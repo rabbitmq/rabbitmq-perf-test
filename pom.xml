@@ -55,6 +55,7 @@
 
     <rabbitmq.version>3.6.5</rabbitmq.version>
     <commons-cli.version>1.1</commons-cli.version>
+    <jetty.version>8.2.0.v20160908</jetty.version>
     <junit.version>4.12</junit.version>
 
   </properties>
@@ -141,6 +142,12 @@
       <artifactId>commons-cli</artifactId>
       <version>${commons-cli.version}</version>
     </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-servlet</artifactId>
+      <version>${jetty.version}</version>
+    </dependency>
+
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>

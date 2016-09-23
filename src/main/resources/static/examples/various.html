@@ -1,0 +1,71 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+ <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>RabbitMQ Performance</title>
+    <link href="../perf.css" rel="stylesheet" type="text/css">
+    <!--[if lte IE 8]><script language="javascript" type="text/javascript" src="../lib/excanvas.min.js"></script><![endif]-->
+    <script language="javascript" type="text/javascript" src="../lib/jquery.min.js"></script>
+    <script language="javascript" type="text/javascript" src="../lib/jquery.flot.min.js"></script>
+    <script language="javascript" type="text/javascript" src="../perf.js"></script>
+    <script language="javascript" type="text/javascript">
+    $(document).ready(function() {
+      var main_results;
+        $.ajax({
+            url: 'various-result.js',
+            success: function(data) {
+                render_graphs(JSON.parse(data));
+            },
+            fail: function() { alert('error loading various-result.js'); }
+        });
+    });
+    </script>
+ </head>
+    <body>
+    <h1>RabbitMQ Performance Various Examples</h1>
+
+    <div class="box">
+    <h3>Time</h3>
+    <div class="small-chart"
+      data-type="time"
+      data-x-axis="time(s)"\
+      data-y-axis=""
+      data-scenario="no-ack"></div>
+    </div>
+
+    <div class="box">
+    <h3>Series</h3>
+    <div class="chart"
+      data-type="series"
+      data-scenario="message-sizes-and-producers"
+      data-x-key="producerCount"
+      data-x-axis="producers"
+      data-y-axis="rate (msg/s)"
+      data-plot-key="send-msg-rate"
+      data-series-key="minMsgSize"></div>
+    </div>
+
+    <div class="box">
+    <h3>x-y</h3>
+    <div class="chart"
+      data-type="x-y"
+      data-scenario="message-sizes-large"
+      data-x-key="minMsgSize"
+      data-plot-keys="send-msg-rate send-bytes-rate"
+      data-x-axis="message size (bytes)"
+      data-y-axis="rate (msg/s)"
+      data-y-axis2="rate (bytes/s)"
+      data-legend="ne"></div>
+    </div>
+
+    <div class="box">
+    <h3>r-l</h3>
+    <div class="chart"
+      data-type="r-l"
+      data-x-axis="rate attempted (msg/s)"
+      data-y-axis="rate (msg/s)"
+      data-scenario="rate-vs-latency"></div>
+    </div>
+
+ </body>
+</html>
