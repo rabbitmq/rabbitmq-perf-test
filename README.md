@@ -24,7 +24,7 @@ HTML page. Learn more [here](HTML_PERFORMANCE_TOOLS.md).
 
 ## Contributing
 
-TODO
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for an overview of the development process.
 
 ## Building
 
