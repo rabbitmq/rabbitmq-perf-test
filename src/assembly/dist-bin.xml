@@ -21,6 +21,9 @@
             <includes>
                 <include>README*</include>
                 <include>LICENSE*</include>
+                <include>HTML_PERFORMANCE_TOOLS.md</include>
+                <include>html/**</include>
+                <include>images/**</include>
             </includes>
         </fileSet>
         <fileSet>

@@ -12,7 +12,7 @@
     $(document).ready(function() {
       var main_results;
         $.ajax({
-            url: '/data',
+            url: 'publish-consume-result.js',
             success: function(data) {
                 render_graphs(JSON.parse(data));
             },

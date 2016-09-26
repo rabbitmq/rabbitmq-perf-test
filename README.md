@@ -3,11 +3,38 @@
 This repository contains source code of the [RabbitMQ Performance Testing Tool](https://www.rabbitmq.com/java-tools.html).
 The client is maintained by the [RabbitMQ team at Pivotal](http://github.com/rabbitmq/).
 
+## Using
+
+### Running performance tests
+
+Assuming the current directory is the root directory of the binary distribution,
+to launch a performance test with 1 producer and 1 consumer:
+
+```
+bin/runjava com.rabbitmq.examples.PerfTest
+```
+
+### Using the HTML performance tools
+
+The HTML Performance Tools are a set of tools that can help you run 
+automated benchmarks by wrapping around the `PerfTest` benchmarking 
+framework. You can provide benchmark specs, and the tool will take care
+of running the benchmark, collecting results and displaying them in an 
+HTML page. Learn more [here](HTML_PERFORMANCE_TOOLS.md).
 
 ## Contributing
 
 TODO
 
+## Building
+
+To build the JAR file, source and binary distribution:
+
+```
+mvn clean package
+```
+
+Files are then in the `target` directory.
 
 ## License
 

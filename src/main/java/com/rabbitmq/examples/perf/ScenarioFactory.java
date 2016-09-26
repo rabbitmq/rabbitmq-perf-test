@@ -29,7 +29,7 @@ public class ScenarioFactory {
         List paramsJSON = read("params", json, List.class);
 
         try {
-            uri = read("uri", json, String.class);
+            uri = read("uri", json, String.class, uri);
             factory.setUri(uri);
         } catch(Exception e) {
             throw new RuntimeException("scenario: " + name + " with malformed uri: "
