@@ -13,30 +13,10 @@
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
 
-package com.rabbitmq.examples.perf;
+package com.rabbitmq.perf;
 
-import java.io.IOException;
+import java.util.Map;
 
-public class BrokerValue implements VariableValue {
-    private final Broker broker;
-
-    public BrokerValue(Broker broker) {
-        this.broker = broker;
-    }
-
-    public void setup(MulticastParams params) throws IOException {
-        broker.start();
-    }
-
-    public void teardown(MulticastParams params) {
-        broker.stop();
-    }
-
-    public String getName() {
-        return "broker_type";
-    }
-
-    public String getValue() {
-        return broker.getName();
-    }
+public interface ScenarioStats {
+    public Map<String, Object> results();
 }

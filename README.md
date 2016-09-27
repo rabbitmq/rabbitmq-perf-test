@@ -11,7 +11,7 @@ Assuming the current directory is the root directory of the binary distribution,
 to launch a performance test with 1 producer and 1 consumer:
 
 ```
-bin/runjava com.rabbitmq.examples.PerfTest
+bin/runjava com.rabbitmq.perf.PerfTest
 ```
 
 ### Using the HTML performance tools

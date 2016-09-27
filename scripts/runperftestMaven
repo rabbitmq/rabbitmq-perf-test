@@ -3,7 +3,7 @@
 cd `dirname $0`/..
 run() {
     echo "=== running with '$2'"
-    mvn -q exec:java -Dexec.mainClass="com.rabbitmq.examples.PerfTest" -Dexec.args=" -h $1 -z 10 -i 20 $2"
+    mvn -q exec:java -Dexec.mainClass="com.rabbitmq.perf.PerfTest" -Dexec.args=" -h $1 -z 10 -i 20 $2"
     sleep 2
 }
 

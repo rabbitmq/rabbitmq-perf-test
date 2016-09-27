@@ -32,7 +32,7 @@ to the root folder of the binary distribution and run the following
 command to start the benchmark:
 
 ```bash
-bin/runjava com.rabbitmq.examples.PerfTestMulti
+bin/runjava com.rabbitmq.perf.PerfTestMulti
 publish-consume-spec.js publish-consume-result.js
 ```
 
@@ -345,7 +345,7 @@ As an alternative, from the root directory of the binary distribution,
 you can launch a Java-based web server:
 
 ```
-bin/runjava com.rabbitmq.examples.WebServer
+bin/runjava com.rabbitmq.perf.WebServer
 ```
 
 The latter command starts a web server listening on port 8080, with the
@@ -353,7 +353,7 @@ The latter command starts a web server listening on port 8080, with the
 sample at http://localhost:8080/examples/sample.html. To change these defaults:
 
 ```
-bin/runjava com.rabbitmq.examples.WebServer ./other-base-dir 9090
+bin/runjava com.rabbitmq.perf.WebServer ./other-base-dir 9090
 ```
 
 At last, if you want a quick preview of your results (same layout
@@ -361,7 +361,7 @@ as the first 'consume' scenario above), ensure the scenario name is
 'benchmark' in the result file and launch the following command:
 
 ```
-$ bin/runjava com.rabbitmq.examples.BenchmarkResults my-result-file.js
+$ bin/runjava com.rabbitmq.perf.BenchmarkResults my-result-file.js
 ```
 
 The latter command will start a web server on port 8080 and open

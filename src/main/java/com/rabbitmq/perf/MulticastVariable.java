@@ -13,10 +13,21 @@
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
 
-package com.rabbitmq.examples.perf;
+package com.rabbitmq.perf;
 
-public interface Scenario {
-    public String getName();
-    public void run() throws Exception;
-    public ScenarioStats getStats();
+import java.util.ArrayList;
+import java.util.List;
+
+public class MulticastVariable implements Variable {
+    private final List<MulticastValue> values = new ArrayList<MulticastValue>();
+
+    public MulticastVariable(String name, Object... values) {
+        for (Object v : values) {
+            this.values.add(new MulticastValue(name, v));
+        }
+    }
+
+    public List<MulticastValue> getValues() {
+        return values;
+    }
 }

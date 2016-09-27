@@ -13,10 +13,29 @@
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
 
-package com.rabbitmq.examples.perf;
+package com.rabbitmq.perf;
 
-import java.util.List;
+class MulticastValue implements VariableValue {
+    private final String name;
+    private final Object value;
 
-public interface Variable {
-    public List<? extends VariableValue> getValues();
+    MulticastValue(String name, Object value) {
+        this.name = name;
+        this.value = value;
+    }
+
+    public void setup(MulticastParams params) {
+        PerfUtil.setValue(params, name, value);
+    }
+
+    public void teardown(MulticastParams params) {
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public Object getValue() {
+        return value;
+    }
 }

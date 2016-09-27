@@ -13,16 +13,16 @@
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
 
-package com.rabbitmq.examples;
+package com.rabbitmq.perf;
 
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
 
-import com.rabbitmq.examples.perf.MulticastParams;
-import com.rabbitmq.examples.perf.MulticastSet;
-import com.rabbitmq.examples.perf.Stats;
+import com.rabbitmq.perf.MulticastParams;
+import com.rabbitmq.perf.MulticastSet;
+import com.rabbitmq.perf.Stats;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.GnuParser;

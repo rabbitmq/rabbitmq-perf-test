@@ -13,12 +13,23 @@
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
 
-package com.rabbitmq.examples.perf;
+package com.rabbitmq.perf;
 
-public interface VariableValue {
-    public void setup(MulticastParams params) throws Exception;
-    public void teardown(MulticastParams params);
+import java.util.ArrayList;
+import java.util.List;
 
-    public String getName();
-    public Object getValue();
+public class BrokerVariable implements Variable {
+    private final Broker[] brokers;
+
+    public BrokerVariable(Broker... brokers) {
+        this.brokers = brokers;
+    }
+
+    public List<BrokerValue> getValues() {
+        List<BrokerValue> values = new ArrayList<BrokerValue>();
+        for (Broker b : brokers) {
+            values.add(new BrokerValue(b));
+        }
+        return values;
+    }
 }

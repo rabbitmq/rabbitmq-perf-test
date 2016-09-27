@@ -13,11 +13,11 @@
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
 
-package com.rabbitmq.examples;
+package com.rabbitmq.perf;
 
 import com.rabbitmq.client.ConnectionFactory;
-import com.rabbitmq.examples.perf.Scenario;
-import com.rabbitmq.examples.perf.ScenarioFactory;
+import com.rabbitmq.perf.Scenario;
+import com.rabbitmq.perf.ScenarioFactory;
 import com.rabbitmq.tools.json.JSONReader;
 import com.rabbitmq.tools.json.JSONWriter;
 

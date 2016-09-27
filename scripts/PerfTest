@@ -9,5 +9,5 @@ SRCDIR=$(cd "$SCRIPTDIR"/.. && pwd)
 	cd "$SRCDIR"
 	mvn -q test-compile -P '!setup-test-cluster'
 	mvn -q exec:java \
-		-Dexec.mainClass="com.rabbitmq.examples.PerfTest" "$@"
+		-Dexec.mainClass="com.rabbitmq.perf.PerfTest" "$@"
 )
