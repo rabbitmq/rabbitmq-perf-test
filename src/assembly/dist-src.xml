@@ -13,7 +13,7 @@
                 <include>README*</include>
                 <include>LICENSE*</include>
                 <include>pom.xml</include>
-                <include>scripts</include>
+                <include>scripts/**</include>
                 <include>HTML_PERFORMANCE_TOOLS.md</include>
                 <include>html/**</include>
                 <include>images/**</include>
