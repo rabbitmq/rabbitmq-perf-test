@@ -1,9 +1,3 @@
-# Deprecated Repository
-
-**Important**: this repository is no longer getting any updates.
-
-This repository is now part of the [PerfTest project](https://github.com/rabbitmq/rabbitmq-perf-test).
-
 ## PerfTool Stats in HTML
 
 We have created a couple of tools to facilitate benchmarking RabbitMQ
