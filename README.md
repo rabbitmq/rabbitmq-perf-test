@@ -20,7 +20,7 @@ The HTML Performance Tools are a set of tools that can help you run
 automated benchmarks by wrapping around the `PerfTest` benchmarking 
 framework. You can provide benchmark specs, and the tool will take care
 of running the benchmark, collecting results and displaying them in an 
-HTML page. Learn more [here](HTML_PERFORMANCE_TOOLS.md).
+HTML page. Learn more [here](html/README.md).
 
 ## Contributing
 

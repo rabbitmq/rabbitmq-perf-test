@@ -1,12 +1,10 @@
-## PerfTool Stats in HTML
+# RabbitMQ Performance Tool #
 
 We have created a couple of tools to facilitate benchmarking RabbitMQ
-in different usage scenarios.  One part of these tools is delivered
-together with our [RabbitMQ Java
-Client](http://www.rabbitmq.com/java-client.html), the other part is a
+in different usage scenarios.  One part of these tools is the `PerfTest`
+Java class, the other part is a
 couple of HTML/JS tools that will let you plot the results obtained
-from the benchmarks into nicely looking graphs. This repository
-contains the libraries for the latter.
+from the benchmarks into nicely looking graphs.
 
 The following blog posts show some examples of what can be done with
 this library:
@@ -16,7 +14,7 @@ this library:
 [RabbitMQ Performance Measurements, part
 2](http://www.rabbitmq.com/blog/2012/04/25/rabbitmq-performance-measurements-part-2/).
 
-## Running benchmarks
+## Running benchmarks ##
 
 Let's see how to run some benchmarks and then display the results in
 HTML using this tool.
@@ -30,11 +28,11 @@ which is simply a JSON file like this one:
 ```
 
 Place this code in a file called `publish-consume-spec.js` and then go
-to the folder where you have the Java client and run the following
+to the root folder of the binary distribution and run the following
 command to start the benchmark:
 
 ```bash
-./runjava.sh com.rabbitmq.examples.PerfTestMulti
+bin/runjava com.rabbitmq.perf.PerfTestMulti
 publish-consume-spec.js publish-consume-result.js
 ```
 
@@ -67,7 +65,7 @@ how the graph should be displayed. We are telling it to load the
 messages per second on the y-axis and a second y-axis showing latency
 in microseconds; all of this displayed in a _time_ kind of graph:
 
-![Publish Consume Graph](./images/publish-consume-graph.png)
+![Publish Consume Graph](../images/publish-consume-graph.png)
 
 If instead of the CSS class `"chart"` we use the `"small-chart"` CSS
 class, then we can get a graph like the one below:
@@ -80,7 +78,7 @@ class, then we can get a graph like the one below:
   data-scenario="no-ack"></div>
 ```
 
-![Small Chart Example](./images/small_chart.png)
+![Small Chart Example](../images/small_chart.png)
 
 Finally, there's a type of graphs called `"summary"` that can show a summary of the whole benchmark. Here's the _HTML_ for displaying them:
 
@@ -91,7 +89,7 @@ Finally, there's a type of graphs called `"summary"` that can show a summary of 
 
 And this is how they look like:
 
-![Summary Graph](./images/summary.png)
+![Summary Graph](../images/summary.png)
 
 
 ## Types of graphs ##
@@ -129,7 +127,7 @@ Here's an HTML example of a `series` graph:
   blogpost for an example of this kind of graph.
 
 ![1 -> 1 sending rate message
- sizes](./images/1_1_sending_rates_msg_sizes.png)
+ sizes](../images/1_1_sending_rates_msg_sizes.png)
 
 Here's how to represent an `x-y` graph in HTML:
 
@@ -150,7 +148,7 @@ Here's how to represent an `x-y` graph in HTML:
   attempted vs latency" from the first blogpost for an example:
 
 ![1 -> 1 sending rate attempted vs
- latency](./images/1_1_sending_rates_latency.png)
+ latency](../images/1_1_sending_rates_latency.png)
 
 Here how's to draw a `r-l` graph with HTML:
 
@@ -163,7 +161,7 @@ Here how's to draw a `r-l` graph with HTML:
 ```
 
 To see how all these benchmark specifications can be put together
-take a look at the `various-spec.js` file in the examples directory,
+take a look at the `various-spec.js` file in the HTML examples directory,
 The `various-result.js` file in the same directory contains
 the results of the benchmark process run on a particular computer
 and `various.html` shows you how to display the results in an
@@ -208,7 +206,7 @@ chart. Here's the list of the ones we support.
 
 ## Boilerplate HTML ##
 
-The file `./examples/sample.html` shows a full HTML page used to
+The file `../html/examples/sample.html` shows a full HTML page used to
 display some results. You should include the following Javascript
 Files:
 
@@ -275,9 +273,9 @@ There are three kind of benchmark scenarios:
 {'name': 'message-sizes-small', 'type': 'varying',
  'params': [{'time-limit': 30}], 'variables': [{'name':
  'min-msg-size', 'values': [0, 100, 200, 500, 1000, 2000, 5000]}]},
- ```
+```
 
- Note that `min-msg-size` gets converted to `minMsgSize`.
+Note that `min-msg-size` gets converted to `minMsgSize`.
 
 You can also set the AMQP URI. See the [URI Spec](https://www.rabbitmq.com/uri-spec.html).
 Default to `"amqp://localhost"` . For example:
@@ -335,10 +333,37 @@ The following parameters can be specified for a scenario:
 - predeclared: tells the benchmark tool if the exchange/queue name
   provided already exists in the broker. Defaults to `false`.
 
-## Note for Chrome Users ##
+## Starting a web server to display the results ##
 
-Chrome users may need to view the page via a web server, not file://.
+Some browsers may need to use a web server (`file://` wouldn't work).
+
+From the `html` directory, you can start a web server with Python:
 
 $ python -m SimpleHTTPServer
 
-will do in a pinch.
+As an alternative, from the root directory of the binary distribution,
+you can launch a Java-based web server:
+
+```
+bin/runjava com.rabbitmq.perf.WebServer
+```
+
+The latter command starts a web server listening on port 8080, with the
+`html` directory as its base directory. You can then see the included
+sample at http://localhost:8080/examples/sample.html. To change these defaults:
+
+```
+bin/runjava com.rabbitmq.perf.WebServer ./other-base-dir 9090
+```
+
+At last, if you want a quick preview of your results (same layout
+as the first 'consume' scenario above), ensure the scenario name is
+'benchmark' in the result file and launch the following command:
+
+```
+$ bin/runjava com.rabbitmq.perf.BenchmarkResults my-result-file.js
+```
+
+The latter command will start a web server on port 8080 and open
+a browser window to display the results.
+
