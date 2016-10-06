@@ -66,10 +66,6 @@ public class MulticastParams {
         this.queueNames = queueNames;
     }
 
-    public void setQueueName(String queueName) {
-        this.queueNames.add(queueName);
-    }
-
     public void setRoutingKey(String routingKey) {
         this.routingKey = routingKey;
     }

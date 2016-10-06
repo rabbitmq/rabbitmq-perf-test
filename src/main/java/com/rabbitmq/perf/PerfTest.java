@@ -16,6 +16,7 @@
 package com.rabbitmq.perf;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
@@ -51,7 +52,7 @@ public class PerfTest {
             testID                   = strArg(cmd, 'd', "test-"+testID);
             String exchangeType      = strArg(cmd, 't', "direct");
             String exchangeName      = strArg(cmd, 'e', exchangeType);
-            String queueName         = strArg(cmd, 'u', "");
+            String queueNames        = strArg(cmd, 'u', "");
             String routingKey        = strArg(cmd, 'k', null);
             boolean randomRoutingKey = cmd.hasOption('K');
             int samplingInterval     = intArg(cmd, 'i', 1);
@@ -111,7 +112,7 @@ public class PerfTest {
             p.setProducerCount(    producerCount);
             p.setProducerMsgCount( producerMsgCount);
             p.setProducerTxSize(   producerTxSize);
-            p.setQueueName(        queueName);
+            p.setQueueNames(        Arrays.asList(queueNames.split(",")));
             p.setRoutingKey(       routingKey);
             p.setRandomRoutingKey( randomRoutingKey);
             p.setProducerRateLimit(producerRateLimit);
