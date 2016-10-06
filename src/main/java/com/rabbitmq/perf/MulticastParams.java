@@ -220,8 +220,8 @@ public class MulticastParams {
                                      false,
                                      autoDelete,
                                      null).getQueue();
-                generatedQueueNames.add(qName);
             }
+            generatedQueueNames.add(qName);
             channel.queueBind(qName, exchangeName, id);
         }
         channel.abort();
