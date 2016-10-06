@@ -7,7 +7,7 @@ SRCDIR=$(cd "$SCRIPTDIR"/.. && pwd)
 
 (
 	cd "$SRCDIR"
-	mvn -q test-compile
+	mvn -q compile
 	mvn -q exec:java \
 		-Dexec.mainClass="com.rabbitmq.perf.PerfTest" "$@"
 )
