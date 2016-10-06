@@ -42,7 +42,7 @@ public class MulticastParams {
 
     private String exchangeName = "direct";
     private String exchangeType = "direct";
-    private String queueName = "";
+    private List<String> queueNames = new ArrayList<String>();
     private String routingKey = null;
     private boolean randomRoutingKey = false;
 
@@ -62,8 +62,12 @@ public class MulticastParams {
         this.exchangeName = exchangeName;
     }
 
+    public void setQueueNames(List<String> queueNames) {
+        this.queueNames = queueNames;
+    }
+
     public void setQueueName(String queueName) {
-        this.queueName = queueName;
+        this.queueNames.add(queueName);
     }
 
     public void setRoutingKey(String routingKey) {
@@ -191,33 +195,42 @@ public class MulticastParams {
     public Consumer createConsumer(Connection connection, Stats stats, String id) throws IOException {
         Channel channel = connection.createChannel();
         if (consumerTxSize > 0) channel.txSelect();
-        String qName = configureQueue(connection, id);
+        List<String> generatedQueueNames = configureQueues(connection, id);
         if (consumerPrefetch > 0) channel.basicQos(consumerPrefetch);
         if (channelPrefetch > 0) channel.basicQos(channelPrefetch, true);
-        return new Consumer(channel, id, qName,
+        return new Consumer(channel, id, generatedQueueNames,
                                          consumerTxSize, autoAck, multiAckEvery,
                                          stats, consumerRateLimit, consumerMsgCount, timeLimit);
     }
 
-    public boolean shouldConfigureQueue() {
-        return consumerCount == 0 && !queueName.equals("");
+    public boolean shouldConfigureQueues() {
+        return consumerCount == 0 && !(queueNames.size() == 0);
     }
 
-    public String configureQueue(Connection connection, String id) throws IOException {
+    public List<String> configureQueues(Connection connection, String id) throws IOException {
         Channel channel = connection.createChannel();
         if (!predeclared || !exchangeExists(connection, exchangeName)) {
             channel.exchangeDeclare(exchangeName, exchangeType);
         }
-        String qName = queueName;
-        if (!predeclared || !queueExists(connection, queueName)) {
-            qName = channel.queueDeclare(queueName,
-                                         flags.contains("persistent"),
-                                         false, autoDelete,
-                                         null).getQueue();
+        // To ensure we get at-least 1 default queue:
+        if (queueNames.isEmpty()) {
+            queueNames.add("");
         }
-        channel.queueBind(qName, exchangeName, id);
+        List<String> generatedQueueNames = new ArrayList<String>();
+        for (String qName : queueNames) {
+            if (!predeclared || !queueExists(connection, qName)) {
+                qName = channel.queueDeclare(qName,
+                                     flags.contains("persistent"),
+                                     false,
+                                     autoDelete,
+                                     null).getQueue();
+                generatedQueueNames.add(qName);
+            }
+            channel.queueBind(qName, exchangeName, id);
+        }
         channel.abort();
-        return qName;
+
+        return generatedQueueNames;
     }
 
     private static boolean exchangeExists(Connection connection, final String exchangeName) throws IOException {

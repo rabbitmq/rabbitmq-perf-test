@@ -293,8 +293,8 @@ The following parameters can be specified for a scenario:
   benchmark. Defaults to `'direct'`
 - exchange-name: exchange name to be used during the
   benchmark. Defaults to whatever `exchangeType` was set to.
-- queue-name: queue name to be used during the benchmark. Defaults to
-  an empty name, letting RabbitMQ provide a random one.
+- queue-names: list of queue names to be used during the benchmark. Defaults to
+  a single queue, letting RabbitMQ provide a random queue name.
 - routing-key: routing key to be used during the benchmark. Defaults to
   an empty routing key.
 - random-routing-key: allows the publisher to send a different routing
