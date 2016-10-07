@@ -24,6 +24,7 @@ import com.rabbitmq.client.ShutdownSignalException;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -43,7 +44,7 @@ public class Consumer extends ProducerConsumerBase implements Runnable {
     private final int                   msgLimit;
     private final long                  timeLimit;
     private final CountDownLatch        latch = new CountDownLatch(1);
-    private final Map<String, String>   ConsumerTagBranchMap = new HashMap<String, String>();
+    private final Map<String, String>   consumerTagBranchMap = Collections.synchronizedMap(new HashMap<String, String>());
 
     public Consumer(Channel channel, String id,
                     List<String> queueNames, int txSize, boolean autoAck,
@@ -66,7 +67,7 @@ public class Consumer extends ProducerConsumerBase implements Runnable {
             q = new ConsumerImpl(channel);
             for (String qName : queueNames) {
                 String tag = channel.basicConsume(qName, autoAck, q);
-                ConsumerTagBranchMap.put(tag, qName);
+                consumerTagBranchMap.put(tag, qName);
             }
             if (timeLimit == 0) {
                 latch.await();
@@ -134,13 +135,13 @@ public class Consumer extends ProducerConsumerBase implements Runnable {
 
         @Override
         public void handleCancel(String consumerTag) throws IOException {
-            if (ConsumerTagBranchMap.containsKey(consumerTag)) {
-                String qName = ConsumerTagBranchMap.get(consumerTag);
-                System.out.printf("Consumer cancelled by broker. Re-consuming. Queue: %s for Tag: %s",
-                        qName, consumerTag);
+            System.out.printf("Consumer cancelled by broker for tag: %s", consumerTag);
+            if (consumerTagBranchMap.containsKey(consumerTag)) {
+                String qName = consumerTagBranchMap.get(consumerTag);
+                System.out.printf("Re-consuming. Queue: %s for Tag: %s", qName, consumerTag);
                 channel.basicConsume(qName, autoAck, q);
             } else {
-                System.out.println("Could not find queue for consumer tag: " + consumerTag);
+                System.out.printf("Could not find queue for consumer tag: %s", consumerTag);
             }
         }
     }
