@@ -1,10 +1,20 @@
-function render_graphs(results) {
+function render_graphs(results, parentDomElement) {
+  if(typeof parentDomElement === "undefined") {
     $('.chart, .small-chart').map(function() {
         plot($(this), results);
     });
     $('.summary').map(function() {
         summarise($(this), results);
     });
+  }
+  else {
+    parentDomElement.find('.chart, .small-chart').map(function() {
+        plot($(this), results);
+    });
+    parentDomElement.find('.summary').map(function() {
+        summarise($(this), results);
+    });
+  }
 }
 
 function summarise(div, results) {
