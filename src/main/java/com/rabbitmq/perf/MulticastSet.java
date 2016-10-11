@@ -72,9 +72,9 @@ public class MulticastSet {
             consumerThreads[i] = t;
         }
 
-        if (params.shouldConfigureQueue()) {
+        if (params.shouldConfigureQueues()) {
             Connection conn = factory.newConnection();
-            params.configureQueue(conn, id);
+            params.configureQueues(conn, id);
             conn.close();
         }
 

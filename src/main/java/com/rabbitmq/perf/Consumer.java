@@ -24,30 +24,35 @@ import com.rabbitmq.client.ShutdownSignalException;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 public class Consumer extends ProducerConsumerBase implements Runnable {
 
-    private ConsumerImpl     q;
-    private final Channel          channel;
-    private final String           id;
-    private final String           queueName;
-    private final int              txSize;
-    private final boolean          autoAck;
-    private final int              multiAckEvery;
-    private final Stats stats;
-    private final int              msgLimit;
-    private final long             timeLimit;
-    private final CountDownLatch   latch = new CountDownLatch(1);
+    private ConsumerImpl                q;
+    private final Channel               channel;
+    private final String                id;
+    private final List<String>          queueNames;
+    private final int                   txSize;
+    private final boolean               autoAck;
+    private final int                   multiAckEvery;
+    private final Stats                 stats;
+    private final int                   msgLimit;
+    private final long                  timeLimit;
+    private final CountDownLatch        latch = new CountDownLatch(1);
+    private final Map<String, String>   consumerTagBranchMap = Collections.synchronizedMap(new HashMap<String, String>());
 
     public Consumer(Channel channel, String id,
-                    String queueName, int txSize, boolean autoAck,
+                    List<String> queueNames, int txSize, boolean autoAck,
                     int multiAckEvery, Stats stats, float rateLimit, int msgLimit, int timeLimit) {
 
         this.channel       = channel;
         this.id            = id;
-        this.queueName     = queueName;
+        this.queueNames    = queueNames;
         this.rateLimit     = rateLimit;
         this.txSize        = txSize;
         this.autoAck       = autoAck;
@@ -60,7 +65,10 @@ public class Consumer extends ProducerConsumerBase implements Runnable {
     public void run() {
         try {
             q = new ConsumerImpl(channel);
-            channel.basicConsume(queueName, autoAck, q);
+            for (String qName : queueNames) {
+                String tag = channel.basicConsume(qName, autoAck, q);
+                consumerTagBranchMap.put(tag, qName);
+            }
             if (timeLimit == 0) {
                 latch.await();
             }
@@ -127,8 +135,14 @@ public class Consumer extends ProducerConsumerBase implements Runnable {
 
         @Override
         public void handleCancel(String consumerTag) throws IOException {
-            System.out.println("Consumer cancelled by broker. Re-consuming.");
-            channel.basicConsume(queueName, autoAck, q);
+            System.out.printf("Consumer cancelled by broker for tag: %s", consumerTag);
+            if (consumerTagBranchMap.containsKey(consumerTag)) {
+                String qName = consumerTagBranchMap.get(consumerTag);
+                System.out.printf("Re-consuming. Queue: %s for Tag: %s", qName, consumerTag);
+                channel.basicConsume(qName, autoAck, q);
+            } else {
+                System.out.printf("Could not find queue for consumer tag: %s", consumerTag);
+            }
         }
     }
 }
