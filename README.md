@@ -28,13 +28,19 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for an overview of the development proc
 
 ## Building
 
-To build the JAR file, source and binary distribution:
+To build the JAR file:
 
 ```
 mvn clean package
 ```
 
 Files are then in the `target` directory.
+
+To build the JAR file, source and binary distributions:
+
+```
+mvn clean package -P assemblies
+```
 
 ## License
 
