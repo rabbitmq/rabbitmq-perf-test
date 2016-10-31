@@ -1,3 +1,5 @@
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.rabbitmq/perf-test/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.rabbitmq/perf-test)
+
 ## RabbitMQ Performance Testing Tool
 
 This repository contains source code of the [RabbitMQ Performance Testing Tool](https://www.rabbitmq.com/java-tools.html).
