@@ -42,6 +42,9 @@ To build the JAR file, source and binary distributions:
 mvn clean package -P assemblies
 ```
 
+## Maven Artifact
+[MVN Repository](http://mavenrepository.com/artifact/com.rabbitmq/perf-test)
+
 ## License
 
 This package, the RabbitMQ Performance Testing Tool library, is triple-licensed under
