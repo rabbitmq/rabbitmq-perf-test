@@ -40,8 +40,9 @@
   </developers>
 
   <scm>
-    <url>https://github.com/rabbitmq/rabbitmq-perf-test.git</url>
-    <connection>scm:git:https://github.com/rabbitmq/rabbitmq-perf-test.git</connection>
+    <url>https://github.com/rabbitmq/rabbitmq-perf-test</url>
+    <connection>scm:git:git://github.com/rabbitmq/rabbitmq-perf-test.git</connection>
+    <developerConnection>scm:git:git@github.com:rabbitmq/rabbitmq-perf-test.git</developerConnection>
   </scm>
 
   <organization>
