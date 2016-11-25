@@ -91,7 +91,23 @@
   </dependencies>
 
   <build>
-    
+
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+      </resource>
+      <resource>
+        <directory>html</directory>
+        <includes>
+          <include>perf.js</include>
+          <include>perf.css</include>
+          <include>lib/*</include>
+        </includes>
+        <targetPath>static</targetPath>
+      </resource>
+
+    </resources>
+
     <plugins>
 
       <plugin>
