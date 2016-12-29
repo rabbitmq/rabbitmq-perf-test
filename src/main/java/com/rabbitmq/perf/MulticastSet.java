@@ -60,16 +60,21 @@ public class MulticastSet {
     }
 
     public void run(boolean announceStartup) throws IOException, InterruptedException, TimeoutException {
-        Thread[] consumerThreads = new Thread[params.getConsumerCount()];
-        Connection[] consumerConnections = new Connection[consumerThreads.length];
+        Thread[] consumerThreads = new Thread[params.getConsumerThreadCount()];
+        Connection[] consumerConnections = new Connection[params.getConsumerCount()];
         for (int i = 0; i < consumerConnections.length; i++) {
             if (announceStartup) {
                 System.out.println("id: " + testID + ", starting consumer #" + i);
             }
             Connection conn = factory.newConnection();
             consumerConnections[i] = conn;
-            Thread t = new Thread(params.createConsumer(conn, stats, id));
-            consumerThreads[i] = t;
+            for (int j = 0; j < params.getConsumerChannels(); j++) {
+                if (announceStartup) {
+                    System.out.println("id: " + testID + ", starting consumer #" + i + ", channel #" + j);
+                }
+                Thread t = new Thread(params.createConsumer(conn, stats, id));
+                consumerThreads[(i * params.getConsumerChannels()) + j] = t;
+            }
         }
 
         if (params.shouldConfigureQueues()) {
@@ -78,16 +83,21 @@ public class MulticastSet {
             conn.close();
         }
 
-        Thread[] producerThreads = new Thread[params.getProducerCount()];
-        Connection[] producerConnections = new Connection[producerThreads.length];
-        for (int i = 0; i < producerThreads.length; i++) {
+        Thread[] producerThreads = new Thread[params.getProducerThreadCount()];
+        Connection[] producerConnections = new Connection[params.getProducerCount()];
+        for (int i = 0; i < producerConnections.length; i++) {
             if (announceStartup) {
                 System.out.println("id: " + testID + ", starting producer #" + i);
             }
             Connection conn = factory.newConnection();
             producerConnections[i] = conn;
-            Thread t = new Thread(params.createProducer(conn, stats, id));
-            producerThreads[i] = t;
+            for (int j = 0; j < params.getProducerChannels(); j++) {
+                if (announceStartup) {
+                    System.out.println("id: " + testID + ", starting producer #" + i + ", channel #" + j);
+                }
+                Thread t = new Thread(params.createProducer(conn, stats, id));
+                producerThreads[(i * params.getProducerChannels()) + j] = t;
+            }
         }
 
         for (Thread consumerThread : consumerThreads) {
