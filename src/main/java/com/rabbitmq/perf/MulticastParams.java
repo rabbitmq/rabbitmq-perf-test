@@ -28,8 +28,8 @@ public class MulticastParams {
     private long confirm = -1;
     private int consumerCount = 1;
     private int producerCount = 1;
-    private int consumerChannels = 1;
-    private int producerChannels = 1;
+    private int consumerChannelCount = 1;
+    private int producerChannelCount = 1;
     private int consumerTxSize = 0;
     private int producerTxSize = 0;
     private int channelPrefetch = 0;
@@ -84,8 +84,8 @@ public class MulticastParams {
         this.producerCount = producerCount;
     }
 
-    public void setProducerChannels(int producerChannels) {
-        this.producerChannels = producerChannels;
+    public void setProducerChannelCount(int producerChannelCount) {
+        this.producerChannelCount = producerChannelCount;
     }
 
     public void setConsumerRateLimit(float consumerRateLimit) {
@@ -96,8 +96,8 @@ public class MulticastParams {
         this.consumerCount = consumerCount;
     }
 
-    public void setConsumerChannels(int consumerChannels) {
-        this.consumerChannels = consumerChannels;
+    public void setConsumerChannelCount(int consumerChannelCount) {
+        this.consumerChannelCount = consumerChannelCount;
     }
 
     public void setProducerTxSize(int producerTxSize) {
@@ -165,24 +165,24 @@ public class MulticastParams {
         return consumerCount;
     }
 
-    public int getConsumerChannels() {
-        return consumerChannels;
+    public int getConsumerChannelCount() {
+        return consumerChannelCount;
     }
 
     public int getConsumerThreadCount() {
-        return consumerCount * consumerChannels;
+        return consumerCount * consumerChannelCount;
     }
 
     public int getProducerCount() {
         return producerCount;
     }
 
-    public int getProducerChannels() {
-        return producerChannels;
+    public int getProducerChannelCount() {
+        return producerChannelCount;
     }
 
     public int getProducerThreadCount() {
-        return producerCount * producerChannels;
+        return producerCount * producerChannelCount;
     }
 
     public int getMinMsgSize() {

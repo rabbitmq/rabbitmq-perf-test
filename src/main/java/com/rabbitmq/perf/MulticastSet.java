@@ -68,12 +68,12 @@ public class MulticastSet {
             }
             Connection conn = factory.newConnection();
             consumerConnections[i] = conn;
-            for (int j = 0; j < params.getConsumerChannels(); j++) {
+            for (int j = 0; j < params.getConsumerChannelCount(); j++) {
                 if (announceStartup) {
                     System.out.println("id: " + testID + ", starting consumer #" + i + ", channel #" + j);
                 }
                 Thread t = new Thread(params.createConsumer(conn, stats, id));
-                consumerThreads[(i * params.getConsumerChannels()) + j] = t;
+                consumerThreads[(i * params.getConsumerChannelCount()) + j] = t;
             }
         }
 
@@ -91,12 +91,12 @@ public class MulticastSet {
             }
             Connection conn = factory.newConnection();
             producerConnections[i] = conn;
-            for (int j = 0; j < params.getProducerChannels(); j++) {
+            for (int j = 0; j < params.getProducerChannelCount(); j++) {
                 if (announceStartup) {
                     System.out.println("id: " + testID + ", starting producer #" + i + ", channel #" + j);
                 }
                 Thread t = new Thread(params.createProducer(conn, stats, id));
-                producerThreads[(i * params.getProducerChannels()) + j] = t;
+                producerThreads[(i * params.getProducerChannelCount()) + j] = t;
             }
         }
 
