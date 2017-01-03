@@ -1,11 +1,14 @@
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.rabbitmq/perf-test/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.rabbitmq/perf-test)
-
 ## RabbitMQ Performance Testing Tool
 
 This repository contains source code of the [RabbitMQ Performance Testing Tool](https://www.rabbitmq.com/java-tools.html).
 The client is maintained by the [RabbitMQ team at Pivotal](http://github.com/rabbitmq/).
 
-## Using
+## Installation
+
+This is a standalone tool that is distributed in binary form using GitHub releases
+and a Maven repositry (see below).
+
+## Usage
 
 ### Running performance tests
 
@@ -28,7 +31,8 @@ HTML page. Learn more [here](html/README.md).
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for an overview of the development process.
 
-## Building
+
+## Building from Source
 
 To build the JAR file:
 
@@ -45,6 +49,9 @@ mvn clean package -P assemblies
 ```
 
 ## Maven Artifact
+
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.rabbitmq/perf-test/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.rabbitmq/perf-test)
+
 [MVN Repository](http://mavenrepository.com/artifact/com.rabbitmq/perf-test)
 
 ## License
