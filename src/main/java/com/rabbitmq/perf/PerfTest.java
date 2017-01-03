@@ -60,6 +60,8 @@ public class PerfTest {
             float consumerRateLimit  = floatArg(cmd, 'R', 0.0f);
             int producerCount        = intArg(cmd, 'x', 1);
             int consumerCount        = intArg(cmd, 'y', 1);
+            int producerChannels     = intArg(cmd, 'X', 1);
+            int consumerChannels     = intArg(cmd, 'Y', 1);
             int producerTxSize       = intArg(cmd, 'm', 0);
             int consumerTxSize       = intArg(cmd, 'n', 0);
             long confirm             = intArg(cmd, 'c', -1);
@@ -98,6 +100,7 @@ public class PerfTest {
             p.setAutoDelete(       true);
             p.setConfirm(          confirm);
             p.setConsumerCount(    consumerCount);
+            p.setConsumerChannels( consumerChannels);
             p.setConsumerMsgCount( consumerMsgCount);
             p.setConsumerRateLimit(consumerRateLimit);
             p.setConsumerTxSize(   consumerTxSize);
@@ -110,6 +113,7 @@ public class PerfTest {
             p.setConsumerPrefetch( consumerPrefetch);
             p.setChannelPrefetch(  channelPrefetch);
             p.setProducerCount(    producerCount);
+            p.setProducerChannels( producerChannels);
             p.setProducerMsgCount( producerMsgCount);
             p.setProducerTxSize(   producerTxSize);
             p.setQueueNames(        Arrays.asList(queueNames.split(",")));
@@ -153,6 +157,8 @@ public class PerfTest {
         options.addOption(new Option("R", "consumerRate",     true, "consumer rate limit"));
         options.addOption(new Option("x", "producers",        true, "producer count"));
         options.addOption(new Option("y", "consumers",        true, "consumer count"));
+        options.addOption(new Option("X", "producerChannels", true, "channels per producer"));
+        options.addOption(new Option("Y", "consumerChannels", true, "channels per consumer"));
         options.addOption(new Option("m", "ptxsize",          true, "producer tx size"));
         options.addOption(new Option("n", "ctxsize",          true, "consumer tx size"));
         options.addOption(new Option("c", "confirm",          true, "max unconfirmed publishes"));

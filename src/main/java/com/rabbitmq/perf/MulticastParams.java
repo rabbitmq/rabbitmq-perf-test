@@ -28,6 +28,8 @@ public class MulticastParams {
     private long confirm = -1;
     private int consumerCount = 1;
     private int producerCount = 1;
+    private int consumerChannels = 1;
+    private int producerChannels = 1;
     private int consumerTxSize = 0;
     private int producerTxSize = 0;
     private int channelPrefetch = 0;
@@ -82,12 +84,20 @@ public class MulticastParams {
         this.producerCount = producerCount;
     }
 
+    public void setProducerChannels(int producerChannels) {
+        this.producerChannels = producerChannels;
+    }
+
     public void setConsumerRateLimit(float consumerRateLimit) {
         this.consumerRateLimit = consumerRateLimit;
     }
 
     public void setConsumerCount(int consumerCount) {
         this.consumerCount = consumerCount;
+    }
+
+    public void setConsumerChannels(int consumerChannels) {
+        this.consumerChannels = consumerChannels;
     }
 
     public void setProducerTxSize(int producerTxSize) {
@@ -155,8 +165,24 @@ public class MulticastParams {
         return consumerCount;
     }
 
+    public int getConsumerChannels() {
+        return consumerChannels;
+    }
+
+    public int getConsumerThreadCount() {
+        return consumerCount * consumerChannels;
+    }
+
     public int getProducerCount() {
         return producerCount;
+    }
+
+    public int getProducerChannels() {
+        return producerChannels;
+    }
+
+    public int getProducerThreadCount() {
+        return producerCount * producerChannels;
     }
 
     public int getMinMsgSize() {
