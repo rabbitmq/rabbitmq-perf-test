@@ -54,6 +54,19 @@ mvn clean package -P assemblies
 
 [MVN Repository](http://mavenrepository.com/artifact/com.rabbitmq/perf-test)
 
+## Logging
+
+`PerfTest` depends transitively on SLF4J for logging (through RabbitMQ Java Client). `PerfTest` binary distribution
+ships with Logback as a SLF4J binding and uses Logback default configuration (printing logs to the console). If
+for any reason you need to use a specific Logback configuration file, you can do it this way:
+
+```
+bin/runjava -Dlogback.configurationFile=/path/to/logback.xml com.rabbitmq.perf.PerfTest
+```
+
+If you use `PerfTest` as a standalone JAR in your project, please note it doesn't depend on any SLF4J binding,
+you can use your favorite one.
+
 ## License
 
 This package, the RabbitMQ Performance Testing Tool library, is triple-licensed under
