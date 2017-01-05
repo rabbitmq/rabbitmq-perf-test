@@ -4,6 +4,7 @@ import com.rabbitmq.client.*;
 import com.rabbitmq.client.impl.nio.NioParams;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.Callable;
@@ -18,8 +19,9 @@ public class Load {
     int nbProducerConnection = 40;
     int nbConsumerConnection = 60;
     int channelPerConnection = 10;
-    int nbQueues = 1000;
+    int nbQueues = 10;
     int nbPublisher = 100;
+    String prefix = "";
     String uri = "amqp://localhost";
 
     public void run() throws Exception {
@@ -52,15 +54,17 @@ public class Load {
             }
         }
 
-        final List<String> queues = new ArrayList<String>(nbQueues);
+        final List<String> queues = Collections.synchronizedList(new ArrayList<String>(nbQueues));
         final Random random = new Random();
         for(int i = 0; i < nbQueues; i++) {
             Channel channel = producerChannels.get(random.nextInt(nbProducerConnection * channelPerConnection));
-            AMQP.Queue.DeclareOk declareOk = channel.queueDeclare("queue-" + i, false, false, true, null);
+            AMQP.Queue.DeclareOk declareOk = channel.queueDeclare(prefix + "queue-" + i, false, false, true, null);
             queues.add(declareOk.getQueue());
+        }
 
-            channel = consumerChannels.get(random.nextInt(nbConsumerConnection * channelPerConnection));
-            channel.basicConsume(declareOk.getQueue(), true, new DefaultConsumer(channel));
+        for(String queue : queues) {
+            Channel channel = consumerChannels.get(random.nextInt(nbConsumerConnection * channelPerConnection));
+            channel.basicConsume(queue, true, new DefaultConsumer(channel));
         }
 
         executorService = Executors.newFixedThreadPool(nbPublisher);
@@ -102,6 +106,10 @@ public class Load {
 
     public void setUri(String uri) {
         this.uri = uri;
+    }
+
+    public void setPrefix(String prefix) {
+        this.prefix = prefix;
     }
 
     public static void main(String[] args) throws Exception {
