@@ -19,8 +19,8 @@ public class Load {
     int nbProducerConnection = 40;
     int nbConsumerConnection = 60;
     int channelPerConnection = 10;
-    int nbQueues = 10;
-    int nbPublisher = 100;
+    int nbQueues = 1000;
+    int nbPublisher = 10;
     String prefix = "";
     String uri = "amqp://localhost";
 
