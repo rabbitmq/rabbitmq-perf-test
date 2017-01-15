@@ -35,6 +35,7 @@ public class MulticastParams {
     private int channelPrefetch = 0;
     private int consumerPrefetch = 0;
     private int minMsgSize = 0;
+    private int msgSizeVariation = 0;
 
     private int timeLimit = 0;
     private float producerRateLimit = 0;
@@ -55,6 +56,7 @@ public class MulticastParams {
     private boolean autoDelete = false;
 
     private boolean predeclared;
+    private boolean setProperties;
 
     public void setExchangeType(String exchangeType) {
         this.exchangeType = exchangeType;
@@ -132,6 +134,10 @@ public class MulticastParams {
         this.minMsgSize = minMsgSize;
     }
 
+    public void setMsgSizeVariation(int msgSizeVariation) {
+        this.msgSizeVariation = msgSizeVariation;
+    }
+
     public void setTimeLimit(int timeLimit) {
         this.timeLimit = timeLimit;
     }
@@ -159,6 +165,10 @@ public class MulticastParams {
 
     public void setPredeclared(boolean predeclared) {
         this.predeclared = predeclared;
+    }
+
+    public void setSetProperties(boolean setProperties) {
+        this.setProperties = setProperties;
     }
 
     public int getConsumerCount() {
@@ -189,6 +199,10 @@ public class MulticastParams {
         return minMsgSize;
     }
 
+    public int getMsgSizeVariation() {
+        return msgSizeVariation;
+    }
+
     public String getRoutingKey() {
         return routingKey;
     }
@@ -207,8 +221,8 @@ public class MulticastParams {
         final Producer producer = new Producer(channel, exchangeName, id,
                                                randomRoutingKey, flags, producerTxSize,
                                                producerRateLimit, producerMsgCount,
-                                               minMsgSize, timeLimit,
-                                               confirm, stats);
+                                               minMsgSize, msgSizeVariation, timeLimit,
+                                               confirm, stats, setProperties);
         channel.addReturnListener(producer);
         channel.addConfirmListener(producer);
         return producer;
