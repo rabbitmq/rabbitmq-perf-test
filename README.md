@@ -5,7 +5,8 @@ The client is maintained by the [RabbitMQ team at Pivotal](http://github.com/rab
 
 ## Installation
 
-This is a standalone tool that is distributed in binary form using GitHub releases
+This is a standalone tool that is distributed in binary form using 
+[GitHub releases](https://github.com/rabbitmq/rabbitmq-perf-test/releases)
 and a Maven repositry (see below).
 
 ## Usage
