@@ -75,6 +75,16 @@ public class PerfTest {
             boolean predeclared      = cmd.hasOption('p');
 
             String uri               = strArg(cmd, 'h', "amqp://localhost");
+            String urisParameter     = strArg(cmd, 'H', null);
+            String [] uris = null;
+            if(urisParameter != null) {
+                uris = urisParameter.split(",");
+                for(int i = 0; i< uris.length; i++) {
+                    uris[i] = uris[i].trim();
+                }
+            } else {
+                uris = new String [] {uri};
+            }
 
             //setup
             PrintlnStats stats = new PrintlnStats(testID,
@@ -87,7 +97,7 @@ public class PerfTest {
 
             ConnectionFactory factory = new ConnectionFactory();
             factory.setShutdownTimeout(0); // So we still shut down even with slow consumers
-            factory.setUri(uri);
+            factory.setUri(uris[0]);
             factory.setRequestedFrameMax(frameMax);
             factory.setRequestedHeartbeat(heartbeat);
 
@@ -118,7 +128,7 @@ public class PerfTest {
             p.setProducerRateLimit(     producerRateLimit);
             p.setTimeLimit(             timeLimit);
 
-            MulticastSet set = new MulticastSet(stats, factory, p, testID);
+            MulticastSet set = new MulticastSet(stats, factory, p, testID, uris);
             set.run(true);
 
             stats.printFinal();
@@ -143,6 +153,7 @@ public class PerfTest {
         options.addOption(new Option("?", "help",                   false,"show usage"));
         options.addOption(new Option("d", "id",                     true, "test ID"));
         options.addOption(new Option("h", "uri",                    true, "connection URI"));
+        options.addOption(new Option("H", "uris",                   true, "connection URIs (separated by commas)"));
         options.addOption(new Option("t", "type",                   true, "exchange type"));
         options.addOption(new Option("e", "exchange",               true, "exchange name"));
         options.addOption(new Option("u", "queue",                  true, "queue name"));

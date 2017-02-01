@@ -18,6 +18,9 @@ package com.rabbitmq.perf;
 import com.rabbitmq.client.ConnectionFactory;
 
 import java.io.IOException;
+import java.net.URISyntaxException;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
 import java.util.concurrent.TimeoutException;
 
 public class SimpleScenario implements Scenario {
@@ -38,10 +41,10 @@ public class SimpleScenario implements Scenario {
         this.interval = interval;
     }
 
-    public void run() throws IOException, InterruptedException, TimeoutException {
+    public void run() throws IOException, InterruptedException, TimeoutException, NoSuchAlgorithmException, KeyManagementException, URISyntaxException {
         this.stats = new SimpleScenarioStats(interval);
         for (MulticastParams p : params) {
-            MulticastSet set = new MulticastSet(stats, factory, p);
+            MulticastSet set = new MulticastSet(stats, factory, p, null);
             stats.setup(p);
             set.run();
         }

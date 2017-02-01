@@ -60,7 +60,7 @@ public class VaryingScenario implements Scenario {
                 for (VariableValue value : values) {
                     value.setup(p);
                 }
-                MulticastSet set = new MulticastSet(stats0, factory, p);
+                MulticastSet set = new MulticastSet(stats0, factory, p, null);
                 stats0.setup(p);
                 set.run();
                 for (VariableValue value : values) {

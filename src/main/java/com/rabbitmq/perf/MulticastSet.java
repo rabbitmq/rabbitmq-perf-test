@@ -19,6 +19,10 @@ import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 
 import java.io.IOException;
+import java.net.URISyntaxException;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
+import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 
@@ -28,9 +32,12 @@ public class MulticastSet {
     private final ConnectionFactory factory;
     private final MulticastParams params;
     private final String testID;
+    private final String [] uris;
+
+    private final Random random = new Random();
 
     public MulticastSet(Stats stats, ConnectionFactory factory,
-        MulticastParams params) {
+        MulticastParams params, String [] uris) {
         if (params.getRoutingKey() == null) {
             this.id = UUID.randomUUID().toString();
         } else {
@@ -40,10 +47,11 @@ public class MulticastSet {
         this.factory = factory;
         this.params = params;
         this.testID = "perftest";
+        this.uris = uris;
     }
 
     public MulticastSet(Stats stats, ConnectionFactory factory,
-        MulticastParams params, String testID) {
+        MulticastParams params, String testID, String [] uris) {
         if (params.getRoutingKey() == null) {
             this.id = UUID.randomUUID().toString();
         } else {
@@ -53,19 +61,22 @@ public class MulticastSet {
         this.factory = factory;
         this.params = params;
         this.testID = testID;
+        this.uris = uris;
     }
 
-    public void run() throws IOException, InterruptedException, TimeoutException {
+    public void run() throws IOException, InterruptedException, TimeoutException, NoSuchAlgorithmException, KeyManagementException, URISyntaxException {
         run(false);
     }
 
-    public void run(boolean announceStartup) throws IOException, InterruptedException, TimeoutException {
+    public void run(boolean announceStartup)
+        throws IOException, InterruptedException, TimeoutException, NoSuchAlgorithmException, KeyManagementException, URISyntaxException {
         Thread[] consumerThreads = new Thread[params.getConsumerThreadCount()];
         Connection[] consumerConnections = new Connection[params.getConsumerCount()];
         for (int i = 0; i < consumerConnections.length; i++) {
             if (announceStartup) {
                 System.out.println("id: " + testID + ", starting consumer #" + i);
             }
+            setUri();
             Connection conn = factory.newConnection();
             consumerConnections[i] = conn;
             for (int j = 0; j < params.getConsumerChannelCount(); j++) {
@@ -78,6 +89,7 @@ public class MulticastSet {
         }
 
         if (params.shouldConfigureQueues()) {
+            setUri();
             Connection conn = factory.newConnection();
             params.configureQueues(conn, id);
             conn.close();
@@ -89,6 +101,7 @@ public class MulticastSet {
             if (announceStartup) {
                 System.out.println("id: " + testID + ", starting producer #" + i);
             }
+            setUri();
             Connection conn = factory.newConnection();
             producerConnections[i] = conn;
             for (int j = 0; j < params.getProducerChannelCount(); j++) {
@@ -117,5 +130,16 @@ public class MulticastSet {
             consumerThreads[i].join();
             consumerConnections[i].close();
         }
+    }
+
+    private void setUri() throws URISyntaxException, NoSuchAlgorithmException, KeyManagementException {
+        if(uris != null) {
+            factory.setUri(uri());
+        }
+    }
+
+    private String uri() {
+        String uri = uris[random.nextInt(uris.length)];
+        return uri;
     }
 }
