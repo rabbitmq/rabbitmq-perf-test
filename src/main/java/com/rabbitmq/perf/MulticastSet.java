@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
+import java.util.List;
 import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
@@ -32,12 +33,12 @@ public class MulticastSet {
     private final ConnectionFactory factory;
     private final MulticastParams params;
     private final String testID;
-    private final String [] uris;
+    private final List<String> uris;
 
     private final Random random = new Random();
 
     public MulticastSet(Stats stats, ConnectionFactory factory,
-        MulticastParams params, String [] uris) {
+        MulticastParams params, List<String> uris) {
         if (params.getRoutingKey() == null) {
             this.id = UUID.randomUUID().toString();
         } else {
@@ -51,7 +52,7 @@ public class MulticastSet {
     }
 
     public MulticastSet(Stats stats, ConnectionFactory factory,
-        MulticastParams params, String testID, String [] uris) {
+        MulticastParams params, String testID, List<String> uris) {
         if (params.getRoutingKey() == null) {
             this.id = UUID.randomUUID().toString();
         } else {
@@ -139,7 +140,7 @@ public class MulticastSet {
     }
 
     private String uri() {
-        String uri = uris[random.nextInt(uris.length)];
+        String uri = uris.get(random.nextInt(uris.size()));
         return uri;
     }
 }

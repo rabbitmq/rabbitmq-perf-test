@@ -18,6 +18,7 @@ package com.rabbitmq.perf;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.List;
 
 import org.apache.commons.cli.CommandLine;
@@ -76,14 +77,15 @@ public class PerfTest {
 
             String uri               = strArg(cmd, 'h', "amqp://localhost");
             String urisParameter     = strArg(cmd, 'H', null);
-            String [] uris = null;
+            List<String> uris = null;
             if(urisParameter != null) {
-                uris = urisParameter.split(",");
-                for(int i = 0; i< uris.length; i++) {
-                    uris[i] = uris[i].trim();
+                String [] urisArray = urisParameter.split(",");
+                for(int i = 0; i< urisArray.length; i++) {
+                    urisArray[i] = urisArray[i].trim();
                 }
+                uris = Arrays.asList(urisArray);
             } else {
-                uris = new String [] {uri};
+                uris = Collections.singletonList(uri);
             }
 
             //setup
@@ -97,7 +99,7 @@ public class PerfTest {
 
             ConnectionFactory factory = new ConnectionFactory();
             factory.setShutdownTimeout(0); // So we still shut down even with slow consumers
-            factory.setUri(uris[0]);
+            factory.setUri(uris.get(0));
             factory.setRequestedFrameMax(frameMax);
             factory.setRequestedHeartbeat(heartbeat);
 
