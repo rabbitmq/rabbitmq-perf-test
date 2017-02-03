@@ -122,14 +122,26 @@ public class MulticastSet {
             producerThread.start();
         }
 
+        int count = 1; // counting the threads
         for (int i = 0; i < producerThreads.length; i++) {
             producerThreads[i].join();
-            producerConnections[i].close();
+            if(count % params.getProducerChannelCount() == 0) {
+                // this is the end of a group of threads on the same connection,
+                // closing the connection
+                producerConnections[count / params.getProducerChannelCount() - 1].close();
+            }
+            count++;
         }
 
+        count = 1; // counting the threads
         for (int i = 0; i < consumerThreads.length; i++) {
             consumerThreads[i].join();
-            consumerConnections[i].close();
+            if(count % params.getConsumerChannelCount() == 0) {
+                // this is the end of a group of threads on the same connection,
+                // closing the connection
+                consumerConnections[count / params.getConsumerChannelCount() - 1].close();
+            }
+            count++;
         }
     }
 
