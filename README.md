@@ -11,7 +11,7 @@ and a Maven repositry (see below).
 
 ## Usage
 
-### Running performance tests
+### Running Performance Tests
 
 Assuming the current directory is the root directory of the binary distribution,
 to launch a performance test with 1 producer and 1 consumer:
@@ -20,7 +20,16 @@ to launch a performance test with 1 producer and 1 consumer:
 bin/runjava com.rabbitmq.perf.PerfTest
 ```
 
-### Using the HTML performance tools
+Use
+
+```
+bin/runjava com.rabbitmq.perf.PerfTest --help
+```
+
+to see all supported options.
+
+
+### Producing HTML Output of Runs
 
 The HTML Performance Tools are a set of tools that can help you run 
 automated benchmarks by wrapping around the `PerfTest` benchmarking 
