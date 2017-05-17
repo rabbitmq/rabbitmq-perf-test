@@ -65,7 +65,11 @@ public class MulticastParams {
     }
 
     public void setQueueNames(List<String> queueNames) {
-        this.queueNames = queueNames;
+        if(queueNames == null) {
+            this.queueNames = new ArrayList<String>();
+        } else {
+            this.queueNames = new ArrayList<String>(queueNames);
+        }
     }
 
     public void setRoutingKey(String routingKey) {
