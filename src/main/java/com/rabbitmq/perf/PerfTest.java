@@ -67,6 +67,10 @@ public class PerfTest {
             int channelPrefetch      = intArg(cmd, 'Q', 0);
             int consumerPrefetch     = intArg(cmd, 'q', 0);
             int minMsgSize           = intArg(cmd, 's', 0);
+            int msgSizeVariation     = intArg(cmd, 'v', 0);
+            if (msgSizeVariation >= minMsgSize) {
+                msgSizeVariation = 0;
+            }
             int timeLimit            = intArg(cmd, 'z', 0);
             int producerMsgCount     = intArg(cmd, 'C', 0);
             int consumerMsgCount     = intArg(cmd, 'D', 0);
@@ -74,6 +78,7 @@ public class PerfTest {
             int frameMax             = intArg(cmd, 'M', 0);
             int heartbeat            = intArg(cmd, 'b', 0);
             boolean predeclared      = cmd.hasOption('p');
+            boolean setProperties    = cmd.hasOption('P');
 
             String uri               = strArg(cmd, 'h', "amqp://localhost");
             String urisParameter     = strArg(cmd, 'H', null);
@@ -117,6 +122,7 @@ public class PerfTest {
             p.setFlags(                 flags);
             p.setMultiAckEvery(         multiAckEvery);
             p.setMinMsgSize(            minMsgSize);
+            p.setMsgSizeVariation(      msgSizeVariation);
             p.setPredeclared(           predeclared);
             p.setConsumerPrefetch(      consumerPrefetch);
             p.setChannelPrefetch(       channelPrefetch);
@@ -129,6 +135,7 @@ public class PerfTest {
             p.setRandomRoutingKey(      randomRoutingKey);
             p.setProducerRateLimit(     producerRateLimit);
             p.setTimeLimit(             timeLimit);
+            p.setSetProperties(         setProperties);
 
             MulticastSet set = new MulticastSet(stats, factory, p, testID, uris);
             set.run(true);
@@ -176,6 +183,7 @@ public class PerfTest {
         options.addOption(new Option("q", "qos",                    true, "consumer prefetch count"));
         options.addOption(new Option("Q", "globalQos",              true, "channel prefetch count"));
         options.addOption(new Option("s", "size",                   true, "message size in bytes"));
+        options.addOption(new Option("v", "variation",              true, "message size variation in bytes"));
         options.addOption(new Option("z", "time",                   true, "run duration in seconds (unlimited by default)"));
         options.addOption(new Option("C", "pmessages",              true, "producer message count"));
         options.addOption(new Option("D", "cmessages",              true, "consumer message count"));
@@ -185,6 +193,7 @@ public class PerfTest {
         options.addOption(new Option("M", "framemax",               true, "frame max"));
         options.addOption(new Option("b", "heartbeat",              true, "heartbeat interval"));
         options.addOption(new Option("p", "predeclared",            false,"allow use of predeclared objects"));
+        options.addOption(new Option("P", "properties",             false,"set message properties"));
         return options;
     }
 

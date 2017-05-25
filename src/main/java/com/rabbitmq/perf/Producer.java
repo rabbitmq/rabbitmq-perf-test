@@ -15,21 +15,25 @@
 
 package com.rabbitmq.perf;
 
-import com.rabbitmq.client.AMQP;
-import com.rabbitmq.client.Channel;
-import com.rabbitmq.client.ConfirmListener;
-import com.rabbitmq.client.MessageProperties;
-import com.rabbitmq.client.ReturnListener;
-
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
+import java.util.Random;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.Semaphore;
+
+import com.rabbitmq.client.AMQP;
+import com.rabbitmq.client.AMQP.BasicProperties;
+import com.rabbitmq.client.Channel;
+import com.rabbitmq.client.ConfirmListener;
+import com.rabbitmq.client.MessageProperties;
+import com.rabbitmq.client.ReturnListener;
 
 public class Producer extends ProducerConsumerBase implements Runnable, ReturnListener,
         ConfirmListener
@@ -44,8 +48,11 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
     private final int     txSize;
     private final int     msgLimit;
     private final long    timeLimit;
+    private final int     minMsgSize;
+    private final int     msgSizeVariation;
 
     private final Stats   stats;
+    private final boolean setProperties;
 
     private final byte[]  message;
 
@@ -53,10 +60,12 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
     private final SortedSet<Long> unconfirmedSet =
         Collections.synchronizedSortedSet(new TreeSet<Long>());
 
+    private final Random random = new Random();
+
     public Producer(Channel channel, String exchangeName, String id, boolean randomRoutingKey,
                     List<?> flags, int txSize,
-                    float rateLimit, int msgLimit, int minMsgSize, int timeLimit,
-                    long confirm, Stats stats)
+                    float rateLimit, int msgLimit, int minMsgSize, int msgSizeVariation, int timeLimit,
+                    long confirm, Stats stats, boolean setProperties)
         throws IOException {
 
         this.channel          = channel;
@@ -70,11 +79,14 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
         this.rateLimit        = rateLimit;
         this.msgLimit         = msgLimit;
         this.timeLimit        = 1000L * timeLimit;
-        this.message          = new byte[minMsgSize];
+        this.message          = new byte[minMsgSize + msgSizeVariation];
+        this.minMsgSize       = minMsgSize;
+        this.msgSizeVariation = msgSizeVariation;
         if (confirm > 0) {
             this.confirmPool  = new Semaphore((int)confirm);
         }
         this.stats        = stats;
+        this.setProperties    = setProperties;
     }
 
     public void handleReturn(int replyCode,
@@ -136,7 +148,8 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
                 if (confirmPool != null) {
                     confirmPool.acquire();
                 }
-                publish(createMessage(totalMsgCount));
+                long nano = System.nanoTime();
+                publish(createProperties(totalMsgCount, nano), createMessage(totalMsgCount, nano));
                 totalMsgCount++;
                 msgCount++;
 
@@ -154,22 +167,34 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
         }
     }
 
-    private void publish(byte[] msg)
+    private void publish(BasicProperties basicProperties, byte[] msg)
         throws IOException {
 
         unconfirmedSet.add(channel.getNextPublishSeqNo());
         channel.basicPublish(exchangeName, randomRoutingKey ? UUID.randomUUID().toString() : id,
                              mandatory, immediate,
-                             persistent ? MessageProperties.MINIMAL_PERSISTENT_BASIC : MessageProperties.MINIMAL_BASIC,
-                             msg);
+                             basicProperties, msg);
     }
 
-    private byte[] createMessage(int sequenceNumber)
+    private BasicProperties createProperties(int sequenceNumber, long nano) {
+        if (!setProperties) {
+            return persistent ? MessageProperties.MINIMAL_PERSISTENT_BASIC : MessageProperties.MINIMAL_BASIC;
+        }
+        return new BasicProperties.Builder()
+                .appId(this.getClass().getName())
+                .contentType("application/octet-stream")
+                .deliveryMode(persistent ? 2 : 1)
+                .messageId(Integer.toString(sequenceNumber))
+                .priority(0)
+                .timestamp(new Date(nano/1000000))
+                .build();
+    }
+
+    private byte[] createMessage(int sequenceNumber, long nano)
         throws IOException {
 
         ByteArrayOutputStream acc = new ByteArrayOutputStream();
         DataOutputStream d = new DataOutputStream(acc);
-        long nano = System.nanoTime();
         d.writeInt(sequenceNumber);
         d.writeLong(nano);
         d.flush();
@@ -177,10 +202,11 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
         byte[] m = acc.toByteArray();
         if (m.length <= message.length) {
             System.arraycopy(m, 0, message, 0, m.length);
-            return message;
+            return msgSizeVariation > 0
+                ? Arrays.copyOfRange(message, 0, minMsgSize - msgSizeVariation + random.nextInt(2 * msgSizeVariation + 1))
+                : message;
         } else {
             return m;
         }
     }
-
 }
