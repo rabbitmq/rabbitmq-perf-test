@@ -62,7 +62,7 @@ mvn clean package -P assemblies
 
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.rabbitmq/perf-test/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.rabbitmq/perf-test)
 
-[MVN Repository](http://mavenrepository.com/artifact/com.rabbitmq/perf-test)
+[perf-test search.maven.org](http://search.maven.org/#search%7Cga%7C1%7Ca%3A%22perf-test%22)
 
 ## Logging
 
