@@ -31,6 +31,7 @@ import org.apache.commons.cli.ParseException;
 
 import com.rabbitmq.client.ConnectionFactory;
 
+import static java.util.Arrays.asList;
 
 public class PerfTest {
 
@@ -73,6 +74,8 @@ public class PerfTest {
             List<?> flags            = lstArg(cmd, 'f');
             int frameMax             = intArg(cmd, 'M', 0);
             int heartbeat            = intArg(cmd, 'b', 0);
+            String bodyFiles         = strArg(cmd, 'B', null);
+            String bodyContentType   = strArg(cmd, 'T', null);
             boolean predeclared      = cmd.hasOption('p');
 
             String uri               = strArg(cmd, 'h', "amqp://localhost");
@@ -83,7 +86,7 @@ public class PerfTest {
                 for(int i = 0; i< urisArray.length; i++) {
                     urisArray[i] = urisArray[i].trim();
                 }
-                uris = Arrays.asList(urisArray);
+                uris = asList(urisArray);
             } else {
                 uris = Collections.singletonList(uri);
             }
@@ -124,11 +127,13 @@ public class PerfTest {
             p.setProducerChannelCount(  producerChannelCount);
             p.setProducerMsgCount(      producerMsgCount);
             p.setProducerTxSize(        producerTxSize);
-            p.setQueueNames(            Arrays.asList(queueNames.split(",")));
+            p.setQueueNames(            asList(queueNames.split(",")));
             p.setRoutingKey(            routingKey);
             p.setRandomRoutingKey(      randomRoutingKey);
             p.setProducerRateLimit(     producerRateLimit);
             p.setTimeLimit(             timeLimit);
+            p.setBodyFiles(             bodyFiles == null ? null : asList(bodyFiles.split(",")));
+            p.setBodyContentType(       bodyContentType);
 
             MulticastSet set = new MulticastSet(stats, factory, p, testID, uris);
             set.run(true);
@@ -185,6 +190,9 @@ public class PerfTest {
         options.addOption(new Option("M", "framemax",               true, "frame max"));
         options.addOption(new Option("b", "heartbeat",              true, "heartbeat interval"));
         options.addOption(new Option("p", "predeclared",            false,"allow use of predeclared objects"));
+        options.addOption(new Option("B", "body",                   true, "comma-separated list of files to use in message bodies"));
+        options.addOption(new Option("T", "bodyContenType",         true, "body content-type"));
+
         return options;
     }
 
@@ -205,7 +213,7 @@ public class PerfTest {
         if (vals == null) {
             vals = new String[] {};
         }
-        return Arrays.asList(vals);
+        return asList(vals);
     }
 
     private static class PrintlnStats extends Stats {

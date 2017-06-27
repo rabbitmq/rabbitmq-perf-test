@@ -54,6 +54,9 @@ public class MulticastParams {
     private boolean autoAck = true;
     private boolean autoDelete = false;
 
+    private List<String> bodyFiles = new ArrayList<String>();
+    private String bodyContentType = null;
+
     private boolean predeclared;
 
     public void setExchangeType(String exchangeType) {
@@ -201,6 +204,18 @@ public class MulticastParams {
         return randomRoutingKey;
     }
 
+    public void setBodyFiles(List<String> bodyFiles) {
+        if (bodyFiles == null) {
+            this.bodyFiles = new ArrayList<String>();
+        } else {
+            this.bodyFiles = new ArrayList<String>(bodyFiles);
+        }
+    }
+
+    public void setBodyContentType(String bodyContentType) {
+        this.bodyContentType = bodyContentType;
+    }
+
     public Producer createProducer(Connection connection, Stats stats, String id) throws IOException {
         Channel channel = connection.createChannel();
         if (producerTxSize > 0) channel.txSelect();
@@ -208,11 +223,17 @@ public class MulticastParams {
         if (!predeclared || !exchangeExists(connection, exchangeName)) {
             channel.exchangeDeclare(exchangeName, exchangeType);
         }
+        MessageBodyCreator messageBodyCreator = null;
+        if (bodyFiles.size() > 0) {
+            messageBodyCreator = new FromFilesMessageBodyCreator(bodyFiles, bodyContentType);
+        } else {
+            messageBodyCreator = new SequenceTimeMessageBodyCreator(minMsgSize);
+        }
         final Producer producer = new Producer(channel, exchangeName, id,
                                                randomRoutingKey, flags, producerTxSize,
                                                producerRateLimit, producerMsgCount,
-                                               minMsgSize, timeLimit,
-                                               confirm, stats);
+                                               timeLimit,
+                                               confirm, messageBodyCreator, stats);
         channel.addReturnListener(producer);
         channel.addConfirmListener(producer);
         return producer;

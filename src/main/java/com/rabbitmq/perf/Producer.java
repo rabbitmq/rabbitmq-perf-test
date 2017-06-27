@@ -47,7 +47,7 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
 
     private final Stats   stats;
 
-    private final byte[]  message;
+    private final MessageBodyCreator messageBodyCreator;
 
     private Semaphore confirmPool;
     private final SortedSet<Long> unconfirmedSet =
@@ -55,22 +55,22 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
 
     public Producer(Channel channel, String exchangeName, String id, boolean randomRoutingKey,
                     List<?> flags, int txSize,
-                    float rateLimit, int msgLimit, int minMsgSize, int timeLimit,
-                    long confirm, Stats stats)
+                    float rateLimit, int msgLimit, int timeLimit,
+                    long confirm, MessageBodyCreator messageBodyCreator, Stats stats)
         throws IOException {
 
-        this.channel          = channel;
-        this.exchangeName     = exchangeName;
-        this.id               = id;
-        this.randomRoutingKey = randomRoutingKey;
-        this.mandatory        = flags.contains("mandatory");
-        this.immediate        = flags.contains("immediate");
-        this.persistent       = flags.contains("persistent");
-        this.txSize           = txSize;
-        this.rateLimit        = rateLimit;
-        this.msgLimit         = msgLimit;
-        this.timeLimit        = 1000L * timeLimit;
-        this.message          = new byte[minMsgSize];
+        this.channel            = channel;
+        this.exchangeName       = exchangeName;
+        this.id                 = id;
+        this.randomRoutingKey   = randomRoutingKey;
+        this.mandatory          = flags.contains("mandatory");
+        this.immediate          = flags.contains("immediate");
+        this.persistent         = flags.contains("persistent");
+        this.txSize             = txSize;
+        this.rateLimit          = rateLimit;
+        this.msgLimit           = msgLimit;
+        this.timeLimit          = 1000L * timeLimit;
+        this.messageBodyCreator = messageBodyCreator;
         if (confirm > 0) {
             this.confirmPool  = new Semaphore((int)confirm);
         }
@@ -136,7 +136,7 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
                 if (confirmPool != null) {
                     confirmPool.acquire();
                 }
-                publish(createMessage(totalMsgCount));
+                publish(messageBodyCreator.create(totalMsgCount));
                 totalMsgCount++;
                 msgCount++;
 
@@ -154,33 +154,23 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
         }
     }
 
-    private void publish(byte[] msg)
+    private void publish(MessageBodyCreator.MessageBodyAndContentType messageBodyAndContentType)
         throws IOException {
+
+        AMQP.BasicProperties.Builder propertiesBuilder = new AMQP.BasicProperties.Builder();
+        if (persistent) {
+            propertiesBuilder.deliveryMode(2);
+        }
+
+        if (messageBodyAndContentType.getContentType() != null) {
+            propertiesBuilder.contentType(messageBodyAndContentType.getContentType());
+        }
 
         unconfirmedSet.add(channel.getNextPublishSeqNo());
         channel.basicPublish(exchangeName, randomRoutingKey ? UUID.randomUUID().toString() : id,
                              mandatory, immediate,
-                             persistent ? MessageProperties.MINIMAL_PERSISTENT_BASIC : MessageProperties.MINIMAL_BASIC,
-                             msg);
-    }
-
-    private byte[] createMessage(int sequenceNumber)
-        throws IOException {
-
-        ByteArrayOutputStream acc = new ByteArrayOutputStream();
-        DataOutputStream d = new DataOutputStream(acc);
-        long nano = System.nanoTime();
-        d.writeInt(sequenceNumber);
-        d.writeLong(nano);
-        d.flush();
-        acc.flush();
-        byte[] m = acc.toByteArray();
-        if (m.length <= message.length) {
-            System.arraycopy(m, 0, message, 0, m.length);
-            return message;
-        } else {
-            return m;
-        }
+                             propertiesBuilder.build(),
+                             messageBodyAndContentType.getBody());
     }
 
 }
