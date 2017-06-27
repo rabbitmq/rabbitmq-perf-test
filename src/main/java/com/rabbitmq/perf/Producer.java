@@ -18,11 +18,8 @@ package com.rabbitmq.perf;
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.ConfirmListener;
-import com.rabbitmq.client.MessageProperties;
 import com.rabbitmq.client.ReturnListener;
 
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
@@ -47,7 +44,7 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
 
     private final Stats   stats;
 
-    private final MessageBodyCreator messageBodyCreator;
+    private final MessageBodySource messageBodySource;
 
     private Semaphore confirmPool;
     private final SortedSet<Long> unconfirmedSet =
@@ -56,7 +53,7 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
     public Producer(Channel channel, String exchangeName, String id, boolean randomRoutingKey,
                     List<?> flags, int txSize,
                     float rateLimit, int msgLimit, int timeLimit,
-                    long confirm, MessageBodyCreator messageBodyCreator, Stats stats)
+                    long confirm, MessageBodySource messageBodySource, Stats stats)
         throws IOException {
 
         this.channel            = channel;
@@ -70,7 +67,7 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
         this.rateLimit          = rateLimit;
         this.msgLimit           = msgLimit;
         this.timeLimit          = 1000L * timeLimit;
-        this.messageBodyCreator = messageBodyCreator;
+        this.messageBodySource = messageBodySource;
         if (confirm > 0) {
             this.confirmPool  = new Semaphore((int)confirm);
         }
@@ -136,7 +133,7 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
                 if (confirmPool != null) {
                     confirmPool.acquire();
                 }
-                publish(messageBodyCreator.create(totalMsgCount));
+                publish(messageBodySource.create(totalMsgCount));
                 totalMsgCount++;
                 msgCount++;
 
@@ -154,7 +151,7 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
         }
     }
 
-    private void publish(MessageBodyCreator.MessageBodyAndContentType messageBodyAndContentType)
+    private void publish(MessageBodySource.MessageBodyAndContentType messageBodyAndContentType)
         throws IOException {
 
         AMQP.BasicProperties.Builder propertiesBuilder = new AMQP.BasicProperties.Builder();

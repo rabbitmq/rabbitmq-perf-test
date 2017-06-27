@@ -223,17 +223,17 @@ public class MulticastParams {
         if (!predeclared || !exchangeExists(connection, exchangeName)) {
             channel.exchangeDeclare(exchangeName, exchangeType);
         }
-        MessageBodyCreator messageBodyCreator = null;
+        MessageBodySource messageBodySource = null;
         if (bodyFiles.size() > 0) {
-            messageBodyCreator = new FromFilesMessageBodyCreator(bodyFiles, bodyContentType);
+            messageBodySource = new FromFilesMessageBodySource(bodyFiles, bodyContentType);
         } else {
-            messageBodyCreator = new SequenceTimeMessageBodyCreator(minMsgSize);
+            messageBodySource = new SequenceTimeMessageBodySource(minMsgSize);
         }
         final Producer producer = new Producer(channel, exchangeName, id,
                                                randomRoutingKey, flags, producerTxSize,
                                                producerRateLimit, producerMsgCount,
                                                timeLimit,
-                                               confirm, messageBodyCreator, stats);
+                                               confirm, messageBodySource, stats);
         channel.addReturnListener(producer);
         channel.addConfirmListener(producer);
         return producer;

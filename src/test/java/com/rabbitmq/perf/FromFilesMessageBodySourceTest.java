@@ -15,7 +15,6 @@
 
 package com.rabbitmq.perf;
 
-import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -23,7 +22,6 @@ import org.junit.rules.TemporaryFolder;
 import java.io.File;
 import java.io.FileWriter;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import static java.util.Arrays.asList;
@@ -33,7 +31,7 @@ import static org.junit.Assert.fail;
 /**
  *
  */
-public class FromFilesMessageBodyCreatorTest {
+public class FromFilesMessageBodySourceTest {
 
     @Rule
     public TemporaryFolder folder = new TemporaryFolder();
@@ -42,7 +40,7 @@ public class FromFilesMessageBodyCreatorTest {
         File file = folder.newFile("content.txt");
         String content = "dummy content";
         write(file, content);
-        MessageBodyCreator creator = new FromFilesMessageBodyCreator(asList(file.getAbsolutePath()));
+        MessageBodySource creator = new FromFilesMessageBodySource(asList(file.getAbsolutePath()));
         byte[] body1 = creator.create(1).getBody();
         byte[] body2 = creator.create(1).getBody();
         assertEquals(content, new String(body1, "UTF-8"));
@@ -58,7 +56,7 @@ public class FromFilesMessageBodyCreatorTest {
             files.add(file.getAbsolutePath());
         }
 
-        MessageBodyCreator creator = new FromFilesMessageBodyCreator(files);
+        MessageBodySource creator = new FromFilesMessageBodySource(files);
         byte[] body0 = creator.create(0).getBody();
         assertEquals("content0", new String(body0, "UTF-8"));
         byte[] body1 = creator.create(1).getBody();
@@ -72,7 +70,7 @@ public class FromFilesMessageBodyCreatorTest {
     @Test public void createFileDoesNotExist() throws Exception {
         File file = new File(folder.getRoot(), "dummy.txt");
         try {
-            new FromFilesMessageBodyCreator(asList(file.getAbsolutePath()));
+            new FromFilesMessageBodySource(asList(file.getAbsolutePath()));
             fail("File does not exist, exception should have thrown");
         } catch (IllegalArgumentException e) {
             // ok

@@ -18,9 +18,10 @@ package com.rabbitmq.perf;
 import java.io.IOException;
 
 /**
- *
+ * Sources produce message bodies and content type
+ * used by publishers.
  */
-public interface MessageBodyCreator {
+public interface MessageBodySource {
 
     MessageBodyAndContentType create(int sequenceNumber) throws IOException;
 
