@@ -251,7 +251,9 @@ public class MulticastParams {
     }
 
     public boolean shouldConfigureQueues() {
-        return consumerCount == 0 && !(queueNames.size() == 0);
+        // don't declare any queues when --predeclared is passed,
+        // otherwise unwanted server-named queues without consumers will pile up. MK.
+        return consumerCount == 0 && !predeclared && !(queueNames.size() == 0);
     }
 
     public List<String> configureQueues(Connection connection, String id) throws IOException {
