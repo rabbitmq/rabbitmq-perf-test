@@ -225,7 +225,7 @@ public class MulticastParams {
         }
         MessageBodySource messageBodySource = null;
         if (bodyFiles.size() > 0) {
-            messageBodySource = new FromFilesMessageBodySource(bodyFiles, bodyContentType);
+            messageBodySource = new LocalFilesMessageBodySource(bodyFiles, bodyContentType);
         } else {
             messageBodySource = new SequenceTimeMessageBodySource(minMsgSize);
         }

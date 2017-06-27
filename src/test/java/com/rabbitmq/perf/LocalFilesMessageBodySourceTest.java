@@ -31,7 +31,7 @@ import static org.junit.Assert.fail;
 /**
  *
  */
-public class FromFilesMessageBodySourceTest {
+public class LocalFilesMessageBodySourceTest {
 
     @Rule
     public TemporaryFolder folder = new TemporaryFolder();
@@ -40,7 +40,7 @@ public class FromFilesMessageBodySourceTest {
         File file = folder.newFile("content.txt");
         String content = "dummy content";
         write(file, content);
-        MessageBodySource creator = new FromFilesMessageBodySource(asList(file.getAbsolutePath()));
+        MessageBodySource creator = new LocalFilesMessageBodySource(asList(file.getAbsolutePath()));
         byte[] body1 = creator.create(1).getBody();
         byte[] body2 = creator.create(1).getBody();
         assertEquals(content, new String(body1, "UTF-8"));
@@ -56,7 +56,7 @@ public class FromFilesMessageBodySourceTest {
             files.add(file.getAbsolutePath());
         }
 
-        MessageBodySource creator = new FromFilesMessageBodySource(files);
+        MessageBodySource creator = new LocalFilesMessageBodySource(files);
         byte[] body0 = creator.create(0).getBody();
         assertEquals("content0", new String(body0, "UTF-8"));
         byte[] body1 = creator.create(1).getBody();
@@ -70,7 +70,7 @@ public class FromFilesMessageBodySourceTest {
     @Test public void createFileDoesNotExist() throws Exception {
         File file = new File(folder.getRoot(), "dummy.txt");
         try {
-            new FromFilesMessageBodySource(asList(file.getAbsolutePath()));
+            new LocalFilesMessageBodySource(asList(file.getAbsolutePath()));
             fail("File does not exist, exception should have thrown");
         } catch (IllegalArgumentException e) {
             // ok

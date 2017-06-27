@@ -22,13 +22,13 @@ import java.util.List;
 /**
  *
  */
-public class FromFilesMessageBodySource implements MessageBodySource {
+public class LocalFilesMessageBodySource implements MessageBodySource {
 
     private final List<byte[]> bodies;
 
     private final String contentType;
 
-    public FromFilesMessageBodySource(List<String> filesNames, String contentType) throws IOException {
+    public LocalFilesMessageBodySource(List<String> filesNames, String contentType) throws IOException {
         bodies = new ArrayList<byte[]>(filesNames.size());
         for (String fileName : filesNames) {
             File file = new File(fileName.trim());
@@ -51,7 +51,7 @@ public class FromFilesMessageBodySource implements MessageBodySource {
         this.contentType = contentType;
     }
 
-    public FromFilesMessageBodySource(List<String> filesNames) throws IOException {
+    public LocalFilesMessageBodySource(List<String> filesNames) throws IOException {
         this(filesNames, null);
     }
 
