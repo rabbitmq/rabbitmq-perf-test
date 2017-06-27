@@ -22,11 +22,11 @@ import java.io.IOException;
 /**
  *
  */
-public class SequenceTimeMessageBodySource implements MessageBodySource {
+public class TimeSequenceMessageBodySource implements MessageBodySource {
 
     private final byte[] message;
 
-    public SequenceTimeMessageBodySource(int minMsgSize) {
+    public TimeSequenceMessageBodySource(int minMsgSize) {
         this.message = new byte[minMsgSize];
     }
 

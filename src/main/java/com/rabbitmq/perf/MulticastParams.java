@@ -227,7 +227,7 @@ public class MulticastParams {
         if (bodyFiles.size() > 0) {
             messageBodySource = new LocalFilesMessageBodySource(bodyFiles, bodyContentType);
         } else {
-            messageBodySource = new SequenceTimeMessageBodySource(minMsgSize);
+            messageBodySource = new TimeSequenceMessageBodySource(minMsgSize);
         }
         final Producer producer = new Producer(channel, exchangeName, id,
                                                randomRoutingKey, flags, producerTxSize,
