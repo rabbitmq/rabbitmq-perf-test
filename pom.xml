@@ -4,7 +4,7 @@
 
   <groupId>com.rabbitmq</groupId>
   <artifactId>perf-test</artifactId>
-  <version>1.3.0-SNAPSHOT</version>
+  <version>1.3.0.RC1</version>
   <packaging>jar</packaging>
 
   <name>RabbitMQ Performance Testing Tool</name>
@@ -42,7 +42,7 @@
     <url>https://github.com/rabbitmq/rabbitmq-perf-test</url>
     <connection>scm:git:git://github.com/rabbitmq/rabbitmq-perf-test.git</connection>
     <developerConnection>scm:git:git@github.com:rabbitmq/rabbitmq-perf-test.git</developerConnection>
-    <tag>HEAD</tag>
+    <tag>v1.3.0.RC1</tag>
   </scm>
 
   <organization>
