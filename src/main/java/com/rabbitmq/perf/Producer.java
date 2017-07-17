@@ -36,7 +36,6 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
     private final String  id;
     private final boolean randomRoutingKey;
     private final boolean mandatory;
-    private final boolean immediate;
     private final boolean persistent;
     private final int     txSize;
     private final int     msgLimit;
@@ -61,7 +60,6 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
         this.id                 = id;
         this.randomRoutingKey   = randomRoutingKey;
         this.mandatory          = flags.contains("mandatory");
-        this.immediate          = flags.contains("immediate");
         this.persistent         = flags.contains("persistent");
         this.txSize             = txSize;
         this.rateLimit          = rateLimit;
@@ -165,7 +163,7 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
 
         unconfirmedSet.add(channel.getNextPublishSeqNo());
         channel.basicPublish(exchangeName, randomRoutingKey ? UUID.randomUUID().toString() : id,
-                             mandatory, immediate,
+                             mandatory, false,
                              propertiesBuilder.build(),
                              messageBodyAndContentType.getBody());
     }
