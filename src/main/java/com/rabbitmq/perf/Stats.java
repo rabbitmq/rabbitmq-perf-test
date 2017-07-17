@@ -15,6 +15,9 @@
 
 package com.rabbitmq.perf;
 
+import com.codahale.metrics.Histogram;
+import com.codahale.metrics.MetricRegistry;
+
 public abstract class Stats {
     protected final long    interval;
 
@@ -40,6 +43,8 @@ public abstract class Stats {
     protected long    elapsedInterval;
     protected long    elapsedTotal;
 
+    protected Histogram latency = new MetricRegistry().histogram("latency");;
+
     public Stats(long interval) {
         this.interval = interval;
         startTime = System.currentTimeMillis();
@@ -59,6 +64,7 @@ public abstract class Stats {
         maxLatency                = Long.MIN_VALUE;
         latencyCountInterval      = 0;
         cumulativeLatencyInterval = 0L;
+        latency                   = new MetricRegistry().histogram("latency");
     }
 
     private void report() {
@@ -99,6 +105,7 @@ public abstract class Stats {
         recvCountInterval++;
         recvCountTotal++;
         if (latency > 0) {
+            this.latency.update(latency);
             minLatency = Math.min(minLatency, latency);
             maxLatency = Math.max(maxLatency, latency);
             cumulativeLatencyInterval += latency;

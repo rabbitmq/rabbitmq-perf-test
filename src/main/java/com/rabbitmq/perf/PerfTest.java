@@ -36,6 +36,7 @@ import static java.util.Arrays.asList;
 public class PerfTest {
 
     public static void main(String[] args) {
+        args = new String[] {"-S"};
         Options options = getOptions();
         CommandLineParser parser = new GnuParser();
         try {
@@ -77,6 +78,7 @@ public class PerfTest {
             String bodyFiles         = strArg(cmd, 'B', null);
             String bodyContentType   = strArg(cmd, 'T', null);
             boolean predeclared      = cmd.hasOption('p');
+            boolean metrics          = cmd.hasOption('S');
 
             String uri               = strArg(cmd, 'h', "amqp://localhost");
             String urisParameter     = strArg(cmd, 'H', null);
@@ -98,7 +100,7 @@ public class PerfTest {
                 consumerCount > 0,
                 (flags.contains("mandatory") ||
                     flags.contains("immediate")),
-                confirm != -1);
+                confirm != -1, metrics);
 
             ConnectionFactory factory = new ConnectionFactory();
             factory.setShutdownTimeout(0); // So we still shut down even with slow consumers
@@ -192,6 +194,7 @@ public class PerfTest {
         options.addOption(new Option("p", "predeclared",            false,"allow use of predeclared objects"));
         options.addOption(new Option("B", "body",                   true, "comma-separated list of files to use in message bodies"));
         options.addOption(new Option("T", "bodyContenType",         true, "body content-type"));
+        options.addOption(new Option("S", "metrics",                false, "compute median and percentiles"));
 
         return options;
     }
@@ -221,18 +224,21 @@ public class PerfTest {
         private final boolean recvStatsEnabled;
         private final boolean returnStatsEnabled;
         private final boolean confirmStatsEnabled;
+        private final boolean showMedianPercentilesMetrics;
 
         private final String testID;
 
         public PrintlnStats(String testID, long interval,
             boolean sendStatsEnabled, boolean recvStatsEnabled,
-            boolean returnStatsEnabled, boolean confirmStatsEnabled) {
+            boolean returnStatsEnabled, boolean confirmStatsEnabled,
+            boolean showMedianPercentilesMetrics) {
             super(interval);
             this.sendStatsEnabled = sendStatsEnabled;
             this.recvStatsEnabled = recvStatsEnabled;
             this.returnStatsEnabled = returnStatsEnabled;
             this.confirmStatsEnabled = confirmStatsEnabled;
             this.testID = testID;
+            this.showMedianPercentilesMetrics = showMedianPercentilesMetrics;
         }
 
         @Override
@@ -247,12 +253,23 @@ public class PerfTest {
                     getRate("nacked",    nackCountInterval,    sendStatsEnabled && confirmStatsEnabled, elapsedInterval) +
                     getRate("received",  recvCountInterval,    recvStatsEnabled,                        elapsedInterval);
 
-            output += (latencyCountInterval > 0 ?
-                ", min/avg/max latency: " +
-                    minLatency/1000L + "/" +
-                    cumulativeLatencyInterval / (1000L * latencyCountInterval) + "/" +
-                    maxLatency/1000L + " microseconds" :
-                "");
+            if (!showMedianPercentilesMetrics) {
+                output += (latencyCountInterval > 0 ?
+                    ", min/avg/max latency: " +
+                        minLatency/1000L + "/" +
+                        cumulativeLatencyInterval / (1000L * latencyCountInterval) + "/" +
+                        maxLatency/1000L + " microseconds " :
+                    "");
+            } else {
+                output += (latencyCountInterval > 0 ?
+                    ", min/median/75th/95th/99th latency: "
+                        + latency.getSnapshot().getMin()/1000L + ", "
+                        + latency.getSnapshot().getMedian()/1000L + ", "
+                        + latency.getSnapshot().get75thPercentile()/1000L + ", "
+                        + latency.getSnapshot().get95thPercentile()/1000L + ", "
+                        + latency.getSnapshot().get99thPercentile()/1000L +  " microseconds" :
+                    "");
+            }
 
             System.out.println(output);
         }
