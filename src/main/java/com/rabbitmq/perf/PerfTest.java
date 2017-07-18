@@ -15,8 +15,8 @@
 
 package com.rabbitmq.perf;
 
+import java.io.*;
 import java.text.SimpleDateFormat;
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.List;
@@ -36,7 +36,6 @@ import static java.util.Arrays.asList;
 public class PerfTest {
 
     public static void main(String[] args) {
-        args = new String[] {"-S"};
         Options options = getOptions();
         CommandLineParser parser = new GnuParser();
         try {
@@ -82,6 +81,26 @@ public class PerfTest {
 
             String uri               = strArg(cmd, 'h', "amqp://localhost");
             String urisParameter     = strArg(cmd, 'H', null);
+            String outputFile        = strArg(cmd, 'o', null);
+
+            final PrintWriter output;
+            if (outputFile != null) {
+                File file = new File(outputFile);
+                if (file.exists()) {
+                    file.delete();
+                }
+                output = new PrintWriter(new BufferedWriter(new FileWriter(file)), true);
+                Runtime.getRuntime().addShutdownHook(new Thread() {
+
+                    @Override
+                    public void run() {
+                        output.close();
+                    }
+                });
+            } else {
+                output = null;
+            }
+
             List<String> uris = null;
             if(urisParameter != null) {
                 String [] urisArray = urisParameter.split(",");
@@ -100,7 +119,7 @@ public class PerfTest {
                 consumerCount > 0,
                 (flags.contains("mandatory") ||
                     flags.contains("immediate")),
-                confirm != -1, metrics);
+                confirm != -1, metrics, output);
 
             ConnectionFactory factory = new ConnectionFactory();
             factory.setShutdownTimeout(0); // So we still shut down even with slow consumers
@@ -195,6 +214,7 @@ public class PerfTest {
         options.addOption(new Option("B", "body",                   true, "comma-separated list of files to use in message bodies"));
         options.addOption(new Option("T", "bodyContenType",         true, "body content-type"));
         options.addOption(new Option("S", "metrics",                false, "compute median and percentiles"));
+        options.addOption(new Option("o", "outputFile",             true, "output file for timing results"));
 
         return options;
     }
@@ -227,11 +247,13 @@ public class PerfTest {
         private final boolean showMedianPercentilesMetrics;
 
         private final String testID;
+        private final PrintWriter out;
 
         public PrintlnStats(String testID, long interval,
             boolean sendStatsEnabled, boolean recvStatsEnabled,
             boolean returnStatsEnabled, boolean confirmStatsEnabled,
-            boolean showMedianPercentilesMetrics) {
+            boolean showMedianPercentilesMetrics,
+            PrintWriter out) {
             super(interval);
             this.sendStatsEnabled = sendStatsEnabled;
             this.recvStatsEnabled = recvStatsEnabled;
@@ -239,6 +261,13 @@ public class PerfTest {
             this.confirmStatsEnabled = confirmStatsEnabled;
             this.testID = testID;
             this.showMedianPercentilesMetrics = showMedianPercentilesMetrics;
+            this.out = out;
+            if (out != null) {
+                out.println("id,time (s),sent (msg/s),returned (msg/s),confirmed (msg/s), nacked (msg/s), received (msg/s),"
+                    + "min latency (microseconds),median latency (microseconds),75th p. latency (microseconds),95th p. latency (microseconds),"
+                    + "99th p. latency (microseconds)");
+            }
+
         }
 
         @Override
@@ -263,15 +292,32 @@ public class PerfTest {
             } else {
                 output += (latencyCountInterval > 0 ?
                     ", min/median/75th/95th/99th latency: "
-                        + latency.getSnapshot().getMin()/1000L + ", "
-                        + latency.getSnapshot().getMedian()/1000L + ", "
-                        + latency.getSnapshot().get75thPercentile()/1000L + ", "
-                        + latency.getSnapshot().get95thPercentile()/1000L + ", "
-                        + latency.getSnapshot().get99thPercentile()/1000L +  " microseconds" :
+                        + latency.getSnapshot().getMin()/1000L + "/"
+                        + (long) latency.getSnapshot().getMedian()/1000L + "/"
+                        + (long) latency.getSnapshot().get75thPercentile()/1000L + "/"
+                        + (long) latency.getSnapshot().get95thPercentile()/1000L + "/"
+                        + (long) latency.getSnapshot().get99thPercentile()/1000L +  " microseconds" :
                     "");
             }
 
             System.out.println(output);
+            if (out != null) {
+                out.println(testID + "," + String.format("%.3f", (now - startTime)/1000.0) + "," +
+                    rate(sendCountInterval, elapsedInterval, sendStatsEnabled)+ "," +
+                    rate(returnCountInterval, elapsedInterval, sendStatsEnabled && returnStatsEnabled)+ "," +
+                    rate(confirmCountInterval, elapsedInterval, sendStatsEnabled && confirmStatsEnabled)+ "," +
+                    rate(nackCountInterval, elapsedInterval, sendStatsEnabled && confirmStatsEnabled)+ "," +
+                    rate(recvCountInterval, elapsedInterval, recvStatsEnabled) + "," +
+                    (latencyCountInterval > 0 ?
+                        latency.getSnapshot().getMin()/1000L + "," +
+                        (long) latency.getSnapshot().getMedian()/1000L + "," +
+                        (long) latency.getSnapshot().get75thPercentile()/1000L + "," +
+                        (long) latency.getSnapshot().get95thPercentile()/1000L + "," +
+                        (long) latency.getSnapshot().get99thPercentile()/1000L
+                        : ",,,,")
+                );
+            }
+
         }
 
         private String getRate(String descr, long count, boolean display,
@@ -291,7 +337,7 @@ public class PerfTest {
 
             long elapsed = now - startTime;
             if (elapsed > 0) {
-                System.out.println("id: " + testID + ", recving rate avg: " +
+                System.out.println("id: " + testID + ", receiving rate avg: " +
                     formatRate(recvCountTotal * 1000.0 / elapsed) +
                     " msg/s");
             }
@@ -302,6 +348,14 @@ public class PerfTest {
             else if (rate < 1)  return String.format("%1.2f", rate);
             else if (rate < 10) return String.format("%1.1f", rate);
             else                return String.format("%d", (long)rate);
+        }
+
+        private static String rate(long count, long elapsed, boolean display) {
+            if (display) {
+                return formatRate(1000.0 * count / elapsed);
+            } else {
+                return "";
+            }
         }
     }
 }
