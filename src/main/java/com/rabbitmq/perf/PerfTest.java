@@ -264,8 +264,8 @@ public class PerfTest {
             this.out = out;
             if (out != null) {
                 out.println("id,time (s),sent (msg/s),returned (msg/s),confirmed (msg/s), nacked (msg/s), received (msg/s),"
-                    + "min latency (microseconds),median latency (microseconds),75th latency (microseconds),95th latency (microseconds),"
-                    + "99th latency (microseconds)");
+                    + "min latency (microseconds),median latency (microseconds),75th p. latency (microseconds),95th p. latency (microseconds),"
+                    + "99th p. latency (microseconds)");
             }
 
         }
@@ -337,7 +337,7 @@ public class PerfTest {
 
             long elapsed = now - startTime;
             if (elapsed > 0) {
-                System.out.println("id: " + testID + ", recving rate avg: " +
+                System.out.println("id: " + testID + ", receiving rate avg: " +
                     formatRate(recvCountTotal * 1000.0 / elapsed) +
                     " msg/s");
             }
