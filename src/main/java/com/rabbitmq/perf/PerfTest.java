@@ -77,7 +77,7 @@ public class PerfTest {
             String bodyFiles         = strArg(cmd, 'B', null);
             String bodyContentType   = strArg(cmd, 'T', null);
             boolean predeclared      = cmd.hasOption('p');
-            boolean metrics          = cmd.hasOption('S');
+            boolean legacyMetrics    = cmd.hasOption('l');
 
             String uri               = strArg(cmd, 'h', "amqp://localhost");
             String urisParameter     = strArg(cmd, 'H', null);
@@ -119,7 +119,7 @@ public class PerfTest {
                 consumerCount > 0,
                 (flags.contains("mandatory") ||
                     flags.contains("immediate")),
-                confirm != -1, metrics, output);
+                confirm != -1, legacyMetrics, output);
 
             ConnectionFactory factory = new ConnectionFactory();
             factory.setShutdownTimeout(0); // So we still shut down even with slow consumers
@@ -213,7 +213,7 @@ public class PerfTest {
         options.addOption(new Option("p", "predeclared",            false,"allow use of predeclared objects"));
         options.addOption(new Option("B", "body",                   true, "comma-separated list of files to use in message bodies"));
         options.addOption(new Option("T", "bodyContenType",         true, "body content-type"));
-        options.addOption(new Option("S", "metrics",                false, "compute median and percentiles"));
+        options.addOption(new Option("l", "legacyMetrics",           false, "display legacy metrics (min/avg/max latency)"));
         options.addOption(new Option("o", "outputFile",             true, "output file for timing results"));
 
         return options;
@@ -244,7 +244,7 @@ public class PerfTest {
         private final boolean recvStatsEnabled;
         private final boolean returnStatsEnabled;
         private final boolean confirmStatsEnabled;
-        private final boolean showMedianPercentilesMetrics;
+        private final boolean legacyMetrics;
 
         private final String testID;
         private final PrintWriter out;
@@ -252,7 +252,7 @@ public class PerfTest {
         public PrintlnStats(String testID, long interval,
             boolean sendStatsEnabled, boolean recvStatsEnabled,
             boolean returnStatsEnabled, boolean confirmStatsEnabled,
-            boolean showMedianPercentilesMetrics,
+            boolean legacyMetrics,
             PrintWriter out) {
             super(interval);
             this.sendStatsEnabled = sendStatsEnabled;
@@ -260,7 +260,7 @@ public class PerfTest {
             this.returnStatsEnabled = returnStatsEnabled;
             this.confirmStatsEnabled = confirmStatsEnabled;
             this.testID = testID;
-            this.showMedianPercentilesMetrics = showMedianPercentilesMetrics;
+            this.legacyMetrics = legacyMetrics;
             this.out = out;
             if (out != null) {
                 out.println("id,time (s),sent (msg/s),returned (msg/s),confirmed (msg/s), nacked (msg/s), received (msg/s),"
@@ -282,7 +282,7 @@ public class PerfTest {
                     getRate("nacked",    nackCountInterval,    sendStatsEnabled && confirmStatsEnabled, elapsedInterval) +
                     getRate("received",  recvCountInterval,    recvStatsEnabled,                        elapsedInterval);
 
-            if (!showMedianPercentilesMetrics) {
+            if (legacyMetrics) {
                 output += (latencyCountInterval > 0 ?
                     ", min/avg/max latency: " +
                         minLatency/1000L + "/" +
