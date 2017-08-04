@@ -7,7 +7,7 @@ The client is maintained by the [RabbitMQ team at Pivotal](http://github.com/rab
 
 This is a standalone tool that is distributed in binary form using 
 [GitHub releases](https://github.com/rabbitmq/rabbitmq-perf-test/releases)
-and a Maven repositry (see below).
+and as a JAR file on Maven Central (see below).
 
 ## Usage
 
