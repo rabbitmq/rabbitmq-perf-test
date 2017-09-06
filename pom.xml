@@ -62,7 +62,6 @@
 
     <!-- to sign artifacts when releasing -->
     <gpg.keyname>6026DFCA</gpg.keyname>
-    <nexus-staging-maven-plugin.version>1.6.4</nexus-staging-maven-plugin.version>
 
     <maven.compiler.plugin.version>3.5.1</maven.compiler.plugin.version>
     <versions.maven.plugin.version>2.3</versions.maven.plugin.version>
