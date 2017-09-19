@@ -54,7 +54,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
-    <rabbitmq.version>4.1.1</rabbitmq.version>
+    <rabbitmq.version>4.2.1</rabbitmq.version>
     <commons-cli.version>1.1</commons-cli.version>
     <logback.version>1.1.8</logback.version>
     <jetty.version>8.1.19.v20160209</jetty.version>
