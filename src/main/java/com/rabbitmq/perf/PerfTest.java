@@ -16,10 +16,12 @@
 package com.rabbitmq.perf;
 
 import java.io.*;
+import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.List;
+import java.util.Properties;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -30,10 +32,16 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
 import com.rabbitmq.client.ConnectionFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.net.ssl.SSLContext;
 
 import static java.util.Arrays.asList;
 
 public class PerfTest {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(PerfTest.class);
 
     public static void main(String[] args) {
         Options options = getOptions();
@@ -121,7 +129,12 @@ public class PerfTest {
                     flags.contains("immediate")),
                 confirm != -1, legacyMetrics, output);
 
+            SSLContext sslContext = getSslContextIfNecessary(cmd, System.getProperties());
+
             ConnectionFactory factory = new ConnectionFactory();
+            if (sslContext != null) {
+                factory.useSslProtocol(sslContext);
+            }
             factory.setShutdownTimeout(0); // So we still shut down even with slow consumers
             factory.setUri(uris.get(0));
             factory.setRequestedFrameMax(frameMax);
@@ -171,6 +184,26 @@ public class PerfTest {
         }
     }
 
+    private static SSLContext getSslContextIfNecessary(CommandLine cmd, Properties systemProperties) throws NoSuchAlgorithmException {
+        SSLContext sslContext = null;
+        if (cmd.hasOption("useDefaultSslContext")) {
+            LOGGER.info("Using default SSL context as per command line option");
+            sslContext = SSLContext.getDefault();
+        }
+        for (String propertyName : systemProperties.stringPropertyNames()) {
+            if (propertyName != null && isPropertyTlsRelated(propertyName)) {
+                LOGGER.info("TLS related system properties detected, using default SSL context");
+                sslContext = SSLContext.getDefault();
+                break;
+            }
+        }
+        return sslContext;
+    }
+
+    private static boolean isPropertyTlsRelated(String propertyName) {
+        return propertyName.startsWith("javax.net.ssl") || propertyName.startsWith("jdk.tls");
+    }
+
     private static void usage(Options options) {
         HelpFormatter formatter = new HelpFormatter();
         formatter.printHelp("<program>", options);
@@ -215,7 +248,7 @@ public class PerfTest {
         options.addOption(new Option("T", "bodyContenType",         true, "body content-type"));
         options.addOption(new Option("l", "legacyMetrics",           false, "display legacy metrics (min/avg/max latency)"));
         options.addOption(new Option("o", "outputFile",             true, "output file for timing results"));
-
+        options.addOption(new Option("useDefaultSslContext", "useDefaultSslContext",       false,"use JVM default SSL context"));
         return options;
     }
 
