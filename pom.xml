@@ -71,6 +71,8 @@
     <maven.javadoc.plugin.version>3.0.0-M1</maven.javadoc.plugin.version>
     <maven.gpg.plugin.version>1.6</maven.gpg.plugin.version>
     <maven.assembly.plugin.version>3.1.0</maven.assembly.plugin.version>
+    <maven.install.plugin.version>2.5.2</maven.install.plugin.version>
+    <checksum.maven.plugin.version>1.6</checksum.maven.plugin.version>
   </properties>
 
   <dependencies>
@@ -164,6 +166,15 @@
         </executions>
       </plugin>
 
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-install-plugin</artifactId>
+        <version>${maven.install.plugin.version}</version>
+        <configuration>
+            <createChecksum>true</createChecksum>
+        </configuration>
+      </plugin>
+
     </plugins>
   </build>
 
@@ -181,58 +192,6 @@
       <properties>
         <javadoc.opts>-Xdoclint:none</javadoc.opts>
       </properties>
-    </profile>
-
-    <profile>
-      <!--
-      The "ossrh-release" Maven profile is used to push release artifacts to a
-      Sonatype staging repository.
-      -->
-      <id>ossrh-release</id>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-javadoc-plugin</artifactId>
-            <version>${maven.javadoc.plugin.version}</version>
-            <configuration>
-              <additionalparam>${javadoc.opts}</additionalparam>
-              <quiet>true</quiet>
-            </configuration>
-            <executions>
-              <execution>
-                <goals>
-                  <goal>jar</goal>
-                </goals>
-              </execution>
-            </executions>
-          </plugin>
-
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-gpg-plugin</artifactId>
-            <version>${maven.gpg.plugin.version}</version>
-            <executions>
-              <execution>
-                <id>sign-artifacts</id>
-                <phase>package</phase>
-                <goals>
-                  <goal>sign</goal>
-                </goals>
-                <configuration>
-                  <keyname>${gpg.keyname}</keyname>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
-      <distributionManagement>
-        <snapshotRepository>
-          <id>ossrh</id>
-          <url>https://oss.sonatype.org/content/repositories/snapshots</url>
-        </snapshotRepository>
-      </distributionManagement>
     </profile>
 
     <!--
@@ -277,6 +236,7 @@
               </execution>
             </executions>
           </plugin>
+
         </plugins>
       </build>
       <distributionManagement>
@@ -330,6 +290,7 @@
               </execution>
             </executions>
           </plugin>
+
         </plugins>
       </build>
       <distributionManagement>
@@ -379,6 +340,51 @@
               </execution>
             </executions>
           </plugin>
+
+          <plugin>
+            <groupId>net.nicoulaj.maven.plugins</groupId>
+            <artifactId>checksum-maven-plugin</artifactId>
+            <version>${checksum.maven.plugin.version}</version>
+            <executions>
+              <execution>
+                <id>sign-artifacts</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>files</goal>
+                </goals>
+                <configuration>
+                  <fileSets>
+                    <fileSet>
+                      <directory>${project.build.directory}</directory>
+                      <includes>
+                        <include>*.tar.gz</include>
+                        <include>*.zip</include>
+                      </includes>
+                    </fileSet>
+                  </fileSets>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-gpg-plugin</artifactId>
+            <version>${maven.gpg.plugin.version}</version>
+            <executions>
+              <execution>
+                <id>sign-artifacts</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>sign</goal>
+                </goals>
+                <configuration>
+                  <keyname>${gpg.keyname}</keyname>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+
         </plugins>
       </build>
     </profile>
