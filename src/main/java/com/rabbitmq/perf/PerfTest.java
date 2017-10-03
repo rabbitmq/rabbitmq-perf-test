@@ -43,6 +43,7 @@ public class PerfTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(PerfTest.class);
 
     public static void main(String[] args) {
+        args = new String[] {"-ad", "dummy"};
         Options options = getOptions();
         CommandLineParser parser = new GnuParser();
         try {
@@ -84,6 +85,7 @@ public class PerfTest {
             String bodyFiles         = strArg(cmd, 'B', null);
             String bodyContentType   = strArg(cmd, 'T', null);
             boolean predeclared      = cmd.hasOption('p');
+            boolean autoDelete       = boolArg(cmd, "ad", true);
 
             String uri               = strArg(cmd, 'h', "amqp://localhost");
             String urisParameter     = strArg(cmd, 'H', null);
@@ -120,7 +122,7 @@ public class PerfTest {
 
             MulticastParams p = new MulticastParams();
             p.setAutoAck(               autoAck);
-            p.setAutoDelete(            true);
+            p.setAutoDelete(            autoDelete);
             p.setConfirm(               confirm);
             p.setConsumerCount(         consumerCount);
             p.setConsumerChannelCount(  consumerChannelCount);
@@ -224,6 +226,7 @@ public class PerfTest {
         options.addOption(new Option("p", "predeclared",            false,"allow use of predeclared objects"));
         options.addOption(new Option("B", "body",                   true, "comma-separated list of files to use in message bodies"));
         options.addOption(new Option("T", "bodyContenType",         true, "body content-type"));
+        options.addOption(new Option("ad", "autoDelete", true, "should the queue be auto-deleted, default is true"));
         options.addOption(new Option("useDefaultSslContext", "useDefaultSslContext",       false,"use JVM default SSL context"));
         return options;
     }
@@ -238,6 +241,10 @@ public class PerfTest {
 
     private static float floatArg(CommandLine cmd, char opt, float def) {
         return Float.parseFloat(cmd.getOptionValue(opt, Float.toString(def)));
+    }
+
+    private static boolean boolArg(CommandLine cmd, String opt, boolean def) {
+        return Boolean.parseBoolean(cmd.getOptionValue(opt, Boolean.toString(def)));
     }
 
     private static List<?> lstArg(CommandLine cmd, char opt) {
