@@ -62,6 +62,8 @@ public class MulticastParams {
 
     private Map<String, Object> queueArguments;
 
+    private int consumerLatencyInMicroseconds;
+
     public void setExchangeType(String exchangeType) {
         this.exchangeType = exchangeType;
     }
@@ -175,6 +177,10 @@ public class MulticastParams {
         this.queueArguments = queueArguments;
     }
 
+    public void setConsumerLatencyInMicroseconds(int consumerLatencyInMicroseconds) {
+        this.consumerLatencyInMicroseconds = consumerLatencyInMicroseconds;
+    }
+
     public int getConsumerCount() {
         return consumerCount;
     }
@@ -254,7 +260,7 @@ public class MulticastParams {
         if (channelPrefetch > 0) channel.basicQos(channelPrefetch, true);
         return new Consumer(channel, id, generatedQueueNames,
                                          consumerTxSize, autoAck, multiAckEvery,
-                                         stats, consumerRateLimit, consumerMsgCount, timeLimit);
+                                         stats, consumerRateLimit, consumerMsgCount, timeLimit, consumerLatencyInMicroseconds);
     }
 
     public boolean shouldConfigureQueues() {

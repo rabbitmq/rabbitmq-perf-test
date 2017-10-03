@@ -88,6 +88,7 @@ public class PerfTest {
             boolean predeclared      = cmd.hasOption('p');
             boolean autoDelete       = boolArg(cmd, "ad", true);
             String queueArgs         = strArg(cmd, "qa", null);
+            int consumerLatencyInMicroseconds = intArg(cmd, 'L', 0);
 
             String uri               = strArg(cmd, 'h', "amqp://localhost");
             String urisParameter     = strArg(cmd, 'H', null);
@@ -151,6 +152,7 @@ public class PerfTest {
             p.setBodyFiles(             bodyFiles == null ? null : asList(bodyFiles.split(",")));
             p.setBodyContentType(       bodyContentType);
             p.setQueueArguments(queueArguments(queueArgs));
+            p.setConsumerLatencyInMicroseconds(consumerLatencyInMicroseconds);
 
             MulticastSet set = new MulticastSet(stats, factory, p, testID, uris);
             set.run(true);
@@ -231,6 +233,7 @@ public class PerfTest {
         options.addOption(new Option("T", "bodyContenType",         true, "body content-type"));
         options.addOption(new Option("ad", "autoDelete", true, "should the queue be auto-deleted, default is true"));
         options.addOption(new Option("qa", "queueArgs", true, "queue arguments as key/pair values, separated by commas"));
+        options.addOption(new Option("L", "consumerLatency", true, "consumer latency in microseconds"));
         options.addOption(new Option("useDefaultSslContext", "useDefaultSslContext",       false,"use JVM default SSL context"));
         return options;
     }
