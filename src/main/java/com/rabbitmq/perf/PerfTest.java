@@ -19,7 +19,9 @@ import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 import org.apache.commons.cli.CommandLine;
@@ -43,7 +45,6 @@ public class PerfTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(PerfTest.class);
 
     public static void main(String[] args) {
-        args = new String[] {"-ad", "dummy"};
         Options options = getOptions();
         CommandLineParser parser = new GnuParser();
         try {
@@ -86,6 +87,7 @@ public class PerfTest {
             String bodyContentType   = strArg(cmd, 'T', null);
             boolean predeclared      = cmd.hasOption('p');
             boolean autoDelete       = boolArg(cmd, "ad", true);
+            String queueArgs         = strArg(cmd, "qa", null);
 
             String uri               = strArg(cmd, 'h', "amqp://localhost");
             String urisParameter     = strArg(cmd, 'H', null);
@@ -148,6 +150,7 @@ public class PerfTest {
             p.setTimeLimit(             timeLimit);
             p.setBodyFiles(             bodyFiles == null ? null : asList(bodyFiles.split(",")));
             p.setBodyContentType(       bodyContentType);
+            p.setQueueArguments(queueArguments(queueArgs));
 
             MulticastSet set = new MulticastSet(stats, factory, p, testID, uris);
             set.run(true);
@@ -227,11 +230,16 @@ public class PerfTest {
         options.addOption(new Option("B", "body",                   true, "comma-separated list of files to use in message bodies"));
         options.addOption(new Option("T", "bodyContenType",         true, "body content-type"));
         options.addOption(new Option("ad", "autoDelete", true, "should the queue be auto-deleted, default is true"));
+        options.addOption(new Option("qa", "queueArgs", true, "queue arguments as key/pair values, separated by commas"));
         options.addOption(new Option("useDefaultSslContext", "useDefaultSslContext",       false,"use JVM default SSL context"));
         return options;
     }
 
     private static String strArg(CommandLine cmd, char opt, String def) {
+        return cmd.getOptionValue(opt, def);
+    }
+
+    private static String strArg(CommandLine cmd, String opt, String def) {
         return cmd.getOptionValue(opt, def);
     }
 
@@ -253,6 +261,22 @@ public class PerfTest {
             vals = new String[] {};
         }
         return asList(vals);
+    }
+
+    private static Map<String, Object> queueArguments(String arg) {
+        if (arg == null || arg.trim().isEmpty()) {
+            return null;
+        }
+        Map<String, Object> queueArguments = new HashMap<String, Object>();
+        for (String entry : arg.split(",")) {
+            String [] keyValue = entry.split("=");
+            try {
+                queueArguments.put(keyValue[0], Long.parseLong(keyValue[1]));
+            } catch(NumberFormatException e) {
+                queueArguments.put(keyValue[0], keyValue[1]);
+            }
+        }
+        return queueArguments;
     }
 
     private static class PrintlnStats extends Stats {

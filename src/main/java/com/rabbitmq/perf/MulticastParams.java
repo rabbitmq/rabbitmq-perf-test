@@ -23,6 +23,7 @@ import com.rabbitmq.client.ShutdownSignalException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class MulticastParams {
     private long confirm = -1;
@@ -58,6 +59,8 @@ public class MulticastParams {
     private String bodyContentType = null;
 
     private boolean predeclared;
+
+    private Map<String, Object> queueArguments;
 
     public void setExchangeType(String exchangeType) {
         this.exchangeType = exchangeType;
@@ -168,6 +171,10 @@ public class MulticastParams {
         this.predeclared = predeclared;
     }
 
+    public void setQueueArguments(Map<String, Object> queueArguments) {
+        this.queueArguments = queueArguments;
+    }
+
     public int getConsumerCount() {
         return consumerCount;
     }
@@ -272,7 +279,7 @@ public class MulticastParams {
                                      flags.contains("persistent"),
                                      false,
                                      autoDelete,
-                                     null).getQueue();
+                                     queueArguments).getQueue();
             }
             generatedQueueNames.add(qName);
             channel.queueBind(qName, exchangeName, id);
