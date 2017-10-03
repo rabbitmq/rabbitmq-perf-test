@@ -20,7 +20,9 @@ import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 import org.apache.commons.cli.CommandLine;
@@ -86,6 +88,9 @@ public class PerfTest {
             String bodyContentType   = strArg(cmd, 'T', null);
             boolean predeclared      = cmd.hasOption('p');
             boolean legacyMetrics    = cmd.hasOption('l');
+            boolean autoDelete       = boolArg(cmd, "ad", true);
+            String queueArgs         = strArg(cmd, "qa", null);
+            int consumerLatencyInMicroseconds = intArg(cmd, 'L', 0);
 
             String uri               = strArg(cmd, 'h', "amqp://localhost");
             String urisParameter     = strArg(cmd, 'H', null);
@@ -142,7 +147,7 @@ public class PerfTest {
 
             MulticastParams p = new MulticastParams();
             p.setAutoAck(               autoAck);
-            p.setAutoDelete(            true);
+            p.setAutoDelete(            autoDelete);
             p.setConfirm(               confirm);
             p.setConsumerCount(         consumerCount);
             p.setConsumerChannelCount(  consumerChannelCount);
@@ -168,6 +173,8 @@ public class PerfTest {
             p.setTimeLimit(             timeLimit);
             p.setBodyFiles(             bodyFiles == null ? null : asList(bodyFiles.split(",")));
             p.setBodyContentType(       bodyContentType);
+            p.setQueueArguments(queueArguments(queueArgs));
+            p.setConsumerLatencyInMicroseconds(consumerLatencyInMicroseconds);
 
             MulticastSet set = new MulticastSet(stats, factory, p, testID, uris);
             set.run(true);
@@ -248,11 +255,18 @@ public class PerfTest {
         options.addOption(new Option("T", "bodyContenType",         true, "body content-type"));
         options.addOption(new Option("l", "legacyMetrics",           false, "display legacy metrics (min/avg/max latency)"));
         options.addOption(new Option("o", "outputFile",             true, "output file for timing results"));
+        options.addOption(new Option("ad", "autoDelete", true, "should the queue be auto-deleted, default is true"));
+        options.addOption(new Option("qa", "queueArgs", true, "queue arguments as key/pair values, separated by commas"));
+        options.addOption(new Option("L", "consumerLatency", true, "consumer latency in microseconds"));
         options.addOption(new Option("useDefaultSslContext", "useDefaultSslContext",       false,"use JVM default SSL context"));
         return options;
     }
 
     private static String strArg(CommandLine cmd, char opt, String def) {
+        return cmd.getOptionValue(opt, def);
+    }
+
+    private static String strArg(CommandLine cmd, String opt, String def) {
         return cmd.getOptionValue(opt, def);
     }
 
@@ -264,12 +278,32 @@ public class PerfTest {
         return Float.parseFloat(cmd.getOptionValue(opt, Float.toString(def)));
     }
 
+    private static boolean boolArg(CommandLine cmd, String opt, boolean def) {
+        return Boolean.parseBoolean(cmd.getOptionValue(opt, Boolean.toString(def)));
+    }
+
     private static List<?> lstArg(CommandLine cmd, char opt) {
         String[] vals = cmd.getOptionValues('f');
         if (vals == null) {
             vals = new String[] {};
         }
         return asList(vals);
+    }
+
+    private static Map<String, Object> queueArguments(String arg) {
+        if (arg == null || arg.trim().isEmpty()) {
+            return null;
+        }
+        Map<String, Object> queueArguments = new HashMap<String, Object>();
+        for (String entry : arg.split(",")) {
+            String [] keyValue = entry.split("=");
+            try {
+                queueArguments.put(keyValue[0], Long.parseLong(keyValue[1]));
+            } catch(NumberFormatException e) {
+                queueArguments.put(keyValue[0], keyValue[1]);
+            }
+        }
+        return queueArguments;
     }
 
     private static class PrintlnStats extends Stats {

@@ -45,10 +45,12 @@ public class Consumer extends ProducerConsumerBase implements Runnable {
     private final long                  timeLimit;
     private final CountDownLatch        latch = new CountDownLatch(1);
     private final Map<String, String>   consumerTagBranchMap = Collections.synchronizedMap(new HashMap<String, String>());
+    private final ConsumerLatency       consumerLatency;
 
     public Consumer(Channel channel, String id,
                     List<String> queueNames, int txSize, boolean autoAck,
-                    int multiAckEvery, Stats stats, float rateLimit, int msgLimit, int timeLimit) {
+                    int multiAckEvery, Stats stats, float rateLimit, int msgLimit, int timeLimit,
+                    int consumerLatencyInMicroSeconds) {
 
         this.channel       = channel;
         this.id            = id;
@@ -60,6 +62,13 @@ public class Consumer extends ProducerConsumerBase implements Runnable {
         this.stats         = stats;
         this.msgLimit      = msgLimit;
         this.timeLimit     = 1000L * timeLimit;
+        if (consumerLatencyInMicroSeconds <= 0) {
+            this.consumerLatency = new NoWaitConsumerLatency();
+        } else if (consumerLatencyInMicroSeconds >= 1000) {
+            this.consumerLatency = new ThreadSleepConsumerLatency(consumerLatencyInMicroSeconds / 1000);
+        } else {
+            this.consumerLatency = new BusyWaitConsumerLatency(consumerLatencyInMicroSeconds * 1000);
+        }
     }
 
     public void run() {
@@ -121,7 +130,10 @@ public class Consumer extends ProducerConsumerBase implements Runnable {
                 now = System.currentTimeMillis();
 
                 stats.handleRecv(id.equals(envelope.getRoutingKey()) ? (nano - msgNano) : 0L);
-                delay(now);
+                if (rateLimit > 0.0f) {
+                    delay(now);
+                }
+                consumerLatency.simulateLatency();
             }
             if (msgLimit != 0 && msgCount >= msgLimit) { // NB: not quite the inverse of above
                 latch.countDown();
@@ -143,6 +155,55 @@ public class Consumer extends ProducerConsumerBase implements Runnable {
             } else {
                 System.out.printf("Could not find queue for consumer tag: %s", consumerTag);
             }
+        }
+    }
+
+    private interface ConsumerLatency {
+
+        void simulateLatency();
+
+    }
+
+    private static class NoWaitConsumerLatency implements ConsumerLatency {
+
+        @Override
+        public void simulateLatency() {
+            // NO OP
+        }
+
+    }
+
+    private static class ThreadSleepConsumerLatency implements ConsumerLatency {
+
+        private final int waitTime;
+
+        private ThreadSleepConsumerLatency(int waitTime) {
+            this.waitTime = waitTime;
+        }
+
+        @Override
+        public void simulateLatency() {
+            try {
+                Thread.sleep(waitTime);
+            } catch (InterruptedException e) {
+                throw new RuntimeException("Exception while simulating latency", e);
+            }
+        }
+    }
+
+    // from https://stackoverflow.com/a/11499351
+    private static class BusyWaitConsumerLatency implements ConsumerLatency {
+
+        private final long delay;
+
+        private BusyWaitConsumerLatency(long delay) {
+            this.delay = delay;
+        }
+
+        @Override
+        public void simulateLatency() {
+            long start = System.nanoTime();
+            while(System.nanoTime() - start < delay);
         }
     }
 }

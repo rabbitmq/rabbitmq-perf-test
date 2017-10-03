@@ -55,8 +55,10 @@ Files are then in the `target` directory.
 To build the JAR file, source and binary distributions:
 
 ```
-mvn clean package -P assemblies
+mvn clean package -P assemblies -Dgpg.skip=true
 ```
+
+Files are then in the `target` directory.
 
 ## Maven Artifact
 
