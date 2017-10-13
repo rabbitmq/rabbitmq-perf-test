@@ -296,11 +296,16 @@ public class MulticastParams {
     }
 
     private static boolean exchangeExists(Connection connection, final String exchangeName) throws IOException {
-        return exists(connection, new Checker() {
-            public void check(Channel ch) throws IOException {
-                ch.exchangeDeclarePassive(exchangeName);
-            }
-        });
+        if (exchangeName == "") {
+            // NB: default exchange always exists
+            return true;
+        } else {
+            return exists(connection, new Checker() {
+                public void check(Channel ch) throws IOException {
+                    ch.exchangeDeclarePassive(exchangeName);
+                }
+            });
+        }
     }
 
     private static boolean queueExists(Connection connection, final String queueName) throws IOException {
