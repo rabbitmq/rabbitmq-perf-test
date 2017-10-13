@@ -291,8 +291,7 @@ public class PerfTest {
         String exchangeName = null;
         if (cmd.hasOption('e')) {
             exchangeName = cmd.getOptionValue('e');
-            // TODO: what would be a good constant to use for the default exchange?
-            if (exchangeName == null || exchangeName.equalsIgnoreCase("AMQP-default")) {
+            if (exchangeName == null || exchangeName.equals("amq.default")) {
                 exchangeName = "";
             }
         } else {
