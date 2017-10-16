@@ -59,7 +59,7 @@ public class PerfTest {
             testID                   = strArg(cmd, 'd', "test-"+testID);
             String exchangeType      = strArg(cmd, 't', "direct");
             String exchangeName      = getExchangeName(cmd, exchangeType);
-            String queueNames        = strArg(cmd, 'u', "");
+            String queueNames        = strArg(cmd, 'u', null);
             String routingKey        = strArg(cmd, 'k', null);
             boolean randomRoutingKey = cmd.hasOption('K');
             int samplingInterval     = intArg(cmd, 'i', 1);
@@ -144,7 +144,7 @@ public class PerfTest {
             p.setProducerChannelCount(  producerChannelCount);
             p.setProducerMsgCount(      producerMsgCount);
             p.setProducerTxSize(        producerTxSize);
-            p.setQueueNames(            asList(queueNames.split(",")));
+            p.setQueueNames(            queueNames == null ? null : asList(queueNames.split(",")));
             p.setRoutingKey(            routingKey);
             p.setRandomRoutingKey(      randomRoutingKey);
             p.setProducerRateLimit(     producerRateLimit);
