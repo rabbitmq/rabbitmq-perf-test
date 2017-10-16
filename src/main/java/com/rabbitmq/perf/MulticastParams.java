@@ -266,7 +266,7 @@ public class MulticastParams {
     public boolean shouldConfigureQueues() {
         // don't declare any queues when --predeclared is passed,
         // otherwise unwanted server-named queues without consumers will pile up. MK.
-        return consumerCount == 0 && !predeclared && !(queueNames.size() == 0);
+        return consumerCount == 0 && !(queueNames.size() == 0);
     }
 
     public List<String> configureQueues(Connection connection, String id) throws IOException {
@@ -275,7 +275,11 @@ public class MulticastParams {
             channel.exchangeDeclare(exchangeName, exchangeType);
         }
         // To ensure we get at-least 1 default queue:
-        if (queueNames.isEmpty()) {
+        // (don't declare any queues when --predeclared is passed,
+        // otherwise unwanted server-named queues without consumers will pile up.
+        // see https://github.com/rabbitmq/rabbitmq-perf-test/issues/25 and
+        // https://github.com/rabbitmq/rabbitmq-perf-test/issues/43)
+        if (!predeclared && queueNames.isEmpty()) {
             queueNames.add("");
         }
         List<String> generatedQueueNames = new ArrayList<String>();
@@ -288,7 +292,10 @@ public class MulticastParams {
                                      queueArguments).getQueue();
             }
             generatedQueueNames.add(qName);
-            channel.queueBind(qName, exchangeName, id);
+            // not allowed to bind to the default exchange
+            if (!"".equals(exchangeName) && !"amq.default".equals(exchangeName)) {
+                channel.queueBind(qName, exchangeName, id);
+            }
         }
         channel.abort();
 
