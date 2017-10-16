@@ -59,7 +59,7 @@ public class PerfTest {
                 getInstance().getTime());
             testID                   = strArg(cmd, 'd', "test-"+testID);
             String exchangeType      = strArg(cmd, 't', "direct");
-            String exchangeName      = strArg(cmd, 'e', exchangeType);
+            String exchangeName      = getExchangeName(cmd, exchangeType);
             String queueNames        = strArg(cmd, 'u', "");
             String routingKey        = strArg(cmd, 'k', null);
             boolean randomRoutingKey = cmd.hasOption('K');
@@ -223,7 +223,12 @@ public class PerfTest {
         options.addOption(new Option("h", "uri",                    true, "connection URI"));
         options.addOption(new Option("H", "uris",                   true, "connection URIs (separated by commas)"));
         options.addOption(new Option("t", "type",                   true, "exchange type"));
-        options.addOption(new Option("e", "exchange",               true, "exchange name"));
+
+        final Option exchangeOpt = new Option("e", "exchange name");
+        exchangeOpt.setLongOpt("exchange");
+        exchangeOpt.setOptionalArg(true);
+        options.addOption(exchangeOpt);
+
         options.addOption(new Option("u", "queue",                  true, "queue name"));
         options.addOption(new Option("k", "routingKey",             true, "routing key"));
         options.addOption(new Option("K", "randomRoutingKey",       false,"use random routing key per message"));
@@ -253,12 +258,12 @@ public class PerfTest {
         options.addOption(new Option("p", "predeclared",            false,"allow use of predeclared objects"));
         options.addOption(new Option("B", "body",                   true, "comma-separated list of files to use in message bodies"));
         options.addOption(new Option("T", "bodyContenType",         true, "body content-type"));
-        options.addOption(new Option("l", "legacyMetrics",           false, "display legacy metrics (min/avg/max latency)"));
+        options.addOption(new Option("l", "legacyMetrics",          false, "display legacy metrics (min/avg/max latency)"));
         options.addOption(new Option("o", "outputFile",             true, "output file for timing results"));
-        options.addOption(new Option("ad", "autoDelete", true, "should the queue be auto-deleted, default is true"));
-        options.addOption(new Option("qa", "queueArgs", true, "queue arguments as key/pair values, separated by commas"));
-        options.addOption(new Option("L", "consumerLatency", true, "consumer latency in microseconds"));
-        options.addOption(new Option("useDefaultSslContext", "useDefaultSslContext",       false,"use JVM default SSL context"));
+        options.addOption(new Option("ad", "autoDelete",            true, "should the queue be auto-deleted, default is true"));
+        options.addOption(new Option("qa", "queueArgs",             true, "queue arguments as key/pair values, separated by commas"));
+        options.addOption(new Option("L", "consumerLatency",        true, "consumer latency in microseconds"));
+        options.addOption(new Option("useDefaultSslContext", "useDefaultSslContext", false,"use JVM default SSL context"));
         return options;
     }
 
@@ -304,6 +309,19 @@ public class PerfTest {
             }
         }
         return queueArguments;
+    }
+
+    private static String getExchangeName(CommandLine cmd, String def) {
+        String exchangeName = null;
+        if (cmd.hasOption('e')) {
+            exchangeName = cmd.getOptionValue('e');
+            if (exchangeName == null || exchangeName.equals("amq.default")) {
+                exchangeName = "";
+            }
+        } else {
+            exchangeName = def;
+        }
+        return exchangeName;
     }
 
     private static class PrintlnStats extends Stats {
