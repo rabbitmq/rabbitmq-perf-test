@@ -296,7 +296,7 @@ public class MulticastParams {
     }
 
     private static boolean exchangeExists(Connection connection, final String exchangeName) throws IOException {
-        if (exchangeName.equals("")) {
+        if ("".equals(exchangeName)) {
             // NB: default exchange always exists
             return true;
         } else {
@@ -316,8 +316,8 @@ public class MulticastParams {
         });
     }
 
-    private static interface Checker {
-        public void check(Channel ch) throws IOException;
+    private interface Checker {
+        void check(Channel ch) throws IOException;
     }
 
     private static boolean exists(Connection connection, Checker checker) throws IOException {
