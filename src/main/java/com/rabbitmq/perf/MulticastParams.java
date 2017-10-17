@@ -292,7 +292,8 @@ public class MulticastParams {
                                      queueArguments).getQueue();
             }
             generatedQueueNames.add(qName);
-            // not allowed to bind to the default exchange
+            // skipping binding to default exchange,
+            // as it's not possible to explicitly bind to it.
             if (!"".equals(exchangeName) && !"amq.default".equals(exchangeName)) {
                 channel.queueBind(qName, exchangeName, id);
             }
