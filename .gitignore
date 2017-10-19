@@ -3,6 +3,7 @@
 .*.sw?
 *.beam
 *.class
+*.csv
 *.dat
 *.dump
 *.iml
