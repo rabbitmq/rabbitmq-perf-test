@@ -22,13 +22,15 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 
 public class MulticastSet {
-    private final String id;
+    private final String routingKey;
     private final Stats stats;
     private final ConnectionFactory factory;
     private final MulticastParams params;
@@ -40,9 +42,9 @@ public class MulticastSet {
     public MulticastSet(Stats stats, ConnectionFactory factory,
         MulticastParams params, List<String> uris) {
         if (params.getRoutingKey() == null) {
-            this.id = UUID.randomUUID().toString();
+            this.routingKey = UUID.randomUUID().toString();
         } else {
-            this.id = params.getRoutingKey();
+            this.routingKey = params.getRoutingKey();
         }
         this.stats = stats;
         this.factory = factory;
@@ -54,9 +56,9 @@ public class MulticastSet {
     public MulticastSet(Stats stats, ConnectionFactory factory,
         MulticastParams params, String testID, List<String> uris) {
         if (params.getRoutingKey() == null) {
-            this.id = UUID.randomUUID().toString();
+            this.routingKey = UUID.randomUUID().toString();
         } else {
-            this.id = params.getRoutingKey();
+            this.routingKey = params.getRoutingKey();
         }
         this.stats = stats;
         this.factory = factory;
@@ -71,6 +73,7 @@ public class MulticastSet {
 
     public void run(boolean announceStartup)
         throws IOException, InterruptedException, TimeoutException, NoSuchAlgorithmException, KeyManagementException, URISyntaxException {
+        Set<String> queueNames = new HashSet<>();
         Thread[] consumerThreads = new Thread[params.getConsumerThreadCount()];
         Connection[] consumerConnections = new Connection[params.getConsumerCount()];
         for (int i = 0; i < consumerConnections.length; i++) {
@@ -84,7 +87,9 @@ public class MulticastSet {
                 if (announceStartup) {
                     System.out.println("id: " + testID + ", starting consumer #" + i + ", channel #" + j);
                 }
-                Thread t = new Thread(params.createConsumer(conn, stats, id));
+                Consumer consumer = params.createConsumer(conn, stats, routingKey);
+                queueNames.addAll(consumer.getQueueNames());
+                Thread t = new Thread(consumer);
                 consumerThreads[(i * params.getConsumerChannelCount()) + j] = t;
             }
         }
@@ -92,8 +97,18 @@ public class MulticastSet {
         if (params.shouldConfigureQueues()) {
             setUri();
             Connection conn = factory.newConnection();
-            params.configureQueues(conn, id);
+            List<String> configuredQueues = params.configureQueues(conn, routingKey);
+            queueNames.addAll(configuredQueues);
             conn.close();
+        }
+
+        String producersRoutingKey;
+        // if one queue, and no routing key, the routing key
+        // must be the queue name and we should use the default exchange
+        if (queueNames.size() == 1 && params.getRoutingKey() == null) {
+            producersRoutingKey = queueNames.iterator().next();
+        } else {
+            producersRoutingKey = this.routingKey;
         }
 
         Thread[] producerThreads = new Thread[params.getProducerThreadCount()];
@@ -109,7 +124,7 @@ public class MulticastSet {
                 if (announceStartup) {
                     System.out.println("id: " + testID + ", starting producer #" + i + ", channel #" + j);
                 }
-                Thread t = new Thread(params.createProducer(conn, stats, id));
+                Thread t = new Thread(params.createProducer(conn, stats, producersRoutingKey));
                 producerThreads[(i * params.getProducerChannelCount()) + j] = t;
             }
         }

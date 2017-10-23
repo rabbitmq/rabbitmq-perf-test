@@ -43,19 +43,19 @@ public class MulticastParams {
     private int producerMsgCount = 0;
     private int consumerMsgCount = 0;
 
-    private String exchangeName = "direct";
+    private String exchangeName = "";
     private String exchangeType = "direct";
-    private List<String> queueNames = new ArrayList<String>();
+    private List<String> queueNames = new ArrayList<>();
     private String routingKey = null;
     private boolean randomRoutingKey = false;
 
-    private List<?> flags = new ArrayList<Object>();
+    private List<?> flags = new ArrayList<>();
 
     private int multiAckEvery = 0;
     private boolean autoAck = true;
     private boolean autoDelete = false;
 
-    private List<String> bodyFiles = new ArrayList<String>();
+    private List<String> bodyFiles = new ArrayList<>();
     private String bodyContentType = null;
 
     private boolean predeclared;
@@ -74,9 +74,9 @@ public class MulticastParams {
 
     public void setQueueNames(List<String> queueNames) {
         if(queueNames == null) {
-            this.queueNames = new ArrayList<String>();
+            this.queueNames = new ArrayList<>();
         } else {
-            this.queueNames = new ArrayList<String>(queueNames);
+            this.queueNames = new ArrayList<>(queueNames);
         }
     }
 
@@ -219,9 +219,9 @@ public class MulticastParams {
 
     public void setBodyFiles(List<String> bodyFiles) {
         if (bodyFiles == null) {
-            this.bodyFiles = new ArrayList<String>();
+            this.bodyFiles = new ArrayList<>();
         } else {
-            this.bodyFiles = new ArrayList<String>(bodyFiles);
+            this.bodyFiles = new ArrayList<>(bodyFiles);
         }
     }
 
@@ -229,11 +229,11 @@ public class MulticastParams {
         this.bodyContentType = bodyContentType;
     }
 
-    public Producer createProducer(Connection connection, Stats stats, String id) throws IOException {
+    public Producer createProducer(Connection connection, Stats stats, String routingKey) throws IOException {
         Channel channel = connection.createChannel();
         if (producerTxSize > 0) channel.txSelect();
         if (confirm >= 0) channel.confirmSelect();
-        if (!predeclared || !exchangeExists(connection, exchangeName)) {
+        if (!predeclared && !exchangeExists(connection, exchangeName)) {
             channel.exchangeDeclare(exchangeName, exchangeType);
         }
         MessageBodySource messageBodySource = null;
@@ -242,7 +242,7 @@ public class MulticastParams {
         } else {
             messageBodySource = new TimeSequenceMessageBodySource(minMsgSize);
         }
-        final Producer producer = new Producer(channel, exchangeName, id,
+        final Producer producer = new Producer(channel, exchangeName, routingKey,
                                                randomRoutingKey, flags, producerTxSize,
                                                producerRateLimit, producerMsgCount,
                                                timeLimit,
@@ -252,26 +252,24 @@ public class MulticastParams {
         return producer;
     }
 
-    public Consumer createConsumer(Connection connection, Stats stats, String id) throws IOException {
+    public Consumer createConsumer(Connection connection, Stats stats, String routingKey) throws IOException {
         Channel channel = connection.createChannel();
         if (consumerTxSize > 0) channel.txSelect();
-        List<String> generatedQueueNames = configureQueues(connection, id);
+        List<String> generatedQueueNames = configureQueues(connection, routingKey);
         if (consumerPrefetch > 0) channel.basicQos(consumerPrefetch);
         if (channelPrefetch > 0) channel.basicQos(channelPrefetch, true);
-        return new Consumer(channel, id, generatedQueueNames,
+        return new Consumer(channel, routingKey, generatedQueueNames,
                                          consumerTxSize, autoAck, multiAckEvery,
                                          stats, consumerRateLimit, consumerMsgCount, timeLimit, consumerLatencyInMicroseconds);
     }
 
     public boolean shouldConfigureQueues() {
-        // don't declare any queues when --predeclared is passed,
-        // otherwise unwanted server-named queues without consumers will pile up. MK.
         return consumerCount == 0 && !(queueNames.size() == 0);
     }
 
-    public List<String> configureQueues(Connection connection, String id) throws IOException {
+    public List<String> configureQueues(Connection connection, String routingKey) throws IOException {
         Channel channel = connection.createChannel();
-        if (!predeclared || !exchangeExists(connection, exchangeName)) {
+        if (!predeclared && !exchangeExists(connection, exchangeName)) {
             channel.exchangeDeclare(exchangeName, exchangeType);
         }
         // To ensure we get at-least 1 default queue:
@@ -295,7 +293,7 @@ public class MulticastParams {
             // skipping binding to default exchange,
             // as it's not possible to explicitly bind to it.
             if (!"".equals(exchangeName) && !"amq.default".equals(exchangeName)) {
-                channel.queueBind(qName, exchangeName, id);
+                channel.queueBind(qName, exchangeName, routingKey);
             }
         }
         channel.abort();
@@ -308,20 +306,12 @@ public class MulticastParams {
             // NB: default exchange always exists
             return true;
         } else {
-            return exists(connection, new Checker() {
-                public void check(Channel ch) throws IOException {
-                    ch.exchangeDeclarePassive(exchangeName);
-                }
-            });
+            return exists(connection, ch -> ch.exchangeDeclarePassive(exchangeName));
         }
     }
 
     private static boolean queueExists(Connection connection, final String queueName) throws IOException {
-        return queueName != null && exists(connection, new Checker() {
-            public void check(Channel ch) throws IOException {
-                ch.queueDeclarePassive(queueName);
-            }
-        });
+        return queueName != null && exists(connection, ch -> ch.queueDeclarePassive(queueName));
     }
 
     private interface Checker {
