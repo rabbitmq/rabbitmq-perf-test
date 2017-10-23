@@ -57,7 +57,7 @@
     <commons-cli.version>1.1</commons-cli.version>
     <metrics.version>3.2.5</metrics.version>
     <logback.version>1.2.3</logback.version>
-    <jetty.version>8.1.19.v20160209</jetty.version>
+    <jetty.version>9.4.7.v20170914</jetty.version>
     <junit.version>4.12</junit.version>
 
     <!-- to sign artifacts when releasing -->
