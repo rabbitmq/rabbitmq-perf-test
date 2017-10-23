@@ -63,7 +63,7 @@
     <!-- to sign artifacts when releasing -->
     <gpg.keyname>6026DFCA</gpg.keyname>
 
-    <maven.compiler.plugin.version>3.5.1</maven.compiler.plugin.version>
+    <maven.compiler.plugin.version>3.7.0</maven.compiler.plugin.version>
     <versions.maven.plugin.version>2.3</versions.maven.plugin.version>
     <maven.release.plugin.version>2.5.3</maven.release.plugin.version>
     <maven.source.plugin.version>3.0.1</maven.source.plugin.version>
@@ -128,8 +128,8 @@
         <artifactId>maven-compiler-plugin</artifactId>
         <version>${maven.compiler.plugin.version}</version>
         <configuration>
-          <source>1.6</source>
-          <target>1.6</target>
+          <source>1.8</source>
+          <target>1.8</target>
           <compilerArgs>
             <arg>-Xlint:deprecation</arg>
             <arg>-Xlint:unchecked</arg>
