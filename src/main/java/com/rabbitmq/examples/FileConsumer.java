@@ -30,7 +30,6 @@ import org.apache.commons.cli.Options;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
-import com.rabbitmq.client.QueueingConsumer;
 
 public class FileConsumer {
     public static void main(String[] args) {

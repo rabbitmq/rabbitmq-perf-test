@@ -18,7 +18,6 @@ package com.rabbitmq.examples;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
-import com.rabbitmq.client.QueueingConsumer;
 
 public class LogTail {
     public static void main(String[] args) {

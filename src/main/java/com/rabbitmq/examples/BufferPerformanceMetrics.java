@@ -25,7 +25,6 @@ import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.DefaultSocketConfigurator;
 import com.rabbitmq.client.MessageProperties;
-import com.rabbitmq.client.QueueingConsumer;
 
 
 /**

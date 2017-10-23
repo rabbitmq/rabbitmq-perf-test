@@ -22,7 +22,6 @@ import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.MessageProperties;
-import com.rabbitmq.client.QueueingConsumer;
 
 public class ConfirmDontLoseMessages {
     static int msgCount = 10000;
