@@ -161,6 +161,8 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
             propertiesBuilder.contentType(messageBodyAndContentType.getContentType());
         }
 
+        propertiesBuilder.headers(Collections.<String, Object>singletonMap("timestamp", System.nanoTime()));
+
         unconfirmedSet.add(channel.getNextPublishSeqNo());
         channel.basicPublish(exchangeName, randomRoutingKey ? UUID.randomUUID().toString() : id,
                              mandatory, false,
