@@ -21,8 +21,6 @@ import com.rabbitmq.client.DefaultConsumer;
 import com.rabbitmq.client.Envelope;
 import com.rabbitmq.client.ShutdownSignalException;
 
-import java.io.ByteArrayInputStream;
-import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
@@ -114,9 +112,14 @@ public class Consumer extends ProducerConsumerBase implements Runnable {
             msgCount++;
 
             if (msgLimit == 0 || msgCount <= msgLimit) {
-                DataInputStream d = new DataInputStream(new ByteArrayInputStream(body));
-                d.readInt();
-                long msgNano = d.readLong();
+                long msgNano;
+                Object timestamp = properties.getHeaders().get("timestamp");
+                if (timestamp == null) {
+                    msgNano = Long.MAX_VALUE;
+                } else {
+                    msgNano = (Long) timestamp;
+                }
+
                 long nano = System.nanoTime();
 
                 if (!autoAck) {
