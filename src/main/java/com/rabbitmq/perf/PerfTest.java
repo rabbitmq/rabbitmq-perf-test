@@ -230,22 +230,22 @@ public class PerfTest {
         options.addOption(exchangeOpt);
 
         options.addOption(new Option("u", "queue",                  true, "queue name"));
-        options.addOption(new Option("k", "routingKey",             true, "routing key"));
-        options.addOption(new Option("K", "randomRoutingKey",       false,"use random routing key per message"));
+        options.addOption(new Option("k", "routing-key",            true, "routing key"));
+        options.addOption(new Option("K", "random-routing-key",     false,"use random routing key per message"));
         options.addOption(new Option("i", "interval",               true, "sampling interval in seconds"));
         options.addOption(new Option("r", "rate",                   true, "producer rate limit"));
-        options.addOption(new Option("R", "consumerRate",           true, "consumer rate limit"));
+        options.addOption(new Option("R", "consumer-rate",          true, "consumer rate limit"));
         options.addOption(new Option("x", "producers",              true, "producer count"));
         options.addOption(new Option("y", "consumers",              true, "consumer count"));
-        options.addOption(new Option("X", "producerChannelCount",   true, "channels per producer"));
-        options.addOption(new Option("Y", "consumerChannelCount",   true, "channels per consumer"));
+        options.addOption(new Option("X", "producer-channel-count", true, "channels per producer"));
+        options.addOption(new Option("Y", "consumer-channel-count", true, "channels per consumer"));
         options.addOption(new Option("m", "ptxsize",                true, "producer tx size"));
         options.addOption(new Option("n", "ctxsize",                true, "consumer tx size"));
         options.addOption(new Option("c", "confirm",                true, "max unconfirmed publishes"));
         options.addOption(new Option("a", "autoack",                false,"auto ack"));
-        options.addOption(new Option("A", "multiAckEvery",          true, "multi ack every"));
+        options.addOption(new Option("A", "multi-ack-every",        true, "multi ack every"));
         options.addOption(new Option("q", "qos",                    true, "consumer prefetch count"));
-        options.addOption(new Option("Q", "globalQos",              true, "channel prefetch count"));
+        options.addOption(new Option("Q", "global-qos",             true, "channel prefetch count"));
         options.addOption(new Option("s", "size",                   true, "message size in bytes"));
         options.addOption(new Option("z", "time",                   true, "run duration in seconds (unlimited by default)"));
         options.addOption(new Option("C", "pmessages",              true, "producer message count"));
@@ -257,13 +257,13 @@ public class PerfTest {
         options.addOption(new Option("b", "heartbeat",              true, "heartbeat interval"));
         options.addOption(new Option("p", "predeclared",            false,"allow use of predeclared objects"));
         options.addOption(new Option("B", "body",                   true, "comma-separated list of files to use in message bodies"));
-        options.addOption(new Option("T", "bodyContenType",         true, "body content-type"));
-        options.addOption(new Option("l", "legacyMetrics",          false, "display legacy metrics (min/avg/max latency)"));
-        options.addOption(new Option("o", "outputFile",             true, "output file for timing results"));
-        options.addOption(new Option("ad", "autoDelete",            true, "should the queue be auto-deleted, default is true"));
-        options.addOption(new Option("qa", "queueArgs",             true, "queue arguments as key/pair values, separated by commas"));
-        options.addOption(new Option("L", "consumerLatency",        true, "consumer latency in microseconds"));
-        options.addOption(new Option("useDefaultSslContext", "useDefaultSslContext", false,"use JVM default SSL context"));
+        options.addOption(new Option("T", "body-content-type",      true, "body content-type"));
+        options.addOption(new Option("l", "legacy-metrics",         false, "display legacy metrics (min/avg/max latency)"));
+        options.addOption(new Option("o", "output-file",            true, "output file for timing results"));
+        options.addOption(new Option("ad", "auto-delete",           true, "should the queue be auto-deleted, default is true"));
+        options.addOption(new Option("qa", "queue-args",            true, "queue arguments as key/pair values, separated by commas"));
+        options.addOption(new Option("L", "consumer-latency",       true, "consumer latency in microseconds"));
+        options.addOption(new Option("udsc", "use-default-ssl-context", false,"use JVM default SSL context"));
         return options;
     }
 
