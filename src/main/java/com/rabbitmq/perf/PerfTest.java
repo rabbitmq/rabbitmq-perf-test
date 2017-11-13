@@ -59,7 +59,7 @@ public class PerfTest {
                 getInstance().getTime());
             testID                   = strArg(cmd, 'd', "test-"+testID);
             String exchangeType      = strArg(cmd, 't', "direct");
-            String exchangeName      = getExchangeName(cmd, "");
+            String exchangeName      = getExchangeName(cmd, exchangeType);
             String queueNames        = strArg(cmd, 'u', null);
             String routingKey        = strArg(cmd, 'k', null);
             boolean randomRoutingKey = cmd.hasOption('K');

@@ -33,7 +33,7 @@ public class Consumer extends ProducerConsumerBase implements Runnable {
 
     private ConsumerImpl                q;
     private final Channel               channel;
-    private final String                routingKey;
+    private final String                id;
     private final List<String>          queueNames;
     private final int                   txSize;
     private final boolean               autoAck;
@@ -45,14 +45,14 @@ public class Consumer extends ProducerConsumerBase implements Runnable {
     private final Map<String, String>   consumerTagBranchMap = Collections.synchronizedMap(new HashMap<String, String>());
     private final ConsumerLatency       consumerLatency;
 
-    public Consumer(Channel channel, String routingKey,
+    public Consumer(Channel channel, String id,
                     List<String> queueNames, int txSize, boolean autoAck,
                     int multiAckEvery, Stats stats, float rateLimit, int msgLimit, int timeLimit,
                     int consumerLatencyInMicroSeconds) {
 
         this.channel       = channel;
-        this.routingKey    = routingKey;
-        this.queueNames    = Collections.unmodifiableList(queueNames);
+        this.id            = id;
+        this.queueNames    = queueNames;
         this.rateLimit     = rateLimit;
         this.txSize        = txSize;
         this.autoAck       = autoAck;
@@ -132,7 +132,7 @@ public class Consumer extends ProducerConsumerBase implements Runnable {
 
                 now = System.currentTimeMillis();
 
-                stats.handleRecv(routingKey.equals(envelope.getRoutingKey()) ? (nano - msgNano) : 0L);
+                stats.handleRecv(id.equals(envelope.getRoutingKey()) ? (nano - msgNano) : 0L);
                 if (rateLimit > 0.0f) {
                     delay(now);
                 }
@@ -159,10 +159,6 @@ public class Consumer extends ProducerConsumerBase implements Runnable {
                 System.out.printf("Could not find queue for consumer tag: %s", consumerTag);
             }
         }
-    }
-
-    public List<String> getQueueNames() {
-        return this.queueNames;
     }
 
     private interface ConsumerLatency {
