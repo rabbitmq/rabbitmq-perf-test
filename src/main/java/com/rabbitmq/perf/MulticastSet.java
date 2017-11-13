@@ -22,8 +22,6 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
@@ -76,7 +74,6 @@ public class MulticastSet {
     public void run(boolean announceStartup)
         throws IOException, InterruptedException, TimeoutException, NoSuchAlgorithmException, KeyManagementException, URISyntaxException {
         Set<String> queueNames = new HashSet<>();
-        Collection<Consumer> consumers = new ArrayList<>();
         Thread[] consumerThreads = new Thread[params.getConsumerThreadCount()];
         Connection[] consumerConnections = new Connection[params.getConsumerCount()];
         for (int i = 0; i < consumerConnections.length; i++) {
@@ -91,7 +88,6 @@ public class MulticastSet {
                     System.out.println("id: " + testID + ", starting consumer #" + i + ", channel #" + j);
                 }
                 Consumer consumer = params.createConsumer(conn, stats, routingKey);
-                consumers.add(consumer);
                 queueNames.addAll(consumer.getQueueNames());
                 Thread t = new Thread(consumer);
                 consumerThreads[(i * params.getConsumerChannelCount()) + j] = t;
@@ -113,12 +109,6 @@ public class MulticastSet {
             producersRoutingKey = queueNames.iterator().next();
         } else {
             producersRoutingKey = this.routingKey;
-        }
-
-        // consumers need the publishing routing key to match it against
-        // against the received message and update the stats
-        for (Consumer consumer : consumers) {
-            consumer.setRoutingKey(producersRoutingKey);
         }
 
         Thread[] producerThreads = new Thread[params.getProducerThreadCount()];

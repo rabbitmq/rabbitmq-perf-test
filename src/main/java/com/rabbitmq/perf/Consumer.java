@@ -33,7 +33,7 @@ public class Consumer extends ProducerConsumerBase implements Runnable {
 
     private ConsumerImpl                q;
     private final Channel               channel;
-    private String                      routingKey;
+    private final String                routingKey;
     private final List<String>          queueNames;
     private final int                   txSize;
     private final boolean               autoAck;
@@ -92,10 +92,6 @@ public class Consumer extends ProducerConsumerBase implements Runnable {
         }
     }
 
-    public void setRoutingKey(String routingKey) {
-        this.routingKey = routingKey;
-    }
-
     private class ConsumerImpl extends DefaultConsumer {
         long now;
         int totalMsgCount = 0;
@@ -135,6 +131,7 @@ public class Consumer extends ProducerConsumerBase implements Runnable {
                 }
 
                 now = System.currentTimeMillis();
+
                 stats.handleRecv(routingKey.equals(envelope.getRoutingKey()) ? (nano - msgNano) : 0L);
                 if (rateLimit > 0.0f) {
                     delay(now);
