@@ -205,6 +205,7 @@ public class PerfTest {
         final Option exchangeOpt = new Option("e", "exchange name");
         exchangeOpt.setLongOpt("exchange");
         exchangeOpt.setOptionalArg(true);
+        exchangeOpt.setArgs(1);
         options.addOption(exchangeOpt);
 
         options.addOption(new Option("u", "queue",                  true, "queue name"));
