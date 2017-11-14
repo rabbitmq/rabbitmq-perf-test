@@ -63,6 +63,7 @@ public class PerfTest {
             String queueNames        = strArg(cmd, 'u', null);
             String routingKey        = strArg(cmd, 'k', null);
             boolean randomRoutingKey = cmd.hasOption('K');
+            boolean skipBindingQueues= cmd.hasOption("sb");
             int samplingInterval     = intArg(cmd, 'i', 1);
             float producerRateLimit  = floatArg(cmd, 'r', 0.0f);
             float consumerRateLimit  = floatArg(cmd, 'R', 0.0f);
@@ -170,6 +171,7 @@ public class PerfTest {
             p.setProducerTxSize(        producerTxSize);
             p.setQueueNames(            queueNames == null ? null : asList(queueNames.split(",")));
             p.setRoutingKey(            routingKey);
+            p.setSkipBindingQueues(     skipBindingQueues);
             p.setRandomRoutingKey(      randomRoutingKey);
             p.setProducerRateLimit(     producerRateLimit);
             p.setTimeLimit(             timeLimit);
@@ -235,6 +237,7 @@ public class PerfTest {
         options.addOption(new Option("u", "queue",                  true, "queue name"));
         options.addOption(new Option("k", "routing-key",            true, "routing key"));
         options.addOption(new Option("K", "random-routing-key",     false,"use random routing key per message"));
+        options.addOption(new Option("sb", "skip-binding-queues",   false,"don't bind queues to the exchange"));
         options.addOption(new Option("i", "interval",               true, "sampling interval in seconds"));
         options.addOption(new Option("r", "rate",                   true, "producer rate limit"));
         options.addOption(new Option("R", "consumer-rate",          true, "consumer rate limit"));

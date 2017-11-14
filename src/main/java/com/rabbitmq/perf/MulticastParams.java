@@ -49,6 +49,7 @@ public class MulticastParams {
     private List<String> queueNames = new ArrayList<String>();
     private String routingKey = null;
     private boolean randomRoutingKey = false;
+    private boolean skipBindingQueues = false;
 
     private List<?> flags = new ArrayList<Object>();
 
@@ -87,6 +88,10 @@ public class MulticastParams {
 
     public void setRandomRoutingKey(boolean randomRoutingKey) {
         this.randomRoutingKey = randomRoutingKey;
+    }
+    
+    public void setSkipBindingQueues(boolean skipBindingQueues) {
+    	this.skipBindingQueues = skipBindingQueues;
     }
 
     public void setProducerRateLimit(float producerRateLimit) {
@@ -225,6 +230,10 @@ public class MulticastParams {
     public boolean getRandomRoutingKey() {
         return randomRoutingKey;
     }
+    
+    public boolean getSkipBindingQueues() {
+    	return skipBindingQueues;
+    }
 
     public void setBodyFiles(List<String> bodyFiles) {
         if (bodyFiles == null) {
@@ -303,7 +312,7 @@ public class MulticastParams {
             generatedQueueNames.add(qName);
             // skipping binding to default exchange,
             // as it's not possible to explicitly bind to it.
-            if (!predeclared && !"".equals(exchangeName) && !"amq.default".equals(exchangeName)) {
+            if (!"".equals(exchangeName) && !"amq.default".equals(exchangeName) && !skipBindingQueues) {
                 channel.queueBind(qName, exchangeName, id);
             }
         }
