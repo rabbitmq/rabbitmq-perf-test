@@ -42,7 +42,7 @@ public class MulticastParams {
     private float consumerRateLimit = 0;
     private int producerMsgCount = 0;
     private int consumerMsgCount = 0;
-	private boolean consumerSlowStart = false;
+    private boolean consumerSlowStart = false;
 
     private String exchangeName = "direct";
     private String exchangeType = "direct";
@@ -113,9 +113,9 @@ public class MulticastParams {
         this.consumerChannelCount = consumerChannelCount;
     }
     
-	public void setConsumerSlowStart(boolean slowStart) {
-		this.consumerSlowStart = slowStart;
-	}
+    public void setConsumerSlowStart(boolean slowStart) {
+        this.consumerSlowStart = slowStart;
+    }
 
     public void setProducerTxSize(int producerTxSize) {
         this.producerTxSize = producerTxSize;
@@ -195,7 +195,7 @@ public class MulticastParams {
     }
     
     public boolean getConsumerSlowStart() {
-    	return consumerSlowStart;
+        return consumerSlowStart;
     }
 
     public int getConsumerThreadCount() {

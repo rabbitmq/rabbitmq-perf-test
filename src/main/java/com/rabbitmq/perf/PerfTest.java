@@ -155,7 +155,7 @@ public class PerfTest {
             p.setConsumerMsgCount(      consumerMsgCount);
             p.setConsumerRateLimit(     consumerRateLimit);
             p.setConsumerTxSize(        consumerTxSize);
-            p.setConsumerSlowStart(slowStart);
+            p.setConsumerSlowStart(     slowStart);
             p.setExchangeName(          exchangeName);
             p.setExchangeType(          exchangeType);
             p.setFlags(                 flags);
@@ -240,7 +240,7 @@ public class PerfTest {
         options.addOption(new Option("R", "consumer-rate",          true, "consumer rate limit"));
         options.addOption(new Option("x", "producers",              true, "producer count"));
         options.addOption(new Option("y", "consumers",              true, "consumer count"));
-        options.addOption(new Option("S", "slow-start",             false,"start consumers slowly"));
+        options.addOption(new Option("S", "slow-start",             false,"start consumers slowly (1 sec delay between each)"));
         options.addOption(new Option("X", "producer-channel-count", true, "channels per producer"));
         options.addOption(new Option("Y", "consumer-channel-count", true, "channels per consumer"));
         options.addOption(new Option("m", "ptxsize",                true, "producer tx size"));
