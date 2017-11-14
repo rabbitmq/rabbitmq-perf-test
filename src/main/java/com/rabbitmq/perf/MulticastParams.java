@@ -299,13 +299,13 @@ public class MulticastParams {
                                      false,
                                      autoDelete,
                                      queueArguments).getQueue();
-                // skipping binding to default exchange,
-                // as it's not possible to explicitly bind to it.
-                if (!"".equals(exchangeName) && !"amq.default".equals(exchangeName)) {
-                    channel.queueBind(qName, exchangeName, id);
-                }
             }
             generatedQueueNames.add(qName);
+            // skipping binding to default exchange,
+            // as it's not possible to explicitly bind to it.
+            if (!predeclared && !"".equals(exchangeName) && !"amq.default".equals(exchangeName)) {
+                channel.queueBind(qName, exchangeName, id);
+            }
         }
         channel.abort();
 
