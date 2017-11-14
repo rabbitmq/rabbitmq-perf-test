@@ -116,6 +116,10 @@ public class MulticastSet {
 
         for (Thread consumerThread : consumerThreads) {
             consumerThread.start();
+            if(params.getConsumerSlowStart()) {
+            	System.out.println("slowStart: wait 1sec");
+            	Thread.sleep(1000);
+            }
         }
 
         for (Thread producerThread : producerThreads) {

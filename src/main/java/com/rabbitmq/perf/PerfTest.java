@@ -78,6 +78,7 @@ public class PerfTest {
             int channelPrefetch      = intArg(cmd, 'Q', 0);
             int consumerPrefetch     = intArg(cmd, 'q', 0);
             int minMsgSize           = intArg(cmd, 's', 0);
+            boolean slowStart        = cmd.hasOption('S');
             int timeLimit            = intArg(cmd, 'z', 0);
             int producerMsgCount     = intArg(cmd, 'C', 0);
             int consumerMsgCount     = intArg(cmd, 'D', 0);
@@ -154,6 +155,7 @@ public class PerfTest {
             p.setConsumerMsgCount(      consumerMsgCount);
             p.setConsumerRateLimit(     consumerRateLimit);
             p.setConsumerTxSize(        consumerTxSize);
+            p.setConsumerSlowStart(slowStart);
             p.setExchangeName(          exchangeName);
             p.setExchangeType(          exchangeType);
             p.setFlags(                 flags);
@@ -238,6 +240,7 @@ public class PerfTest {
         options.addOption(new Option("R", "consumer-rate",          true, "consumer rate limit"));
         options.addOption(new Option("x", "producers",              true, "producer count"));
         options.addOption(new Option("y", "consumers",              true, "consumer count"));
+        options.addOption(new Option("S", "slow-start",             false,"start consumers slowly"));
         options.addOption(new Option("X", "producer-channel-count", true, "channels per producer"));
         options.addOption(new Option("Y", "consumer-channel-count", true, "channels per consumer"));
         options.addOption(new Option("m", "ptxsize",                true, "producer tx size"));

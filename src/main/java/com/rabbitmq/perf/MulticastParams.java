@@ -42,6 +42,7 @@ public class MulticastParams {
     private float consumerRateLimit = 0;
     private int producerMsgCount = 0;
     private int consumerMsgCount = 0;
+	private boolean consumerSlowStart = false;
 
     private String exchangeName = "direct";
     private String exchangeType = "direct";
@@ -111,6 +112,10 @@ public class MulticastParams {
     public void setConsumerChannelCount(int consumerChannelCount) {
         this.consumerChannelCount = consumerChannelCount;
     }
+    
+	public void setConsumerSlowStart(boolean slowStart) {
+		this.consumerSlowStart = slowStart;
+	}
 
     public void setProducerTxSize(int producerTxSize) {
         this.producerTxSize = producerTxSize;
@@ -187,6 +192,10 @@ public class MulticastParams {
 
     public int getConsumerChannelCount() {
         return consumerChannelCount;
+    }
+    
+    public boolean getConsumerSlowStart() {
+    	return consumerSlowStart;
     }
 
     public int getConsumerThreadCount() {
@@ -290,13 +299,13 @@ public class MulticastParams {
                                      false,
                                      autoDelete,
                                      queueArguments).getQueue();
+                // skipping binding to default exchange,
+                // as it's not possible to explicitly bind to it.
+                if (!"".equals(exchangeName) && !"amq.default".equals(exchangeName)) {
+                    channel.queueBind(qName, exchangeName, id);
+                }
             }
             generatedQueueNames.add(qName);
-            // skipping binding to default exchange,
-            // as it's not possible to explicitly bind to it.
-            if (!"".equals(exchangeName) && !"amq.default".equals(exchangeName)) {
-                channel.queueBind(qName, exchangeName, id);
-            }
         }
         channel.abort();
 
