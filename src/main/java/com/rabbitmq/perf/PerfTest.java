@@ -63,6 +63,7 @@ public class PerfTest {
             String queueNames        = strArg(cmd, 'u', null);
             String routingKey        = strArg(cmd, 'k', null);
             boolean randomRoutingKey = cmd.hasOption('K');
+            boolean skipBindingQueues= cmd.hasOption("sb");
             int samplingInterval     = intArg(cmd, 'i', 1);
             float producerRateLimit  = floatArg(cmd, 'r', 0.0f);
             float consumerRateLimit  = floatArg(cmd, 'R', 0.0f);
@@ -78,6 +79,7 @@ public class PerfTest {
             int channelPrefetch      = intArg(cmd, 'Q', 0);
             int consumerPrefetch     = intArg(cmd, 'q', 0);
             int minMsgSize           = intArg(cmd, 's', 0);
+            boolean slowStart        = cmd.hasOption('S');
             int timeLimit            = intArg(cmd, 'z', 0);
             int producerMsgCount     = intArg(cmd, 'C', 0);
             int consumerMsgCount     = intArg(cmd, 'D', 0);
@@ -154,6 +156,7 @@ public class PerfTest {
             p.setConsumerMsgCount(      consumerMsgCount);
             p.setConsumerRateLimit(     consumerRateLimit);
             p.setConsumerTxSize(        consumerTxSize);
+            p.setConsumerSlowStart(     slowStart);
             p.setExchangeName(          exchangeName);
             p.setExchangeType(          exchangeType);
             p.setFlags(                 flags);
@@ -168,6 +171,7 @@ public class PerfTest {
             p.setProducerTxSize(        producerTxSize);
             p.setQueueNames(            queueNames == null ? null : asList(queueNames.split(",")));
             p.setRoutingKey(            routingKey);
+            p.setSkipBindingQueues(     skipBindingQueues);
             p.setRandomRoutingKey(      randomRoutingKey);
             p.setProducerRateLimit(     producerRateLimit);
             p.setTimeLimit(             timeLimit);
@@ -233,11 +237,13 @@ public class PerfTest {
         options.addOption(new Option("u", "queue",                  true, "queue name"));
         options.addOption(new Option("k", "routing-key",            true, "routing key"));
         options.addOption(new Option("K", "random-routing-key",     false,"use random routing key per message"));
+        options.addOption(new Option("sb", "skip-binding-queues",   false,"don't bind queues to the exchange"));
         options.addOption(new Option("i", "interval",               true, "sampling interval in seconds"));
         options.addOption(new Option("r", "rate",                   true, "producer rate limit"));
         options.addOption(new Option("R", "consumer-rate",          true, "consumer rate limit"));
         options.addOption(new Option("x", "producers",              true, "producer count"));
         options.addOption(new Option("y", "consumers",              true, "consumer count"));
+        options.addOption(new Option("S", "slow-start",             false,"start consumers slowly (1 sec delay between each)"));
         options.addOption(new Option("X", "producer-channel-count", true, "channels per producer"));
         options.addOption(new Option("Y", "consumer-channel-count", true, "channels per consumer"));
         options.addOption(new Option("m", "ptxsize",                true, "producer tx size"));

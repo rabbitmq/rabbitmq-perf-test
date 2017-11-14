@@ -116,6 +116,10 @@ public class MulticastSet {
 
         for (Thread consumerThread : consumerThreads) {
             consumerThread.start();
+            if(params.getConsumerSlowStart()) {
+            	System.out.println("Delaying start by 1 second because -S/--slow-start was requested");
+            	Thread.sleep(1000);
+            }
         }
 
         for (Thread producerThread : producerThreads) {

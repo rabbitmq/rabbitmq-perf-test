@@ -42,12 +42,14 @@ public class MulticastParams {
     private float consumerRateLimit = 0;
     private int producerMsgCount = 0;
     private int consumerMsgCount = 0;
+    private boolean consumerSlowStart = false;
 
     private String exchangeName = "direct";
     private String exchangeType = "direct";
     private List<String> queueNames = new ArrayList<String>();
     private String routingKey = null;
     private boolean randomRoutingKey = false;
+    private boolean skipBindingQueues = false;
 
     private List<?> flags = new ArrayList<Object>();
 
@@ -87,6 +89,10 @@ public class MulticastParams {
     public void setRandomRoutingKey(boolean randomRoutingKey) {
         this.randomRoutingKey = randomRoutingKey;
     }
+    
+    public void setSkipBindingQueues(boolean skipBindingQueues) {
+    	this.skipBindingQueues = skipBindingQueues;
+    }
 
     public void setProducerRateLimit(float producerRateLimit) {
         this.producerRateLimit = producerRateLimit;
@@ -110,6 +116,10 @@ public class MulticastParams {
 
     public void setConsumerChannelCount(int consumerChannelCount) {
         this.consumerChannelCount = consumerChannelCount;
+    }
+    
+    public void setConsumerSlowStart(boolean slowStart) {
+        this.consumerSlowStart = slowStart;
     }
 
     public void setProducerTxSize(int producerTxSize) {
@@ -188,6 +198,10 @@ public class MulticastParams {
     public int getConsumerChannelCount() {
         return consumerChannelCount;
     }
+    
+    public boolean getConsumerSlowStart() {
+        return consumerSlowStart;
+    }
 
     public int getConsumerThreadCount() {
         return consumerCount * consumerChannelCount;
@@ -215,6 +229,10 @@ public class MulticastParams {
 
     public boolean getRandomRoutingKey() {
         return randomRoutingKey;
+    }
+    
+    public boolean getSkipBindingQueues() {
+    	return skipBindingQueues;
     }
 
     public void setBodyFiles(List<String> bodyFiles) {
@@ -294,7 +312,7 @@ public class MulticastParams {
             generatedQueueNames.add(qName);
             // skipping binding to default exchange,
             // as it's not possible to explicitly bind to it.
-            if (!"".equals(exchangeName) && !"amq.default".equals(exchangeName)) {
+            if (!"".equals(exchangeName) && !"amq.default".equals(exchangeName) && !skipBindingQueues) {
                 channel.queueBind(qName, exchangeName, id);
             }
         }
