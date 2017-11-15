@@ -251,7 +251,7 @@ public class PerfTest {
         options.addOption(new Option("m", "ptxsize",                true, "producer tx size"));
         options.addOption(new Option("n", "ctxsize",                true, "consumer tx size"));
         options.addOption(new Option("c", "confirm",                true, "max unconfirmed publishes"));
-        options.addOption(new Option("ct", "confirmTimeout",        true, "waiting timeout for unconfirmed publishes before failing (in seconds)"));
+        options.addOption(new Option("ct", "confirm-timeout",       true, "waiting timeout for unconfirmed publishes before failing (in seconds)"));
         options.addOption(new Option("a", "autoack",                false,"auto ack"));
         options.addOption(new Option("A", "multi-ack-every",        true, "multi ack every"));
         options.addOption(new Option("q", "qos",                    true, "consumer prefetch count"));
