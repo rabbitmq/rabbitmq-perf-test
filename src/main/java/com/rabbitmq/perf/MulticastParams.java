@@ -27,6 +27,7 @@ import java.util.Map;
 
 public class MulticastParams {
     private long confirm = -1;
+    private int confirmTimeout = 30;
     private int consumerCount = 1;
     private int producerCount = 1;
     private int consumerChannelCount = 1;
@@ -132,6 +133,10 @@ public class MulticastParams {
 
     public void setConfirm(long confirm) {
         this.confirm = confirm;
+    }
+
+    public void setConfirmTimeout(int confirmTimeout) {
+        this.confirmTimeout = confirmTimeout;
     }
 
     public void setAutoAck(boolean autoAck) {
@@ -264,7 +269,7 @@ public class MulticastParams {
                                                randomRoutingKey, flags, producerTxSize,
                                                producerRateLimit, producerMsgCount,
                                                timeLimit,
-                                               confirm, messageBodySource, stats);
+                                               confirm, confirmTimeout, messageBodySource, stats);
         channel.addReturnListener(producer);
         channel.addConfirmListener(producer);
         return producer;
