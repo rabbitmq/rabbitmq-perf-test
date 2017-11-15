@@ -27,6 +27,7 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 
 public class Producer extends ProducerConsumerBase implements Runnable, ReturnListener,
         ConfirmListener
@@ -46,13 +47,14 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
     private final MessageBodySource messageBodySource;
 
     private Semaphore confirmPool;
+    private int confirmTimeout;
     private final SortedSet<Long> unconfirmedSet =
         Collections.synchronizedSortedSet(new TreeSet<Long>());
 
     public Producer(Channel channel, String exchangeName, String id, boolean randomRoutingKey,
                     List<?> flags, int txSize,
                     float rateLimit, int msgLimit, int timeLimit,
-                    long confirm, MessageBodySource messageBodySource, Stats stats)
+                    long confirm, int confirmTimeout, MessageBodySource messageBodySource, Stats stats)
         throws IOException {
 
         this.channel            = channel;
@@ -68,6 +70,7 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
         this.messageBodySource = messageBodySource;
         if (confirm > 0) {
             this.confirmPool  = new Semaphore((int)confirm);
+            this.confirmTimeout = confirmTimeout;
         }
         this.stats        = stats;
     }
@@ -129,7 +132,16 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
                    (msgLimit == 0 || msgCount < msgLimit)) {
                 delay(now);
                 if (confirmPool != null) {
-                    confirmPool.acquire();
+                    if (confirmTimeout < 0) {
+                        confirmPool.acquire();
+                    } else {
+                        boolean acquired = confirmPool.tryAcquire(confirmTimeout, TimeUnit.SECONDS);
+                        if (!acquired) {
+                            // waiting for too long, broker may be gone, stopping thread
+                            throw new RuntimeException("Waiting for publisher confirms for too long");
+                        }
+                    }
+
                 }
                 publish(messageBodySource.create(totalMsgCount));
                 totalMsgCount++;

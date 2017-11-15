@@ -72,6 +72,7 @@ public class PerfTest {
             int producerTxSize       = intArg(cmd, 'm', 0);
             int consumerTxSize       = intArg(cmd, 'n', 0);
             long confirm             = intArg(cmd, 'c', -1);
+            int confirmTimeout       = intArg(cmd, "ct", 30);
             boolean autoAck          = cmd.hasOption('a');
             int multiAckEvery        = intArg(cmd, 'A', 0);
             int channelPrefetch      = intArg(cmd, 'Q', 0);
@@ -127,6 +128,7 @@ public class PerfTest {
             p.setAutoAck(               autoAck);
             p.setAutoDelete(            autoDelete);
             p.setConfirm(               confirm);
+            p.setConfirmTimeout(        confirmTimeout);
             p.setConsumerCount(         consumerCount);
             p.setConsumerChannelCount(  consumerChannelCount);
             p.setConsumerMsgCount(      consumerMsgCount);
@@ -221,6 +223,7 @@ public class PerfTest {
         options.addOption(new Option("m", "ptxsize",                true, "producer tx size"));
         options.addOption(new Option("n", "ctxsize",                true, "consumer tx size"));
         options.addOption(new Option("c", "confirm",                true, "max unconfirmed publishes"));
+        options.addOption(new Option("ct", "confirmTimeout",        true, "waiting timeout for unconfirmed publishes before failing (in seconds)"));
         options.addOption(new Option("a", "autoack",                false,"auto ack"));
         options.addOption(new Option("A", "multiAckEvery",          true, "multi ack every"));
         options.addOption(new Option("q", "qos",                    true, "consumer prefetch count"));
@@ -253,6 +256,10 @@ public class PerfTest {
     }
 
     private static int intArg(CommandLine cmd, char opt, int def) {
+        return Integer.parseInt(cmd.getOptionValue(opt, Integer.toString(def)));
+    }
+
+    private static int intArg(CommandLine cmd, String opt, int def) {
         return Integer.parseInt(cmd.getOptionValue(opt, Integer.toString(def)));
     }
 
