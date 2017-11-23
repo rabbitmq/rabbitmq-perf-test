@@ -242,16 +242,20 @@ public class MulticastParams {
             channel.exchangeDeclare(exchangeName, exchangeType);
         }
         MessageBodySource messageBodySource = null;
+        boolean timestampInHeader;
         if (bodyFiles.size() > 0) {
             messageBodySource = new LocalFilesMessageBodySource(bodyFiles, bodyContentType);
+            timestampInHeader = true;
         } else {
             messageBodySource = new TimeSequenceMessageBodySource(minMsgSize);
+            timestampInHeader = false;
         }
         final Producer producer = new Producer(channel, exchangeName, id,
                                                randomRoutingKey, flags, producerTxSize,
                                                producerRateLimit, producerMsgCount,
                                                timeLimit,
-                                               confirm, confirmTimeout, messageBodySource, stats);
+                                               confirm, confirmTimeout, messageBodySource,
+                                               timestampInHeader, stats);
         channel.addReturnListener(producer);
         channel.addConfirmListener(producer);
         return producer;
@@ -263,9 +267,18 @@ public class MulticastParams {
         List<String> generatedQueueNames = configureQueues(connection, id);
         if (consumerPrefetch > 0) channel.basicQos(consumerPrefetch);
         if (channelPrefetch > 0) channel.basicQos(channelPrefetch, true);
+
+        boolean timestampInHeader;
+        if (bodyFiles.size() > 0) {
+            timestampInHeader = true;
+        } else {
+            timestampInHeader = false;
+        }
+
         return new Consumer(channel, id, generatedQueueNames,
                                          consumerTxSize, autoAck, multiAckEvery,
-                                         stats, consumerRateLimit, consumerMsgCount, timeLimit, consumerLatencyInMicroseconds);
+                                         stats, consumerRateLimit, consumerMsgCount, timeLimit,
+                                         consumerLatencyInMicroseconds, timestampInHeader);
     }
 
     public boolean shouldConfigureQueues() {
