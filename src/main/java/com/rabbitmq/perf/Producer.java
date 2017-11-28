@@ -42,7 +42,7 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
     private final boolean persistent;
     private final int     txSize;
     private final int     msgLimit;
-    private final long    timeLimit;
+    private final long    timeLimitMillis;
 
     private final Stats   stats;
 
@@ -56,27 +56,28 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
 
     public Producer(Channel channel, String exchangeName, String id, boolean randomRoutingKey,
                     List<?> flags, int txSize,
-                    float rateLimit, int msgLimit, int timeLimit,
-                    long confirm, int confirmTimeout, MessageBodySource messageBodySource,
-                    boolean timestampInHeader, Stats stats)
+                    float rateLimit, int msgLimit, int timeLimitSecs,
+                    long confirm, int confirmTimeout,
+                    MessageBodySource messageBodySource,
+                    TimestampProvider tsp, Stats stats)
         throws IOException {
 
-        this.channel            = channel;
-        this.exchangeName       = exchangeName;
-        this.id                 = id;
-        this.randomRoutingKey   = randomRoutingKey;
-        this.mandatory          = flags.contains("mandatory");
-        this.persistent         = flags.contains("persistent");
-        this.txSize             = txSize;
-        this.rateLimit          = rateLimit;
-        this.msgLimit           = msgLimit;
-        this.timeLimit          = 1000L * timeLimit;
+        this.channel           = channel;
+        this.exchangeName      = exchangeName;
+        this.id                = id;
+        this.randomRoutingKey  = randomRoutingKey;
+        this.mandatory         = flags.contains("mandatory");
+        this.persistent        = flags.contains("persistent");
+        this.txSize            = txSize;
+        this.rateLimit         = rateLimit;
+        this.msgLimit          = msgLimit;
+        this.timeLimitMillis   = 1000L * timeLimitSecs;
         this.messageBodySource = messageBodySource;
-        if (timestampInHeader) {
+        if (tsp.isTimestampInHeader()) {
             this.propertiesBuilderProcessor = new PropertiesBuilderProcessor() {
                 @Override
                 public AMQP.BasicProperties.Builder process(AMQP.BasicProperties.Builder builder) {
-                    builder.headers(Collections.<String, Object>singletonMap(TIMESTAMP_HEADER, System.nanoTime()));
+                    builder.headers(Collections.<String, Object>singletonMap(TIMESTAMP_HEADER, tsp.getCurrentTime()));
                     return builder;
                 }
             };
@@ -92,7 +93,7 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
             this.confirmPool  = new Semaphore((int)confirm);
             this.confirmTimeout = confirmTimeout;
         }
-        this.stats        = stats;
+        this.stats = stats;
     }
 
     public void handleReturn(int replyCode,
@@ -148,7 +149,7 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
 
         try {
 
-            while ((timeLimit == 0 || now < startTime + timeLimit) &&
+            while ((timeLimitMillis == 0 || now < startTime + timeLimitMillis) &&
                    (msgLimit == 0 || msgCount < msgLimit)) {
                 delay(now);
                 if (confirmPool != null) {

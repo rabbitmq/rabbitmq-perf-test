@@ -48,22 +48,26 @@ public class Consumer extends ProducerConsumerBase implements Runnable {
     private final Map<String, String>   consumerTagBranchMap = Collections.synchronizedMap(new HashMap<String, String>());
     private final ConsumerLatency       consumerLatency;
     private final TimestampExtractor    timestampExtractor;
+    private final TimestampProvider     timestampProvider;
 
     public Consumer(Channel channel, String id,
                     List<String> queueNames, int txSize, boolean autoAck,
                     int multiAckEvery, Stats stats, float rateLimit, int msgLimit, final int timeLimit,
-                    int consumerLatencyInMicroSeconds, boolean extractTimestampFromHeader) {
+                    int consumerLatencyInMicroSeconds,
+                    TimestampProvider timestampProvider) {
 
-        this.channel       = channel;
-        this.id            = id;
-        this.queueNames    = queueNames;
-        this.rateLimit     = rateLimit;
-        this.txSize        = txSize;
-        this.autoAck       = autoAck;
-        this.multiAckEvery = multiAckEvery;
-        this.stats         = stats;
-        this.msgLimit      = msgLimit;
-        this.timeLimit     = 1000L * timeLimit;
+        this.channel           = channel;
+        this.id                = id;
+        this.queueNames        = queueNames;
+        this.rateLimit         = rateLimit;
+        this.txSize            = txSize;
+        this.autoAck           = autoAck;
+        this.multiAckEvery     = multiAckEvery;
+        this.stats             = stats;
+        this.msgLimit          = msgLimit;
+        this.timeLimit         = 1000L * timeLimit;
+        this.timestampProvider = timestampProvider;
+
         if (consumerLatencyInMicroSeconds <= 0) {
             this.consumerLatency = new NoWaitConsumerLatency();
         } else if (consumerLatencyInMicroSeconds >= 1000) {
@@ -71,7 +75,8 @@ public class Consumer extends ProducerConsumerBase implements Runnable {
         } else {
             this.consumerLatency = new BusyWaitConsumerLatency(consumerLatencyInMicroSeconds * 1000);
         }
-        if (extractTimestampFromHeader) {
+
+        if (timestampProvider.isTimestampInHeader()) {
             this.timestampExtractor = new TimestampExtractor() {
                 @Override
                 public long extract(BasicProperties properties, byte[] body) throws IOException {
@@ -130,10 +135,8 @@ public class Consumer extends ProducerConsumerBase implements Runnable {
             msgCount++;
 
             if (msgLimit == 0 || msgCount <= msgLimit) {
-                long msgNano = timestampExtractor.extract(properties, body);
-
-
-                long nano = System.nanoTime();
+                long msg_ts = timestampExtractor.extract(properties, body);
+                long now_ts = timestampProvider.getCurrentTime();
 
                 if (!autoAck) {
                     if (multiAckEvery == 0) {
@@ -149,7 +152,8 @@ public class Consumer extends ProducerConsumerBase implements Runnable {
 
                 now = System.currentTimeMillis();
 
-                stats.handleRecv(id.equals(envelope.getRoutingKey()) ? (nano - msgNano) : 0L);
+                long diff_time = timestampProvider.getDifference(now_ts, msg_ts);
+                stats.handleRecv(id.equals(envelope.getRoutingKey()) ? diff_time : 0L);
                 if (rateLimit > 0.0f) {
                     delay(now);
                 }
