@@ -24,9 +24,11 @@ import java.io.IOException;
  */
 public class TimeSequenceMessageBodySource implements MessageBodySource {
 
+    private final TimestampProvider tsp;
     private final byte[] message;
 
-    public TimeSequenceMessageBodySource(int minMsgSize) {
+    public TimeSequenceMessageBodySource(TimestampProvider tsp, int minMsgSize) {
+        this.tsp = tsp;
         this.message = new byte[minMsgSize];
     }
 
@@ -34,9 +36,9 @@ public class TimeSequenceMessageBodySource implements MessageBodySource {
     public MessageBodyAndContentType create(int sequenceNumber) throws IOException {
         ByteArrayOutputStream acc = new ByteArrayOutputStream();
         DataOutputStream d = new DataOutputStream(acc);
-        long nano = System.nanoTime();
+        long time = tsp.getCurrentTime();
         d.writeInt(sequenceNumber);
-        d.writeLong(nano);
+        d.writeLong(time);
         d.flush();
         acc.flush();
         byte[] m = acc.toByteArray();

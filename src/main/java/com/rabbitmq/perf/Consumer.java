@@ -15,7 +15,6 @@
 
 package com.rabbitmq.perf;
 
-import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.AMQP.BasicProperties;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.DefaultConsumer;
@@ -31,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiFunction;
 
 public class Consumer extends ProducerConsumerBase implements Runnable {
 
@@ -47,23 +47,27 @@ public class Consumer extends ProducerConsumerBase implements Runnable {
     private final CountDownLatch        latch = new CountDownLatch(1);
     private final Map<String, String>   consumerTagBranchMap = Collections.synchronizedMap(new HashMap<String, String>());
     private final ConsumerLatency       consumerLatency;
-    private final TimestampExtractor    timestampExtractor;
+    private final BiFunction<BasicProperties, byte[], Long> timestampExtractor;
+    private final TimestampProvider     timestampProvider;
 
     public Consumer(Channel channel, String id,
                     List<String> queueNames, int txSize, boolean autoAck,
                     int multiAckEvery, Stats stats, float rateLimit, int msgLimit, final int timeLimit,
-                    int consumerLatencyInMicroSeconds, boolean extractTimestampFromHeader) {
+                    int consumerLatencyInMicroSeconds,
+                    TimestampProvider timestampProvider) {
 
-        this.channel       = channel;
-        this.id            = id;
-        this.queueNames    = queueNames;
-        this.rateLimit     = rateLimit;
-        this.txSize        = txSize;
-        this.autoAck       = autoAck;
-        this.multiAckEvery = multiAckEvery;
-        this.stats         = stats;
-        this.msgLimit      = msgLimit;
-        this.timeLimit     = 1000L * timeLimit;
+        this.channel           = channel;
+        this.id                = id;
+        this.queueNames        = queueNames;
+        this.rateLimit         = rateLimit;
+        this.txSize            = txSize;
+        this.autoAck           = autoAck;
+        this.multiAckEvery     = multiAckEvery;
+        this.stats             = stats;
+        this.msgLimit          = msgLimit;
+        this.timeLimit         = 1000L * timeLimit;
+        this.timestampProvider = timestampProvider;
+
         if (consumerLatencyInMicroSeconds <= 0) {
             this.consumerLatency = new NoWaitConsumerLatency();
         } else if (consumerLatencyInMicroSeconds >= 1000) {
@@ -71,22 +75,22 @@ public class Consumer extends ProducerConsumerBase implements Runnable {
         } else {
             this.consumerLatency = new BusyWaitConsumerLatency(consumerLatencyInMicroSeconds * 1000);
         }
-        if (extractTimestampFromHeader) {
-            this.timestampExtractor = new TimestampExtractor() {
-                @Override
-                public long extract(BasicProperties properties, byte[] body) throws IOException {
+
+        if (timestampProvider.isTimestampInHeader()) {
+            this.timestampExtractor = (properties, body) -> {
                     Object timestamp = properties.getHeaders().get(Producer.TIMESTAMP_HEADER);
                     return timestamp == null ? Long.MAX_VALUE : (Long) timestamp;
-                }
             };
         } else {
-            this.timestampExtractor = new TimestampExtractor() {
-                @Override
-                public long extract(BasicProperties properties, byte[] body) throws IOException {
-                    DataInputStream d = new DataInputStream(new ByteArrayInputStream(body));
+            this.timestampExtractor = (properties, body) -> {
+                DataInputStream d = new DataInputStream(new ByteArrayInputStream(body));
+                try {
                     d.readInt();
                     return d.readLong();
+                } catch (IOException e) {
+                    throw new RuntimeException("Error while extracting timestamp from body");
                 }
+
             };
         }
     }
@@ -130,10 +134,8 @@ public class Consumer extends ProducerConsumerBase implements Runnable {
             msgCount++;
 
             if (msgLimit == 0 || msgCount <= msgLimit) {
-                long msgNano = timestampExtractor.extract(properties, body);
-
-
-                long nano = System.nanoTime();
+                long messageTimestamp = timestampExtractor.apply(properties, body);
+                long nowTimestamp = timestampProvider.getCurrentTime();
 
                 if (!autoAck) {
                     if (multiAckEvery == 0) {
@@ -147,9 +149,10 @@ public class Consumer extends ProducerConsumerBase implements Runnable {
                     channel.txCommit();
                 }
 
-                now = System.currentTimeMillis();
+                long diff_time = timestampProvider.getDifference(nowTimestamp, messageTimestamp);
+                stats.handleRecv(id.equals(envelope.getRoutingKey()) ? diff_time : 0L);
 
-                stats.handleRecv(id.equals(envelope.getRoutingKey()) ? (nano - msgNano) : 0L);
+                now = System.currentTimeMillis();
                 if (rateLimit > 0.0f) {
                     delay(now);
                 }
@@ -227,9 +230,4 @@ public class Consumer extends ProducerConsumerBase implements Runnable {
         }
     }
 
-    private interface TimestampExtractor {
-
-        long extract(BasicProperties properties, byte[] body) throws IOException;
-
-    }
 }

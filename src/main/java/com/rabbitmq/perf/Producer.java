@@ -28,6 +28,7 @@ import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.function.UnaryOperator;
 
 public class Producer extends ProducerConsumerBase implements Runnable, ReturnListener,
         ConfirmListener
@@ -42,13 +43,13 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
     private final boolean persistent;
     private final int     txSize;
     private final int     msgLimit;
-    private final long    timeLimit;
+    private final long    timeLimitMillis;
 
     private final Stats   stats;
 
     private final MessageBodySource messageBodySource;
 
-    private final PropertiesBuilderProcessor propertiesBuilderProcessor;
+    private final UnaryOperator<AMQP.BasicProperties.Builder> propertiesBuilderProcessor;
     private Semaphore confirmPool;
     private int confirmTimeout;
     private final SortedSet<Long> unconfirmedSet =
@@ -56,43 +57,36 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
 
     public Producer(Channel channel, String exchangeName, String id, boolean randomRoutingKey,
                     List<?> flags, int txSize,
-                    float rateLimit, int msgLimit, int timeLimit,
-                    long confirm, int confirmTimeout, MessageBodySource messageBodySource,
-                    boolean timestampInHeader, Stats stats)
+                    float rateLimit, int msgLimit, int timeLimitSecs,
+                    long confirm, int confirmTimeout,
+                    MessageBodySource messageBodySource,
+                    TimestampProvider tsp, Stats stats)
         throws IOException {
 
-        this.channel            = channel;
-        this.exchangeName       = exchangeName;
-        this.id                 = id;
-        this.randomRoutingKey   = randomRoutingKey;
-        this.mandatory          = flags.contains("mandatory");
-        this.persistent         = flags.contains("persistent");
-        this.txSize             = txSize;
-        this.rateLimit          = rateLimit;
-        this.msgLimit           = msgLimit;
-        this.timeLimit          = 1000L * timeLimit;
+        this.channel           = channel;
+        this.exchangeName      = exchangeName;
+        this.id                = id;
+        this.randomRoutingKey  = randomRoutingKey;
+        this.mandatory         = flags.contains("mandatory");
+        this.persistent        = flags.contains("persistent");
+        this.txSize            = txSize;
+        this.rateLimit         = rateLimit;
+        this.msgLimit          = msgLimit;
+        this.timeLimitMillis   = 1000L * timeLimitSecs;
         this.messageBodySource = messageBodySource;
-        if (timestampInHeader) {
-            this.propertiesBuilderProcessor = new PropertiesBuilderProcessor() {
-                @Override
-                public AMQP.BasicProperties.Builder process(AMQP.BasicProperties.Builder builder) {
-                    builder.headers(Collections.<String, Object>singletonMap(TIMESTAMP_HEADER, System.nanoTime()));
-                    return builder;
-                }
+        if (tsp.isTimestampInHeader()) {
+            this.propertiesBuilderProcessor = builder -> {
+                builder.headers(Collections.<String, Object>singletonMap(TIMESTAMP_HEADER, tsp.getCurrentTime()));
+                return builder;
             };
         } else {
-            this.propertiesBuilderProcessor = new PropertiesBuilderProcessor() {
-                @Override
-                public AMQP.BasicProperties.Builder process(AMQP.BasicProperties.Builder builder) {
-                    return builder;
-                }
-            };
+            this.propertiesBuilderProcessor = UnaryOperator.identity();
         }
         if (confirm > 0) {
             this.confirmPool  = new Semaphore((int)confirm);
             this.confirmTimeout = confirmTimeout;
         }
-        this.stats        = stats;
+        this.stats = stats;
     }
 
     public void handleReturn(int replyCode,
@@ -140,7 +134,7 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
 
     public void run() {
         long now;
-        long startTime;
+        final long startTime;
         startTime = now = System.currentTimeMillis();
         lastStatsTime = startTime;
         msgCount = 0;
@@ -148,7 +142,7 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
 
         try {
 
-            while ((timeLimit == 0 || now < startTime + timeLimit) &&
+            while ((timeLimitMillis == 0 || now < startTime + timeLimitMillis) &&
                    (msgLimit == 0 || msgCount < msgLimit)) {
                 delay(now);
                 if (confirmPool != null) {
@@ -193,19 +187,13 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
             propertiesBuilder.contentType(messageBodyAndContentType.getContentType());
         }
 
-        propertiesBuilder = this.propertiesBuilderProcessor.process(propertiesBuilder);
+        propertiesBuilder = this.propertiesBuilderProcessor.apply(propertiesBuilder);
 
         unconfirmedSet.add(channel.getNextPublishSeqNo());
         channel.basicPublish(exchangeName, randomRoutingKey ? UUID.randomUUID().toString() : id,
                              mandatory, false,
                              propertiesBuilder.build(),
                              messageBodyAndContentType.getBody());
-    }
-
-    private interface PropertiesBuilderProcessor {
-
-        AMQP.BasicProperties.Builder process(AMQP.BasicProperties.Builder builder);
-
     }
 
 }

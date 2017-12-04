@@ -92,6 +92,7 @@ public class PerfTest {
             boolean predeclared      = cmd.hasOption('p');
             boolean legacyMetrics    = cmd.hasOption('l');
             boolean autoDelete       = boolArg(cmd, "ad", true);
+            boolean useMillis        = cmd.hasOption("ms");
             String queueArgs         = strArg(cmd, "qa", null);
             int consumerLatencyInMicroseconds = intArg(cmd, 'L', 0);
 
@@ -106,18 +107,12 @@ public class PerfTest {
                     file.delete();
                 }
                 output = new PrintWriter(new BufferedWriter(new FileWriter(file)), true);
-                Runtime.getRuntime().addShutdownHook(new Thread() {
-
-                    @Override
-                    public void run() {
-                        output.close();
-                    }
-                });
+                Runtime.getRuntime().addShutdownHook(new Thread(() -> output.close()));
             } else {
                 output = null;
             }
 
-            List<String> uris = null;
+            List<String> uris;
             if(urisParameter != null) {
                 String [] urisArray = urisParameter.split(",");
                 for(int i = 0; i< urisArray.length; i++) {
@@ -133,9 +128,8 @@ public class PerfTest {
                 1000L * samplingInterval,
                 producerCount > 0,
                 consumerCount > 0,
-                (flags.contains("mandatory") ||
-                    flags.contains("immediate")),
-                confirm != -1, legacyMetrics, output);
+                (flags.contains("mandatory") || flags.contains("immediate")),
+                confirm != -1, legacyMetrics, useMillis, output);
 
             SSLContext sslContext = getSslContextIfNecessary(cmd, System.getProperties());
 
@@ -177,6 +171,7 @@ public class PerfTest {
             p.setRandomRoutingKey(      randomRoutingKey);
             p.setProducerRateLimit(     producerRateLimit);
             p.setTimeLimit(             timeLimit);
+            p.setUseMillis(             useMillis);
             p.setBodyFiles(             bodyFiles == null ? null : asList(bodyFiles.split(",")));
             p.setBodyContentType(       bodyContentType);
             p.setQueueArguments(queueArguments(queueArgs));
@@ -187,7 +182,7 @@ public class PerfTest {
 
             stats.printFinal();
         }
-        catch( ParseException exp ) {
+        catch (ParseException exp) {
             System.err.println("Parsing failed. Reason: " + exp.getMessage());
             usage(options);
         } catch (Exception e) {
@@ -268,9 +263,11 @@ public class PerfTest {
         options.addOption(new Option("p", "predeclared",            false,"allow use of predeclared objects"));
         options.addOption(new Option("B", "body",                   true, "comma-separated list of files to use in message bodies"));
         options.addOption(new Option("T", "body-content-type",      true, "body content-type"));
-        options.addOption(new Option("l", "legacy-metrics",         false, "display legacy metrics (min/avg/max latency)"));
+        options.addOption(new Option("l", "legacy-metrics",         false,"display legacy metrics (min/avg/max latency)"));
         options.addOption(new Option("o", "output-file",            true, "output file for timing results"));
         options.addOption(new Option("ad", "auto-delete",           true, "should the queue be auto-deleted, default is true"));
+        options.addOption(new Option("ms", "use-millis",            false,"should latency be collected in milliseconds, default is false. "
+                                                                                                    + "Set to true if producers are consumers run on different machines."));
         options.addOption(new Option("qa", "queue-args",            true, "queue arguments as key/pair values, separated by commas"));
         options.addOption(new Option("L", "consumer-latency",       true, "consumer latency in microseconds"));
         options.addOption(new Option("udsc", "use-default-ssl-context", false,"use JVM default SSL context"));
@@ -344,6 +341,7 @@ public class PerfTest {
         private final boolean returnStatsEnabled;
         private final boolean confirmStatsEnabled;
         private final boolean legacyMetrics;
+        private final boolean useMillis;
 
         private final String testID;
         private final PrintWriter out;
@@ -351,7 +349,7 @@ public class PerfTest {
         public PrintlnStats(String testID, long interval,
             boolean sendStatsEnabled, boolean recvStatsEnabled,
             boolean returnStatsEnabled, boolean confirmStatsEnabled,
-            boolean legacyMetrics,
+            boolean legacyMetrics, boolean useMillis,
             PrintWriter out) {
             super(interval);
             this.sendStatsEnabled = sendStatsEnabled;
@@ -360,13 +358,13 @@ public class PerfTest {
             this.confirmStatsEnabled = confirmStatsEnabled;
             this.testID = testID;
             this.legacyMetrics = legacyMetrics;
+            this.useMillis = useMillis;
             this.out = out;
             if (out != null) {
                 out.println("id,time (s),sent (msg/s),returned (msg/s),confirmed (msg/s), nacked (msg/s), received (msg/s),"
                     + "min latency (microseconds),median latency (microseconds),75th p. latency (microseconds),95th p. latency (microseconds),"
                     + "99th p. latency (microseconds)");
             }
-
         }
 
         @Override
@@ -391,11 +389,10 @@ public class PerfTest {
             } else {
                 output += (latencyCountInterval > 0 ?
                     ", min/median/75th/95th/99th latency: "
-                        + latency.getSnapshot().getMin()/1000L + "/"
-                        + (long) latency.getSnapshot().getMedian()/1000L + "/"
-                        + (long) latency.getSnapshot().get75thPercentile()/1000L + "/"
-                        + (long) latency.getSnapshot().get95thPercentile()/1000L + "/"
-                        + (long) latency.getSnapshot().get99thPercentile()/1000L +  " microseconds" :
+                        + div(latency.getSnapshot().getMin()) + "/"
+                        + div(latency.getSnapshot().getMedian()) + "/"
+                        + div(latency.getSnapshot().get75thPercentile()) + "/"
+                        + div(latency.getSnapshot().get95thPercentile()) + units() :
                     "");
             }
 
@@ -408,23 +405,40 @@ public class PerfTest {
                     rate(nackCountInterval, elapsedInterval, sendStatsEnabled && confirmStatsEnabled)+ "," +
                     rate(recvCountInterval, elapsedInterval, recvStatsEnabled) + "," +
                     (latencyCountInterval > 0 ?
-                        latency.getSnapshot().getMin()/1000L + "," +
-                        (long) latency.getSnapshot().getMedian()/1000L + "," +
-                        (long) latency.getSnapshot().get75thPercentile()/1000L + "," +
-                        (long) latency.getSnapshot().get95thPercentile()/1000L + "," +
-                        (long) latency.getSnapshot().get99thPercentile()/1000L
+                        div(latency.getSnapshot().getMin()) + "," +
+                        div(latency.getSnapshot().getMedian()) + "," +
+                        div(latency.getSnapshot().get75thPercentile()) + "," +
+                        div(latency.getSnapshot().get95thPercentile()) + "," +
+                        div(latency.getSnapshot().get99thPercentile())
                         : ",,,,")
                 );
             }
 
         }
 
+        private String units() {
+            if (useMillis) {
+                return " milliseconds";
+            } else {
+                return " microseconds";
+            }
+        }
+
+        private long div(double p) {
+            if (useMillis) {
+                return (long)p;
+            } else {
+                return (long)(p / 1000L);
+            }
+        }
+
         private String getRate(String descr, long count, boolean display,
             long elapsed) {
-            if (display)
+            if (display) {
                 return ", " + descr + ": " + formatRate(1000.0 * count / elapsed) + " msg/s";
-            else
+            } else {
                 return "";
+            }
         }
 
         public void printFinal() {

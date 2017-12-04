@@ -62,6 +62,7 @@ public class MulticastParams {
     private String bodyContentType = null;
 
     private boolean predeclared;
+    private boolean useMillis;
 
     private Map<String, Object> queueArguments;
 
@@ -163,6 +164,10 @@ public class MulticastParams {
         this.timeLimit = timeLimit;
     }
 
+    public void setUseMillis(boolean useMillis) {
+        this.useMillis = useMillis;
+    }
+
     public void setProducerMsgCount(int producerMsgCount) {
         this.producerMsgCount = producerMsgCount;
     }
@@ -259,21 +264,21 @@ public class MulticastParams {
         if (!predeclared || !exchangeExists(connection, exchangeName)) {
             channel.exchangeDeclare(exchangeName, exchangeType);
         }
-        MessageBodySource messageBodySource = null;
-        boolean timestampInHeader;
+        MessageBodySource messageBodySource;
+        TimestampProvider tsp;
         if (bodyFiles.size() > 0) {
+            tsp = new TimestampProvider(useMillis, true);
             messageBodySource = new LocalFilesMessageBodySource(bodyFiles, bodyContentType);
-            timestampInHeader = true;
         } else {
-            messageBodySource = new TimeSequenceMessageBodySource(minMsgSize);
-            timestampInHeader = false;
+            tsp = new TimestampProvider(useMillis, false);
+            messageBodySource = new TimeSequenceMessageBodySource(tsp, minMsgSize);
         }
         final Producer producer = new Producer(channel, exchangeName, id,
                                                randomRoutingKey, flags, producerTxSize,
                                                producerRateLimit, producerMsgCount,
                                                timeLimit,
                                                confirm, confirmTimeout, messageBodySource,
-                                               timestampInHeader, stats);
+                                               tsp, stats);
         channel.addReturnListener(producer);
         channel.addConfirmListener(producer);
         return producer;
@@ -292,11 +297,11 @@ public class MulticastParams {
         } else {
             timestampInHeader = false;
         }
-
+        TimestampProvider tsp = new TimestampProvider(useMillis, timestampInHeader);
         return new Consumer(channel, id, generatedQueueNames,
                                          consumerTxSize, autoAck, multiAckEvery,
                                          stats, consumerRateLimit, consumerMsgCount, timeLimit,
-                                         consumerLatencyInMicroseconds, timestampInHeader);
+                                         consumerLatencyInMicroseconds, tsp);
     }
 
     public boolean shouldConfigureQueues() {
