@@ -107,13 +107,7 @@ public class PerfTest {
                     file.delete();
                 }
                 output = new PrintWriter(new BufferedWriter(new FileWriter(file)), true);
-                Runtime.getRuntime().addShutdownHook(new Thread() {
-
-                    @Override
-                    public void run() {
-                        output.close();
-                    }
-                });
+                Runtime.getRuntime().addShutdownHook(new Thread(() -> output.close()));
             } else {
                 output = null;
             }

@@ -264,7 +264,7 @@ public class MulticastParams {
         if (!predeclared || !exchangeExists(connection, exchangeName)) {
             channel.exchangeDeclare(exchangeName, exchangeType);
         }
-        MessageBodySource messageBodySource = null;
+        MessageBodySource messageBodySource;
         TimestampProvider tsp;
         if (bodyFiles.size() > 0) {
             tsp = new TimestampProvider(useMillis, true);

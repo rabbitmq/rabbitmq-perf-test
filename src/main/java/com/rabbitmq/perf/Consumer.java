@@ -15,7 +15,6 @@
 
 package com.rabbitmq.perf;
 
-import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.AMQP.BasicProperties;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.DefaultConsumer;
@@ -31,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiFunction;
 
 public class Consumer extends ProducerConsumerBase implements Runnable {
 
@@ -47,7 +47,7 @@ public class Consumer extends ProducerConsumerBase implements Runnable {
     private final CountDownLatch        latch = new CountDownLatch(1);
     private final Map<String, String>   consumerTagBranchMap = Collections.synchronizedMap(new HashMap<String, String>());
     private final ConsumerLatency       consumerLatency;
-    private final TimestampExtractor    timestampExtractor;
+    private final BiFunction<BasicProperties, byte[], Long> timestampExtractor;
     private final TimestampProvider     timestampProvider;
 
     public Consumer(Channel channel, String id,
@@ -77,21 +77,20 @@ public class Consumer extends ProducerConsumerBase implements Runnable {
         }
 
         if (timestampProvider.isTimestampInHeader()) {
-            this.timestampExtractor = new TimestampExtractor() {
-                @Override
-                public long extract(BasicProperties properties, byte[] body) throws IOException {
+            this.timestampExtractor = (properties, body) -> {
                     Object timestamp = properties.getHeaders().get(Producer.TIMESTAMP_HEADER);
                     return timestamp == null ? Long.MAX_VALUE : (Long) timestamp;
-                }
             };
         } else {
-            this.timestampExtractor = new TimestampExtractor() {
-                @Override
-                public long extract(BasicProperties properties, byte[] body) throws IOException {
-                    DataInputStream d = new DataInputStream(new ByteArrayInputStream(body));
+            this.timestampExtractor = (properties, body) -> {
+                DataInputStream d = new DataInputStream(new ByteArrayInputStream(body));
+                try {
                     d.readInt();
                     return d.readLong();
+                } catch (IOException e) {
+                    throw new RuntimeException("Error while extracting timestamp from body");
                 }
+
             };
         }
     }
@@ -135,8 +134,8 @@ public class Consumer extends ProducerConsumerBase implements Runnable {
             msgCount++;
 
             if (msgLimit == 0 || msgCount <= msgLimit) {
-                long msg_ts = timestampExtractor.extract(properties, body);
-                long now_ts = timestampProvider.getCurrentTime();
+                long messageTimestamp = timestampExtractor.apply(properties, body);
+                long nowTimestamp = timestampProvider.getCurrentTime();
 
                 if (!autoAck) {
                     if (multiAckEvery == 0) {
@@ -150,10 +149,10 @@ public class Consumer extends ProducerConsumerBase implements Runnable {
                     channel.txCommit();
                 }
 
-                now = System.currentTimeMillis();
-
-                long diff_time = timestampProvider.getDifference(now_ts, msg_ts);
+                long diff_time = timestampProvider.getDifference(nowTimestamp, messageTimestamp);
                 stats.handleRecv(id.equals(envelope.getRoutingKey()) ? diff_time : 0L);
+
+                now = System.currentTimeMillis();
                 if (rateLimit > 0.0f) {
                     delay(now);
                 }
@@ -231,9 +230,4 @@ public class Consumer extends ProducerConsumerBase implements Runnable {
         }
     }
 
-    private interface TimestampExtractor {
-
-        long extract(BasicProperties properties, byte[] body) throws IOException;
-
-    }
 }
