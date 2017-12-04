@@ -112,7 +112,7 @@ public class PerfTest {
                 output = null;
             }
 
-            List<String> uris = null;
+            List<String> uris;
             if(urisParameter != null) {
                 String [] urisArray = urisParameter.split(",");
                 for(int i = 0; i< urisArray.length; i++) {
@@ -266,7 +266,8 @@ public class PerfTest {
         options.addOption(new Option("l", "legacy-metrics",         false,"display legacy metrics (min/avg/max latency)"));
         options.addOption(new Option("o", "output-file",            true, "output file for timing results"));
         options.addOption(new Option("ad", "auto-delete",           true, "should the queue be auto-deleted, default is true"));
-        options.addOption(new Option("ms", "use-millis",            false,"should latency be collected in milliseconds, default is false"));
+        options.addOption(new Option("ms", "use-millis",            false,"should latency be collected in milliseconds, default is false. "
+                                                                                                    + "Set to true if producers are consumers run on different machines."));
         options.addOption(new Option("qa", "queue-args",            true, "queue arguments as key/pair values, separated by commas"));
         options.addOption(new Option("L", "consumer-latency",       true, "consumer latency in microseconds"));
         options.addOption(new Option("udsc", "use-default-ssl-context", false,"use JVM default SSL context"));
