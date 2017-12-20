@@ -27,9 +27,6 @@ services:
 branches:
   only:
     - master
-before_script:
-  - ./bin/before_build.sh
-
 script: ./mvnw clean verify
 cache:
   directories:
