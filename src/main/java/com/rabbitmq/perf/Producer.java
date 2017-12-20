@@ -29,7 +29,7 @@ import java.util.UUID;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.UnaryOperator;
+import java.util.function.Function;
 
 public class Producer extends ProducerConsumerBase implements Runnable, ReturnListener,
         ConfirmListener
@@ -49,7 +49,7 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
 
     private final MessageBodySource messageBodySource;
 
-    private final UnaryOperator<AMQP.BasicProperties.Builder> propertiesBuilderProcessor;
+    private final Function<AMQP.BasicProperties.Builder, AMQP.BasicProperties.Builder> propertiesBuilderProcessor;
     private Semaphore confirmPool;
     private int confirmTimeout;
     private final SortedSet<Long> unconfirmedSet =
@@ -70,17 +70,28 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
         this.randomRoutingKey  = randomRoutingKey;
         this.mandatory         = flags.contains("mandatory");
         this.persistent        = flags.contains("persistent");
+
+        Function<AMQP.BasicProperties.Builder, AMQP.BasicProperties.Builder> builderProcessor = Function.identity();
+        for (Object flag : flags) {
+            if (flag != null && flag.toString().startsWith("priority=")) {
+                final Integer priority = Integer.valueOf(flag.toString().substring(
+                    flag.toString().indexOf("=") + 1
+                ));
+                builderProcessor = builderProcessor.andThen(builder -> {
+                    builder.priority(priority);
+                    return builder;
+                });
+            }
+        }
         this.txSize            = txSize;
         this.rateLimit         = rateLimit;
         this.msgLimit          = msgLimit;
         this.messageBodySource = messageBodySource;
         if (tsp.isTimestampInHeader()) {
-            this.propertiesBuilderProcessor = builder -> {
-                builder.headers(Collections.<String, Object>singletonMap(TIMESTAMP_HEADER, tsp.getCurrentTime()));
+            builderProcessor = builderProcessor.andThen(builder -> {
+                builder.headers(Collections.singletonMap(TIMESTAMP_HEADER, tsp.getCurrentTime()));
                 return builder;
-            };
-        } else {
-            this.propertiesBuilderProcessor = UnaryOperator.identity();
+            });
         }
         if (confirm > 0) {
             this.confirmPool  = new Semaphore((int)confirm);
@@ -88,6 +99,7 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
         }
         this.stats = stats;
         this.completionHandler = completionHandler;
+        this.propertiesBuilderProcessor = builderProcessor;
     }
 
     public void handleReturn(int replyCode,
