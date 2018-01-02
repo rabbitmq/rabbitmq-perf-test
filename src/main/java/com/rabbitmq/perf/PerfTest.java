@@ -16,15 +16,18 @@
 package com.rabbitmq.perf;
 
 import java.io.*;
+import java.nio.charset.Charset;
 import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
 
+import com.rabbitmq.client.impl.ClientVersion;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.GnuParser;
@@ -55,6 +58,12 @@ public class PerfTest {
                 usage(options);
                 System.exit(0);
             }
+
+            if (cmd.hasOption('v')) {
+                versionInformation();
+                System.exit(0);
+            }
+
             String testID = new SimpleDateFormat("HHmmss-SSS").format(Calendar.
                 getInstance().getTime());
             testID                   = strArg(cmd, 'd', "test-"+testID);
@@ -271,6 +280,8 @@ public class PerfTest {
         options.addOption(new Option("qa", "queue-args",            true, "queue arguments as key/pair values, separated by commas"));
         options.addOption(new Option("L", "consumer-latency",       true, "consumer latency in microseconds"));
         options.addOption(new Option("udsc", "use-default-ssl-context", false,"use JVM default SSL context"));
+
+        options.addOption(new Option("v", "version",                false,"print version information"));
         return options;
     }
 
@@ -471,4 +482,27 @@ public class PerfTest {
             }
         }
     }
+
+    private static void versionInformation() {
+        String lineSeparator = System.getProperty("line.separator");
+        String version = String.format(
+            "RabbitMQ Perf Test %s (%s; %s)",
+            Version.VERSION, Version.BUILD, Version.BUILD_TIMESTAMP
+        );
+        String info = String.format(
+            "RabbitMQ AMQP Client version: %s" + lineSeparator +
+            "Java version: %s, vendor: %s" + lineSeparator +
+            "Java home: %s" + lineSeparator +
+            "Default locale: %s, platform encoding: %s" + lineSeparator +
+            "OS name: %s, version: %s, arch: %s",
+            ClientVersion.VERSION,
+            System.getProperty("java.version"), System.getProperty("java.vendor"),
+            System.getProperty("java.home"),
+            Locale.getDefault().toString(), Charset.defaultCharset().toString(),
+            System.getProperty("os.name"), System.getProperty("os.version"), System.getProperty("os.arch")
+        );
+        System.out.println("\u001B[1m" + version);
+        System.out.println("\u001B[0m" + info);
+    }
+
 }
