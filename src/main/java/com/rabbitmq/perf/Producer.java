@@ -143,7 +143,7 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
         try {
 
             while ((timeLimitMillis == 0 || now < startTime + timeLimitMillis) &&
-                   (msgLimit == 0 || msgCount < msgLimit)) {
+                   (msgLimit == 0 || msgCount < msgLimit) && !Thread.interrupted()) {
                 delay(now);
                 if (confirmPool != null) {
                     if (confirmTimeout < 0) {

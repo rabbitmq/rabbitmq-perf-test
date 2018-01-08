@@ -22,8 +22,10 @@ import com.rabbitmq.client.ShutdownSignalException;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 public class MulticastParams {
     private long confirm = -1;
@@ -39,34 +41,40 @@ public class MulticastParams {
     private int minMsgSize = 0;
 
     private int timeLimit = 0;
-    private float producerRateLimit = 0;
-    private float consumerRateLimit = 0;
+    private float producerRateLimit = 0.0f;
+    private float consumerRateLimit = 0.0f;
     private int producerMsgCount = 0;
     private int consumerMsgCount = 0;
     private boolean consumerSlowStart = false;
 
     private String exchangeName = "direct";
     private String exchangeType = "direct";
-    private List<String> queueNames = new ArrayList<String>();
+    private List<String> queueNames = new ArrayList<>();
     private String routingKey = null;
     private boolean randomRoutingKey = false;
     private boolean skipBindingQueues = false;
 
-    private List<?> flags = new ArrayList<Object>();
+    private List<?> flags = new ArrayList<>();
 
     private int multiAckEvery = 0;
-    private boolean autoAck = true;
-    private boolean autoDelete = false;
+    private boolean autoAck = false;
+    private boolean autoDelete = true;
 
-    private List<String> bodyFiles = new ArrayList<String>();
+    private List<String> bodyFiles = new ArrayList<>();
     private String bodyContentType = null;
 
-    private boolean predeclared;
-    private boolean useMillis;
+    private boolean predeclared = false;
+    private boolean useMillis = false;
 
-    private Map<String, Object> queueArguments;
+    private Map<String, Object> queueArguments = null;
 
-    private int consumerLatencyInMicroseconds;
+    private int consumerLatencyInMicroseconds = 0;
+
+    private String queuePattern = null;
+    private int queueSequenceFrom = -1;
+    private int queueSequenceTo = -1;
+
+    private TopologyHandler topologyHandler;
 
     public void setExchangeType(String exchangeType) {
         this.exchangeType = exchangeType;
@@ -78,9 +86,9 @@ public class MulticastParams {
 
     public void setQueueNames(List<String> queueNames) {
         if(queueNames == null) {
-            this.queueNames = new ArrayList<String>();
+            this.queueNames = new ArrayList<>();
         } else {
-            this.queueNames = new ArrayList<String>(queueNames);
+            this.queueNames = new ArrayList<>(queueNames);
         }
     }
 
@@ -247,9 +255,9 @@ public class MulticastParams {
 
     public void setBodyFiles(List<String> bodyFiles) {
         if (bodyFiles == null) {
-            this.bodyFiles = new ArrayList<String>();
+            this.bodyFiles = new ArrayList<>();
         } else {
-            this.bodyFiles = new ArrayList<String>(bodyFiles);
+            this.bodyFiles = new ArrayList<>(bodyFiles);
         }
     }
 
@@ -257,7 +265,31 @@ public class MulticastParams {
         this.bodyContentType = bodyContentType;
     }
 
-    public Producer createProducer(Connection connection, Stats stats, String id) throws IOException {
+    public void setQueuePattern(String queuePattern) {
+        this.queuePattern = queuePattern;
+    }
+
+    public String getQueuePattern() {
+        return queuePattern;
+    }
+
+    public void setQueueSequenceFrom(int queueSequenceFrom) {
+        this.queueSequenceFrom = queueSequenceFrom;
+    }
+
+    public int getQueueSequenceFrom() {
+        return queueSequenceFrom;
+    }
+
+    public void setQueueSequenceTo(int queueSequenceTo) {
+        this.queueSequenceTo = queueSequenceTo;
+    }
+
+    public int getQueueSequenceTo() {
+        return queueSequenceTo;
+    }
+
+    public Producer createProducer(Connection connection, Stats stats) throws IOException {
         Channel channel = connection.createChannel();
         if (producerTxSize > 0) channel.txSelect();
         if (confirm >= 0) channel.confirmSelect();
@@ -273,7 +305,7 @@ public class MulticastParams {
             tsp = new TimestampProvider(useMillis, false);
             messageBodySource = new TimeSequenceMessageBodySource(tsp, minMsgSize);
         }
-        final Producer producer = new Producer(channel, exchangeName, id,
+        final Producer producer = new Producer(channel, exchangeName, this.topologyHandler.getRoutingKey(),
                                                randomRoutingKey, flags, producerTxSize,
                                                producerRateLimit, producerMsgCount,
                                                timeLimit,
@@ -281,13 +313,14 @@ public class MulticastParams {
                                                tsp, stats);
         channel.addReturnListener(producer);
         channel.addConfirmListener(producer);
+        this.topologyHandler.next();
         return producer;
     }
 
-    public Consumer createConsumer(Connection connection, Stats stats, String id) throws IOException {
+    public Consumer createConsumer(Connection connection, Stats stats) throws IOException {
         Channel channel = connection.createChannel();
         if (consumerTxSize > 0) channel.txSelect();
-        List<String> generatedQueueNames = configureQueues(connection, id);
+        List<String> generatedQueueNames = this.topologyHandler.configureQueuesForClient(connection);
         if (consumerPrefetch > 0) channel.basicQos(consumerPrefetch);
         if (channelPrefetch > 0) channel.basicQos(channelPrefetch, true);
 
@@ -298,50 +331,29 @@ public class MulticastParams {
             timestampInHeader = false;
         }
         TimestampProvider tsp = new TimestampProvider(useMillis, timestampInHeader);
-        return new Consumer(channel, id, generatedQueueNames,
+        Consumer consumer = new Consumer(channel, this.topologyHandler.getRoutingKey(), generatedQueueNames,
                                          consumerTxSize, autoAck, multiAckEvery,
                                          stats, consumerRateLimit, consumerMsgCount, timeLimit,
                                          consumerLatencyInMicroseconds, tsp);
+        this.topologyHandler.next();
+        return consumer;
     }
 
-    public boolean shouldConfigureQueues() {
-        // don't declare any queues when --predeclared is passed,
-        // otherwise unwanted server-named queues without consumers will pile up. MK.
-        return consumerCount == 0 && !(queueNames.size() == 0);
+    public List<String> configureAllQueues(Connection connection) throws IOException {
+        return this.topologyHandler.configureAllQueues(connection);
     }
 
-    public List<String> configureQueues(Connection connection, String id) throws IOException {
-        Channel channel = connection.createChannel();
-        if (!predeclared || !exchangeExists(connection, exchangeName)) {
-            channel.exchangeDeclare(exchangeName, exchangeType);
+    public void init() {
+        if (this.queuePattern == null) {
+            this.topologyHandler = new FixedQueuesTopologyHandler(this, this.routingKey, this.queueNames);
+        } else {
+            this.topologyHandler = new SequenceTopologyHandler(this, this.queueSequenceFrom, this.queueSequenceTo, this.queuePattern);
         }
-        // To ensure we get at-least 1 default queue:
-        // (don't declare any queues when --predeclared is passed,
-        // otherwise unwanted server-named queues without consumers will pile up.
-        // see https://github.com/rabbitmq/rabbitmq-perf-test/issues/25 and
-        // https://github.com/rabbitmq/rabbitmq-perf-test/issues/43)
-        if (!predeclared && queueNames.isEmpty()) {
-            queueNames.add("");
-        }
-        List<String> generatedQueueNames = new ArrayList<String>();
-        for (String qName : queueNames) {
-            if (!predeclared || !queueExists(connection, qName)) {
-                qName = channel.queueDeclare(qName,
-                                     flags.contains("persistent"),
-                                     false,
-                                     autoDelete,
-                                     queueArguments).getQueue();
-            }
-            generatedQueueNames.add(qName);
-            // skipping binding to default exchange,
-            // as it's not possible to explicitly bind to it.
-            if (!"".equals(exchangeName) && !"amq.default".equals(exchangeName) && !skipBindingQueues) {
-                channel.queueBind(qName, exchangeName, id);
-            }
-        }
-        channel.abort();
 
-        return generatedQueueNames;
+    }
+
+    public void resetTopologyHandler() {
+        this.topologyHandler.reset();
     }
 
     private static boolean exchangeExists(Connection connection, final String exchangeName) throws IOException {
@@ -349,20 +361,12 @@ public class MulticastParams {
             // NB: default exchange always exists
             return true;
         } else {
-            return exists(connection, new Checker() {
-                public void check(Channel ch) throws IOException {
-                    ch.exchangeDeclarePassive(exchangeName);
-                }
-            });
+            return exists(connection, ch -> ch.exchangeDeclarePassive(exchangeName));
         }
     }
 
     private static boolean queueExists(Connection connection, final String queueName) throws IOException {
-        return queueName != null && exists(connection, new Checker() {
-            public void check(Channel ch) throws IOException {
-                ch.queueDeclarePassive(queueName);
-            }
-        });
+        return queueName != null && exists(connection, ch -> ch.queueDeclarePassive(queueName));
     }
 
     private interface Checker {
@@ -385,6 +389,215 @@ public class MulticastParams {
                 }
             }
             throw e;
+        }
+    }
+
+    /**
+     * Contract to handle the creation and configuration of resources.
+     * E.g. creation of queues, binding exchange to queues.
+     */
+    interface TopologyHandler {
+
+        /**
+         * Get the current routing key
+         * @return
+         */
+        String getRoutingKey();
+
+        /**
+         * Configure the queues for the current client (e.g. consumer or producer)
+         * @param connection
+         * @return the configured queues names (can be server-generated names)
+         * @throws IOException
+         */
+        List<String> configureQueuesForClient(Connection connection) throws IOException;
+
+        /**
+         * Configure all the queues for this run
+         * @param connection
+         * @return the configured queues names (can be server-generated names)
+         * @throws IOException
+         */
+        List<String> configureAllQueues(Connection connection) throws IOException;
+
+        /**
+         * Move the cursor forward.
+         * Should be called when the configuration (queues and routing key)
+         * is required for the next client (consumer or producer).
+         */
+        void next();
+
+        /**
+         * Reset the {@link TopologyHandler}.
+         * Typically reset the cursor. To call e.g. when a new set of
+         * clients need to configured.
+         */
+        void reset();
+
+    }
+
+    /**
+     * Support class that contains queue configuration.
+     */
+    static abstract class TopologyHandlerSupport {
+
+        protected final MulticastParams params;
+
+        protected TopologyHandlerSupport(MulticastParams params) {
+            this.params = params;
+        }
+
+        protected List<String> configureQueues(Connection connection, List<String> queues) throws IOException {
+            Channel channel = connection.createChannel();
+            if (!params.predeclared || !exchangeExists(connection, params.exchangeName)) {
+                channel.exchangeDeclare(params.exchangeName, params.exchangeType);
+            }
+
+            // To ensure we get at-least 1 default queue:
+            // (don't declare any queues when --predeclared is passed,
+            // otherwise unwanted server-named queues without consumers will pile up.
+            // see https://github.com/rabbitmq/rabbitmq-perf-test/issues/25 and
+            // https://github.com/rabbitmq/rabbitmq-perf-test/issues/43)
+            if (!params.predeclared && queues.isEmpty()) {
+                queues = Collections.singletonList("");
+            }
+
+            List<String> generatedQueueNames = new ArrayList<>();
+            for (String qName : queues) {
+                if (!params.predeclared || !queueExists(connection, qName)) {
+                    qName = channel.queueDeclare(qName,
+                        params.flags.contains("persistent"),
+                        false,
+                        params.autoDelete,
+                        params.queueArguments).getQueue();
+                }
+                generatedQueueNames.add(qName);
+                // skipping binding to default exchange,
+                // as it's not possible to explicitly bind to it.
+                if (!"".equals(params.exchangeName) && !"amq.default".equals(params.exchangeName) && !params.skipBindingQueues) {
+                    channel.queueBind(qName, params.exchangeName, params.topologyHandler.getRoutingKey());
+                }
+                doAfterQueueConfiguration();
+            }
+            channel.abort();
+
+            return generatedQueueNames;
+        }
+
+        protected void doAfterQueueConfiguration() { }
+
+    }
+
+    /**
+     * {@link TopologyHandler} implementation that contains a list of a queues and a fixed routing key.
+     */
+    static class FixedQueuesTopologyHandler extends TopologyHandlerSupport implements TopologyHandler {
+
+        final String routingKey;
+
+        final List<String> queueNames;
+
+        FixedQueuesTopologyHandler(MulticastParams params, String routingKey, List<String> queueNames) {
+            super(params);
+            if (routingKey == null) {
+                this.routingKey = UUID.randomUUID().toString();
+            } else {
+                this.routingKey = routingKey;
+            }
+            this.queueNames = queueNames == null ? new ArrayList<>() : queueNames;
+        }
+
+        @Override
+        public String getRoutingKey() {
+            return routingKey;
+        }
+
+        @Override
+        public List<String> configureQueuesForClient(Connection connection) throws IOException {
+            return configureQueues(connection, this.queueNames);
+        }
+
+        @Override
+        public List<String> configureAllQueues(Connection connection) throws IOException {
+            if (shouldConfigureQueues()) {
+                return configureQueues(connection, this.queueNames);
+            }
+            return null;
+        }
+
+        public boolean shouldConfigureQueues() {
+            // if no consumer, no queue has been configured and
+            // some queues are specified, we have to configure the queues and their bindings
+            return this.params.consumerCount == 0 && !(queueNames.size() == 0);
+        }
+
+        @Override
+        public void next() {
+            // NO OP
+        }
+
+        @Override
+        public void reset() {
+            // NO OP
+        }
+    }
+
+    /**
+     * {@link TopologyHandler} meant to use a sequence of queues and routing keys.
+     * E.g. <code>perf-test-1</code>, <code>perf-test-2</code>, etc.
+     * The routing key has the same value as the current queue.
+     */
+    static class SequenceTopologyHandler extends TopologyHandlerSupport implements TopologyHandler {
+
+        final List<String> queues;
+        int index = 0;
+
+        public SequenceTopologyHandler(MulticastParams params, int from, int to, String queuePattern) {
+            super(params);
+            queues = new ArrayList<>(to - from + 1);
+            for (int i = from; i <= to; i++) {
+                queues.add(queuePattern.replaceAll("\\$\\{i\\}", String.valueOf(i)));
+            }
+        }
+
+        @Override
+        public String getRoutingKey() {
+            return this.getQueueNamesForClient().get(0);
+        }
+
+        @Override
+        public List<String> configureQueuesForClient(Connection connection) {
+            // just returns the name of the current queue, no need to create it,
+            // it's been configured already
+            return getQueueNamesForClient();
+        }
+
+        @Override
+        public List<String> configureAllQueues(Connection connection) throws IOException {
+            return configureQueues(connection, getQueueNames());
+        }
+
+        protected List<String> getQueueNames() {
+            return Collections.unmodifiableList(queues);
+        }
+
+        protected List<String> getQueueNamesForClient() {
+            return Collections.singletonList(queues.get(index % queues.size()));
+        }
+
+        @Override
+        protected void doAfterQueueConfiguration() {
+            this.next();
+        }
+
+        @Override
+        public void next() {
+            index++;
+        }
+
+        @Override
+        public void reset() {
+            index = 0;
         }
     }
 }

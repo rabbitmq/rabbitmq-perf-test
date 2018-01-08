@@ -16,7 +16,8 @@
 package com.rabbitmq.perf;
 
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.migrationsupport.rules.EnableRuleMigrationSupport;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
@@ -25,18 +26,17 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static java.util.Arrays.asList;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
-/**
- *
- */
+@EnableRuleMigrationSupport
 public class LocalFilesMessageBodySourceTest {
 
     @Rule
     public TemporaryFolder folder = new TemporaryFolder();
 
-    @Test public void createOneFileThatExists() throws Exception {
+    @Test
+    public void createOneFileThatExists() throws Exception {
         File file = folder.newFile("content.txt");
         String content = "dummy content";
         write(file, content);

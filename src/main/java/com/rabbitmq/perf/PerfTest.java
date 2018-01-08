@@ -151,6 +151,21 @@ public class PerfTest {
             factory.setRequestedFrameMax(frameMax);
             factory.setRequestedHeartbeat(heartbeat);
 
+            String queuePattern        = strArg(cmd, "qp", null);
+            int from                   = intArg(cmd, 'F', -1);
+            int to                     = intArg(cmd, 'T', -1);
+
+            if (queuePattern != null || from >= 0 || to >= 0) {
+                if (queuePattern == null || from < 0 || to < 0) {
+                    System.err.println("Queue pattern, from, and to options should all be set or none should be set");
+                    System.exit(1);
+                }
+                if (from > to) {
+                    System.err.println("'To' option should be more than or equals to 'from' option");
+                    System.exit(1);
+                }
+            }
+
             MulticastParams p = new MulticastParams();
             p.setAutoAck(               autoAck);
             p.setAutoDelete(            autoDelete);
@@ -185,6 +200,9 @@ public class PerfTest {
             p.setBodyContentType(       bodyContentType);
             p.setQueueArguments(queueArguments(queueArgs));
             p.setConsumerLatencyInMicroseconds(consumerLatencyInMicroseconds);
+            p.setQueuePattern(queuePattern);
+            p.setQueueSequenceFrom(from);
+            p.setQueueSequenceTo(to);
 
             MulticastSet set = new MulticastSet(stats, factory, p, testID, uris);
             set.run(true);
@@ -282,6 +300,10 @@ public class PerfTest {
         options.addOption(new Option("udsc", "use-default-ssl-context", false,"use JVM default SSL context"));
 
         options.addOption(new Option("v", "version",                false,"print version information"));
+
+        options.addOption(new Option("qp", "queue-pattern",         true, "queue name pattern for creating queues in sequence"));
+        options.addOption(new Option("F", "from",                   true, "sequence start (included)"));
+        options.addOption(new Option("T", "to",                     true, "sequence end (included)"));
         return options;
     }
 
@@ -321,7 +343,7 @@ public class PerfTest {
         if (arg == null || arg.trim().isEmpty()) {
             return null;
         }
-        Map<String, Object> queueArguments = new HashMap<String, Object>();
+        Map<String, Object> queueArguments = new HashMap<>();
         for (String entry : arg.split(",")) {
             String [] keyValue = entry.split("=");
             try {
