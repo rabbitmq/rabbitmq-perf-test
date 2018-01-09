@@ -336,11 +336,11 @@ public class TopologyTest {
             .queueBind(eq(queue), eq("direct"), eq(routingKey));
     }
 
-    // --queue-pattern 'perf-test-${i}' --from 1 --to 100
+    // --queue-pattern 'perf-test-%d' --queue-pattern-from 1 --queue-pattern-to 100
     @Test
     public void sequenceQueuesDefinition1to100() throws Exception {
         String queuePrefix = "perf-test-";
-        params.setQueuePattern(queuePrefix + "${i}");
+        params.setQueuePattern(queuePrefix + "%d");
         params.setQueueSequenceFrom(1);
         params.setQueueSequenceTo(100);
 
@@ -368,11 +368,11 @@ public class TopologyTest {
         ));
     }
 
-    // --queue-pattern 'perf-test-${i}' --from 100 --to 500
+    // --queue-pattern 'perf-test-%d' --queue-pattern-from 100 --queue-pattern-to 500
     @Test
     public void sequenceQueuesDefinition100to500() throws Exception {
         String queuePrefix = "perf-test-";
-        params.setQueuePattern(queuePrefix + "${i}");
+        params.setQueuePattern(queuePrefix + "%d");
         params.setQueueSequenceFrom(100);
         params.setQueueSequenceTo(500);
 
@@ -400,11 +400,11 @@ public class TopologyTest {
         ));
     }
 
-    //  --queue-pattern 'perf-test-${i}' --from 502 --to 5001
+    //  --queue-pattern 'perf-test-%d' --queue-pattern-from 502 --queue-pattern-to 5001
     @Test
     public void sequenceQueuesDefinition502to5001() throws Exception {
         String queuePrefix = "perf-test-";
-        params.setQueuePattern(queuePrefix + "${i}");
+        params.setQueuePattern(queuePrefix + "%d");
         params.setQueueSequenceFrom(502);
         params.setQueueSequenceTo(5001);
 
@@ -434,13 +434,13 @@ public class TopologyTest {
         ));
     }
 
-    // --queue-pattern 'perf-test-${i}' --from 1 --to 100 --producers 10 --consumers 0
+    // --queue-pattern 'perf-test-%d' --queue-pattern-from 1 --queue-pattern-to 100 --producers 10 --consumers 0
     @Test
     public void sequenceMoreQueuesThanProducers() throws Exception {
         String queuePrefix = "perf-test-";
         params.setConsumerCount(0);
         params.setProducerCount(10);
-        params.setQueuePattern(queuePrefix + "${i}");
+        params.setQueuePattern(queuePrefix + "%d");
         params.setQueueSequenceFrom(1);
         params.setQueueSequenceTo(100);
 
@@ -475,13 +475,13 @@ public class TopologyTest {
         ));
     }
 
-    // --queue-pattern 'perf-test-${i}' --from 1 --to 10 --producers 15 --consumers 30
+    // --queue-pattern 'perf-test-%d' --queue-pattern-from 1 --queue-pattern-to 10 --producers 15 --consumers 30
     @Test
     public void sequenceProducersAndConsumersSpread() throws Exception {
         String queuePrefix = "perf-test-";
         params.setConsumerCount(30);
         params.setProducerCount(15);
-        params.setQueuePattern(queuePrefix + "${i}");
+        params.setQueuePattern(queuePrefix + "%d");
         params.setQueueSequenceFrom(1);
         params.setQueueSequenceTo(10);
 
@@ -538,13 +538,13 @@ public class TopologyTest {
         ));
     }
 
-    // --queue-pattern 'perf-test-${i}' --from 101 --to 110 --producers 0 --consumers 110
+    // --queue-pattern 'perf-test-%d' --queue-pattern-from 101 --queue-pattern-to 110 --producers 0 --consumers 110
     @Test
     public void sequenceConsumersSpread() throws Exception {
         String queuePrefix = "perf-test-";
         params.setConsumerCount(110);
         params.setProducerCount(0);
-        params.setQueuePattern(queuePrefix + "${i}");
+        params.setQueuePattern(queuePrefix + "%d");
         params.setQueueSequenceFrom(101);
         params.setQueueSequenceTo(110);
 

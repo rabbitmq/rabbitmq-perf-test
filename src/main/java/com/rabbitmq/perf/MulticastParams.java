@@ -556,7 +556,7 @@ public class MulticastParams {
             super(params);
             queues = new ArrayList<>(to - from + 1);
             for (int i = from; i <= to; i++) {
-                queues.add(queuePattern.replaceAll("\\$\\{i\\}", String.valueOf(i)));
+                queues.add(String.format(queuePattern, i));
             }
         }
 

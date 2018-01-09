@@ -302,8 +302,8 @@ public class PerfTest {
         options.addOption(new Option("v", "version",                false,"print version information"));
 
         options.addOption(new Option("qp", "queue-pattern",         true, "queue name pattern for creating queues in sequence"));
-        options.addOption(new Option("F", "from",                   true, "sequence start (included)"));
-        options.addOption(new Option("T", "to",                     true, "sequence end (included)"));
+        options.addOption(new Option("F", "queue-pattern-from",     true, "sequence start for queue pattern (included)"));
+        options.addOption(new Option("T", "queue-pattern-to",       true, "sequence end for queue pattern (included)"));
         return options;
     }
 
