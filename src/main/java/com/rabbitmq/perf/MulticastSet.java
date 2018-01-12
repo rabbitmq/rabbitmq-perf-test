@@ -28,7 +28,7 @@ import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 
 public class MulticastSet {
-    private final String id;
+
     private final Stats stats;
     private final ConnectionFactory factory;
     private final MulticastParams params;
@@ -37,32 +37,22 @@ public class MulticastSet {
 
     private final Random random = new Random();
 
+    private ThreadHandler threadHandler = new DefaultThreadHandler();
+
     public MulticastSet(Stats stats, ConnectionFactory factory,
         MulticastParams params, List<String> uris) {
-        if (params.getRoutingKey() == null) {
-            this.id = UUID.randomUUID().toString();
-        } else {
-            this.id = params.getRoutingKey();
-        }
-        this.stats = stats;
-        this.factory = factory;
-        this.params = params;
-        this.testID = "perftest";
-        this.uris = uris;
+        this(stats, factory, params, "perftest", uris);
     }
 
     public MulticastSet(Stats stats, ConnectionFactory factory,
         MulticastParams params, String testID, List<String> uris) {
-        if (params.getRoutingKey() == null) {
-            this.id = UUID.randomUUID().toString();
-        } else {
-            this.id = params.getRoutingKey();
-        }
         this.stats = stats;
         this.factory = factory;
         this.params = params;
         this.testID = testID;
         this.uris = uris;
+
+        this.params.init();
     }
 
     public void run() throws IOException, InterruptedException, TimeoutException, NoSuchAlgorithmException, KeyManagementException, URISyntaxException {
@@ -71,6 +61,14 @@ public class MulticastSet {
 
     public void run(boolean announceStartup)
         throws IOException, InterruptedException, TimeoutException, NoSuchAlgorithmException, KeyManagementException, URISyntaxException {
+
+        setUri();
+        Connection conn = factory.newConnection();
+        params.configureAllQueues(conn);
+        conn.close();
+
+        this.params.resetTopologyHandler();
+
         Thread[] consumerThreads = new Thread[params.getConsumerThreadCount()];
         Connection[] consumerConnections = new Connection[params.getConsumerCount()];
         for (int i = 0; i < consumerConnections.length; i++) {
@@ -78,23 +76,18 @@ public class MulticastSet {
                 System.out.println("id: " + testID + ", starting consumer #" + i);
             }
             setUri();
-            Connection conn = factory.newConnection();
+            conn = factory.newConnection();
             consumerConnections[i] = conn;
             for (int j = 0; j < params.getConsumerChannelCount(); j++) {
                 if (announceStartup) {
                     System.out.println("id: " + testID + ", starting consumer #" + i + ", channel #" + j);
                 }
-                Thread t = new Thread(params.createConsumer(conn, stats, id));
+                Thread t = new Thread(params.createConsumer(conn, stats));
                 consumerThreads[(i * params.getConsumerChannelCount()) + j] = t;
             }
         }
 
-        if (params.shouldConfigureQueues()) {
-            setUri();
-            Connection conn = factory.newConnection();
-            params.configureQueues(conn, id);
-            conn.close();
-        }
+        this.params.resetTopologyHandler();
 
         Thread[] producerThreads = new Thread[params.getProducerThreadCount()];
         Connection[] producerConnections = new Connection[params.getProducerCount()];
@@ -103,19 +96,19 @@ public class MulticastSet {
                 System.out.println("id: " + testID + ", starting producer #" + i);
             }
             setUri();
-            Connection conn = factory.newConnection();
+            conn = factory.newConnection();
             producerConnections[i] = conn;
             for (int j = 0; j < params.getProducerChannelCount(); j++) {
                 if (announceStartup) {
                     System.out.println("id: " + testID + ", starting producer #" + i + ", channel #" + j);
                 }
-                Thread t = new Thread(params.createProducer(conn, stats, id));
+                Thread t = new Thread(params.createProducer(conn, stats));
                 producerThreads[(i * params.getProducerChannelCount()) + j] = t;
             }
         }
 
         for (Thread consumerThread : consumerThreads) {
-            consumerThread.start();
+            this.threadHandler.start(consumerThread);
             if(params.getConsumerSlowStart()) {
             	System.out.println("Delaying start by 1 second because -S/--slow-start was requested");
             	Thread.sleep(1000);
@@ -123,12 +116,12 @@ public class MulticastSet {
         }
 
         for (Thread producerThread : producerThreads) {
-            producerThread.start();
+            this.threadHandler.start(producerThread);
         }
 
         int count = 1; // counting the threads
         for (int i = 0; i < producerThreads.length; i++) {
-            producerThreads[i].join();
+            this.threadHandler.waitForCompletion(producerThreads[i]);
             if(count % params.getProducerChannelCount() == 0) {
                 // this is the end of a group of threads on the same connection,
                 // closing the connection
@@ -139,7 +132,7 @@ public class MulticastSet {
 
         count = 1; // counting the threads
         for (int i = 0; i < consumerThreads.length; i++) {
-            consumerThreads[i].join();
+            this.threadHandler.waitForCompletion(consumerThreads[i]);
             if(count % params.getConsumerChannelCount() == 0) {
                 // this is the end of a group of threads on the same connection,
                 // closing the connection
@@ -147,6 +140,10 @@ public class MulticastSet {
             }
             count++;
         }
+    }
+
+    public void setThreadHandler(ThreadHandler threadHandler) {
+        this.threadHandler = threadHandler;
     }
 
     private void setUri() throws URISyntaxException, NoSuchAlgorithmException, KeyManagementException {
@@ -159,4 +156,31 @@ public class MulticastSet {
         String uri = uris.get(random.nextInt(uris.size()));
         return uri;
     }
+
+    /**
+     * Abstraction for thread management.
+     * Exists to ease testing.
+     */
+    interface ThreadHandler {
+
+        void start(Thread thread);
+
+        void waitForCompletion(Thread thread) throws InterruptedException;
+
+    }
+
+    static class DefaultThreadHandler implements ThreadHandler {
+
+        @Override
+        public void start(Thread thread) {
+            thread.start();
+        }
+
+        @Override
+        public void waitForCompletion(Thread thread) throws InterruptedException {
+            thread.join();
+        }
+
+    }
+
 }

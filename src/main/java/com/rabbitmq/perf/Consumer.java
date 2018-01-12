@@ -20,6 +20,7 @@ import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.DefaultConsumer;
 import com.rabbitmq.client.Envelope;
 import com.rabbitmq.client.ShutdownSignalException;
+import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
@@ -112,7 +113,7 @@ public class Consumer extends ProducerConsumerBase implements Runnable {
         } catch (IOException e) {
             throw new RuntimeException(e);
         } catch (InterruptedException e) {
-            throw new RuntimeException(e);
+            LoggerFactory.getLogger(getClass()).warn("Consumer thread has been interrupted");
         } catch (ShutdownSignalException e) {
             throw new RuntimeException(e);
         }
