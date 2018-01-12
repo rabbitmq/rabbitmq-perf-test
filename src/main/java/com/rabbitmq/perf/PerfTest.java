@@ -48,7 +48,8 @@ public class PerfTest {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PerfTest.class);
 
-    public static void main(String [] args, SystemExiter systemExiter) {
+    public static void main(String [] args, PerfTestOptions perfTestOptions) {
+        SystemExiter systemExiter = perfTestOptions.systemExiter;
         Options options = getOptions();
         CommandLineParser parser = new GnuParser();
         try {
@@ -140,7 +141,9 @@ public class PerfTest {
                 (flags.contains("mandatory") || flags.contains("immediate")),
                 confirm != -1, legacyMetrics, useMillis, output);
 
-            SSLContext sslContext = getSslContextIfNecessary(cmd, System.getProperties());
+            SSLContext sslContext = perfTestOptions.skipSslContextConfiguration ? null :
+                getSslContextIfNecessary(cmd, System.getProperties());
+
 
             ConnectionFactory factory = new ConnectionFactory();
             if (sslContext != null) {
@@ -220,7 +223,7 @@ public class PerfTest {
     }
 
     public static void main(String[] args) {
-        main(args, new JvmSystemExiter());
+        main(args, new PerfTestOptions().setSystemExiter(new JvmSystemExiter()).setSkipSslContextConfiguration(false));
     }
 
     private static SSLContext getSslContextIfNecessary(CommandLine cmd, Properties systemProperties) throws NoSuchAlgorithmException {
@@ -529,6 +532,26 @@ public class PerfTest {
         );
         System.out.println("\u001B[1m" + version);
         System.out.println("\u001B[0m" + info);
+    }
+
+    /**
+     * Abstraction to ease testing or PerfTest usage as a library.
+     */
+    public static class PerfTestOptions {
+
+        private SystemExiter systemExiter = new JvmSystemExiter();
+
+        private boolean skipSslContextConfiguration = false;
+
+        PerfTestOptions setSystemExiter(SystemExiter systemExiter) {
+            this.systemExiter = systemExiter;
+            return this;
+        }
+
+        public PerfTestOptions setSkipSslContextConfiguration(boolean skipSslContextConfiguration) {
+            this.skipSslContextConfiguration = skipSslContextConfiguration;
+            return this;
+        }
     }
 
     /**
