@@ -543,7 +543,7 @@ public class PerfTest {
 
         private boolean skipSslContextConfiguration = false;
 
-        PerfTestOptions setSystemExiter(SystemExiter systemExiter) {
+        public PerfTestOptions setSystemExiter(SystemExiter systemExiter) {
             this.systemExiter = systemExiter;
             return this;
         }
