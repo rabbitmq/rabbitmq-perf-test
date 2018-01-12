@@ -48,7 +48,7 @@ public class PerfTest {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PerfTest.class);
 
-    public static void main(String[] args) {
+    public static void main(String [] args, SystemExiter systemExiter) {
         Options options = getOptions();
         CommandLineParser parser = new GnuParser();
         try {
@@ -56,12 +56,12 @@ public class PerfTest {
 
             if (cmd.hasOption('?')) {
                 usage(options);
-                System.exit(0);
+                systemExiter.exit(0);
             }
 
             if (cmd.hasOption('v')) {
                 versionInformation();
-                System.exit(0);
+                systemExiter.exit(0);
             }
 
             String testID = new SimpleDateFormat("HHmmss-SSS").format(Calendar.
@@ -158,11 +158,11 @@ public class PerfTest {
             if (queuePattern != null || from >= 0 || to >= 0) {
                 if (queuePattern == null || from < 0 || to < 0) {
                     System.err.println("Queue pattern, from, and to options should all be set or none should be set");
-                    System.exit(1);
+                    systemExiter.exit(1);
                 }
                 if (from > to) {
                     System.err.println("'To' option should be more than or equals to 'from' option");
-                    System.exit(1);
+                    systemExiter.exit(1);
                 }
             }
 
@@ -215,8 +215,12 @@ public class PerfTest {
         } catch (Exception e) {
             System.err.println("Main thread caught exception: " + e);
             e.printStackTrace();
-            System.exit(1);
+            systemExiter.exit(1);
         }
+    }
+
+    public static void main(String[] args) {
+        main(args, new JvmSystemExiter());
     }
 
     private static SSLContext getSslContextIfNecessary(CommandLine cmd, Properties systemProperties) throws NoSuchAlgorithmException {
@@ -525,6 +529,29 @@ public class PerfTest {
         );
         System.out.println("\u001B[1m" + version);
         System.out.println("\u001B[0m" + info);
+    }
+
+    /**
+     * Interface for exiting the JVM.
+     * This abstraction is useful for testing and for PerfTest usage a library.
+     */
+    public interface SystemExiter {
+
+        /**
+         * Terminate the currently running Java Virtual Machine.
+         * @param status
+         */
+        void exit(int status);
+
+    }
+
+    private static class JvmSystemExiter implements SystemExiter {
+
+        @Override
+        public void exit(int status) {
+            System.exit(status);
+        }
+
     }
 
 }
