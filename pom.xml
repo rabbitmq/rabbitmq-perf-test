@@ -83,6 +83,8 @@
     <!-- because of https://issues.apache.org/jira/browse/MRESOURCES-99 -->
     <build.timestamp>${maven.build.timestamp}</build.timestamp>
     <maven.build.timestamp.format>yyyy-MM-dd'T'HH:mm:ss'Z'</maven.build.timestamp.format>
+
+    <finalName>rabbitmq-${project.build.finalName}</finalName>
   </properties>
 
   <dependencies>
@@ -429,7 +431,7 @@
             <artifactId>maven-assembly-plugin</artifactId>
             <version>${maven.assembly.plugin.version}</version>
             <configuration>
-              <finalName>rabbitmq-${project.build.finalName}</finalName>
+              <finalName>${finalName}</finalName>
               <descriptors>
                 <descriptor>src/assembly/dist-bin.xml</descriptor>
                 <descriptor>src/assembly/dist-src.xml</descriptor>
@@ -498,6 +500,38 @@
         </plugins>
       </build>
     </profile>
+
+    <profile>
+      <id>ossrh-release</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-javadoc-plugin</artifactId>
+            <version>${maven.javadoc.plugin.version}</version>
+            <configuration>
+              <additionalparam>${javadoc.opts}</additionalparam>
+              <quiet>true</quiet>
+            </configuration>
+            <executions>
+              <execution>
+                <goals>
+                  <goal>jar</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+
+        </plugins>
+      </build>
+      <distributionManagement>
+        <snapshotRepository>
+          <id>ossrh</id>
+          <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+        </snapshotRepository>
+      </distributionManagement>
+    </profile>
+
   </profiles>
 
 </project>
