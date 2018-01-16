@@ -106,6 +106,7 @@ public class PerfTest {
             String queueArgs         = strArg(cmd, "qa", null);
             int consumerLatencyInMicroseconds = intArg(cmd, 'L', 0);
             int heartbeatSenderThreads = intArg(cmd, "hst", -1);
+            String messageProperties = strArg(cmd, "mp", null);
 
             String uri               = strArg(cmd, 'h', "amqp://localhost");
             String urisParameter     = strArg(cmd, 'H', null);
@@ -202,12 +203,13 @@ public class PerfTest {
             p.setUseMillis(             useMillis);
             p.setBodyFiles(             bodyFiles == null ? null : asList(bodyFiles.split(",")));
             p.setBodyContentType(       bodyContentType);
-            p.setQueueArguments(queueArguments(queueArgs));
+            p.setQueueArguments(convertKeyValuePairs(queueArgs));
             p.setConsumerLatencyInMicroseconds(consumerLatencyInMicroseconds);
             p.setQueuePattern(queuePattern);
             p.setQueueSequenceFrom(from);
             p.setQueueSequenceTo(to);
             p.setHeartbeatSenderThreads(heartbeatSenderThreads);
+            p.setMessageProperties(convertKeyValuePairs(messageProperties));
 
             MulticastSet.CompletionHandler completionHandler = getCompletionHandler(p);
 
@@ -336,6 +338,7 @@ public class PerfTest {
         options.addOption(new Option("F", "queue-pattern-from",     true, "sequence start for queue pattern (included)"));
         options.addOption(new Option("T", "queue-pattern-to",       true, "sequence end for queue pattern (included)"));
         options.addOption(new Option("hst", "heartbeat-sender-threads",       true, "number of threads for producers and consumers heartbeat senders"));
+        options.addOption(new Option("mp", "message-properties",    true, "message properties as key/pair values, separated by commas"));
         return options;
     }
 
@@ -371,20 +374,20 @@ public class PerfTest {
         return asList(vals);
     }
 
-    private static Map<String, Object> queueArguments(String arg) {
+    private static Map<String, Object> convertKeyValuePairs(String arg) {
         if (arg == null || arg.trim().isEmpty()) {
             return null;
         }
-        Map<String, Object> queueArguments = new HashMap<>();
+        Map<String, Object> properties = new HashMap<>();
         for (String entry : arg.split(",")) {
             String [] keyValue = entry.split("=");
             try {
-                queueArguments.put(keyValue[0], Long.parseLong(keyValue[1]));
+                properties.put(keyValue[0], Long.parseLong(keyValue[1]));
             } catch(NumberFormatException e) {
-                queueArguments.put(keyValue[0], keyValue[1]);
+                properties.put(keyValue[0], keyValue[1]);
             }
         }
-        return queueArguments;
+        return properties;
     }
 
     private static String getExchangeName(CommandLine cmd, String def) {
