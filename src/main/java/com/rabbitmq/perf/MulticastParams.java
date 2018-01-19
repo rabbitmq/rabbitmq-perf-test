@@ -76,6 +76,8 @@ public class MulticastParams {
 
     private TopologyHandler topologyHandler;
 
+    private int heartbeatSenderThreads = -1;
+
     public void setExchangeType(String exchangeType) {
         this.exchangeType = exchangeType;
     }
@@ -287,6 +289,14 @@ public class MulticastParams {
 
     public int getQueueSequenceTo() {
         return queueSequenceTo;
+    }
+
+    public void setHeartbeatSenderThreads(int heartbeatSenderThreads) {
+        this.heartbeatSenderThreads = heartbeatSenderThreads;
+    }
+
+    public int getHeartbeatSenderThreads() {
+        return heartbeatSenderThreads <= 0 ? producerCount + consumerCount : this.heartbeatSenderThreads;
     }
 
     public Producer createProducer(Connection connection, Stats stats) throws IOException {

@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
 public class SimpleScenario implements Scenario {
@@ -41,7 +42,8 @@ public class SimpleScenario implements Scenario {
         this.interval = interval;
     }
 
-    public void run() throws IOException, InterruptedException, TimeoutException, NoSuchAlgorithmException, KeyManagementException, URISyntaxException {
+    public void run()
+        throws IOException, InterruptedException, TimeoutException, NoSuchAlgorithmException, KeyManagementException, URISyntaxException, ExecutionException {
         this.stats = new SimpleScenarioStats(interval);
         for (MulticastParams p : params) {
             MulticastSet set = new MulticastSet(stats, factory, p, null);
