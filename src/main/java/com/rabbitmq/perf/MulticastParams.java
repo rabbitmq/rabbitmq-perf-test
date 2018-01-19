@@ -343,7 +343,7 @@ public class MulticastParams {
         TimestampProvider tsp = new TimestampProvider(useMillis, timestampInHeader);
         Consumer consumer = new Consumer(channel, this.topologyHandler.getRoutingKey(), generatedQueueNames,
                                          consumerTxSize, autoAck, multiAckEvery,
-                                         stats, consumerRateLimit, consumerMsgCount, timeLimit,
+                                         stats, consumerRateLimit, consumerMsgCount,
                                          consumerLatencyInMicroseconds, tsp);
         this.topologyHandler.next();
         return consumer;

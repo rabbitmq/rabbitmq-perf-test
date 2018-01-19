@@ -89,14 +89,13 @@ public class MulticastSet {
 
         this.params.resetTopologyHandler();
 
-        AgentState[] agentStates = new AgentState[params.getConsumerThreadCount()];
+        AgentState[] consumerStates = new AgentState[params.getConsumerThreadCount()];
         Connection[] consumerConnections = new Connection[params.getConsumerCount()];
         for (int i = 0; i < consumerConnections.length; i++) {
             if (announceStartup) {
                 System.out.println("id: " + testID + ", starting consumer #" + i);
             }
             setUri();
-
             ExecutorService executorService = this.threadingHandler.executorService(
                 format("perf-test-consumer-%s-worker-", i),
                 nbThreadsForConsumer(this.params)
@@ -112,7 +111,7 @@ public class MulticastSet {
 
                 AgentState agentState = new AgentState();
                 agentState.runnable = params.createConsumer(conn, stats);
-                agentStates[(i * params.getConsumerChannelCount()) + j] = agentState;
+                consumerStates[(i * params.getConsumerChannelCount()) + j] = agentState;
             }
         }
 
@@ -143,11 +142,8 @@ public class MulticastSet {
             }
         }
 
-        ExecutorService consumerStarterExecutorService = this.threadingHandler.executorService(
-            "perf-test-consumers-starter-", 1
-        );
-        for (AgentState agentState : agentStates) {
-            agentState.task = consumerStarterExecutorService.submit(agentState.runnable);
+        for (AgentState consumerState : consumerStates) {
+            consumerState.runnable.run();
             if(params.getConsumerSlowStart()) {
                 System.out.println("Delaying start by 1 second because -S/--slow-start was requested");
                 Thread.sleep(1000);
@@ -172,15 +168,8 @@ public class MulticastSet {
             count++;
         }
 
-        count = 1; // counting the threads
-        for (int i = 0; i < agentStates.length; i++) {
-            agentStates[i].task.get();
-            if(count % params.getConsumerChannelCount() == 0) {
-                // this is the end of a group of threads on the same connection,
-                // closing the connection
-                consumerConnections[count / params.getConsumerChannelCount() - 1].close();
-            }
-            count++;
+        for (Connection consumerConnection : consumerConnections) {
+            consumerConnection.close();
         }
 
         this.threadingHandler.shutdown();
