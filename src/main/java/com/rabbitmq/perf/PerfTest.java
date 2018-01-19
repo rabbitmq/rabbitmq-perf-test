@@ -49,7 +49,6 @@ public class PerfTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(PerfTest.class);
 
     public static void main(String [] args, PerfTestOptions perfTestOptions) {
-        args = "-r 1 -x 10 -y 10".split(" ");
         SystemExiter systemExiter = perfTestOptions.systemExiter;
         Options options = getOptions();
         CommandLineParser parser = new GnuParser();
