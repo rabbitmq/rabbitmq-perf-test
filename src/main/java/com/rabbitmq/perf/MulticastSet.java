@@ -220,10 +220,7 @@ public class MulticastSet {
             if (nbThreads <= 0) {
                 return create(() -> Executors.newSingleThreadExecutor(new NamedThreadFactory(name)));
             } else {
-                return create(() -> new ThreadPoolExecutor(nbThreads, nbThreads,
-                    60L, TimeUnit.SECONDS,
-                    new SynchronousQueue<>(),
-                    new NamedThreadFactory(name)));
+                return create(() -> Executors.newFixedThreadPool(nbThreads, new NamedThreadFactory(name)));
             }
         }
 
