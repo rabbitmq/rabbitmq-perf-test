@@ -89,7 +89,7 @@ public class MulticastSet {
 
         this.params.resetTopologyHandler();
 
-        AgentState[] consumerStates = new AgentState[params.getConsumerThreadCount()];
+        Runnable[] consumerRunnables = new Runnable[params.getConsumerThreadCount()];
         Connection[] consumerConnections = new Connection[params.getConsumerCount()];
         for (int i = 0; i < consumerConnections.length; i++) {
             if (announceStartup) {
@@ -108,10 +108,7 @@ public class MulticastSet {
                 if (announceStartup) {
                     System.out.println("id: " + testID + ", starting consumer #" + i + ", channel #" + j);
                 }
-
-                AgentState agentState = new AgentState();
-                agentState.runnable = params.createConsumer(conn, stats);
-                consumerStates[(i * params.getConsumerChannelCount()) + j] = agentState;
+                consumerRunnables[(i * params.getConsumerChannelCount()) + j] = params.createConsumer(conn, stats);
             }
         }
 
@@ -142,8 +139,8 @@ public class MulticastSet {
             }
         }
 
-        for (AgentState consumerState : consumerStates) {
-            consumerState.runnable.run();
+        for (Runnable runnable : consumerRunnables) {
+            runnable.run();
             if(params.getConsumerSlowStart()) {
                 System.out.println("Delaying start by 1 second because -S/--slow-start was requested");
                 Thread.sleep(1000);
@@ -221,12 +218,12 @@ public class MulticastSet {
         @Override
         public ExecutorService executorService(String name, int nbThreads) {
             if (nbThreads <= 0) {
-                return create(() -> new ThreadPoolExecutor(0, 1,
+                return create(() -> Executors.newSingleThreadExecutor(new NamedThreadFactory(name)));
+            } else {
+                return create(() -> new ThreadPoolExecutor(nbThreads, nbThreads,
                     60L, TimeUnit.SECONDS,
                     new SynchronousQueue<>(),
                     new NamedThreadFactory(name)));
-            } else {
-                return create(() -> Executors.newFixedThreadPool(nbThreads, new NamedThreadFactory(name)));
             }
         }
 
