@@ -401,9 +401,11 @@ public class PerfTest {
             this.useMillis = useMillis;
             this.out = out;
             if (out != null) {
-                out.println("id,time (s),sent (msg/s),returned (msg/s),confirmed (msg/s), nacked (msg/s), received (msg/s),"
-                    + "min latency (microseconds),median latency (microseconds),75th p. latency (microseconds),95th p. latency (microseconds),"
-                    + "99th p. latency (microseconds)");
+                out.printf("id,time (s),sent (msg/s),returned (msg/s)," +
+                        "confirmed (msg/s),nacked (msg/s)," +
+                        "received (msg/s),min latency (%s),median latency (%s)," +
+                        "75th p. latency (%s),95th p. latency (%s),99th p. latency (%s)%n",
+                        units(), units(), units(), units(), units());
             }
         }
 
@@ -424,7 +426,7 @@ public class PerfTest {
                     ", min/avg/max latency: " +
                         minLatency/1000L + "/" +
                         cumulativeLatencyInterval / (1000L * latencyCountInterval) + "/" +
-                        maxLatency/1000L + " microseconds " :
+                        maxLatency/1000L + " µs " :
                     "");
             } else {
                 output += (latencyCountInterval > 0 ?
@@ -432,7 +434,7 @@ public class PerfTest {
                         + div(latency.getSnapshot().getMin()) + "/"
                         + div(latency.getSnapshot().getMedian()) + "/"
                         + div(latency.getSnapshot().get75thPercentile()) + "/"
-                        + div(latency.getSnapshot().get95thPercentile()) + units() :
+                        + div(latency.getSnapshot().get95thPercentile()) + " " + units() :
                     "");
             }
 
@@ -458,9 +460,9 @@ public class PerfTest {
 
         private String units() {
             if (useMillis) {
-                return " milliseconds";
+                return "ms";
             } else {
-                return " microseconds";
+                return "µs";
             }
         }
 
