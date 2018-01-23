@@ -212,6 +212,8 @@ public class TopologyTest {
 
         set.run();
 
+        assertThat("basicPublish should have been called", latch.await(1, TimeUnit.SECONDS), is(true));
+
         verify(ch, atLeastOnce())
             .basicPublish(anyString(), anyString(),
                 anyBoolean(), eq(false),
@@ -515,9 +517,11 @@ public class TopologyTest {
             anyBoolean(), eq(false),
             any(), any(byte[].class));
 
-        MulticastSet set = getMulticastSet(new InterruptThreadHandler(latchPublishing));
+        MulticastSet set = getMulticastSet(new MulticastSet.DefaultThreadingHandler());
 
         set.run();
+
+        assertThat("Producers should have published to all routing keys", latchPublishing.await(1, TimeUnit.SECONDS), is(true));
 
         verify(cf, times(1 + 30 + 15)).newConnection(anyString()); // configuration, consumers, producers
         verify(c, atLeast(1 + 30 + 15)).createChannel(); // configuration, producers, consumers, and checks
@@ -612,7 +616,16 @@ public class TopologyTest {
 
     private MulticastSet getMulticastSet(MulticastSet.ThreadingHandler threadingHandler) {
         MulticastSet set = new MulticastSet(
-            stats, cf, params, singletonList("amqp://localhost")
+            stats, cf, params, singletonList("amqp://localhost"), new MulticastSet.CompletionHandler() {
+
+            @Override
+            public void waitForCompletion() {
+            }
+
+            @Override
+            public void countDown() {
+            }
+        }
         );
 
         set.setThreadingHandler(threadingHandler);

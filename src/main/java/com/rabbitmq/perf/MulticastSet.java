@@ -26,13 +26,12 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.SynchronousQueue;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
@@ -52,19 +51,21 @@ public class MulticastSet {
 
     private ThreadingHandler threadingHandler = new DefaultThreadingHandler();
 
+    private final CompletionHandler completionHandler;
+
     public MulticastSet(Stats stats, ConnectionFactory factory,
-        MulticastParams params, List<String> uris) {
-        this(stats, factory, params, "perftest", uris);
+        MulticastParams params, List<String> uris, CompletionHandler completionHandler) {
+        this(stats, factory, params, "perftest", uris, completionHandler);
     }
 
     public MulticastSet(Stats stats, ConnectionFactory factory,
-        MulticastParams params, String testID, List<String> uris) {
+        MulticastParams params, String testID, List<String> uris, CompletionHandler completionHandler) {
         this.stats = stats;
         this.factory = factory;
         this.params = params;
         this.testID = testID;
         this.uris = uris;
-
+        this.completionHandler = completionHandler;
         this.params.init();
     }
 
@@ -108,7 +109,7 @@ public class MulticastSet {
                 if (announceStartup) {
                     System.out.println("id: " + testID + ", starting consumer #" + i + ", channel #" + j);
                 }
-                consumerRunnables[(i * params.getConsumerChannelCount()) + j] = params.createConsumer(conn, stats);
+                consumerRunnables[(i * params.getConsumerChannelCount()) + j] = params.createConsumer(conn, stats, this.completionHandler);
             }
         }
 
@@ -134,7 +135,7 @@ public class MulticastSet {
                     System.out.println("id: " + testID + ", starting producer #" + i + ", channel #" + j);
                 }
                 AgentState agentState = new AgentState();
-                agentState.runnable = params.createProducer(conn, stats);
+                agentState.runnable = params.createProducer(conn, stats, this.completionHandler);
                 producerStates[(i * params.getProducerChannelCount()) + j] = agentState;
             }
         }
@@ -154,9 +155,11 @@ public class MulticastSet {
             producerState.task = producersExecutorService.submit(producerState.runnable);
         }
 
+        this.completionHandler.waitForCompletion();
+
         int count = 1; // counting the threads
         for (int i = 0; i < producerStates.length; i++) {
-            producerStates[i].task.get();
+            producerStates[i].task.cancel(true);
             if(count % params.getProducerChannelCount() == 0) {
                 // this is the end of a group of threads on the same connection,
                 // closing the connection
@@ -250,5 +253,52 @@ public class MulticastSet {
         private Future<?> task;
 
     }
+
+    interface CompletionHandler {
+
+        void waitForCompletion() throws InterruptedException;
+
+        void countDown();
+
+    }
+
+    static class DefaultCompletionHandler implements CompletionHandler {
+
+        private final int timeLimit;
+        private final CountDownLatch latch;
+
+        DefaultCompletionHandler(int timeLimit, int countLimit) {
+            this.timeLimit = timeLimit;
+            this.latch = new CountDownLatch(countLimit <= 0 ? 1 : countLimit);
+        }
+
+        @Override
+        public void waitForCompletion() throws InterruptedException {
+            if (timeLimit <= 0) {
+                this.latch.await();
+            } else {
+                this.latch.await(timeLimit, TimeUnit.SECONDS);
+            }
+        }
+
+        @Override
+        public void countDown() {
+            latch.countDown();
+        }
+    }
+
+    static class NoLimitCompletionHandler implements CompletionHandler {
+
+        private final CountDownLatch latch = new CountDownLatch(1);
+
+        @Override
+        public void waitForCompletion() throws InterruptedException {
+            latch.await();
+        }
+
+        @Override
+        public void countDown() { }
+    }
+
 
 }

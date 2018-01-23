@@ -63,6 +63,7 @@
     <junit.platform.version>1.0.2</junit.platform.version>
     <mockito.version>2.13.0</mockito.version>
     <hamcrest.version>2.0.0.0</hamcrest.version>
+    <awaitility.version>3.0.0</awaitility.version>
 
     <!-- to sign artifacts when releasing -->
     <gpg.keyname>6026DFCA</gpg.keyname>
@@ -158,6 +159,14 @@
       <version>${hamcrest.version}</version>
       <scope>test</scope>
     </dependency>
+
+    <dependency>
+      <groupId>org.awaitility</groupId>
+      <artifactId>awaitility</artifactId>
+      <version>${awaitility.version}</version>
+      <scope>test</scope>
+    </dependency>
+
 
     <dependency>
       <groupId>ch.qos.logback</groupId>

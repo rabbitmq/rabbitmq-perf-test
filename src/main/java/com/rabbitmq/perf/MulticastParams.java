@@ -299,7 +299,19 @@ public class MulticastParams {
         return heartbeatSenderThreads <= 0 ? producerCount + consumerCount : this.heartbeatSenderThreads;
     }
 
-    public Producer createProducer(Connection connection, Stats stats) throws IOException {
+    public int getTimeLimit() {
+        return timeLimit;
+    }
+
+    public int getProducerMsgCount() {
+        return producerMsgCount;
+    }
+
+    public int getConsumerMsgCount() {
+        return consumerMsgCount;
+    }
+
+    public Producer createProducer(Connection connection, Stats stats, MulticastSet.CompletionHandler completionHandler) throws IOException {
         Channel channel = connection.createChannel();
         if (producerTxSize > 0) channel.txSelect();
         if (confirm >= 0) channel.confirmSelect();
@@ -318,16 +330,15 @@ public class MulticastParams {
         final Producer producer = new Producer(channel, exchangeName, this.topologyHandler.getRoutingKey(),
                                                randomRoutingKey, flags, producerTxSize,
                                                producerRateLimit, producerMsgCount,
-                                               timeLimit,
                                                confirm, confirmTimeout, messageBodySource,
-                                               tsp, stats);
+                                               tsp, stats, completionHandler);
         channel.addReturnListener(producer);
         channel.addConfirmListener(producer);
         this.topologyHandler.next();
         return producer;
     }
 
-    public Consumer createConsumer(Connection connection, Stats stats) throws IOException {
+    public Consumer createConsumer(Connection connection, Stats stats, MulticastSet.CompletionHandler completionHandler) throws IOException {
         Channel channel = connection.createChannel();
         if (consumerTxSize > 0) channel.txSelect();
         List<String> generatedQueueNames = this.topologyHandler.configureQueuesForClient(connection);
@@ -344,7 +355,7 @@ public class MulticastParams {
         Consumer consumer = new Consumer(channel, this.topologyHandler.getRoutingKey(), generatedQueueNames,
                                          consumerTxSize, autoAck, multiAckEvery,
                                          stats, consumerRateLimit, consumerMsgCount,
-                                         consumerLatencyInMicroseconds, tsp);
+                                         consumerLatencyInMicroseconds, tsp, completionHandler);
         this.topologyHandler.next();
         return consumer;
     }
@@ -377,6 +388,10 @@ public class MulticastParams {
 
     private static boolean queueExists(Connection connection, final String queueName) throws IOException {
         return queueName != null && exists(connection, ch -> ch.queueDeclarePassive(queueName));
+    }
+
+    public boolean hasLimit() {
+        return this.timeLimit > 0 || this.consumerMsgCount > 0 || this.producerCount > 0;
     }
 
     private interface Checker {
