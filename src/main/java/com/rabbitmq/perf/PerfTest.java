@@ -105,6 +105,7 @@ public class PerfTest {
             boolean useMillis        = cmd.hasOption("ms");
             String queueArgs         = strArg(cmd, "qa", null);
             int consumerLatencyInMicroseconds = intArg(cmd, 'L', 0);
+            int heartbeatSenderThreads = intArg(cmd, "hst", -1);
 
             String uri               = strArg(cmd, 'h', "amqp://localhost");
             String urisParameter     = strArg(cmd, 'H', null);
@@ -206,6 +207,7 @@ public class PerfTest {
             p.setQueuePattern(queuePattern);
             p.setQueueSequenceFrom(from);
             p.setQueueSequenceTo(to);
+            p.setHeartbeatSenderThreads(heartbeatSenderThreads);
 
             MulticastSet set = new MulticastSet(stats, factory, p, testID, uris);
             set.run(true);
@@ -311,6 +313,7 @@ public class PerfTest {
         options.addOption(new Option("qp", "queue-pattern",         true, "queue name pattern for creating queues in sequence"));
         options.addOption(new Option("F", "queue-pattern-from",     true, "sequence start for queue pattern (included)"));
         options.addOption(new Option("T", "queue-pattern-to",       true, "sequence end for queue pattern (included)"));
+        options.addOption(new Option("hst", "heartbeat-sender-threads",       true, "number of threads for producers and consumers heartbeat senders"));
         return options;
     }
 

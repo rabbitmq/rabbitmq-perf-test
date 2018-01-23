@@ -20,7 +20,6 @@ import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.DefaultConsumer;
 import com.rabbitmq.client.Envelope;
 import com.rabbitmq.client.ShutdownSignalException;
-import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
@@ -30,7 +29,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
 
 public class Consumer extends ProducerConsumerBase implements Runnable {
@@ -44,7 +42,6 @@ public class Consumer extends ProducerConsumerBase implements Runnable {
     private final int                   multiAckEvery;
     private final Stats                 stats;
     private final int                   msgLimit;
-    private final long                  timeLimit;
     private final CountDownLatch        latch = new CountDownLatch(1);
     private final Map<String, String>   consumerTagBranchMap = Collections.synchronizedMap(new HashMap<String, String>());
     private final ConsumerLatency       consumerLatency;
@@ -53,7 +50,7 @@ public class Consumer extends ProducerConsumerBase implements Runnable {
 
     public Consumer(Channel channel, String id,
                     List<String> queueNames, int txSize, boolean autoAck,
-                    int multiAckEvery, Stats stats, float rateLimit, int msgLimit, final int timeLimit,
+                    int multiAckEvery, Stats stats, float rateLimit, int msgLimit,
                     int consumerLatencyInMicroSeconds,
                     TimestampProvider timestampProvider) {
 
@@ -66,7 +63,6 @@ public class Consumer extends ProducerConsumerBase implements Runnable {
         this.multiAckEvery     = multiAckEvery;
         this.stats             = stats;
         this.msgLimit          = msgLimit;
-        this.timeLimit         = 1000L * timeLimit;
         this.timestampProvider = timestampProvider;
 
         if (consumerLatencyInMicroSeconds <= 0) {
@@ -103,17 +99,8 @@ public class Consumer extends ProducerConsumerBase implements Runnable {
                 String tag = channel.basicConsume(qName, autoAck, q);
                 consumerTagBranchMap.put(tag, qName);
             }
-            if (timeLimit == 0) {
-                latch.await();
-            }
-            else {
-                latch.await(timeLimit, TimeUnit.MILLISECONDS);
-            }
-
         } catch (IOException e) {
             throw new RuntimeException(e);
-        } catch (InterruptedException e) {
-            LoggerFactory.getLogger(getClass()).warn("Consumer thread has been interrupted");
         } catch (ShutdownSignalException e) {
             throw new RuntimeException(e);
         }

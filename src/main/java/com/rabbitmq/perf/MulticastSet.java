@@ -22,10 +22,23 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Random;
-import java.util.UUID;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Supplier;
+
+import static java.lang.Math.min;
+import static java.lang.String.format;
 
 public class MulticastSet {
 
@@ -37,7 +50,7 @@ public class MulticastSet {
 
     private final Random random = new Random();
 
-    private ThreadHandler threadHandler = new DefaultThreadHandler();
+    private ThreadingHandler threadingHandler = new DefaultThreadingHandler();
 
     public MulticastSet(Stats stats, ConnectionFactory factory,
         MulticastParams params, List<String> uris) {
@@ -55,73 +68,95 @@ public class MulticastSet {
         this.params.init();
     }
 
-    public void run() throws IOException, InterruptedException, TimeoutException, NoSuchAlgorithmException, KeyManagementException, URISyntaxException {
+    public void run()
+        throws IOException, InterruptedException, TimeoutException, NoSuchAlgorithmException, KeyManagementException, URISyntaxException, ExecutionException {
         run(false);
     }
 
     public void run(boolean announceStartup)
-        throws IOException, InterruptedException, TimeoutException, NoSuchAlgorithmException, KeyManagementException, URISyntaxException {
+        throws IOException, InterruptedException, TimeoutException, NoSuchAlgorithmException, KeyManagementException, URISyntaxException, ExecutionException {
+
+        ScheduledExecutorService heartbeatSenderExecutorService = this.threadingHandler.scheduledExecutorService(
+            "perf-test-heartbeat-sender-",
+            this.params.getHeartbeatSenderThreads()
+        );
+        factory.setHeartbeatExecutor(heartbeatSenderExecutorService);
 
         setUri();
-        Connection conn = factory.newConnection();
+        Connection conn = factory.newConnection("perf-test-configuration");
         params.configureAllQueues(conn);
         conn.close();
 
         this.params.resetTopologyHandler();
 
-        Thread[] consumerThreads = new Thread[params.getConsumerThreadCount()];
+        Runnable[] consumerRunnables = new Runnable[params.getConsumerThreadCount()];
         Connection[] consumerConnections = new Connection[params.getConsumerCount()];
         for (int i = 0; i < consumerConnections.length; i++) {
             if (announceStartup) {
                 System.out.println("id: " + testID + ", starting consumer #" + i);
             }
             setUri();
-            conn = factory.newConnection();
+            ExecutorService executorService = this.threadingHandler.executorService(
+                format("perf-test-consumer-%s-worker-", i),
+                nbThreadsForConsumer(this.params)
+            );
+            factory.setSharedExecutor(executorService);
+
+            conn = factory.newConnection("perf-test-consumer-" + i);
             consumerConnections[i] = conn;
             for (int j = 0; j < params.getConsumerChannelCount(); j++) {
                 if (announceStartup) {
                     System.out.println("id: " + testID + ", starting consumer #" + i + ", channel #" + j);
                 }
-                Thread t = new Thread(params.createConsumer(conn, stats));
-                consumerThreads[(i * params.getConsumerChannelCount()) + j] = t;
+                consumerRunnables[(i * params.getConsumerChannelCount()) + j] = params.createConsumer(conn, stats);
             }
         }
 
         this.params.resetTopologyHandler();
 
-        Thread[] producerThreads = new Thread[params.getProducerThreadCount()];
+        AgentState[] producerStates = new AgentState[params.getProducerThreadCount()];
         Connection[] producerConnections = new Connection[params.getProducerCount()];
+        // producers don't need an executor service, as they don't have any consumers
+        // this consumer should never be asked to create any threads
+        ExecutorService executorServiceForProducersConsumers = this.threadingHandler.executorService(
+            "perf-test-producers-worker-", 0
+        );
+        factory.setSharedExecutor(executorServiceForProducersConsumers);
         for (int i = 0; i < producerConnections.length; i++) {
             if (announceStartup) {
                 System.out.println("id: " + testID + ", starting producer #" + i);
             }
             setUri();
-            conn = factory.newConnection();
+            conn = factory.newConnection("perf-test-producer-i");
             producerConnections[i] = conn;
             for (int j = 0; j < params.getProducerChannelCount(); j++) {
                 if (announceStartup) {
                     System.out.println("id: " + testID + ", starting producer #" + i + ", channel #" + j);
                 }
-                Thread t = new Thread(params.createProducer(conn, stats));
-                producerThreads[(i * params.getProducerChannelCount()) + j] = t;
+                AgentState agentState = new AgentState();
+                agentState.runnable = params.createProducer(conn, stats);
+                producerStates[(i * params.getProducerChannelCount()) + j] = agentState;
             }
         }
 
-        for (Thread consumerThread : consumerThreads) {
-            this.threadHandler.start(consumerThread);
+        for (Runnable runnable : consumerRunnables) {
+            runnable.run();
             if(params.getConsumerSlowStart()) {
-            	System.out.println("Delaying start by 1 second because -S/--slow-start was requested");
-            	Thread.sleep(1000);
+                System.out.println("Delaying start by 1 second because -S/--slow-start was requested");
+                Thread.sleep(1000);
             }
         }
 
-        for (Thread producerThread : producerThreads) {
-            this.threadHandler.start(producerThread);
+        ExecutorService producersExecutorService = this.threadingHandler.executorService(
+            "perf-test-producer-", producerStates.length
+        );
+        for (AgentState producerState : producerStates) {
+            producerState.task = producersExecutorService.submit(producerState.runnable);
         }
 
         int count = 1; // counting the threads
-        for (int i = 0; i < producerThreads.length; i++) {
-            this.threadHandler.waitForCompletion(producerThreads[i]);
+        for (int i = 0; i < producerStates.length; i++) {
+            producerStates[i].task.get();
             if(count % params.getProducerChannelCount() == 0) {
                 // this is the end of a group of threads on the same connection,
                 // closing the connection
@@ -130,20 +165,21 @@ public class MulticastSet {
             count++;
         }
 
-        count = 1; // counting the threads
-        for (int i = 0; i < consumerThreads.length; i++) {
-            this.threadHandler.waitForCompletion(consumerThreads[i]);
-            if(count % params.getConsumerChannelCount() == 0) {
-                // this is the end of a group of threads on the same connection,
-                // closing the connection
-                consumerConnections[count / params.getConsumerChannelCount() - 1].close();
-            }
-            count++;
+        for (Connection consumerConnection : consumerConnections) {
+            consumerConnection.close();
         }
+
+        this.threadingHandler.shutdown();
     }
 
-    public void setThreadHandler(ThreadHandler threadHandler) {
-        this.threadHandler = threadHandler;
+    // from Java Client ConsumerWorkService
+    public final static int DEFAULT_CONSUMER_WORK_SERVICE_THREAD_POOL_SIZE = Runtime.getRuntime().availableProcessors() * 2;
+
+    protected static int nbThreadsForConsumer(MulticastParams params) {
+        // for backward compatibility, the thread pool should large enough to dedicate
+        // one thread for each channel when channel number is <= DEFAULT_CONSUMER_WORK_SERVICE_THREAD_POOL_SIZE
+        // Above this number, we stick to DEFAULT_CONSUMER_WORK_SERVICE_THREAD_POOL_SIZE
+        return min(params.getConsumerChannelCount(), DEFAULT_CONSUMER_WORK_SERVICE_THREAD_POOL_SIZE);
     }
 
     private void setUri() throws URISyntaxException, NoSuchAlgorithmException, KeyManagementException {
@@ -157,29 +193,61 @@ public class MulticastSet {
         return uri;
     }
 
+    public void setThreadingHandler(ThreadingHandler threadingHandler) {
+        this.threadingHandler = threadingHandler;
+    }
+
     /**
      * Abstraction for thread management.
      * Exists to ease testing.
      */
-    interface ThreadHandler {
+    interface ThreadingHandler {
 
-        void start(Thread thread);
+        ExecutorService executorService(String name, int nbThreads);
 
-        void waitForCompletion(Thread thread) throws InterruptedException;
+        ScheduledExecutorService scheduledExecutorService(String name, int nbThreads);
+
+        void shutdown();
 
     }
 
-    static class DefaultThreadHandler implements ThreadHandler {
+    static class DefaultThreadingHandler implements ThreadingHandler {
+
+        private final Collection<ExecutorService> executorServices = new ArrayList<>();
 
         @Override
-        public void start(Thread thread) {
-            thread.start();
+        public ExecutorService executorService(String name, int nbThreads) {
+            if (nbThreads <= 0) {
+                return create(() -> Executors.newSingleThreadExecutor(new NamedThreadFactory(name)));
+            } else {
+                return create(() -> Executors.newFixedThreadPool(nbThreads, new NamedThreadFactory(name)));
+            }
         }
 
         @Override
-        public void waitForCompletion(Thread thread) throws InterruptedException {
-            thread.join();
+        public ScheduledExecutorService scheduledExecutorService(String name, int nbThreads) {
+            return (ScheduledExecutorService) create(() -> Executors.newScheduledThreadPool(nbThreads, new NamedThreadFactory(name)));
         }
+
+        private ExecutorService create(Supplier<ExecutorService> s) {
+            ExecutorService executorService = s.get();
+            this.executorServices.add(executorService);
+            return executorService;
+        }
+
+        @Override
+        public void shutdown() {
+            for (ExecutorService executorService : executorServices) {
+                executorService.shutdown();
+            }
+        }
+    }
+
+    private static class AgentState {
+
+        private Runnable runnable;
+
+        private Future<?> task;
 
     }
 

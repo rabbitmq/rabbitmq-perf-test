@@ -28,9 +28,15 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
@@ -55,6 +61,7 @@ import static org.mockito.ArgumentMatchers.startsWith;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -94,7 +101,7 @@ public class TopologyTest {
     public void init() throws Exception {
         initMocks(this);
 
-        when(cf.newConnection()).thenReturn(c);
+        when(cf.newConnection(anyString())).thenReturn(c);
         when(c.createChannel()).thenReturn(ch);
 
         params = new MulticastParams();
@@ -110,7 +117,7 @@ public class TopologyTest {
 
         set.run();
 
-        verify(cf, times(1 + 1 + 1)).newConnection(); // consumers, producers, configuration (not used)
+        verify(cf, times(1 + 1 + 1)).newConnection(anyString()); // consumers, producers, configuration (not used)
         verify(c, times(1 + 1 + 1)).createChannel(); // queue configuration, consumer, producer
         verify(ch, times(1))
             .queueDeclare(eq(""), anyBoolean(), anyBoolean(), anyBoolean(), isNull());
@@ -131,7 +138,7 @@ public class TopologyTest {
 
         set.run();
 
-        verify(cf, times(10 + 10 + 1)).newConnection(); // consumers, producers, configuration (not used)
+        verify(cf, times(10 + 10 + 1)).newConnection(anyString()); // consumers, producers, configuration (not used)
         verify(c, times(10 + 10 + 10)).createChannel(); // queue configuration, consumer, producer
         verify(ch, times(10))
             .queueDeclare(eq(""), anyBoolean(), anyBoolean(), anyBoolean(), isNull());
@@ -154,7 +161,7 @@ public class TopologyTest {
 
         set.run();
 
-        verify(cf, times(2 + 1 + 1)).newConnection(); // consumers, producers, configuration (not used)
+        verify(cf, times(2 + 1 + 1)).newConnection(anyString()); // consumers, producers, configuration (not used)
         verify(c, times(2 + 2 + 1)).createChannel(); // queue configuration, consumer, producer
         verify(ch, times(2))
             .queueDeclare(eq(queue), anyBoolean(), anyBoolean(), anyBoolean(), isNull());
@@ -177,7 +184,7 @@ public class TopologyTest {
 
         set.run();
 
-        verify(cf, times(4 + 2 + 1)).newConnection(); // consumers, producers, configuration (not used)
+        verify(cf, times(4 + 2 + 1)).newConnection(anyString()); // consumers, producers, configuration (not used)
         verify(c, times(4 + 4 + 2)).createChannel(); // queue configuration, consumer, producer
         verify(ch, times(4))
             .queueDeclare(eq(queue), anyBoolean(), anyBoolean(), anyBoolean(), isNull());
@@ -226,7 +233,7 @@ public class TopologyTest {
 
         set.run();
 
-        verify(cf, times(1 + 1 + 1)).newConnection(); // consumers, producers, configuration (not used)
+        verify(cf, times(1 + 1 + 1)).newConnection(anyString()); // consumers, producers, configuration (not used)
         verify(c, times(1 + 1 + 1)).createChannel(); // queue configuration, consumer, producer
         verify(ch, times(1))
             .queueDeclare(eq(""), anyBoolean(), anyBoolean(), anyBoolean(), isNull());
@@ -252,7 +259,7 @@ public class TopologyTest {
 
         set.run();
 
-        verify(cf, times(1 + 1)).newConnection(); // configuration and producer
+        verify(cf, times(1 + 1)).newConnection(anyString()); // configuration and producer
         verify(c, atLeast(1 + 1)).createChannel(); // configuration, producer, and checks
         verify(ch, never()) // shouldn't be called, pre-declared is true
             .queueDeclare(eq(queue), anyBoolean(), anyBoolean(), anyBoolean(), isNull());
@@ -276,7 +283,7 @@ public class TopologyTest {
 
         set.run();
 
-        verify(cf, times(10 + 1)).newConnection(); // consumers, configuration (not used)
+        verify(cf, times(10 + 1)).newConnection(anyString()); // consumers, configuration (not used)
         verify(c, atLeast(10 + 10)).createChannel(); // configuration, consumers, and checks
         verify(ch, never()) // shouldn't be called, pre-declared is true
             .queueDeclare(eq(queue), anyBoolean(), anyBoolean(), anyBoolean(), isNull());
@@ -302,7 +309,7 @@ public class TopologyTest {
 
         set.run();
 
-        verify(cf, times(1 + 1)).newConnection(); // configuration, producer
+        verify(cf, times(1 + 1)).newConnection(anyString()); // configuration, producer
         verify(c, atLeast(1 + 1)).createChannel(); // configuration, producer, checks
         verify(ch, never()) // shouldn't be called, pre-declared is true
             .queueDeclare(eq(queue), anyBoolean(), anyBoolean(), anyBoolean(), isNull());
@@ -328,7 +335,7 @@ public class TopologyTest {
 
         set.run();
 
-        verify(cf, times(1 + 1)).newConnection(); // consumer, configuration (not used)
+        verify(cf, times(1 + 1)).newConnection(anyString()); // consumer, configuration (not used)
         verify(c, atLeast(1 + 1)).createChannel(); // configuration, consumer, checks
         verify(ch, never()) // shouldn't be called, pre-declared is true
             .queueDeclare(eq(queue), anyBoolean(), anyBoolean(), anyBoolean(), isNull());
@@ -351,7 +358,7 @@ public class TopologyTest {
 
         set.run();
 
-        verify(cf, times(1 + 1 + 1)).newConnection(); // configuration, consumer, producer
+        verify(cf, times(1 + 1 + 1)).newConnection(anyString()); // configuration, consumer, producer
         verify(c, atLeast(1 + 1 + 1)).createChannel(); // configuration, producer, consumer, and checks
         verify(ch, times(100))
             .queueDeclare(startsWith(queuePrefix), anyBoolean(), anyBoolean(), anyBoolean(), isNull());
@@ -383,7 +390,7 @@ public class TopologyTest {
 
         set.run();
 
-        verify(cf, times(1 + 1 + 1)).newConnection(); // configuration, consumer, producer
+        verify(cf, times(1 + 1 + 1)).newConnection(anyString()); // configuration, consumer, producer
         verify(c, atLeast(1 + 1 + 1)).createChannel(); // configuration, producer, consumer, and checks
         verify(ch, times(401))
             .queueDeclare(startsWith(queuePrefix), anyBoolean(), anyBoolean(), anyBoolean(), isNull());
@@ -415,7 +422,7 @@ public class TopologyTest {
 
         set.run();
 
-        verify(cf, times(1 + 1 + 1)).newConnection(); // configuration, consumer, producer
+        verify(cf, times(1 + 1 + 1)).newConnection(anyString()); // configuration, consumer, producer
         verify(c, atLeast(1 + 1 + 1)).createChannel(); // configuration, producer, consumer, and checks
         verify(ch, times(4500))
             .queueDeclare(startsWith(queuePrefix), anyBoolean(), anyBoolean(), anyBoolean(), isNull());
@@ -438,8 +445,9 @@ public class TopologyTest {
     @Test
     public void sequenceMoreQueuesThanProducers() throws Exception {
         String queuePrefix = "perf-test-";
+        int producerCount = 10;
         params.setConsumerCount(0);
-        params.setProducerCount(10);
+        params.setProducerCount(producerCount);
         params.setQueuePattern(queuePrefix + "%d");
         params.setQueueSequenceFrom(1);
         params.setQueueSequenceTo(100);
@@ -447,11 +455,15 @@ public class TopologyTest {
         when(ch.queueDeclare(queueNameCaptor.capture(), anyBoolean(), anyBoolean(), anyBoolean(), isNull()))
             .then(invocation -> new AMQImpl.Queue.DeclareOk(invocation.getArgument(0), 0, 0));
 
-        // we wait for 1 K messages to be sent
-        // hopefully there will be messages of all the producers to assert against all routing key values
-        CountDownLatch latchPublishing = new CountDownLatch(1000);
+        // once all producers have sent messages (producerCount routing keys in the set),
+        // we open the latch so MulticastSet.run can end
+        Set<String> routingKeys = new HashSet<>();
+        CountDownLatch latchPublishing = new CountDownLatch(1);
         doAnswer(invocation -> {
-            latchPublishing.countDown();
+            routingKeys.add(invocation.getArgument(1));
+            if (routingKeys.size() == producerCount) {
+                latchPublishing.countDown();
+            }
             return null;
         }).when(ch).basicPublish(eq("direct"), routingKeyCaptor.capture(),
             anyBoolean(), eq(false),
@@ -461,7 +473,7 @@ public class TopologyTest {
 
         set.run();
 
-        verify(cf, times(1 + 0 + 10)).newConnection(); // configuration, consumer, producer
+        verify(cf, times(1 + 0 + 10)).newConnection(anyString()); // configuration, consumer, producer
         verify(c, atLeast(1 + 10)).createChannel(); // configuration, producer, and checks
         verify(ch, times(100))
             .queueDeclare(startsWith(queuePrefix), anyBoolean(), anyBoolean(), anyBoolean(), isNull());
@@ -479,20 +491,25 @@ public class TopologyTest {
     @Test
     public void sequenceProducersAndConsumersSpread() throws Exception {
         String queuePrefix = "perf-test-";
+        int queueCount = 10;
         params.setConsumerCount(30);
         params.setProducerCount(15);
         params.setQueuePattern(queuePrefix + "%d");
         params.setQueueSequenceFrom(1);
-        params.setQueueSequenceTo(10);
+        params.setQueueSequenceTo(queueCount);
 
         when(ch.queueDeclare(queueNameCaptor.capture(), anyBoolean(), anyBoolean(), anyBoolean(), isNull()))
             .then(invocation -> new AMQImpl.Queue.DeclareOk(invocation.getArgument(0), 0, 0));
 
-        // we wait for 1 K messages to be sent
-        // hopefully there will be messages of all the producers to assert against all routing key values
-        CountDownLatch latchPublishing = new CountDownLatch(1000);
+        // once messages have been to all queues (queueCount routing keys in the set),
+        // we open the latch so MulticastSet.run can end
+        Set<String> routingKeys = new HashSet<>();
+        CountDownLatch latchPublishing = new CountDownLatch(1);
         doAnswer(invocation -> {
-            latchPublishing.countDown();
+            routingKeys.add(invocation.getArgument(1));
+            if (routingKeys.size() == queueCount) {
+                latchPublishing.countDown();
+            }
             return null;
         }).when(ch).basicPublish(eq("direct"), routingKeyCaptor.capture(),
             anyBoolean(), eq(false),
@@ -502,7 +519,7 @@ public class TopologyTest {
 
         set.run();
 
-        verify(cf, times(1 + 30 + 15)).newConnection(); // configuration, consumers, producers
+        verify(cf, times(1 + 30 + 15)).newConnection(anyString()); // configuration, consumers, producers
         verify(c, atLeast(1 + 30 + 15)).createChannel(); // configuration, producers, consumers, and checks
         verify(ch, times(10))
             .queueDeclare(startsWith(queuePrefix), anyBoolean(), anyBoolean(), anyBoolean(), isNull());
@@ -562,7 +579,7 @@ public class TopologyTest {
 
         set.run();
 
-        verify(cf, times(1 + 110 + 0)).newConnection(); // configuration, consumers, producers
+        verify(cf, times(1 + 110 + 0)).newConnection(anyString()); // configuration, consumers, producers
         verify(c, atLeast(1 + 110 + 0)).createChannel(); // configuration, producers, consumers, and checks
         verify(ch, times(10))
             .queueDeclare(startsWith(queuePrefix), anyBoolean(), anyBoolean(), anyBoolean(), isNull());
@@ -589,49 +606,84 @@ public class TopologyTest {
     }
 
     private MulticastSet getMulticastSet() {
-        return getMulticastSet(new NoOpThreadHandler());
+        NoOpThreadingHandler noOpThreadingHandler = new NoOpThreadingHandler();
+        return getMulticastSet(noOpThreadingHandler);
     }
 
-    private MulticastSet getMulticastSet(MulticastSet.ThreadHandler threadHandler) {
+    private MulticastSet getMulticastSet(MulticastSet.ThreadingHandler threadingHandler) {
         MulticastSet set = new MulticastSet(
             stats, cf, params, singletonList("amqp://localhost")
         );
 
-        set.setThreadHandler(threadHandler);
+        set.setThreadingHandler(threadingHandler);
         return set;
     }
 
-    static class NoOpThreadHandler implements MulticastSet.ThreadHandler {
+    static class NoOpThreadingHandler implements MulticastSet.ThreadingHandler {
 
-        @Override
-        public void start(Thread thread) {
+        final ExecutorService executorService = mock(ExecutorService.class);
+        final ScheduledExecutorService scheduledExecutorService = mock(ScheduledExecutorService.class);
+
+        @SuppressWarnings("unchecked")
+        public NoOpThreadingHandler() {
+            Future future = mock(Future.class);
+            when(executorService.submit(any(Runnable.class))).thenReturn(future);
         }
 
         @Override
-        public void waitForCompletion(Thread thread) {
+        public ExecutorService executorService(String name, int nbThreads) {
+            return executorService;
+        }
+
+        @Override
+        public ScheduledExecutorService scheduledExecutorService(String name, int nbThreads) {
+            return scheduledExecutorService;
+        }
+
+        @Override
+        public void shutdown() {
         }
     }
 
-    static class InterruptThreadHandler implements MulticastSet.ThreadHandler {
+    static class InterruptThreadHandler implements MulticastSet.ThreadingHandler {
 
         final CountDownLatch[] latches;
+        final ExecutorService backingExecutorService = Executors.newCachedThreadPool();
+        final ExecutorService executorService = mock(ExecutorService.class);
+        final ScheduledExecutorService scheduledExecutorService = mock(ScheduledExecutorService.class);
 
         InterruptThreadHandler(CountDownLatch... latches) {
             this.latches = latches;
-        }
-
-        @Override
-        public void start(Thread thread) {
-            thread.start();
-        }
-
-        @Override
-        public void waitForCompletion(Thread thread) throws InterruptedException {
-            for (CountDownLatch latch : latches) {
-                latch.await(1, TimeUnit.SECONDS);
+            Future future = mock(Future.class);
+            try {
+                when(future.get()).then(invocation -> {
+                    for (CountDownLatch latch : latches) {
+                        latch.await(1, TimeUnit.SECONDS);
+                    }
+                    return null;
+                });
+            } catch (Exception e) {
+                e.printStackTrace();
             }
-            thread.interrupt();
-            thread.join(500);
+            when(executorService.submit(any(Runnable.class))).thenAnswer(invocation -> {
+                backingExecutorService.submit((Runnable) invocation.getArguments()[0]);
+                return future;
+            });
+        }
+
+        @Override
+        public ExecutorService executorService(String name, int nbThreads) {
+            return executorService;
+        }
+
+        @Override
+        public ScheduledExecutorService scheduledExecutorService(String name, int nbThreads) {
+            return scheduledExecutorService;
+        }
+
+        @Override
+        public void shutdown() {
+            backingExecutorService.shutdown();
         }
     }
 }

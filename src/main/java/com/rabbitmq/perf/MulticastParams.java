@@ -76,6 +76,8 @@ public class MulticastParams {
 
     private TopologyHandler topologyHandler;
 
+    private int heartbeatSenderThreads = -1;
+
     public void setExchangeType(String exchangeType) {
         this.exchangeType = exchangeType;
     }
@@ -289,6 +291,14 @@ public class MulticastParams {
         return queueSequenceTo;
     }
 
+    public void setHeartbeatSenderThreads(int heartbeatSenderThreads) {
+        this.heartbeatSenderThreads = heartbeatSenderThreads;
+    }
+
+    public int getHeartbeatSenderThreads() {
+        return heartbeatSenderThreads <= 0 ? producerCount + consumerCount : this.heartbeatSenderThreads;
+    }
+
     public Producer createProducer(Connection connection, Stats stats) throws IOException {
         Channel channel = connection.createChannel();
         if (producerTxSize > 0) channel.txSelect();
@@ -333,7 +343,7 @@ public class MulticastParams {
         TimestampProvider tsp = new TimestampProvider(useMillis, timestampInHeader);
         Consumer consumer = new Consumer(channel, this.topologyHandler.getRoutingKey(), generatedQueueNames,
                                          consumerTxSize, autoAck, multiAckEvery,
-                                         stats, consumerRateLimit, consumerMsgCount, timeLimit,
+                                         stats, consumerRateLimit, consumerMsgCount,
                                          consumerLatencyInMicroseconds, tsp);
         this.topologyHandler.next();
         return consumer;
