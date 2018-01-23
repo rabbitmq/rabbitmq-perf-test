@@ -169,7 +169,7 @@ public class MessageCountTimeLimitTest {
             any(), any());
 
         assertThat(messagesTotal + " messages should have been published by now",
-            publishedLatch.await(5, TimeUnit.SECONDS), is(true));
+            publishedLatch.await(10, TimeUnit.SECONDS), is(true));
         waitAtMost(5, TimeUnit.SECONDS).until(() -> runningTest.isDone(), is(true));
         verify(ch, times(messagesTotal))
             .basicPublish(anyString(), anyString(),

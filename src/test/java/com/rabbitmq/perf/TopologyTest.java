@@ -471,7 +471,7 @@ public class TopologyTest {
             anyBoolean(), eq(false),
             any(), any(byte[].class));
 
-        MulticastSet set = getMulticastSet(new InterruptThreadHandler(latchPublishing));
+        MulticastSet set = getMulticastSet(new MulticastSet.DefaultThreadingHandler(), latchPublishing);
 
         set.run();
 
@@ -617,14 +617,26 @@ public class TopologyTest {
     private MulticastSet getMulticastSet(MulticastSet.ThreadingHandler threadingHandler) {
         MulticastSet set = new MulticastSet(
             stats, cf, params, singletonList("amqp://localhost"), new MulticastSet.CompletionHandler() {
-
             @Override
-            public void waitForCompletion() {
-            }
-
+            public void waitForCompletion() { }
             @Override
-            public void countDown() {
+            public void countDown() { }
+        }
+        );
+
+        set.setThreadingHandler(threadingHandler);
+        return set;
+    }
+
+    private MulticastSet getMulticastSet(MulticastSet.ThreadingHandler threadingHandler, CountDownLatch completionLatch) {
+        MulticastSet set = new MulticastSet(
+            stats, cf, params, singletonList("amqp://localhost"), new MulticastSet.CompletionHandler() {
+            @Override
+            public void waitForCompletion() throws InterruptedException {
+                completionLatch.await(10, TimeUnit.SECONDS);
             }
+            @Override
+            public void countDown() { }
         }
         );
 

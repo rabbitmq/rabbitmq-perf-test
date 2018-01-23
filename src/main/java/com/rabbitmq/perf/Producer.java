@@ -64,7 +64,6 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
                     long confirm, int confirmTimeout,
                     MessageBodySource messageBodySource,
                     TimestampProvider tsp, Stats stats, MulticastSet.CompletionHandler completionHandler) {
-
         this.channel           = channel;
         this.exchangeName      = exchangeName;
         this.id                = id;
