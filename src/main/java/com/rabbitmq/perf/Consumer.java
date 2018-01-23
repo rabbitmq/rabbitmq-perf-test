@@ -28,7 +28,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiFunction;
 
 public class Consumer extends ProducerConsumerBase implements Runnable {
@@ -42,17 +42,19 @@ public class Consumer extends ProducerConsumerBase implements Runnable {
     private final int                   multiAckEvery;
     private final Stats                 stats;
     private final int                   msgLimit;
-    private final CountDownLatch        latch = new CountDownLatch(1);
     private final Map<String, String>   consumerTagBranchMap = Collections.synchronizedMap(new HashMap<String, String>());
     private final ConsumerLatency       consumerLatency;
     private final BiFunction<BasicProperties, byte[], Long> timestampExtractor;
     private final TimestampProvider     timestampProvider;
+    private final MulticastSet.CompletionHandler completionHandler;
+    private final AtomicBoolean completed = new AtomicBoolean(false);
 
     public Consumer(Channel channel, String id,
                     List<String> queueNames, int txSize, boolean autoAck,
                     int multiAckEvery, Stats stats, float rateLimit, int msgLimit,
                     int consumerLatencyInMicroSeconds,
-                    TimestampProvider timestampProvider) {
+                    TimestampProvider timestampProvider,
+                    MulticastSet.CompletionHandler completionHandler) {
 
         this.channel           = channel;
         this.id                = id;
@@ -64,6 +66,7 @@ public class Consumer extends ProducerConsumerBase implements Runnable {
         this.stats             = stats;
         this.msgLimit          = msgLimit;
         this.timestampProvider = timestampProvider;
+        this.completionHandler = completionHandler;
 
         if (consumerLatencyInMicroSeconds <= 0) {
             this.consumerLatency = new NoWaitConsumerLatency();
@@ -147,13 +150,13 @@ public class Consumer extends ProducerConsumerBase implements Runnable {
                 consumerLatency.simulateLatency();
             }
             if (msgLimit != 0 && msgCount >= msgLimit) { // NB: not quite the inverse of above
-                latch.countDown();
+                countDown();
             }
         }
 
         @Override
         public void handleShutdownSignal(String consumerTag, ShutdownSignalException sig) {
-            latch.countDown();
+            countDown();
         }
 
         @Override
@@ -166,6 +169,12 @@ public class Consumer extends ProducerConsumerBase implements Runnable {
             } else {
                 System.out.printf("Could not find queue for consumer tag: %s", consumerTag);
             }
+        }
+    }
+
+    private void countDown() {
+        if (completed.compareAndSet(false, true)) {
+            completionHandler.countDown();
         }
     }
 

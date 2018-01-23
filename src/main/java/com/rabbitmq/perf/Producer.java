@@ -28,6 +28,7 @@ import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.UnaryOperator;
 
 public class Producer extends ProducerConsumerBase implements Runnable, ReturnListener,
@@ -43,7 +44,6 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
     private final boolean persistent;
     private final int     txSize;
     private final int     msgLimit;
-    private final long    timeLimitMillis;
 
     private final Stats   stats;
 
@@ -55,14 +55,15 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
     private final SortedSet<Long> unconfirmedSet =
         Collections.synchronizedSortedSet(new TreeSet<Long>());
 
+    private final MulticastSet.CompletionHandler completionHandler;
+    private final AtomicBoolean completed = new AtomicBoolean(false);
+
     public Producer(Channel channel, String exchangeName, String id, boolean randomRoutingKey,
                     List<?> flags, int txSize,
-                    float rateLimit, int msgLimit, int timeLimitSecs,
+                    float rateLimit, int msgLimit,
                     long confirm, int confirmTimeout,
                     MessageBodySource messageBodySource,
-                    TimestampProvider tsp, Stats stats)
-        throws IOException {
-
+                    TimestampProvider tsp, Stats stats, MulticastSet.CompletionHandler completionHandler) {
         this.channel           = channel;
         this.exchangeName      = exchangeName;
         this.id                = id;
@@ -72,7 +73,6 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
         this.txSize            = txSize;
         this.rateLimit         = rateLimit;
         this.msgLimit          = msgLimit;
-        this.timeLimitMillis   = 1000L * timeLimitSecs;
         this.messageBodySource = messageBodySource;
         if (tsp.isTimestampInHeader()) {
             this.propertiesBuilderProcessor = builder -> {
@@ -87,6 +87,7 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
             this.confirmTimeout = confirmTimeout;
         }
         this.stats = stats;
+        this.completionHandler = completionHandler;
     }
 
     public void handleReturn(int replyCode,
@@ -94,8 +95,7 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
                              String exchange,
                              String routingKey,
                              AMQP.BasicProperties properties,
-                             byte[] body)
-        throws IOException {
+                             byte[] body) {
         stats.handleReturn();
     }
 
@@ -142,8 +142,7 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
 
         try {
 
-            while ((timeLimitMillis == 0 || now < startTime + timeLimitMillis) &&
-                   (msgLimit == 0 || msgCount < msgLimit) && !Thread.interrupted()) {
+            while ((msgLimit == 0 || msgCount < msgLimit) && !Thread.interrupted()) {
                 delay(now);
                 if (confirmPool != null) {
                     if (confirmTimeout < 0) {
@@ -166,6 +165,9 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
                 }
                 stats.handleSend();
                 now = System.currentTimeMillis();
+            }
+            if (msgCount >= msgLimit) {
+                countDown();
             }
 
         } catch (IOException e) {
@@ -194,6 +196,12 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
                              mandatory, false,
                              propertiesBuilder.build(),
                              messageBodyAndContentType.getBody());
+    }
+
+    private void countDown() {
+        if (completed.compareAndSet(false, true)) {
+            completionHandler.countDown();
+        }
     }
 
 }

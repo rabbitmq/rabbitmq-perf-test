@@ -209,7 +209,9 @@ public class PerfTest {
             p.setQueueSequenceTo(to);
             p.setHeartbeatSenderThreads(heartbeatSenderThreads);
 
-            MulticastSet set = new MulticastSet(stats, factory, p, testID, uris);
+            MulticastSet.CompletionHandler completionHandler = getCompletionHandler(p);
+
+            MulticastSet set = new MulticastSet(stats, factory, p, testID, uris, completionHandler);
             set.run(true);
 
             stats.printFinal();
@@ -222,6 +224,26 @@ public class PerfTest {
             e.printStackTrace();
             systemExiter.exit(1);
         }
+    }
+
+    static MulticastSet.CompletionHandler getCompletionHandler(MulticastParams p) {
+        MulticastSet.CompletionHandler completionHandler;
+        if (p.hasLimit()) {
+            int countLimit = 0;
+            if (p.getProducerMsgCount() > 0) {
+                countLimit += p.getProducerThreadCount();
+            }
+            if (p.getConsumerMsgCount() > 0) {
+                countLimit += p.getProducerThreadCount();
+            }
+            completionHandler = new MulticastSet.DefaultCompletionHandler(
+                p.getTimeLimit(),
+                 countLimit
+            );
+        } else {
+            completionHandler = new MulticastSet.NoLimitCompletionHandler();
+        }
+        return completionHandler;
     }
 
     public static void main(String[] args) {
