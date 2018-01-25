@@ -29,7 +29,7 @@ public class LocalFilesMessageBodySource implements MessageBodySource {
     private final String contentType;
 
     public LocalFilesMessageBodySource(List<String> filesNames, String contentType) throws IOException {
-        bodies = new ArrayList<byte[]>(filesNames.size());
+        bodies = new ArrayList<>(filesNames.size());
         for (String fileName : filesNames) {
             File file = new File(fileName.trim());
             if (!file.exists() || file.isDirectory()) {
@@ -56,7 +56,7 @@ public class LocalFilesMessageBodySource implements MessageBodySource {
     }
 
     @Override
-    public MessageBodyAndContentType create(int sequenceNumber) throws IOException {
+    public MessageBodyAndContentType create(int sequenceNumber) {
         return new MessageBodyAndContentType(
             bodies.get(sequenceNumber % bodies.size()), contentType
         );

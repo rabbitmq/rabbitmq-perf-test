@@ -21,15 +21,22 @@ import com.rabbitmq.client.ConfirmListener;
 import com.rabbitmq.client.ReturnListener;
 
 import java.io.IOException;
+import java.time.OffsetDateTime;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.UnaryOperator;
+import java.util.function.Function;
+import static java.util.stream.Collectors.toMap;
 
 public class Producer extends ProducerConsumerBase implements Runnable, ReturnListener,
         ConfirmListener
@@ -49,7 +56,7 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
 
     private final MessageBodySource messageBodySource;
 
-    private final UnaryOperator<AMQP.BasicProperties.Builder> propertiesBuilderProcessor;
+    private final Function<AMQP.BasicProperties.Builder, AMQP.BasicProperties.Builder> propertiesBuilderProcessor;
     private Semaphore confirmPool;
     private int confirmTimeout;
     private final SortedSet<Long> unconfirmedSet =
@@ -63,24 +70,25 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
                     float rateLimit, int msgLimit,
                     long confirm, int confirmTimeout,
                     MessageBodySource messageBodySource,
-                    TimestampProvider tsp, Stats stats, MulticastSet.CompletionHandler completionHandler) {
+                    TimestampProvider tsp, Stats stats, Map<String, Object> messageProperties,
+                    MulticastSet.CompletionHandler completionHandler) {
         this.channel           = channel;
         this.exchangeName      = exchangeName;
         this.id                = id;
         this.randomRoutingKey  = randomRoutingKey;
         this.mandatory         = flags.contains("mandatory");
         this.persistent        = flags.contains("persistent");
+
+        Function<AMQP.BasicProperties.Builder, AMQP.BasicProperties.Builder> builderProcessor = Function.identity();
         this.txSize            = txSize;
         this.rateLimit         = rateLimit;
         this.msgLimit          = msgLimit;
         this.messageBodySource = messageBodySource;
         if (tsp.isTimestampInHeader()) {
-            this.propertiesBuilderProcessor = builder -> {
-                builder.headers(Collections.<String, Object>singletonMap(TIMESTAMP_HEADER, tsp.getCurrentTime()));
-                return builder;
-            };
-        } else {
-            this.propertiesBuilderProcessor = UnaryOperator.identity();
+            builderProcessor = builderProcessor.andThen(builder -> builder.headers(Collections.singletonMap(TIMESTAMP_HEADER, tsp.getCurrentTime())));
+        }
+        if (messageProperties != null && !messageProperties.isEmpty()) {
+            builderProcessor = builderProcessorWithMessageProperties(messageProperties, builderProcessor);
         }
         if (confirm > 0) {
             this.confirmPool  = new Semaphore((int)confirm);
@@ -88,6 +96,109 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
         }
         this.stats = stats;
         this.completionHandler = completionHandler;
+        this.propertiesBuilderProcessor = builderProcessor;
+    }
+
+    private Function<AMQP.BasicProperties.Builder, AMQP.BasicProperties.Builder> builderProcessorWithMessageProperties(
+            Map<String, Object> messageProperties,
+            Function<AMQP.BasicProperties.Builder, AMQP.BasicProperties.Builder> builderProcessor) {
+        if (messageProperties.containsKey("contentType")) {
+            String value = messageProperties.get("contentType").toString();
+            builderProcessor = builderProcessor.andThen(builder -> builder.contentType(value));
+        }
+        if (messageProperties.containsKey("contentEncoding")) {
+            String value = messageProperties.get("contentEncoding").toString();
+            builderProcessor = builderProcessor.andThen(builder -> builder.contentEncoding(value));
+        }
+        if (messageProperties.containsKey("deliveryMode")) {
+            Integer value = ((Number) messageProperties.get("deliveryMode")).intValue();
+            builderProcessor = builderProcessor.andThen(builder -> builder.deliveryMode(value));
+        }
+        if (messageProperties.containsKey("priority")) {
+            Integer value = ((Number) messageProperties.get("priority")).intValue();
+            builderProcessor = builderProcessor.andThen(builder -> builder.priority(value));
+        }
+        if (messageProperties.containsKey("correlationId")) {
+            String value = messageProperties.get("correlationId").toString();
+            builderProcessor = builderProcessor.andThen(builder -> builder.correlationId(value));
+        }
+        if (messageProperties.containsKey("replyTo")) {
+            String value = messageProperties.get("replyTo").toString();
+            builderProcessor = builderProcessor.andThen(builder -> builder.replyTo(value));
+        }
+        if (messageProperties.containsKey("expiration")) {
+            String value = messageProperties.get("expiration").toString();
+            builderProcessor = builderProcessor.andThen(builder -> builder.expiration(value));
+        }
+        if (messageProperties.containsKey("messageId")) {
+            String value = messageProperties.get("messageId").toString();
+            builderProcessor = builderProcessor.andThen(builder -> builder.messageId(value));
+        }
+        if (messageProperties.containsKey("timestamp")) {
+            String value = messageProperties.get("timestamp").toString();
+            Date timestamp = Date.from(OffsetDateTime.parse(value).toInstant());
+            builderProcessor = builderProcessor.andThen(builder -> builder.timestamp(timestamp));
+        }
+        if (messageProperties.containsKey("type")) {
+            String value = messageProperties.get("type").toString();
+            builderProcessor = builderProcessor.andThen(builder -> builder.type(value));
+        }
+        if (messageProperties.containsKey("userId")) {
+            String value = messageProperties.get("userId").toString();
+            builderProcessor = builderProcessor.andThen(builder -> builder.userId(value));
+        }
+        if (messageProperties.containsKey("appId")) {
+            String value = messageProperties.get("appId").toString();
+            builderProcessor = builderProcessor.andThen(builder -> builder.appId(value));
+        }
+        if (messageProperties.containsKey("clusterId")) {
+            String value = messageProperties.get("clusterId").toString();
+            builderProcessor = builderProcessor.andThen(builder -> builder.clusterId(value));
+        }
+
+        final Map<String, Object> headers = messageProperties.entrySet().stream()
+            .filter(entry -> !isPropertyKey(entry.getKey()))
+            .collect(toMap(e -> e.getKey(), e -> e.getValue()));
+
+        if (!headers.isEmpty()) {
+            builderProcessor = builderProcessor.andThen(builder -> {
+                // we merge if there are already some headers
+                AMQP.BasicProperties properties = builder.build();
+                Map<String, Object> existingHeaders = properties.getHeaders();
+                if (existingHeaders != null && !existingHeaders.isEmpty()) {
+                    Map<String, Object> newHeaders = new HashMap<>();
+                    newHeaders.putAll(existingHeaders);
+                    newHeaders.putAll(headers);
+                    builder = builder.headers(newHeaders);
+                } else {
+                    builder = builder.headers(headers);
+                }
+                return builder;
+            });
+        }
+
+        return builderProcessor;
+    }
+
+    private static final Collection<String> MESSAGE_PROPERTIES_KEYS = Arrays.asList(
+        "contentType",
+        "contentEncoding",
+        "headers",
+        "deliveryMode",
+        "priority",
+        "correlationId",
+        "replyTo",
+        "expiration",
+        "messageId",
+        "timestamp",
+        "type",
+        "userId",
+        "appId",
+        "clusterId"
+    );
+
+    private boolean isPropertyKey(String key) {
+        return MESSAGE_PROPERTIES_KEYS.contains(key);
     }
 
     public void handleReturn(int replyCode,

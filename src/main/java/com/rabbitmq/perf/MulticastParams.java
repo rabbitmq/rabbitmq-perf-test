@@ -74,6 +74,8 @@ public class MulticastParams {
     private int queueSequenceFrom = -1;
     private int queueSequenceTo = -1;
 
+    private Map<String, Object> messageProperties = null;
+
     private TopologyHandler topologyHandler;
 
     private int heartbeatSenderThreads = -1;
@@ -211,6 +213,10 @@ public class MulticastParams {
         this.consumerLatencyInMicroseconds = consumerLatencyInMicroseconds;
     }
 
+    public void setMessageProperties(Map<String, Object> messageProperties) {
+        this.messageProperties = messageProperties;
+    }
+
     public int getConsumerCount() {
         return consumerCount;
     }
@@ -331,7 +337,7 @@ public class MulticastParams {
                                                randomRoutingKey, flags, producerTxSize,
                                                producerRateLimit, producerMsgCount,
                                                confirm, confirmTimeout, messageBodySource,
-                                               tsp, stats, completionHandler);
+                                               tsp, stats, messageProperties, completionHandler);
         channel.addReturnListener(producer);
         channel.addConfirmListener(producer);
         this.topologyHandler.next();
