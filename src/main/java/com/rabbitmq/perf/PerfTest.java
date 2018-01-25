@@ -315,7 +315,8 @@ public class PerfTest {
         options.addOption(new Option("z", "time",                   true, "run duration in seconds (unlimited by default)"));
         options.addOption(new Option("C", "pmessages",              true, "producer message count"));
         options.addOption(new Option("D", "cmessages",              true, "consumer message count"));
-        Option flag =     new Option("f", "flag",                   true, "message flag");
+        Option flag =     new Option("f", "flag",                   true, "message flag(s) separated by commas. "
+                                                                                                    + "Supported values: persistent and mandatory");
         flag.setArgs(Option.UNLIMITED_VALUES);
         options.addOption(flag);
         options.addOption(new Option("M", "framemax",               true, "frame max"));
@@ -328,7 +329,8 @@ public class PerfTest {
         options.addOption(new Option("ad", "auto-delete",           true, "should the queue be auto-deleted, default is true"));
         options.addOption(new Option("ms", "use-millis",            false,"should latency be collected in milliseconds, default is false. "
                                                                                                     + "Set to true if producers are consumers run on different machines."));
-        options.addOption(new Option("qa", "queue-args",            true, "queue arguments as key/pair values, separated by commas"));
+        options.addOption(new Option("qa", "queue-args",            true, "queue arguments as key/pair values, separated by commas, "
+                                                                                                    + "e.g. x-max-length=10"));
         options.addOption(new Option("L", "consumer-latency",       true, "consumer latency in microseconds"));
         options.addOption(new Option("udsc", "use-default-ssl-context", false,"use JVM default SSL context"));
 
@@ -338,7 +340,8 @@ public class PerfTest {
         options.addOption(new Option("F", "queue-pattern-from",     true, "sequence start for queue pattern (included)"));
         options.addOption(new Option("T", "queue-pattern-to",       true, "sequence end for queue pattern (included)"));
         options.addOption(new Option("hst", "heartbeat-sender-threads",       true, "number of threads for producers and consumers heartbeat senders"));
-        options.addOption(new Option("mp", "message-properties",    true, "message properties as key/pair values, separated by commas"));
+        options.addOption(new Option("mp", "message-properties",    true, "message properties as key/pair values, separated by commas, "
+                                                                                                    + "e.g. priority=5"));
         return options;
     }
 
