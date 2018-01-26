@@ -80,6 +80,8 @@ public class MulticastParams {
 
     private int heartbeatSenderThreads = -1;
 
+    private int routingKeyCacheSize = 0;
+
     public void setExchangeType(String exchangeType) {
         this.exchangeType = exchangeType;
     }
@@ -317,6 +319,10 @@ public class MulticastParams {
         return consumerMsgCount;
     }
 
+    public void setRoutingKeyCacheSize(int routingKeyCacheSize) {
+        this.routingKeyCacheSize = routingKeyCacheSize;
+    }
+
     public Producer createProducer(Connection connection, Stats stats, MulticastSet.CompletionHandler completionHandler) throws IOException {
         Channel channel = connection.createChannel();
         if (producerTxSize > 0) channel.txSelect();
@@ -337,7 +343,7 @@ public class MulticastParams {
                                                randomRoutingKey, flags, producerTxSize,
                                                producerRateLimit, producerMsgCount,
                                                confirm, confirmTimeout, messageBodySource,
-                                               tsp, stats, messageProperties, completionHandler);
+                                               tsp, stats, messageProperties, completionHandler, this.routingKeyCacheSize);
         channel.addReturnListener(producer);
         channel.addConfirmListener(producer);
         this.topologyHandler.next();
