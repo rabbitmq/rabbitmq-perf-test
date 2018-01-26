@@ -107,6 +107,7 @@ public class PerfTest {
             int consumerLatencyInMicroseconds = intArg(cmd, 'L', 0);
             int heartbeatSenderThreads = intArg(cmd, "hst", -1);
             String messageProperties = strArg(cmd, "mp", null);
+            int routingKeyCacheSize  = intArg(cmd, "rkcs", 0);
 
             String uri               = strArg(cmd, 'h', "amqp://localhost");
             String urisParameter     = strArg(cmd, 'H', null);
@@ -210,6 +211,7 @@ public class PerfTest {
             p.setQueueSequenceTo(to);
             p.setHeartbeatSenderThreads(heartbeatSenderThreads);
             p.setMessageProperties(convertKeyValuePairs(messageProperties));
+            p.setRoutingKeyCacheSize(routingKeyCacheSize);
 
             MulticastSet.CompletionHandler completionHandler = getCompletionHandler(p);
 
@@ -342,6 +344,7 @@ public class PerfTest {
         options.addOption(new Option("hst", "heartbeat-sender-threads",       true, "number of threads for producers and consumers heartbeat senders"));
         options.addOption(new Option("mp", "message-properties",    true, "message properties as key/pair values, separated by commas, "
                                                                                                     + "e.g. priority=5"));
+        options.addOption(new Option("rkcs", "routing-key-cache-size",true, "size of the random routing keys cache. See --random-routing-key."));
         return options;
     }
 

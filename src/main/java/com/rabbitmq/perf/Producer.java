@@ -36,6 +36,8 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
+import java.util.function.Supplier;
+
 import static java.util.stream.Collectors.toMap;
 
 public class Producer extends ProducerConsumerBase implements Runnable, ReturnListener,
@@ -65,13 +67,15 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
     private final MulticastSet.CompletionHandler completionHandler;
     private final AtomicBoolean completed = new AtomicBoolean(false);
 
+    private final Supplier<String> routingKeyGenerator;
+
     public Producer(Channel channel, String exchangeName, String id, boolean randomRoutingKey,
                     List<?> flags, int txSize,
                     float rateLimit, int msgLimit,
                     long confirm, int confirmTimeout,
                     MessageBodySource messageBodySource,
                     TimestampProvider tsp, Stats stats, Map<String, Object> messageProperties,
-                    MulticastSet.CompletionHandler completionHandler) {
+                    MulticastSet.CompletionHandler completionHandler, int routingKeyCacheSize) {
         this.channel           = channel;
         this.exchangeName      = exchangeName;
         this.id                = id;
@@ -97,6 +101,15 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
         this.stats = stats;
         this.completionHandler = completionHandler;
         this.propertiesBuilderProcessor = builderProcessor;
+        if (randomRoutingKey || routingKeyCacheSize > 0) {
+            if (routingKeyCacheSize > 0) {
+                this.routingKeyGenerator = new CachingRoutingKeyGenerator(routingKeyCacheSize);
+            } else {
+                this.routingKeyGenerator = () -> UUID.randomUUID().toString();
+            }
+        } else {
+            this.routingKeyGenerator = () -> this.id;
+        }
     }
 
     private Function<AMQP.BasicProperties.Builder, AMQP.BasicProperties.Builder> builderProcessorWithMessageProperties(
@@ -303,7 +316,7 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
         propertiesBuilder = this.propertiesBuilderProcessor.apply(propertiesBuilder);
 
         unconfirmedSet.add(channel.getNextPublishSeqNo());
-        channel.basicPublish(exchangeName, randomRoutingKey ? UUID.randomUUID().toString() : id,
+        channel.basicPublish(exchangeName, routingKeyGenerator.get(),
                              mandatory, false,
                              propertiesBuilder.build(),
                              messageBodyAndContentType.getBody());
@@ -315,4 +328,27 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
         }
     }
 
+    static class CachingRoutingKeyGenerator implements Supplier<String> {
+
+        private final String [] keys;
+        private int count = 0;
+
+        public CachingRoutingKeyGenerator(int cacheSize) {
+            if (cacheSize <= 0) {
+                throw new IllegalArgumentException(String.valueOf(cacheSize));
+            }
+            this.keys = new String[cacheSize];
+            for (int i = 0; i < cacheSize; i++) {
+                this.keys[i] = UUID.randomUUID().toString();
+            }
+        }
+
+        @Override
+        public String get() {
+            if (count == keys.length) {
+                count = 0;
+            }
+            return keys[count++ % keys.length];
+        }
+    }
 }

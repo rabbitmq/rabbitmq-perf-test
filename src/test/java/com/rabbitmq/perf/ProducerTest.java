@@ -17,8 +17,8 @@ package com.rabbitmq.perf;
 
 import com.rabbitmq.client.AMQP.BasicProperties;
 import com.rabbitmq.client.Channel;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
@@ -49,7 +49,7 @@ public class ProducerTest {
     @Captor
     private ArgumentCaptor<BasicProperties> propertiesCaptor;
 
-    @Before
+    @BeforeEach
     public void init() {
         MockitoAnnotations.initMocks(this);
     }
@@ -141,7 +141,7 @@ public class ProducerTest {
             new TimeSequenceMessageBodySource(new TimestampProvider(true, true), 1000),
             new TimestampProvider(true, true),
             stats(),
-            null, completionHandler());
+            null, completionHandler(), 0);
 
         producer.run();
 
@@ -210,7 +210,7 @@ public class ProducerTest {
             (sequence) -> new MessageBodySource.MessageBodyAndContentType("".getBytes(), "application/json"),
             new TimestampProvider(true, true),
             stats(),
-            messageProperties, completionHandler());
+            messageProperties, completionHandler(), 0);
 
         producer.run();
 
@@ -266,7 +266,7 @@ public class ProducerTest {
             new TimeSequenceMessageBodySource(new TimestampProvider(true, true), 1000),
             new TimestampProvider(true, true),
             stats(),
-            messageProperties, completionHandler());
+            messageProperties, completionHandler(), 0);
 
         producer.run();
 
@@ -298,7 +298,7 @@ public class ProducerTest {
             new TimestampProvider(false, false),
             stats(),
             messageProperties,
-            completionHandler());
+            completionHandler(), 0);
     }
 
     BasicProperties props() {
