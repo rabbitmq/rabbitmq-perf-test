@@ -81,6 +81,24 @@ public class MessageCountTimeLimitTest {
 
     volatile long testDurationInMs;
 
+    static Stream<Arguments> producerCountArguments() {
+        return Stream.of(
+            Arguments.of(1, 1),
+            Arguments.of(10, 1),
+            Arguments.of(1, 10),
+            Arguments.of(2, 5)
+        );
+    }
+
+    static Stream<Arguments> consumerCountArguments() {
+        return Stream.of(
+            Arguments.of(1, 1),
+            Arguments.of(10, 1),
+            Arguments.of(1, 10),
+            Arguments.of(2, 5)
+        );
+    }
+
     @BeforeEach
     public void init() throws Exception {
         initMocks(this);
@@ -137,15 +155,6 @@ public class MessageCountTimeLimitTest {
         assertThat(testDurationInMs, greaterThan(5000L));
     }
 
-    static Stream<Arguments> producerCountArguments() {
-        return Stream.of(
-            Arguments.of(1, 1),
-            Arguments.of(10, 1),
-            Arguments.of(1, 10),
-            Arguments.of(2, 5)
-        );
-    }
-
     // -y 1 --pmessages 10 -x n -X m
     @ParameterizedTest
     @MethodSource("producerCountArguments")
@@ -176,15 +185,6 @@ public class MessageCountTimeLimitTest {
                 anyBoolean(), eq(false),
                 any(), any(byte[].class)
             );
-    }
-
-    static Stream<Arguments> consumerCountArguments() {
-        return Stream.of(
-            Arguments.of(1, 1),
-            Arguments.of(10, 1),
-            Arguments.of(1, 10),
-            Arguments.of(2, 5)
-        );
     }
 
     // --cmessages 10 -y n -Y m
