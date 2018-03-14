@@ -35,6 +35,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -78,7 +79,7 @@ public class MessageCountTimeLimitTest {
 
     MulticastSet.ThreadingHandler th;
 
-    volatile Future<?> runningTest;
+    AtomicBoolean testIsDone;
 
     volatile long testDurationInMs;
 
@@ -107,6 +108,7 @@ public class MessageCountTimeLimitTest {
         when(cf.newConnection(anyString())).thenReturn(c);
         when(c.createChannel()).thenReturn(ch);
 
+        testIsDone = new AtomicBoolean(false);
         executorService = Executors.newCachedThreadPool();
         th = new MulticastSet.DefaultThreadingHandler();
         testDurationInMs = -1;
@@ -138,7 +140,7 @@ public class MessageCountTimeLimitTest {
         assertThat("1000 messages should have been published by now",
             publishedLatch.await(5, TimeUnit.SECONDS), is(true));
 
-        assertThat(runningTest.isDone(), is(false));
+        assertThat(testIsDone.get(), is(false));
         // only the configuration connection has been closed
         // so the test is still running in the background
         verify(c, times(1)).close();
@@ -152,7 +154,7 @@ public class MessageCountTimeLimitTest {
 
         run(multicastSet);
 
-        waitAtMost(10, TimeUnit.SECONDS).until(() -> runningTest.isDone(), is(true));
+        waitAtMost(10, TimeUnit.SECONDS).until(() -> testIsDone.get(), is(true));
         assertThat(testDurationInMs, greaterThanOrEqualTo(5000L));
     }
 
@@ -180,7 +182,7 @@ public class MessageCountTimeLimitTest {
 
         assertThat(messagesTotal + " messages should have been published by now",
             publishedLatch.await(10, TimeUnit.SECONDS), is(true));
-        waitAtMost(5, TimeUnit.SECONDS).until(() -> runningTest.isDone(), is(true));
+        waitAtMost(5, TimeUnit.SECONDS).until(() -> testIsDone.get(), is(true));
         verify(ch, times(messagesTotal))
             .basicPublish(anyString(), anyString(),
                 anyBoolean(), anyBoolean(),
@@ -218,7 +220,7 @@ public class MessageCountTimeLimitTest {
             sendMessagesToConsumer(messagesCount, consumer);
         }
 
-        waitAtMost(5, TimeUnit.SECONDS).until(() -> runningTest.isDone(), is(true));
+        waitAtMost(5, TimeUnit.SECONDS).until(() -> testIsDone.get(), is(true));
     }
 
     // --time 5 -x 1 --pmessages 10 -y 1 --cmessages 10
@@ -255,10 +257,10 @@ public class MessageCountTimeLimitTest {
         assertThat(nbMessages + " messages should have been published by now",
             publishedLatch.await(5, TimeUnit.SECONDS), is(true));
 
-        assertThat(runningTest.isDone(), is(false));
+        assertThat(testIsDone.get(), is(false));
 
-        waitAtMost(10, TimeUnit.SECONDS).until(() -> runningTest.isDone(), is(true));
-        assertThat(testDurationInMs, greaterThan(5000L));
+        waitAtMost(10, TimeUnit.SECONDS).until(() -> testIsDone.get(), is(true));
+        assertThat(testDurationInMs, greaterThanOrEqualTo(5000L));
     }
 
     // -x 0 -y 1
@@ -285,7 +287,7 @@ public class MessageCountTimeLimitTest {
             consumersLatch.await(5, TimeUnit.SECONDS), is(true));
         assertThat(consumerArgumentCaptor.getValue(), notNullValue());
 
-        assertThat(runningTest.isDone(), is(false));
+        assertThat(testIsDone.get(), is(false));
         // only the configuration connection has been closed
         // so the test is still running in the background
         verify(c, times(1)).close();
@@ -312,7 +314,7 @@ public class MessageCountTimeLimitTest {
 
         assertThat("1000 messages should have been published by now",
             publishedLatch.await(5, TimeUnit.SECONDS), is(true));
-        assertThat(runningTest.isDone(), is(false));
+        assertThat(testIsDone.get(), is(false));
         // only the configuration connection has been closed
         // so the test is still running in the background
         verify(c, times(1)).close();
@@ -353,11 +355,12 @@ public class MessageCountTimeLimitTest {
     }
 
     private void run(MulticastSet multicastSet) {
-        this.runningTest = executorService.submit(() -> {
+        executorService.submit(() -> {
             try {
                 long start = System.nanoTime();
                 multicastSet.run();
                 testDurationInMs = (System.nanoTime() - start) / 1_000_000;
+                testIsDone.set(true);
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }

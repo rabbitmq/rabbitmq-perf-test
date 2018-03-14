@@ -63,7 +63,7 @@
     <junit.platform.version>1.1.0</junit.platform.version>
     <mockito.version>2.16.0</mockito.version>
     <hamcrest.version>2.0.0.0</hamcrest.version>
-    <awaitility.version>3.0.0</awaitility.version>
+    <awaitility.version>3.1.0</awaitility.version>
 
     <!-- to sign artifacts when releasing -->
     <gpg.keyname>6026DFCA</gpg.keyname>
