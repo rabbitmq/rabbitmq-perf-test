@@ -43,6 +43,7 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static org.awaitility.Awaitility.waitAtMost;
 import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.core.Is.is;
@@ -152,7 +153,7 @@ public class MessageCountTimeLimitTest {
         run(multicastSet);
 
         waitAtMost(10, TimeUnit.SECONDS).until(() -> runningTest.isDone(), is(true));
-        assertThat(testDurationInMs, greaterThan(5000L));
+        assertThat(testDurationInMs, greaterThanOrEqualTo(5000L));
     }
 
     // -y 1 --pmessages 10 -x n -X m
@@ -174,7 +175,7 @@ public class MessageCountTimeLimitTest {
             publishedLatch.countDown();
             return null;
         }).when(ch).basicPublish(anyString(), anyString(),
-            anyBoolean(), eq(false),
+            anyBoolean(), anyBoolean(),
             any(), any());
 
         assertThat(messagesTotal + " messages should have been published by now",
@@ -182,7 +183,7 @@ public class MessageCountTimeLimitTest {
         waitAtMost(5, TimeUnit.SECONDS).until(() -> runningTest.isDone(), is(true));
         verify(ch, times(messagesTotal))
             .basicPublish(anyString(), anyString(),
-                anyBoolean(), eq(false),
+                anyBoolean(), anyBoolean(),
                 any(), any(byte[].class)
             );
     }
