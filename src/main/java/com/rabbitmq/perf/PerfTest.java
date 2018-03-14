@@ -347,7 +347,8 @@ public class PerfTest {
         options.addOption(new Option("mp", "message-properties",    true, "message properties as key/pair values, separated by commas, "
                                                                                                     + "e.g. priority=5"));
         options.addOption(new Option("rkcs", "routing-key-cache-size",true, "size of the random routing keys cache. See --random-routing-key."));
-        options.addOption(new Option("E", "exclusive",     false,"declare random queues"));
+        options.addOption(new Option("E", "exclusive",                false, "use server-named exclusive queues. "
+                                                                                        + "Such queues can only be used by their declaring connection!"));
         return options;
     }
 
