@@ -81,6 +81,7 @@ public class MulticastParams {
     private int heartbeatSenderThreads = -1;
 
     private int routingKeyCacheSize = 0;
+    private boolean exclusive = false;
 
     public void setExchangeType(String exchangeType) {
         this.exchangeType = exchangeType;
@@ -406,6 +407,14 @@ public class MulticastParams {
         return this.timeLimit > 0 || this.consumerMsgCount > 0 || this.producerCount > 0;
     }
 
+    public void setExclusive(boolean exclusive) {
+        this.exclusive = exclusive;
+    }
+
+    public boolean isExclusive() {
+        return exclusive;
+    }
+
     private interface Checker {
         void check(Channel ch) throws IOException;
     }
@@ -484,7 +493,7 @@ public class MulticastParams {
             this.params = params;
         }
 
-        protected List<String> configureQueues(Connection connection, List<String> queues) throws IOException {
+        protected List<String> configureQueues(Connection connection, List<String> queues, Runnable afterQueueConfigurationCallback) throws IOException {
             Channel channel = connection.createChannel();
             if (!params.predeclared || !exchangeExists(connection, params.exchangeName)) {
                 channel.exchangeDeclare(params.exchangeName, params.exchangeType);
@@ -504,7 +513,7 @@ public class MulticastParams {
                 if (!params.predeclared || !queueExists(connection, qName)) {
                     qName = channel.queueDeclare(qName,
                         params.flags.contains("persistent"),
-                        false,
+                        params.isExclusive(),
                         params.autoDelete,
                         params.queueArguments).getQueue();
                 }
@@ -514,14 +523,12 @@ public class MulticastParams {
                 if (!"".equals(params.exchangeName) && !"amq.default".equals(params.exchangeName) && !params.skipBindingQueues) {
                     channel.queueBind(qName, params.exchangeName, params.topologyHandler.getRoutingKey());
                 }
-                doAfterQueueConfiguration();
+                afterQueueConfigurationCallback.run();
             }
             channel.abort();
 
             return generatedQueueNames;
         }
-
-        protected void doAfterQueueConfiguration() { }
 
     }
 
@@ -551,13 +558,13 @@ public class MulticastParams {
 
         @Override
         public List<String> configureQueuesForClient(Connection connection) throws IOException {
-            return configureQueues(connection, this.queueNames);
+            return configureQueues(connection, this.queueNames, () -> {});
         }
 
         @Override
         public List<String> configureAllQueues(Connection connection) throws IOException {
-            if (shouldConfigureQueues()) {
-                return configureQueues(connection, this.queueNames);
+            if (shouldConfigureQueues() && !this.params.isExclusive()) {
+                return configureQueues(connection, this.queueNames, () -> {});
             }
             return null;
         }
@@ -603,15 +610,26 @@ public class MulticastParams {
         }
 
         @Override
-        public List<String> configureQueuesForClient(Connection connection) {
-            // just returns the name of the current queue, no need to create it,
-            // it's been configured already
-            return getQueueNamesForClient();
+        public List<String> configureQueuesForClient(Connection connection) throws IOException {
+            if (this.params.isExclusive()) {
+                // if queues are exclusive, we create them for each consumer connection
+                return configureQueues(connection, getQueueNamesForClient(), () -> {});
+            } else {
+                // just returns the name of the current queue, no need to create it,
+                // it's been configured already
+                return getQueueNamesForClient();
+            }
+
         }
 
         @Override
         public List<String> configureAllQueues(Connection connection) throws IOException {
-            return configureQueues(connection, getQueueNames());
+            // if queues are exclusive, we'll create them for each consumer connection
+            if (this.params.isExclusive()) {
+                return null;
+            } else {
+                return configureQueues(connection, getQueueNames(), () -> this.next());
+            }
         }
 
         protected List<String> getQueueNames() {
@@ -620,11 +638,6 @@ public class MulticastParams {
 
         protected List<String> getQueueNamesForClient() {
             return Collections.singletonList(queues.get(index % queues.size()));
-        }
-
-        @Override
-        protected void doAfterQueueConfiguration() {
-            this.next();
         }
 
         @Override

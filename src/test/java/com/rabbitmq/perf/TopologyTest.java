@@ -24,6 +24,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
@@ -40,6 +41,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
+import static java.lang.Boolean.valueOf;
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.IntStream.range;
@@ -345,13 +347,35 @@ public class TopologyTest {
             .queueBind(eq(queue), eq("direct"), eq(routingKey));
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = { "true", "false" })
+    public void exclusiveQueue(String exclusive) throws Exception {
+        params.setExclusive(valueOf(exclusive));
+        when(ch.queueDeclare(eq(""), anyBoolean(), anyBoolean(), anyBoolean(), isNull()))
+            .thenReturn(new AMQImpl.Queue.DeclareOk("", 0, 0));
+
+        MulticastSet set = getMulticastSet();
+
+        set.run();
+
+        verify(cf, times(1 + 1 + 1)).newConnection(anyString()); // consumers, producers, configuration (not used)
+        verify(c, times(1 + 1 + 1)).createChannel(); // queue configuration, consumer, producer
+        verify(ch, times(1))
+            .queueDeclare(eq(""), anyBoolean(), eq(valueOf(exclusive)), anyBoolean(), isNull());
+        verify(ch, times(1))
+            .queueBind(anyString(), eq("direct"), anyString());
+    }
+
     // --queue-pattern 'perf-test-%d' --queue-pattern-from 1 --queue-pattern-to 100
-    @Test
-    public void sequenceQueuesDefinition1to100() throws Exception {
+    @ParameterizedTest
+    @ValueSource(strings = { "true", "false" })
+    public void sequenceQueuesDefinition1to100(String exclusive) throws Exception {
+        params.setExclusive(valueOf(exclusive));
         String queuePrefix = "perf-test-";
         params.setQueuePattern(queuePrefix + "%d");
         params.setQueueSequenceFrom(1);
         params.setQueueSequenceTo(100);
+        params.setConsumerCount(100);
 
         when(ch.queueDeclare(queueNameCaptor.capture(), anyBoolean(), anyBoolean(), anyBoolean(), isNull()))
             .then(invocation -> new AMQImpl.Queue.DeclareOk(invocation.getArgument(0), 0, 0));
@@ -360,10 +384,10 @@ public class TopologyTest {
 
         set.run();
 
-        verify(cf, times(1 + 1 + 1)).newConnection(anyString()); // configuration, consumer, producer
+        verify(cf, times(1 + 100 + 1)).newConnection(anyString()); // configuration, consumers, producer
         verify(c, atLeast(1 + 1 + 1)).createChannel(); // configuration, producer, consumer, and checks
         verify(ch, times(100))
-            .queueDeclare(startsWith(queuePrefix), anyBoolean(), anyBoolean(), anyBoolean(), isNull());
+            .queueDeclare(startsWith(queuePrefix), anyBoolean(), eq(valueOf(exclusive)), anyBoolean(), isNull());
         verify(ch, times(100))
             .queueBind(startsWith(queuePrefix), eq("direct"), routingKeyCaptor.capture());
 
@@ -378,12 +402,15 @@ public class TopologyTest {
     }
 
     // --queue-pattern 'perf-test-%d' --queue-pattern-from 100 --queue-pattern-to 500
-    @Test
-    public void sequenceQueuesDefinition100to500() throws Exception {
+    @ParameterizedTest
+    @ValueSource(strings = { "true", "false" })
+    public void sequenceQueuesDefinition100to500(String exclusive) throws Exception {
+        params.setExclusive(valueOf(exclusive));
         String queuePrefix = "perf-test-";
         params.setQueuePattern(queuePrefix + "%d");
         params.setQueueSequenceFrom(100);
         params.setQueueSequenceTo(500);
+        params.setConsumerCount(401);
 
         when(ch.queueDeclare(queueNameCaptor.capture(), anyBoolean(), anyBoolean(), anyBoolean(), isNull()))
             .then(invocation -> new AMQImpl.Queue.DeclareOk(invocation.getArgument(0), 0, 0));
@@ -392,10 +419,10 @@ public class TopologyTest {
 
         set.run();
 
-        verify(cf, times(1 + 1 + 1)).newConnection(anyString()); // configuration, consumer, producer
+        verify(cf, times(1 + 401 + 1)).newConnection(anyString()); // configuration, consumers, producer
         verify(c, atLeast(1 + 1 + 1)).createChannel(); // configuration, producer, consumer, and checks
         verify(ch, times(401))
-            .queueDeclare(startsWith(queuePrefix), anyBoolean(), anyBoolean(), anyBoolean(), isNull());
+            .queueDeclare(startsWith(queuePrefix), anyBoolean(), eq(valueOf(exclusive)), anyBoolean(), isNull());
         verify(ch, times(401))
             .queueBind(startsWith(queuePrefix), eq("direct"), routingKeyCaptor.capture());
 
@@ -410,12 +437,15 @@ public class TopologyTest {
     }
 
     //  --queue-pattern 'perf-test-%d' --queue-pattern-from 502 --queue-pattern-to 5001
-    @Test
-    public void sequenceQueuesDefinition502to5001() throws Exception {
+    @ParameterizedTest
+    @ValueSource(strings = { "true", "false" })
+    public void sequenceQueuesDefinition502to5001(String exclusive) throws Exception {
+        params.setExclusive(valueOf(exclusive));
         String queuePrefix = "perf-test-";
         params.setQueuePattern(queuePrefix + "%d");
         params.setQueueSequenceFrom(502);
         params.setQueueSequenceTo(5001);
+        params.setConsumerCount(4500);
 
         when(ch.queueDeclare(queueNameCaptor.capture(), anyBoolean(), anyBoolean(), anyBoolean(), isNull()))
             .then(invocation -> new AMQImpl.Queue.DeclareOk(invocation.getArgument(0), 0, 0));
@@ -424,10 +454,10 @@ public class TopologyTest {
 
         set.run();
 
-        verify(cf, times(1 + 1 + 1)).newConnection(anyString()); // configuration, consumer, producer
+        verify(cf, times(1 + 4500 + 1)).newConnection(anyString()); // configuration, consumers, producer
         verify(c, atLeast(1 + 1 + 1)).createChannel(); // configuration, producer, consumer, and checks
         verify(ch, times(4500))
-            .queueDeclare(startsWith(queuePrefix), anyBoolean(), anyBoolean(), anyBoolean(), isNull());
+            .queueDeclare(startsWith(queuePrefix), anyBoolean(), eq(valueOf(exclusive)), anyBoolean(), isNull());
         verify(ch, times(4500))
             .queueBind(startsWith(queuePrefix), eq("direct"), routingKeyCaptor.capture());
 
@@ -617,10 +647,14 @@ public class TopologyTest {
     private MulticastSet getMulticastSet(MulticastSet.ThreadingHandler threadingHandler) {
         MulticastSet set = new MulticastSet(
             stats, cf, params, singletonList("amqp://localhost"), new MulticastSet.CompletionHandler() {
+
             @Override
-            public void waitForCompletion() { }
+            public void waitForCompletion() {
+            }
+
             @Override
-            public void countDown() { }
+            public void countDown() {
+            }
         }
         );
 
@@ -631,12 +665,15 @@ public class TopologyTest {
     private MulticastSet getMulticastSet(MulticastSet.ThreadingHandler threadingHandler, CountDownLatch completionLatch) {
         MulticastSet set = new MulticastSet(
             stats, cf, params, singletonList("amqp://localhost"), new MulticastSet.CompletionHandler() {
+
             @Override
             public void waitForCompletion() throws InterruptedException {
                 completionLatch.await(10, TimeUnit.SECONDS);
             }
+
             @Override
-            public void countDown() { }
+            public void countDown() {
+            }
         }
         );
 

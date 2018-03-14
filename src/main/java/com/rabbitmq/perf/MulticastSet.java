@@ -241,7 +241,7 @@ public class MulticastSet {
         @Override
         public void shutdown() {
             for (ExecutorService executorService : executorServices) {
-                executorService.shutdown();
+                executorService.shutdownNow();
             }
         }
     }
