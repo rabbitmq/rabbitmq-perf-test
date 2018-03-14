@@ -128,7 +128,7 @@ public class MulticastSet {
                 System.out.println("id: " + testID + ", starting producer #" + i);
             }
             setUri();
-            conn = factory.newConnection("perf-test-producer-i");
+            conn = factory.newConnection("perf-test-producer-" + i);
             producerConnections[i] = conn;
             for (int j = 0; j < params.getProducerChannelCount(); j++) {
                 if (announceStartup) {
