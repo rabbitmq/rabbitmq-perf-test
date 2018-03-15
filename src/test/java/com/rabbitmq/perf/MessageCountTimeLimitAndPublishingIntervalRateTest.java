@@ -323,7 +323,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
     }
 
     @Test public void publishingRateLimit() throws Exception {
-        countsAndTimeLimit(0, 0, 6);
+        countsAndTimeLimit(0, 0, 8);
         params.setProducerRateLimit(10);
         params.setProducerCount(3);
         MulticastSet multicastSet = getMulticastSet();
@@ -338,10 +338,10 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         run(multicastSet);
 
-        waitAtMost(10, TimeUnit.SECONDS).until(() -> testIsDone.get(), is(true));
+        waitAtMost(15, TimeUnit.SECONDS).until(() -> testIsDone.get(), is(true));
         assertThat(publishedMessageCount.get(), allOf(
             greaterThan(3 * 10 * 4), // 3 producers at 10 m/s for about 4 seconds at least
-            lessThan(3 * 10 * 4 * 2) // not too many messages though
+            lessThan(3 * 10 * 4 * 3) // not too many messages though
         ));
         assertThat(testDurationInMs, greaterThan(5000L));
     }

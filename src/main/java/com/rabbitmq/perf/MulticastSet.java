@@ -17,6 +17,8 @@ package com.rabbitmq.perf;
 
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -41,6 +43,8 @@ import static java.lang.Math.min;
 import static java.lang.String.format;
 
 public class MulticastSet {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(MulticastSet.class);
 
     private final Stats stats;
     private final ConnectionFactory factory;
@@ -149,12 +153,36 @@ public class MulticastSet {
             }
         }
 
-        ExecutorService producersExecutorService = this.threadingHandler.executorService(
-            "perf-test-producer-", producerStates.length
-        );
-        for (AgentState producerState : producerStates) {
-            producerState.task = producersExecutorService.submit(producerState.runnable);
+        if (params.getPublishingInterval() > 0) {
+            ScheduledExecutorService producersExecutorService = this.threadingHandler.scheduledExecutorService(
+                "perf-test-producer-", Math.min(producerStates.length, 10)
+            );
+            Supplier<Integer> startDelaySupplier;
+            if (params.getProducerRandomStartDelayInSeconds() > 0) {
+                Random random = new Random();
+                startDelaySupplier = () -> random.nextInt(params.getProducerRandomStartDelayInSeconds()) + 1;
+            } else {
+                startDelaySupplier = () -> 0;
+            }
+            int publishingInterval = params.getPublishingInterval();
+            for (int i = 0; i < producerStates.length; i++) {
+                AgentState producerState = producerStates[i];
+                int delay = startDelaySupplier.get();
+                LOGGER.debug("Starting producer {} with a {} s start delay and to publish every {} s", i, delay, publishingInterval);
+                producerState.task = producersExecutorService.scheduleAtFixedRate(
+                    producerState.runnable.createRunnableForScheduling(),
+                    delay, publishingInterval, TimeUnit.SECONDS
+                );
+            }
+        } else {
+            ExecutorService producersExecutorService = this.threadingHandler.executorService(
+                "perf-test-producer-", producerStates.length
+            );
+            for (AgentState producerState : producerStates) {
+                producerState.task = producersExecutorService.submit(producerState.runnable);
+            }
         }
+
 
         this.completionHandler.waitForCompletion();
 
@@ -252,7 +280,7 @@ public class MulticastSet {
 
     private static class AgentState {
 
-        private Runnable runnable;
+        private Producer runnable;
 
         private Future<?> task;
 

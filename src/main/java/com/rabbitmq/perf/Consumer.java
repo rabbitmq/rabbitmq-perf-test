@@ -31,7 +31,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiFunction;
 
-public class Consumer extends ProducerConsumerBase implements Runnable {
+public class Consumer extends AgentBase implements Runnable {
 
     private ConsumerImpl                q;
     private final Channel               channel;
@@ -49,6 +49,8 @@ public class Consumer extends ProducerConsumerBase implements Runnable {
     private final MulticastSet.CompletionHandler completionHandler;
     private final AtomicBoolean completed = new AtomicBoolean(false);
 
+    private final AgentState state;
+
     public Consumer(Channel channel, String id,
                     List<String> queueNames, int txSize, boolean autoAck,
                     int multiAckEvery, Stats stats, float rateLimit, int msgLimit,
@@ -59,7 +61,6 @@ public class Consumer extends ProducerConsumerBase implements Runnable {
         this.channel           = channel;
         this.id                = id;
         this.queueNames        = queueNames;
-        this.rateLimit         = rateLimit;
         this.txSize            = txSize;
         this.autoAck           = autoAck;
         this.multiAckEvery     = multiAckEvery;
@@ -93,6 +94,8 @@ public class Consumer extends ProducerConsumerBase implements Runnable {
 
             };
         }
+
+        this.state = new AgentState(rateLimit);
     }
 
     public void run() {
@@ -115,16 +118,17 @@ public class Consumer extends ProducerConsumerBase implements Runnable {
 
         private ConsumerImpl(Channel channel) {
             super(channel);
-            lastStatsTime = now = System.currentTimeMillis();
-            msgCount = 0;
+            now = System.currentTimeMillis();
+            state.setLastStatsTime(now);
+            state.setMsgCount(0);
         }
 
         @Override
         public void handleDelivery(String consumerTag, Envelope envelope, BasicProperties properties, byte[] body) throws IOException {
             totalMsgCount++;
-            msgCount++;
+            state.incrementMessageCount();
 
-            if (msgLimit == 0 || msgCount <= msgLimit) {
+            if (msgLimit == 0 || state.getMsgCount() <= msgLimit) {
                 long messageTimestamp = timestampExtractor.apply(properties, body);
                 long nowTimestamp = timestampProvider.getCurrentTime();
 
@@ -144,12 +148,12 @@ public class Consumer extends ProducerConsumerBase implements Runnable {
                 stats.handleRecv(id.equals(envelope.getRoutingKey()) ? diff_time : 0L);
 
                 now = System.currentTimeMillis();
-                if (rateLimit > 0.0f) {
-                    delay(now);
+                if (state.getRateLimit() > 0.0f) {
+                    delay(now, state);
                 }
                 consumerLatency.simulateLatency();
             }
-            if (msgLimit != 0 && msgCount >= msgLimit) { // NB: not quite the inverse of above
+            if (msgLimit != 0 && state.getMsgCount() >= msgLimit) { // NB: not quite the inverse of above
                 countDown();
             }
         }

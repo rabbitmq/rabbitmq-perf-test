@@ -27,7 +27,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.SortedSet;
@@ -41,7 +40,7 @@ import java.util.function.Supplier;
 
 import static java.util.stream.Collectors.toMap;
 
-public class Producer extends ProducerConsumerBase implements Runnable, ReturnListener,
+public class Producer extends AgentBase implements Runnable, ReturnListener,
         ConfirmListener
 {
 
@@ -71,6 +70,8 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
 
     private final int randomStartDelay;
 
+    private final AgentState state;
+
     public Producer(ProducerParameters parameters) {
         this.channel           = parameters.getChannel();
         this.exchangeName      = parameters.getExchangeName();
@@ -80,7 +81,6 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
 
         Function<AMQP.BasicProperties.Builder, AMQP.BasicProperties.Builder> builderProcessor = Function.identity();
         this.txSize            = parameters.getTxSize();
-        this.rateLimit         = parameters.getRateLimit();
         this.msgLimit          = parameters.getMsgLimit();
         this.messageBodySource = parameters.getMessageBodySource();
         if (parameters.getTsp().isTimestampInHeader()) {
@@ -106,6 +106,8 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
             this.routingKeyGenerator = () -> this.id;
         }
         this.randomStartDelay = parameters.getRandomStartDelayInSeconds();
+
+        this.state = new AgentState(parameters.getRateLimit());
     }
 
     private Function<AMQP.BasicProperties.Builder, AMQP.BasicProperties.Builder> builderProcessorWithMessageProperties(
@@ -264,40 +266,61 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
         long now;
         final long startTime;
         startTime = now = System.currentTimeMillis();
-        lastStatsTime = startTime;
-        msgCount = 0;
-        int totalMsgCount = 0;
+        this.state.setLastStatsTime(startTime);
+        this.state.setMsgCount(0);
+        while (keepGoing(this.state)) {
+            delay(now, this.state);
+            handlePublish(this.state);
+            now = System.currentTimeMillis();
+        }
+        if (this.state.getMsgCount() >= msgLimit) {
+            countDown();
+        }
+    }
 
+    private boolean keepGoing(AgentState state) {
+        return (msgLimit == 0 || state.getMsgCount() < msgLimit) && !Thread.interrupted();
+    }
+
+    public Runnable createRunnableForScheduling() {
+        AtomicBoolean initialized = new AtomicBoolean(false);
+        return () -> {
+            if (initialized.compareAndSet(false, true)) {
+                this.state.setLastStatsTime(System.currentTimeMillis());
+                this.state.setMsgCount(0);
+            }
+            maybeHandlePublish(state);
+        };
+    }
+
+    public void maybeHandlePublish(AgentState state) {
+        if (keepGoing(state)) {
+            handlePublish(state);
+        } else {
+            countDown();
+        }
+    }
+
+    public void handlePublish(AgentState state) {
         try {
-
-            while ((msgLimit == 0 || msgCount < msgLimit) && !Thread.interrupted()) {
-                delay(now);
-                if (confirmPool != null) {
-                    if (confirmTimeout < 0) {
-                        confirmPool.acquire();
-                    } else {
-                        boolean acquired = confirmPool.tryAcquire(confirmTimeout, TimeUnit.SECONDS);
-                        if (!acquired) {
-                            // waiting for too long, broker may be gone, stopping thread
-                            throw new RuntimeException("Waiting for publisher confirms for too long");
-                        }
+            if (confirmPool != null) {
+                if (confirmTimeout < 0) {
+                    confirmPool.acquire();
+                } else {
+                    boolean acquired = confirmPool.tryAcquire(confirmTimeout, TimeUnit.SECONDS);
+                    if (!acquired) {
+                        // waiting for too long, broker may be gone, stopping thread
+                        throw new RuntimeException("Waiting for publisher confirms for too long");
                     }
-
                 }
-                publish(messageBodySource.create(totalMsgCount));
-                totalMsgCount++;
-                msgCount++;
-
-                if (txSize != 0 && totalMsgCount % txSize == 0) {
-                    channel.txCommit();
-                }
-                stats.handleSend();
-                now = System.currentTimeMillis();
             }
-            if (msgCount >= msgLimit) {
-                countDown();
-            }
+            publish(messageBodySource.create(state.getMsgCount()));
+            this.state.incrementMessageCount();
 
+            if (txSize != 0 && this.state.getMsgCount() % txSize == 0) {
+                channel.txCommit();
+            }
+            stats.handleSend();
         } catch (IOException e) {
             throw new RuntimeException(e);
         } catch (InterruptedException e) {

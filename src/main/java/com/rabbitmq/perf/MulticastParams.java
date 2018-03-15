@@ -431,8 +431,16 @@ public class MulticastParams {
         this.publishingInterval = publishingIntervalInSeconds;
     }
 
+    public int getPublishingInterval() {
+        return publishingInterval;
+    }
+
     public void setProducerRandomStartDelayInSeconds(int producerRandomStartDelayInSeconds) {
         this.producerRandomStartDelayInSeconds = producerRandomStartDelayInSeconds;
+    }
+
+    public int getProducerRandomStartDelayInSeconds() {
+        return producerRandomStartDelayInSeconds;
     }
 
     private interface Checker {
