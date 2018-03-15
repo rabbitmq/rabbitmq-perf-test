@@ -34,6 +34,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 
 import static java.lang.Math.min;
@@ -179,7 +180,7 @@ public class MulticastSet {
     public final static int DEFAULT_CONSUMER_WORK_SERVICE_THREAD_POOL_SIZE = Runtime.getRuntime().availableProcessors() * 2;
 
     protected static int nbThreadsForConsumer(MulticastParams params) {
-        // for backward compatibility, the thread pool should large enough to dedicate
+        // for backward compatibility, the thread pool should be large enough to dedicate
         // one thread for each channel when channel number is <= DEFAULT_CONSUMER_WORK_SERVICE_THREAD_POOL_SIZE
         // Above this number, we stick to DEFAULT_CONSUMER_WORK_SERVICE_THREAD_POOL_SIZE
         return min(params.getConsumerChannelCount(), DEFAULT_CONSUMER_WORK_SERVICE_THREAD_POOL_SIZE);
@@ -217,6 +218,7 @@ public class MulticastSet {
     static class DefaultThreadingHandler implements ThreadingHandler {
 
         private final Collection<ExecutorService> executorServices = new ArrayList<>();
+        private final AtomicBoolean closing = new AtomicBoolean(false);
 
         @Override
         public ExecutorService executorService(String name, int nbThreads) {
@@ -240,8 +242,10 @@ public class MulticastSet {
 
         @Override
         public void shutdown() {
-            for (ExecutorService executorService : executorServices) {
-                executorService.shutdownNow();
+            if (closing.compareAndSet(false, true)) {
+                for (ExecutorService executorService : executorServices) {
+                    executorService.shutdownNow();
+                }
             }
         }
     }

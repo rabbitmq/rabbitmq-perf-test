@@ -82,6 +82,8 @@ public class MulticastParams {
 
     private int routingKeyCacheSize = 0;
     private boolean exclusive = false;
+    private int publishingInterval = -1;
+    private int producerRandomStartDelayInSeconds;
 
     public void setExchangeType(String exchangeType) {
         this.exchangeType = exchangeType;
@@ -340,11 +342,21 @@ public class MulticastParams {
             tsp = new TimestampProvider(useMillis, false);
             messageBodySource = new TimeSequenceMessageBodySource(tsp, minMsgSize);
         }
-        final Producer producer = new Producer(channel, exchangeName, this.topologyHandler.getRoutingKey(),
-                                               randomRoutingKey, flags, producerTxSize,
-                                               producerRateLimit, producerMsgCount,
-                                               confirm, confirmTimeout, messageBodySource,
-                                               tsp, stats, messageProperties, completionHandler, this.routingKeyCacheSize);
+
+        float calculatedProducerRateLimit = this.producerRateLimit;
+        if (this.publishingInterval > 0) {
+            calculatedProducerRateLimit = 1.0f / (float) this.publishingInterval;
+        }
+
+        final Producer producer = new Producer(new ProducerParameters()
+            .setChannel(channel).setExchangeName(exchangeName).setId(this.topologyHandler.getRoutingKey())
+            .setRandomRoutingKey(randomRoutingKey).setFlags(flags).setTxSize(producerTxSize)
+            .setRateLimit(calculatedProducerRateLimit).setMsgLimit(producerMsgCount).setConfirm(confirm)
+            .setConfirmTimeout(confirmTimeout).setMessageBodySource(messageBodySource).setTsp(tsp)
+            .setStats(stats).setMessageProperties(messageProperties).setCompletionHandler(completionHandler)
+            .setRoutingKeyCacheSize(this.routingKeyCacheSize)
+            .setRandomStartDelayInSeconds(this.producerRandomStartDelayInSeconds)
+        );
         channel.addReturnListener(producer);
         channel.addConfirmListener(producer);
         this.topologyHandler.next();
@@ -413,6 +425,14 @@ public class MulticastParams {
 
     public boolean isExclusive() {
         return exclusive;
+    }
+
+    public void setPublishingInterval(int publishingIntervalInSeconds) {
+        this.publishingInterval = publishingIntervalInSeconds;
+    }
+
+    public void setProducerRandomStartDelayInSeconds(int producerRandomStartDelayInSeconds) {
+        this.producerRandomStartDelayInSeconds = producerRandomStartDelayInSeconds;
     }
 
     private interface Checker {

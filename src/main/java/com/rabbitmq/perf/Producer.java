@@ -29,6 +29,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.UUID;
@@ -48,7 +49,6 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
     private final Channel channel;
     private final String  exchangeName;
     private final String  id;
-    private final boolean randomRoutingKey;
     private final boolean mandatory;
     private final boolean persistent;
     private final int     txSize;
@@ -69,47 +69,43 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
 
     private final Supplier<String> routingKeyGenerator;
 
-    public Producer(Channel channel, String exchangeName, String id, boolean randomRoutingKey,
-                    List<?> flags, int txSize,
-                    float rateLimit, int msgLimit,
-                    long confirm, int confirmTimeout,
-                    MessageBodySource messageBodySource,
-                    TimestampProvider tsp, Stats stats, Map<String, Object> messageProperties,
-                    MulticastSet.CompletionHandler completionHandler, int routingKeyCacheSize) {
-        this.channel           = channel;
-        this.exchangeName      = exchangeName;
-        this.id                = id;
-        this.randomRoutingKey  = randomRoutingKey;
-        this.mandatory         = flags.contains("mandatory");
-        this.persistent        = flags.contains("persistent");
+    private final int randomStartDelay;
+
+    public Producer(ProducerParameters parameters) {
+        this.channel           = parameters.getChannel();
+        this.exchangeName      = parameters.getExchangeName();
+        this.id                = parameters.getId();
+        this.mandatory         = parameters.getFlags().contains("mandatory");
+        this.persistent        = parameters.getFlags().contains("persistent");
 
         Function<AMQP.BasicProperties.Builder, AMQP.BasicProperties.Builder> builderProcessor = Function.identity();
-        this.txSize            = txSize;
-        this.rateLimit         = rateLimit;
-        this.msgLimit          = msgLimit;
-        this.messageBodySource = messageBodySource;
-        if (tsp.isTimestampInHeader()) {
-            builderProcessor = builderProcessor.andThen(builder -> builder.headers(Collections.singletonMap(TIMESTAMP_HEADER, tsp.getCurrentTime())));
+        this.txSize            = parameters.getTxSize();
+        this.rateLimit         = parameters.getRateLimit();
+        this.msgLimit          = parameters.getMsgLimit();
+        this.messageBodySource = parameters.getMessageBodySource();
+        if (parameters.getTsp().isTimestampInHeader()) {
+            builderProcessor = builderProcessor.andThen(builder -> builder.headers(Collections.singletonMap(TIMESTAMP_HEADER, parameters.getTsp().getCurrentTime())));
         }
-        if (messageProperties != null && !messageProperties.isEmpty()) {
-            builderProcessor = builderProcessorWithMessageProperties(messageProperties, builderProcessor);
+        if (parameters.getMessageProperties() != null && !parameters.getMessageProperties().isEmpty()) {
+            builderProcessor = builderProcessorWithMessageProperties(parameters.getMessageProperties(), builderProcessor);
         }
-        if (confirm > 0) {
-            this.confirmPool  = new Semaphore((int)confirm);
-            this.confirmTimeout = confirmTimeout;
+        if (parameters.getConfirm() > 0) {
+            this.confirmPool  = new Semaphore((int)parameters.getConfirm());
+            this.confirmTimeout = parameters.getConfirmTimeout();
         }
-        this.stats = stats;
-        this.completionHandler = completionHandler;
+        this.stats = parameters.getStats();
+        this.completionHandler = parameters.getCompletionHandler();
         this.propertiesBuilderProcessor = builderProcessor;
-        if (randomRoutingKey || routingKeyCacheSize > 0) {
-            if (routingKeyCacheSize > 0) {
-                this.routingKeyGenerator = new CachingRoutingKeyGenerator(routingKeyCacheSize);
+        if (parameters.isRandomRoutingKey() || parameters.getRoutingKeyCacheSize() > 0) {
+            if (parameters.getRoutingKeyCacheSize() > 0) {
+                this.routingKeyGenerator = new CachingRoutingKeyGenerator(parameters.getRoutingKeyCacheSize());
             } else {
                 this.routingKeyGenerator = () -> UUID.randomUUID().toString();
             }
         } else {
             this.routingKeyGenerator = () -> this.id;
         }
+        this.randomStartDelay = parameters.getRandomStartDelayInSeconds();
     }
 
     private Function<AMQP.BasicProperties.Builder, AMQP.BasicProperties.Builder> builderProcessorWithMessageProperties(
@@ -257,6 +253,14 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
     }
 
     public void run() {
+        if (randomStartDelay > 0) {
+            int delay = new Random().nextInt(randomStartDelay) + 1;
+            try {
+                Thread.sleep(delay * 1000);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }
         long now;
         final long startTime;
         startTime = now = System.currentTimeMillis();

@@ -133,15 +133,16 @@ public class ProducerTest {
 
     @Test
     public void timestampInHeader() throws Exception {
-        Producer producer = new Producer(
-            channel, "exchange", "id", false,
-            asList("persistent"),
-            0, 0.0f, 1,
-            -1, 30,
-            new TimeSequenceMessageBodySource(new TimestampProvider(true, true), 1000),
-            new TimestampProvider(true, true),
-            stats(),
-            null, completionHandler(), 0);
+        Producer producer = new Producer(new ProducerParameters()
+            .setChannel(channel).setExchangeName("exchange").setId("id").setRandomRoutingKey(false)
+            .setFlags(asList("persistent"))
+            .setTxSize(0).setRateLimit(0.0f).setMsgLimit(1)
+            .setConfirm(-1).setConfirmTimeout(30)
+            .setMessageBodySource(new TimeSequenceMessageBodySource(new TimestampProvider(true, true), 1000))
+            .setTsp(new TimestampProvider(true, true))
+            .setStats(stats())
+            .setMessageProperties(null).setCompletionHandler(completionHandler()).setRoutingKeyCacheSize(0)
+            .setRandomStartDelayInSeconds(-1));
 
         producer.run();
 
@@ -203,14 +204,17 @@ public class ProducerTest {
         }};
 
         Producer producer = new Producer(
-            channel, "exchange", "id", false,
-            asList("persistent"),
-            0, 0.0f, 1,
-            -1, 30,
-            (sequence) -> new MessageBodySource.MessageBodyAndContentType("".getBytes(), "application/json"),
-            new TimestampProvider(true, true),
-            stats(),
-            messageProperties, completionHandler(), 0);
+            new ProducerParameters()
+                .setChannel(channel).setExchangeName("exchange").setId("id").setRandomRoutingKey(false)
+                .setFlags(asList("persistent"))
+                .setTxSize(0).setRateLimit(0.0f).setMsgLimit(1)
+                .setConfirm(-1).setConfirmTimeout(30)
+                .setMessageBodySource((sequence) -> new MessageBodySource.MessageBodyAndContentType("".getBytes(), "application/json"))
+                .setTsp(new TimestampProvider(true, true))
+                .setStats(stats())
+                .setMessageProperties(messageProperties).setCompletionHandler(completionHandler()).setRoutingKeyCacheSize(0)
+                .setRandomStartDelayInSeconds(-1)
+        );
 
         producer.run();
 
@@ -259,14 +263,17 @@ public class ProducerTest {
         }};
 
         Producer producer = new Producer(
-            channel, "exchange", "id", false,
-            asList("persistent"),
-            0, 0.0f, 1,
-            -1, 30,
-            new TimeSequenceMessageBodySource(new TimestampProvider(true, true), 1000),
-            new TimestampProvider(true, true),
-            stats(),
-            messageProperties, completionHandler(), 0);
+            new ProducerParameters()
+                .setChannel(channel).setExchangeName("exchange").setId("id").setRandomRoutingKey(false)
+                .setFlags(asList("persistent"))
+                .setTxSize(0).setRateLimit(0.0f).setMsgLimit(1)
+                .setConfirm(-1).setConfirmTimeout(30)
+                .setMessageBodySource(new TimeSequenceMessageBodySource(new TimestampProvider(true, true), 1000))
+                .setTsp(new TimestampProvider(true, true))
+                .setStats(stats())
+                .setMessageProperties(messageProperties).setCompletionHandler(completionHandler()).setRoutingKeyCacheSize(0)
+                .setRandomStartDelayInSeconds(-1)
+            );
 
         producer.run();
 
@@ -290,15 +297,17 @@ public class ProducerTest {
 
     Producer flagProducer(Map<String, Object> messageProperties, String... flags) {
         return new Producer(
-            channel, "exchange", "id", false,
-            asList(flags),
-            0, 0.0f, 1,
-            -1, 30,
-            new TimeSequenceMessageBodySource(new TimestampProvider(false, false), 1000),
-            new TimestampProvider(false, false),
-            stats(),
-            messageProperties,
-            completionHandler(), 0);
+            new ProducerParameters()
+                .setChannel(channel).setExchangeName("exchange").setId("id").setRandomRoutingKey(false)
+                .setFlags(asList(flags))
+                .setTxSize(0).setRateLimit(0.0f).setMsgLimit(1)
+                .setConfirm(-1).setConfirmTimeout(30)
+                .setMessageBodySource(new TimeSequenceMessageBodySource(new TimestampProvider(false, false), 1000))
+                .setTsp(new TimestampProvider(false, false))
+                .setStats(stats())
+                .setMessageProperties(messageProperties).setCompletionHandler(completionHandler()).setRoutingKeyCacheSize(0)
+                .setRandomStartDelayInSeconds(-1)
+        );
     }
 
     BasicProperties props() {

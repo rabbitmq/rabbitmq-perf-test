@@ -109,6 +109,8 @@ public class PerfTest {
             String messageProperties = strArg(cmd, "mp", null);
             int routingKeyCacheSize  = intArg(cmd, "rkcs", 0);
             boolean exclusive = cmd.hasOption('E');
+            int publishingIntervalInSeconds = intArg(cmd, "P", -1);
+            int producerRandomStartDelayInSeconds = intArg(cmd, "prsd", -1);
 
             String uri               = strArg(cmd, 'h', "amqp://localhost");
             String urisParameter     = strArg(cmd, 'H', null);
@@ -214,6 +216,8 @@ public class PerfTest {
             p.setMessageProperties(convertKeyValuePairs(messageProperties));
             p.setRoutingKeyCacheSize(routingKeyCacheSize);
             p.setExclusive(exclusive);
+            p.setPublishingInterval(publishingIntervalInSeconds);
+            p.setProducerRandomStartDelayInSeconds(producerRandomStartDelayInSeconds);
 
             MulticastSet.CompletionHandler completionHandler = getCompletionHandler(p);
 
@@ -349,6 +353,8 @@ public class PerfTest {
         options.addOption(new Option("rkcs", "routing-key-cache-size",true, "size of the random routing keys cache. See --random-routing-key."));
         options.addOption(new Option("E", "exclusive",                false, "use server-named exclusive queues. "
                                                                                         + "Such queues can only be used by their declaring connection!"));
+        options.addOption(new Option("P", "publishing-interval",true, "publishing interval in seconds (opposite of producer rate limit)"));
+        options.addOption(new Option("prsd", "producer-random-start-delay",true, "max random delay in seconds to start producers"));
         return options;
     }
 

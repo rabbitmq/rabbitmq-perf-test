@@ -43,9 +43,11 @@ import java.util.stream.Stream;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static org.awaitility.Awaitility.waitAtMost;
+import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.lessThan;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.junit.MatcherAssert.assertThat;
@@ -62,7 +64,7 @@ import static org.mockito.MockitoAnnotations.initMocks;
 /**
  *
  */
-public class MessageCountTimeLimitTest {
+public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
     @Mock
     ConnectionFactory cf;
@@ -320,7 +322,53 @@ public class MessageCountTimeLimitTest {
         verify(c, times(1)).close();
     }
 
-    // producer only test doesn't stop immediately
+    @Test public void publishingRateLimit() throws Exception {
+        countsAndTimeLimit(0, 0, 5);
+        params.setProducerRateLimit(10);
+        params.setProducerCount(3);
+        MulticastSet multicastSet = getMulticastSet();
+
+        AtomicInteger publishedMessageCount = new AtomicInteger();
+        doAnswer(invocation -> {
+            publishedMessageCount.incrementAndGet();
+            return null;
+        }).when(ch).basicPublish(anyString(), anyString(),
+            anyBoolean(), eq(false),
+            any(), any());
+
+        run(multicastSet);
+
+        waitAtMost(10, TimeUnit.SECONDS).until(() -> testIsDone.get(), is(true));
+        assertThat(publishedMessageCount.get(), allOf(
+            greaterThan(3 * 10 * 4), // 3 producers at 10 m/s for about 4 seconds at least
+            lessThan(3 * 10 * 4 * 2) // not too many messages though
+        ));
+        assertThat(testDurationInMs, greaterThan(5000L));
+    }
+
+    @Test public void publishingInterval() throws Exception {
+        countsAndTimeLimit(0, 0, 5);
+        params.setPublishingInterval(2);
+        params.setProducerCount(3);
+        MulticastSet multicastSet = getMulticastSet();
+
+        AtomicInteger publishedMessageCount = new AtomicInteger();
+        doAnswer(invocation -> {
+            publishedMessageCount.incrementAndGet();
+            return null;
+        }).when(ch).basicPublish(anyString(), anyString(),
+            anyBoolean(), eq(false),
+            any(), any());
+
+        run(multicastSet);
+
+        waitAtMost(10, TimeUnit.SECONDS).until(() -> testIsDone.get(), is(true));
+        assertThat(publishedMessageCount.get(), allOf(
+            lessThan(3 * 2 * 3), // 3 publishers that don't publish more than 3 times
+            lessThan(3 * 2 * 3)  // they should publish at least a couple of times
+        ));
+        assertThat(testDurationInMs, greaterThan(5000L));
+    }
 
     private void sendMessagesToConsumer(int messagesCount, Consumer consumer) {
         IntStream.range(0, messagesCount).forEach(i -> {
