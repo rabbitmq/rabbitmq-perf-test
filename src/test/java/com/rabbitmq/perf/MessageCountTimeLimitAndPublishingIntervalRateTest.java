@@ -323,7 +323,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
     }
 
     @Test public void publishingRateLimit() throws Exception {
-        countsAndTimeLimit(0, 0, 5);
+        countsAndTimeLimit(0, 0, 6);
         params.setProducerRateLimit(10);
         params.setProducerCount(3);
         MulticastSet multicastSet = getMulticastSet();
