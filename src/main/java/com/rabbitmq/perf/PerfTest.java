@@ -111,6 +111,7 @@ public class PerfTest {
             boolean exclusive = cmd.hasOption('E');
             int publishingIntervalInSeconds = intArg(cmd, "P", -1);
             int producerRandomStartDelayInSeconds = intArg(cmd, "prsd", -1);
+            int producerSchedulingThreads = intArg(cmd, "pst", -1);
 
             String uri               = strArg(cmd, 'h', "amqp://localhost");
             String urisParameter     = strArg(cmd, 'H', null);
@@ -218,6 +219,7 @@ public class PerfTest {
             p.setExclusive(exclusive);
             p.setPublishingInterval(publishingIntervalInSeconds);
             p.setProducerRandomStartDelayInSeconds(producerRandomStartDelayInSeconds);
+            p.setProducerSchedulerThreadCount(producerSchedulingThreads);
 
             MulticastSet.CompletionHandler completionHandler = getCompletionHandler(p);
 
@@ -355,6 +357,7 @@ public class PerfTest {
                                                                                         + "Such queues can only be used by their declaring connection!"));
         options.addOption(new Option("P", "publishing-interval",true, "publishing interval in seconds (opposite of producer rate limit)"));
         options.addOption(new Option("prsd", "producer-random-start-delay",true, "max random delay in seconds to start producers"));
+        options.addOption(new Option("pst", "producer-scheduler-threads",true, "number of threads to use when using --publishing-interval"));
         return options;
     }
 

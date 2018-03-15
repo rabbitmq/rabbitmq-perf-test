@@ -84,6 +84,7 @@ public class MulticastParams {
     private boolean exclusive = false;
     private int publishingInterval = -1;
     private int producerRandomStartDelayInSeconds;
+    private int producerSchedulerThreadCount = -1;
 
     public void setExchangeType(String exchangeType) {
         this.exchangeType = exchangeType;
@@ -254,18 +255,6 @@ public class MulticastParams {
         return minMsgSize;
     }
 
-    public String getRoutingKey() {
-        return routingKey;
-    }
-
-    public boolean getRandomRoutingKey() {
-        return randomRoutingKey;
-    }
-    
-    public boolean getSkipBindingQueues() {
-    	return skipBindingQueues;
-    }
-
     public void setBodyFiles(List<String> bodyFiles) {
         if (bodyFiles == null) {
             this.bodyFiles = new ArrayList<>();
@@ -282,24 +271,12 @@ public class MulticastParams {
         this.queuePattern = queuePattern;
     }
 
-    public String getQueuePattern() {
-        return queuePattern;
-    }
-
     public void setQueueSequenceFrom(int queueSequenceFrom) {
         this.queueSequenceFrom = queueSequenceFrom;
     }
 
-    public int getQueueSequenceFrom() {
-        return queueSequenceFrom;
-    }
-
     public void setQueueSequenceTo(int queueSequenceTo) {
         this.queueSequenceTo = queueSequenceTo;
-    }
-
-    public int getQueueSequenceTo() {
-        return queueSequenceTo;
     }
 
     public void setHeartbeatSenderThreads(int heartbeatSenderThreads) {
@@ -441,6 +418,14 @@ public class MulticastParams {
 
     public int getProducerRandomStartDelayInSeconds() {
         return producerRandomStartDelayInSeconds;
+    }
+
+    public int getProducerSchedulerThreadCount() {
+        return producerSchedulerThreadCount;
+    }
+
+    public void setProducerSchedulerThreadCount(int producerSchedulerThreadCount) {
+        this.producerSchedulerThreadCount = producerSchedulerThreadCount;
     }
 
     private interface Checker {

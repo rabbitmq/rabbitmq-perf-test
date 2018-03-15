@@ -19,6 +19,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static com.rabbitmq.perf.MulticastSet.nbThreadsForConsumer;
+import static com.rabbitmq.perf.MulticastSet.nbThreadsForProducerScheduledExecutorService;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
@@ -53,4 +54,25 @@ public class MulticastSetTest {
         params.setConsumerChannelCount(MulticastSet.DEFAULT_CONSUMER_WORK_SERVICE_THREAD_POOL_SIZE * 2);
         assertThat(nbThreadsForConsumer(params), is(MulticastSet.DEFAULT_CONSUMER_WORK_SERVICE_THREAD_POOL_SIZE));
     }
+
+    @Test public void nbThreadsForProducerScheduledExecutorServiceDefaultIsOne() {
+        assertThat(nbThreadsForProducerScheduledExecutorService(params), is(1));
+    }
+
+    @Test public void nbThreadsForProducerScheduledExecutorServiceOneThreadEvery50Producers() {
+        params.setProducerCount(120);
+        assertThat(nbThreadsForProducerScheduledExecutorService(params), is(3));
+    }
+
+    @Test public void nbThreadsForProducerScheduledExecutorServiceOneThreadEvery50ProducersIncludeChannels() {
+        params.setProducerCount(30);
+        params.setProducerChannelCount(4);
+        assertThat(nbThreadsForProducerScheduledExecutorService(params), is(3));
+    }
+
+    @Test public void nbThreadsForProducerScheduledExecutorServiceUseParameterValueWhenSpecified() {
+        params.setProducerSchedulerThreadCount(7);
+        assertThat(nbThreadsForProducerScheduledExecutorService(params), is(7));
+    }
+
 }

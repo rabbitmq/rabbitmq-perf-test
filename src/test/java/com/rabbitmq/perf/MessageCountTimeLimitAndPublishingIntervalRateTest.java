@@ -170,7 +170,6 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         params.setProducerChannelCount(channelsCount);
         MulticastSet multicastSet = getMulticastSet();
 
-        run(multicastSet);
 
         int messagesTotal = producersCount * channelsCount * messagesCount;
 
@@ -181,6 +180,8 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         }).when(ch).basicPublish(anyString(), anyString(),
             anyBoolean(), anyBoolean(),
             any(), any());
+
+        run(multicastSet);
 
         assertThat(messagesTotal + " messages should have been published by now",
             publishedLatch.await(10, TimeUnit.SECONDS), is(true));
@@ -364,8 +365,8 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         waitAtMost(10, TimeUnit.SECONDS).until(() -> testIsDone.get(), is(true));
         assertThat(publishedMessageCount.get(), allOf(
-            lessThan(3 * 2 * 3), // 3 publishers that don't publish more than 3 times
-            lessThan(3 * 2 * 3)  // they should publish at least a couple of times
+            greaterThanOrEqualTo(3 * 2),  // 3 publishers should publish at least a couple of times
+            lessThan(3 * 2 * 3) //  but they don't publish more than 3 times
         ));
         assertThat(testDurationInMs, greaterThan(5000L));
     }

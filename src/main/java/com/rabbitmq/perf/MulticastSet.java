@@ -155,7 +155,7 @@ public class MulticastSet {
 
         if (params.getPublishingInterval() > 0) {
             ScheduledExecutorService producersExecutorService = this.threadingHandler.scheduledExecutorService(
-                "perf-test-producer-", Math.min(producerStates.length, 10)
+                "perf-test-producer-", nbThreadsForConsumer(params)
             );
             Supplier<Integer> startDelaySupplier;
             if (params.getProducerRandomStartDelayInSeconds() > 0) {
@@ -212,6 +212,24 @@ public class MulticastSet {
         // one thread for each channel when channel number is <= DEFAULT_CONSUMER_WORK_SERVICE_THREAD_POOL_SIZE
         // Above this number, we stick to DEFAULT_CONSUMER_WORK_SERVICE_THREAD_POOL_SIZE
         return min(params.getConsumerChannelCount(), DEFAULT_CONSUMER_WORK_SERVICE_THREAD_POOL_SIZE);
+    }
+
+    /**
+     * Why 50? This is arbitrary. The fastest rate is 1 message / second when
+     * using a publishing interval, so 1 thread should be able to keep up easily with
+     * up to 50 messages / seconds (ie. 50 producers). Then, a new thread is used
+     * every 50 producers. This is 20 threads for 1000 producers, which seems reasonable.
+     * There's a command line argument to override this anyway.
+     */
+    private static final int PUBLISHING_INTERVAL_NB_PRODUCERS_PER_THREAD = 50;
+
+    protected static int nbThreadsForProducerScheduledExecutorService(MulticastParams params) {
+        int producerExecutorServiceNbThreads = params.getProducerSchedulerThreadCount();
+        if (producerExecutorServiceNbThreads <= 0) {
+            return params.getProducerThreadCount() / PUBLISHING_INTERVAL_NB_PRODUCERS_PER_THREAD + 1;
+        } else {
+            return producerExecutorServiceNbThreads;
+        }
     }
 
     private void setUri() throws URISyntaxException, NoSuchAlgorithmException, KeyManagementException {
