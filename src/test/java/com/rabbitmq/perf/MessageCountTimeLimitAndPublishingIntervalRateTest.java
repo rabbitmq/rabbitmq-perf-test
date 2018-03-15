@@ -129,7 +129,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         countsAndTimeLimit(0, 0, 0);
         MulticastSet multicastSet = getMulticastSet();
 
-        CountDownLatch publishedLatch = new CountDownLatch(1000);
+        CountDownLatch publishedLatch = new CountDownLatch(500);
         doAnswer(invocation -> {
             publishedLatch.countDown();
             return null;
@@ -139,7 +139,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         run(multicastSet);
 
-        assertThat("1000 messages should have been published by now",
+        assertThat("500 messages should have been published by now",
             publishedLatch.await(5, TimeUnit.SECONDS), is(true));
 
         assertThat(testIsDone.get(), is(false));
