@@ -33,7 +33,6 @@ import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -156,7 +155,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         run(multicastSet);
 
-        waitAtMost(15, TimeUnit.SECONDS).until(() -> testIsDone.get(), is(true));
+        waitAtMost(15, TimeUnit.SECONDS).untilTrue(testIsDone);
         assertThat(testDurationInMs, greaterThanOrEqualTo(5000L));
     }
 
@@ -185,7 +184,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         assertThat(messagesTotal + " messages should have been published by now",
             publishedLatch.await(20, TimeUnit.SECONDS), is(true));
-        waitAtMost(10, TimeUnit.SECONDS).until(() -> testIsDone.get(), is(true));
+        waitAtMost(10, TimeUnit.SECONDS).untilTrue(testIsDone);
         verify(ch, times(messagesTotal))
             .basicPublish(anyString(), anyString(),
                 anyBoolean(), anyBoolean(),
@@ -217,13 +216,13 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         assertThat(consumersCount * channelsCount + " consumer(s) should have been registered by now",
             consumersLatch.await(5, TimeUnit.SECONDS), is(true));
 
-        waitAtMost(5, TimeUnit.SECONDS).until(() -> consumerArgumentCaptor.getAllValues(), hasSize(consumersCount * channelsCount));
+        waitAtMost(10, TimeUnit.SECONDS).until(() -> consumerArgumentCaptor.getAllValues(), hasSize(consumersCount * channelsCount));
 
         for (Consumer consumer : consumerArgumentCaptor.getAllValues()) {
             sendMessagesToConsumer(messagesCount, consumer);
         }
 
-        waitAtMost(5, TimeUnit.SECONDS).until(() -> testIsDone.get(), is(true));
+        waitAtMost(10, TimeUnit.SECONDS).untilTrue(testIsDone);
     }
 
     // --time 5 -x 1 --pmessages 10 -y 1 --cmessages 10
@@ -262,7 +261,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         assertThat(testIsDone.get(), is(false));
 
-        waitAtMost(10, TimeUnit.SECONDS).until(() -> testIsDone.get(), is(true));
+        waitAtMost(10, TimeUnit.SECONDS).untilTrue(testIsDone);
         assertThat(testDurationInMs, greaterThanOrEqualTo(5000L));
     }
 
@@ -339,7 +338,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         run(multicastSet);
 
-        waitAtMost(15, TimeUnit.SECONDS).until(() -> testIsDone.get(), is(true));
+        waitAtMost(15, TimeUnit.SECONDS).untilTrue(testIsDone);
         assertThat(publishedMessageCount.get(), allOf(
             greaterThan(3 * 10 * 3), // 3 producers at 10 m/s for about 3 seconds at least
             lessThan(3 * 10 * 4 * 3) // not too many messages though
@@ -363,7 +362,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         run(multicastSet);
 
-        waitAtMost(10, TimeUnit.SECONDS).until(() -> testIsDone.get(), is(true));
+        waitAtMost(10, TimeUnit.SECONDS).untilTrue(testIsDone);
         assertThat(publishedMessageCount.get(), allOf(
             greaterThanOrEqualTo(3 * 2),  // 3 publishers should publish at least a couple of times
             lessThan(3 * 2 * 3) //  but they don't publish more than 3 times
