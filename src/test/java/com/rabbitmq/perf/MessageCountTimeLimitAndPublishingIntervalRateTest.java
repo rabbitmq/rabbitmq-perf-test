@@ -184,7 +184,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         run(multicastSet);
 
         assertThat(messagesTotal + " messages should have been published by now",
-            publishedLatch.await(10, TimeUnit.SECONDS), is(true));
+            publishedLatch.await(20, TimeUnit.SECONDS), is(true));
         waitAtMost(5, TimeUnit.SECONDS).until(() -> testIsDone.get(), is(true));
         verify(ch, times(messagesTotal))
             .basicPublish(anyString(), anyString(),
