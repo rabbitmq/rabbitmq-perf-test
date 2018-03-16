@@ -175,7 +175,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         run(multicastSet);
 
         waitAtMost(15, TimeUnit.SECONDS).untilTrue(testIsDone);
-        assertThat(testDurationInMs, greaterThanOrEqualTo(5000L));
+        assertThat(testDurationInMs, greaterThanOrEqualTo(3000L));
     }
 
     // -y 1 --pmessages 10 -x n -X m
