@@ -21,6 +21,7 @@ import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.Consumer;
 import com.rabbitmq.client.Envelope;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -39,6 +40,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static org.awaitility.Awaitility.waitAtMost;
@@ -50,6 +52,7 @@ import static org.hamcrest.Matchers.lessThan;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.junit.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -128,7 +131,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         countsAndTimeLimit(0, 0, 0);
         MulticastSet multicastSet = getMulticastSet();
 
-        CountDownLatch publishedLatch = new CountDownLatch(500);
+        CountDownLatch publishedLatch = new CountDownLatch(100);
         doAnswer(invocation -> {
             publishedLatch.countDown();
             return null;
@@ -138,8 +141,10 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         run(multicastSet);
 
-        assertThat("500 messages should have been published by now",
-            publishedLatch.await(5, TimeUnit.SECONDS), is(true));
+        assertTrue(
+            publishedLatch.await(5, TimeUnit.SECONDS),
+            () -> format("Only %d / 500 have been published", publishedLatch.getCount())
+        );
 
         assertThat(testIsDone.get(), is(false));
         // only the configuration connection has been closed
@@ -182,8 +187,10 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         run(multicastSet);
 
-        assertThat(messagesTotal + " messages should have been published by now",
-            publishedLatch.await(20, TimeUnit.SECONDS), is(true));
+        assertTrue(
+            publishedLatch.await(20, TimeUnit.SECONDS),
+            () -> format("Only %d / %d have been published", publishedLatch.getCount(), messagesTotal)
+        );
         waitAtMost(10, TimeUnit.SECONDS).untilTrue(testIsDone);
         verify(ch, times(messagesTotal))
             .basicPublish(anyString(), anyString(),
