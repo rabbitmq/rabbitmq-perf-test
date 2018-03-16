@@ -19,6 +19,7 @@ import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.impl.AMQImpl;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -42,6 +43,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 import static java.lang.Boolean.valueOf;
+import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.IntStream.range;
@@ -54,6 +56,7 @@ import static org.hamcrest.Matchers.hasItems;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.iterableWithSize;
 import static org.hamcrest.Matchers.not;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -551,7 +554,10 @@ public class TopologyTest {
 
         set.run();
 
-        assertThat("Producers should have published to all routing keys", latchPublishing.await(1, TimeUnit.SECONDS), is(true));
+        assertTrue(
+            latchPublishing.await(5, TimeUnit.SECONDS),
+            () -> format("Only %d / %d routing keys have been published to", routingKeys.size(), queueCount)
+        );
 
         verify(cf, times(1 + 30 + 15)).newConnection(anyString()); // configuration, consumers, producers
         verify(c, atLeast(1 + 30 + 15)).createChannel(); // configuration, producers, consumers, and checks

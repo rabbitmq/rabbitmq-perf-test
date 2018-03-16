@@ -20,8 +20,11 @@ import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.Consumer;
 import com.rabbitmq.client.Envelope;
+import org.awaitility.Awaitility;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -105,6 +108,16 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         );
     }
 
+    @BeforeAll
+    public static void beforeAllTests() {
+        Awaitility.setDefaultPollInterval(200, TimeUnit.MILLISECONDS);
+    }
+
+    @AfterAll
+    public static void afterAllTests() {
+        Awaitility.reset();
+    }
+
     @BeforeEach
     public void init() throws Exception {
         initMocks(this);
@@ -131,7 +144,8 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         countsAndTimeLimit(0, 0, 0);
         MulticastSet multicastSet = getMulticastSet();
 
-        CountDownLatch publishedLatch = new CountDownLatch(100);
+        int nbMessages = 100;
+        CountDownLatch publishedLatch = new CountDownLatch(nbMessages);
         doAnswer(invocation -> {
             publishedLatch.countDown();
             return null;
@@ -143,7 +157,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         assertTrue(
             publishedLatch.await(5, TimeUnit.SECONDS),
-            () -> format("Only %d / 500 have been published", publishedLatch.getCount())
+            () -> format("Only %d / %d messages have been published", publishedLatch.getCount(), nbMessages)
         );
 
         assertThat(testIsDone.get(), is(false));
@@ -189,7 +203,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         assertTrue(
             publishedLatch.await(20, TimeUnit.SECONDS),
-            () -> format("Only %d / %d have been published", publishedLatch.getCount(), messagesTotal)
+            () -> format("Only %d / %d messages have been published", publishedLatch.getCount(), messagesTotal)
         );
         waitAtMost(10, TimeUnit.SECONDS).untilTrue(testIsDone);
         verify(ch, times(messagesTotal))
