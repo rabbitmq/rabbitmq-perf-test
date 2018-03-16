@@ -154,7 +154,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         run(multicastSet);
 
         assertTrue(
-            publishedLatch.await(5, TimeUnit.SECONDS),
+            publishedLatch.await(10, TimeUnit.SECONDS),
             () -> format("Only %d / %d messages have been published", publishedLatch.getCount(), nbMessages)
         );
 
