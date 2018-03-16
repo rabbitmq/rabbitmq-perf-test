@@ -372,6 +372,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         assertThat(testDurationInMs, greaterThan(5000L));
     }
 
+    @Disabled
     @Test public void publishingInterval() throws Exception {
         countsAndTimeLimit(0, 0, 6);
         params.setPublishingInterval(2);
