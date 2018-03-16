@@ -23,8 +23,8 @@ import com.rabbitmq.client.Envelope;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -187,7 +187,6 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         params.setProducerChannelCount(channelsCount);
         MulticastSet multicastSet = getMulticastSet();
 
-
         int messagesTotal = producersCount * channelsCount * messagesCount;
 
         CountDownLatch publishedLatch = new CountDownLatch(messagesTotal);
@@ -319,7 +318,6 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
     // -x 0 -y 1
     @Test
-    @Disabled
     public void producerOnlyDoesNotStop() throws Exception {
         countsAndTimeLimit(0, 0, 0);
         params.setProducerCount(1);
@@ -348,7 +346,8 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         verify(c, times(1)).close();
     }
 
-    @Test public void publishingRateLimit() throws Exception {
+    @Test
+    public void publishingRateLimit() throws Exception {
         countsAndTimeLimit(0, 0, 8);
         params.setProducerRateLimit(10);
         params.setProducerCount(3);
@@ -372,8 +371,8 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         assertThat(testDurationInMs, greaterThan(5000L));
     }
 
-    @Disabled
-    @Test public void publishingInterval() throws Exception {
+    @Test
+    public void publishingInterval() throws Exception {
         countsAndTimeLimit(0, 0, 6);
         params.setPublishingInterval(2);
         params.setProducerCount(3);

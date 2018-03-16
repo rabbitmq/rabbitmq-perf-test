@@ -17,6 +17,7 @@ package com.rabbitmq.perf;
 
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -286,6 +287,16 @@ public class MulticastSet {
             if (closing.compareAndSet(false, true)) {
                 for (ExecutorService executorService : executorServices) {
                     executorService.shutdownNow();
+                    try {
+                        boolean terminated = executorService.awaitTermination(10, TimeUnit.SECONDS);
+                        if (!terminated) {
+                            LoggerFactory.getLogger(DefaultThreadingHandler.class).warn(
+                                "Some producer and/or consumer tasks didn't finish"
+                            );
+                        }
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
                 }
             }
         }
