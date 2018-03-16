@@ -169,7 +169,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
     // --time 5
     @Test
     public void timeLimit() {
-        countsAndTimeLimit(0, 0, 5);
+        countsAndTimeLimit(0, 0, 3);
         MulticastSet multicastSet = getMulticastSet();
 
         run(multicastSet);
@@ -277,8 +277,10 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         assertThat(consumerArgumentCaptor.getValue(), notNullValue());
         sendMessagesToConsumer(nbMessages / 2, consumerArgumentCaptor.getValue());
 
-        assertThat(nbMessages + " messages should have been published by now",
-            publishedLatch.await(5, TimeUnit.SECONDS), is(true));
+        assertTrue(
+            publishedLatch.await(5, TimeUnit.SECONDS),
+            () -> format("Only %d / %d messages have been published", publishedLatch.getCount(), nbMessages)
+        );
 
         assertThat(testIsDone.get(), is(false));
 
@@ -325,7 +327,8 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         MulticastSet multicastSet = getMulticastSet();
 
-        CountDownLatch publishedLatch = new CountDownLatch(1000);
+        int nbMessages = 1000;
+        CountDownLatch publishedLatch = new CountDownLatch(nbMessages);
         doAnswer(invocation -> {
             publishedLatch.countDown();
             return null;
@@ -335,8 +338,10 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         run(multicastSet);
 
-        assertThat("1000 messages should have been published by now",
-            publishedLatch.await(5, TimeUnit.SECONDS), is(true));
+        assertTrue(
+            publishedLatch.await(5, TimeUnit.SECONDS),
+            () -> format("Only %d / %d messages have been published", publishedLatch.getCount(), nbMessages)
+        );
         assertThat(testIsDone.get(), is(false));
         // only the configuration connection has been closed
         // so the test is still running in the background
