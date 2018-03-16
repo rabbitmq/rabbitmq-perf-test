@@ -28,7 +28,7 @@ services:
 branches:
   only:
     - master
-script: ./mvnw clean verify
+script: ./mvnw clean verify -Dtravis=true
 cache:
   directories:
     - $HOME/.m2
