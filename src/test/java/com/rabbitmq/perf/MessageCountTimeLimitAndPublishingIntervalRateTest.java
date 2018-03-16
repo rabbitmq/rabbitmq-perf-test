@@ -364,8 +364,8 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         waitAtMost(15, TimeUnit.SECONDS).untilTrue(testIsDone);
         assertThat(publishedMessageCount.get(), allOf(
-            greaterThan(3 * 10 * 2), // 3 producers at 10 m/s for about 2 seconds at least
-            lessThan(3 * 10 * 2 * 4) // not too many messages though
+            greaterThan(3 * 10 * 3), // 3 producers at 10 m/s for about 2 seconds at least
+            lessThan(3 * 10 * 8 * 2) // not too many messages though
         ));
         assertThat(testDurationInMs, greaterThan(5000L));
     }
