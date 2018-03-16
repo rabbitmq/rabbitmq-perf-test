@@ -23,9 +23,7 @@ import com.rabbitmq.client.Envelope;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -205,7 +203,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
             publishedLatch.await(20, TimeUnit.SECONDS),
             () -> format("Only %d / %d messages have been published", publishedLatch.getCount(), messagesTotal)
         );
-        waitAtMost(10, TimeUnit.SECONDS).untilTrue(testIsDone);
+        waitAtMost(20, TimeUnit.SECONDS).untilTrue(testIsDone);
         verify(ch, times(messagesTotal))
             .basicPublish(anyString(), anyString(),
                 anyBoolean(), anyBoolean(),
@@ -237,13 +235,13 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         assertThat(consumersCount * channelsCount + " consumer(s) should have been registered by now",
             consumersLatch.await(5, TimeUnit.SECONDS), is(true));
 
-        waitAtMost(10, TimeUnit.SECONDS).until(() -> consumerArgumentCaptor.getAllValues(), hasSize(consumersCount * channelsCount));
+        waitAtMost(20, TimeUnit.SECONDS).until(() -> consumerArgumentCaptor.getAllValues(), hasSize(consumersCount * channelsCount));
 
         for (Consumer consumer : consumerArgumentCaptor.getAllValues()) {
             sendMessagesToConsumer(messagesCount, consumer);
         }
 
-        waitAtMost(10, TimeUnit.SECONDS).untilTrue(testIsDone);
+        waitAtMost(20, TimeUnit.SECONDS).untilTrue(testIsDone);
     }
 
     // --time 5 -x 1 --pmessages 10 -y 1 --cmessages 10
@@ -327,7 +325,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         MulticastSet multicastSet = getMulticastSet();
 
-        int nbMessages = 1000;
+        int nbMessages = 100;
         CountDownLatch publishedLatch = new CountDownLatch(nbMessages);
         doAnswer(invocation -> {
             publishedLatch.countDown();
