@@ -200,7 +200,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         run(multicastSet);
 
         assertTrue(
-            publishedLatch.await(20, TimeUnit.SECONDS),
+            publishedLatch.await(60, TimeUnit.SECONDS),
             () -> format("Only %d / %d messages have been published", publishedLatch.getCount(), messagesTotal)
         );
         waitAtMost(20, TimeUnit.SECONDS).untilTrue(testIsDone);
@@ -364,8 +364,8 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         waitAtMost(15, TimeUnit.SECONDS).untilTrue(testIsDone);
         assertThat(publishedMessageCount.get(), allOf(
-            greaterThan(3 * 10 * 2), // 3 producers at 10 m/s for about 3 seconds at least
-            lessThan(3 * 10 * 3 * 2) // not too many messages though
+            greaterThan(3 * 10 * 2), // 3 producers at 10 m/s for about 2 seconds at least
+            lessThan(3 * 10 * 2 * 4) // not too many messages though
         ));
         assertThat(testDurationInMs, greaterThan(5000L));
     }

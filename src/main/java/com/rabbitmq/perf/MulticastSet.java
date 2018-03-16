@@ -17,8 +17,6 @@ package com.rabbitmq.perf;
 
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -43,8 +41,6 @@ import static java.lang.Math.min;
 import static java.lang.String.format;
 
 public class MulticastSet {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(MulticastSet.class);
 
     private final Stats stats;
     private final ConnectionFactory factory;
@@ -168,7 +164,6 @@ public class MulticastSet {
             for (int i = 0; i < producerStates.length; i++) {
                 AgentState producerState = producerStates[i];
                 int delay = startDelaySupplier.get();
-                LOGGER.debug("Starting producer {} with a {} s start delay and to publish every {} s", i, delay, publishingInterval);
                 producerState.task = producersExecutorService.scheduleAtFixedRate(
                     producerState.runnable.createRunnableForScheduling(),
                     delay, publishingInterval, TimeUnit.SECONDS
