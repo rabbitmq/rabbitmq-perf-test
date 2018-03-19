@@ -26,8 +26,13 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.Executors;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import com.rabbitmq.client.impl.ClientVersion;
+import com.rabbitmq.client.impl.nio.NioParams;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.GnuParser;
@@ -42,6 +47,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.SSLContext;
 
+import static java.lang.String.format;
 import static java.util.Arrays.asList;
 
 public class PerfTest {
@@ -176,6 +182,8 @@ public class PerfTest {
                 }
             }
 
+            factory = configureNioIfRequested(cmd, factory);
+
             MulticastParams p = new MulticastParams();
             p.setAutoAck(               autoAck);
             p.setAutoDelete(            autoDelete);
@@ -227,6 +235,10 @@ public class PerfTest {
             set.run(true);
 
             stats.printFinal();
+
+            if (factory.getNioParams().getNioExecutor() != null) {
+                factory.getNioParams().getNioExecutor().shutdownNow();
+            }
         }
         catch (ParseException exp) {
             System.err.println("Parsing failed. Reason: " + exp.getMessage());
@@ -236,6 +248,41 @@ public class PerfTest {
             e.printStackTrace();
             systemExiter.exit(1);
         }
+    }
+
+    private static ConnectionFactory configureNioIfRequested(CommandLine cmd, ConnectionFactory factory) {
+        int nbThreads = intArg(cmd, "niot", -1);
+        int executorSize = intArg(cmd, "niotp", -1);
+        if (nbThreads > 0 || executorSize > 0) {
+            NioParams nioParams = new NioParams();
+            int[] nbThreadsAndExecutorSize = getNioNbThreadsAndExecutorSize(nbThreads, executorSize);
+            nioParams.setNbIoThreads(nbThreadsAndExecutorSize[0]);
+            nioParams.setNioExecutor(new ThreadPoolExecutor(
+                nbThreadsAndExecutorSize[0], nbThreadsAndExecutorSize[1],
+                60L, TimeUnit.SECONDS,
+                new SynchronousQueue<>(),
+                new NamedThreadFactory("perf-test-nio-")
+            ));
+            factory.useNio();
+            factory.setNioParams(nioParams);
+        }
+        return factory;
+    }
+
+    protected static int [] getNioNbThreadsAndExecutorSize(int requestedNbThreads, int requestedExecutorSize) {
+        // executor size must slightly bigger than nb threads, see NioParams#setNioExecutor
+        int extraThreadsForExecutor = 2;
+        int nbThreadsToUse = requestedNbThreads > 0 ? requestedNbThreads : requestedExecutorSize - extraThreadsForExecutor;
+        int executorSizeToUse = requestedExecutorSize > 0 ? requestedExecutorSize : requestedNbThreads + extraThreadsForExecutor;
+        if (nbThreadsToUse <= 0 || executorSizeToUse <= 0) {
+            throw new IllegalArgumentException(
+                format("NIO number of threads and executor must be greater than 0: %d, %d", nbThreadsToUse, executorSizeToUse)
+            );
+        }
+        return new int[] {
+            nbThreadsToUse,
+            executorSizeToUse > nbThreadsToUse ? executorSizeToUse : nbThreadsToUse + extraThreadsForExecutor
+        };
     }
 
     static MulticastSet.CompletionHandler getCompletionHandler(MulticastParams p) {
@@ -358,6 +405,8 @@ public class PerfTest {
         options.addOption(new Option("P", "publishing-interval",true, "publishing interval in seconds (opposite of producer rate limit)"));
         options.addOption(new Option("prsd", "producer-random-start-delay",true, "max random delay in seconds to start producers"));
         options.addOption(new Option("pst", "producer-scheduler-threads",true, "number of threads to use when using --publishing-interval"));
+        options.addOption(new Option("niot", "nio-threads",true, "number of NIO threads to use"));
+        options.addOption(new Option("niotp", "nio-thread-pool",true, "size of NIO thread pool, should be slightly higher than number of NIO threads"));
         return options;
     }
 
@@ -460,7 +509,7 @@ public class PerfTest {
         protected void report(long now) {
             String output = "id: " + testID + ", ";
 
-            output += "time: " + String.format("%.3f", (now - startTime)/1000.0) + "s";
+            output += "time: " + format("%.3f", (now - startTime)/1000.0) + "s";
             output +=
                 getRate("sent",      sendCountInterval,    sendStatsEnabled,                        elapsedInterval) +
                     getRate("returned",  returnCountInterval,  sendStatsEnabled && returnStatsEnabled,  elapsedInterval) +
@@ -487,7 +536,7 @@ public class PerfTest {
 
             System.out.println(output);
             if (out != null) {
-                out.println(testID + "," + String.format("%.3f", (now - startTime)/1000.0) + "," +
+                out.println(testID + "," + format("%.3f", (now - startTime)/1000.0) + "," +
                     rate(sendCountInterval, elapsedInterval, sendStatsEnabled)+ "," +
                     rate(returnCountInterval, elapsedInterval, sendStatsEnabled && returnStatsEnabled)+ "," +
                     rate(confirmCountInterval, elapsedInterval, sendStatsEnabled && confirmStatsEnabled)+ "," +
@@ -546,10 +595,10 @@ public class PerfTest {
         }
 
         private static String formatRate(double rate) {
-            if (rate == 0.0)    return String.format("%d", (long)rate);
-            else if (rate < 1)  return String.format("%1.2f", rate);
-            else if (rate < 10) return String.format("%1.1f", rate);
-            else                return String.format("%d", (long)rate);
+            if (rate == 0.0)    return format("%d", (long)rate);
+            else if (rate < 1)  return format("%1.2f", rate);
+            else if (rate < 10) return format("%1.1f", rate);
+            else                return format("%d", (long)rate);
         }
 
         private static String rate(long count, long elapsed, boolean display) {
@@ -563,11 +612,11 @@ public class PerfTest {
 
     private static void versionInformation() {
         String lineSeparator = System.getProperty("line.separator");
-        String version = String.format(
+        String version = format(
             "RabbitMQ Perf Test %s (%s; %s)",
             Version.VERSION, Version.BUILD, Version.BUILD_TIMESTAMP
         );
-        String info = String.format(
+        String info = format(
             "RabbitMQ AMQP Client version: %s" + lineSeparator +
             "Java version: %s, vendor: %s" + lineSeparator +
             "Java home: %s" + lineSeparator +
