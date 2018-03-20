@@ -35,6 +35,7 @@ import java.util.UUID;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -70,7 +71,7 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
 
     private final int randomStartDelay;
 
-    private final AgentState state;
+    private final float rateLimit;
 
     public Producer(ProducerParameters parameters) {
         this.channel           = parameters.getChannel();
@@ -107,7 +108,7 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
         }
         this.randomStartDelay = parameters.getRandomStartDelayInSeconds();
 
-        this.state = new AgentState(parameters.getRateLimit());
+        this.rateLimit = parameters.getRateLimit();
     }
 
     private Function<AMQP.BasicProperties.Builder, AMQP.BasicProperties.Builder> builderProcessorWithMessageProperties(
@@ -266,14 +267,15 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
         long now;
         final long startTime;
         startTime = now = System.currentTimeMillis();
-        this.state.setLastStatsTime(startTime);
-        this.state.setMsgCount(0);
-        while (keepGoing(this.state)) {
-            delay(now, this.state);
-            handlePublish(this.state);
+        ProducerState state = new ProducerState(this.rateLimit);
+        state.setLastStatsTime(startTime);
+        state.setMsgCount(0);
+        while (keepGoing(state)) {
+            delay(now, state);
+            handlePublish(state);
             now = System.currentTimeMillis();
         }
-        if (this.state.getMsgCount() >= msgLimit) {
+        if (state.getMsgCount() >= msgLimit) {
             countDown();
         }
     }
@@ -282,12 +284,31 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
         return (msgLimit == 0 || state.getMsgCount() < msgLimit) && !Thread.interrupted();
     }
 
+
+
     public Runnable createRunnableForScheduling() {
-        AtomicBoolean initialized = new AtomicBoolean(false);
+        final AtomicBoolean initialized = new AtomicBoolean(false);
+        // make the producer state thread-safe for what we use in this case
+        final ProducerState state = new ProducerState(this.rateLimit) {
+            final AtomicInteger messageCount = new AtomicInteger(0);
+            @Override
+            protected void setMsgCount(int msgCount) {
+                messageCount.set(msgCount);
+            }
+            @Override
+            public int getMsgCount() {
+                return messageCount.get();
+            }
+
+            @Override
+            public int incrementMessageCount() {
+                return messageCount.incrementAndGet();
+            }
+        };
         return () -> {
             if (initialized.compareAndSet(false, true)) {
-                this.state.setLastStatsTime(System.currentTimeMillis());
-                this.state.setMsgCount(0);
+                state.setLastStatsTime(System.currentTimeMillis());
+                state.setMsgCount(0);
             }
             maybeHandlePublish(state);
         };
@@ -301,7 +322,7 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
         }
     }
 
-    public void handlePublish(AgentState state) {
+    public void handlePublish(AgentState currentState) {
         try {
             if (confirmPool != null) {
                 if (confirmTimeout < 0) {
@@ -314,10 +335,11 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
                     }
                 }
             }
-            publish(messageBodySource.create(state.getMsgCount()));
-            this.state.incrementMessageCount();
+            publish(messageBodySource.create(currentState.getMsgCount()));
 
-            if (txSize != 0 && this.state.getMsgCount() % txSize == 0) {
+            int messageCount = currentState.incrementMessageCount();
+
+            if (txSize != 0 && messageCount % txSize == 0) {
                 channel.txCommit();
             }
             stats.handleSend();
@@ -353,6 +375,45 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
         if (completed.compareAndSet(false, true)) {
             completionHandler.countDown();
         }
+    }
+
+    /**
+     * Not thread-safe (OK for non-scheduled Producer, as it runs inside the same thread).
+     */
+    private static class ProducerState implements AgentState {
+
+        private final float rateLimit;
+        private long  lastStatsTime;
+        private int msgCount = 0;
+
+        protected ProducerState(float rateLimit) {
+            this.rateLimit = rateLimit;
+        }
+
+        public float getRateLimit() {
+            return rateLimit;
+        }
+
+        public long getLastStatsTime() {
+            return lastStatsTime;
+        }
+
+        protected void setLastStatsTime(long lastStatsTime) {
+            this.lastStatsTime = lastStatsTime;
+        }
+
+        public int getMsgCount() {
+            return msgCount;
+        }
+
+        protected void setMsgCount(int msgCount) {
+            this.msgCount = msgCount;
+        }
+
+        public int incrementMessageCount() {
+            return ++this.msgCount;
+        }
+
     }
 
     static class CachingRoutingKeyGenerator implements Supplier<String> {

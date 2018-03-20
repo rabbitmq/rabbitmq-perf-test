@@ -29,6 +29,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiFunction;
 
 public class Consumer extends AgentBase implements Runnable {
@@ -49,7 +50,7 @@ public class Consumer extends AgentBase implements Runnable {
     private final MulticastSet.CompletionHandler completionHandler;
     private final AtomicBoolean completed = new AtomicBoolean(false);
 
-    private final AgentState state;
+    private final ConsumerState state;
 
     public Consumer(Channel channel, String id,
                     List<String> queueNames, int txSize, boolean autoAck,
@@ -95,7 +96,7 @@ public class Consumer extends AgentBase implements Runnable {
             };
         }
 
-        this.state = new AgentState(rateLimit);
+        this.state = new ConsumerState(rateLimit);
     }
 
     public void run() {
@@ -113,41 +114,37 @@ public class Consumer extends AgentBase implements Runnable {
     }
 
     private class ConsumerImpl extends DefaultConsumer {
-        long now;
-        int totalMsgCount = 0;
 
         private ConsumerImpl(Channel channel) {
             super(channel);
-            now = System.currentTimeMillis();
-            state.setLastStatsTime(now);
+            state.setLastStatsTime(System.currentTimeMillis());
             state.setMsgCount(0);
         }
 
         @Override
         public void handleDelivery(String consumerTag, Envelope envelope, BasicProperties properties, byte[] body) throws IOException {
-            totalMsgCount++;
-            state.incrementMessageCount();
+            int currentMessageCount = state.incrementMessageCount();
 
-            if (msgLimit == 0 || state.getMsgCount() <= msgLimit) {
+            if (msgLimit == 0 || currentMessageCount <= msgLimit) {
                 long messageTimestamp = timestampExtractor.apply(properties, body);
                 long nowTimestamp = timestampProvider.getCurrentTime();
 
                 if (!autoAck) {
                     if (multiAckEvery == 0) {
                         channel.basicAck(envelope.getDeliveryTag(), false);
-                    } else if (totalMsgCount % multiAckEvery == 0) {
+                    } else if (currentMessageCount % multiAckEvery == 0) {
                         channel.basicAck(envelope.getDeliveryTag(), true);
                     }
                 }
 
-                if (txSize != 0 && totalMsgCount % txSize == 0) {
+                if (txSize != 0 && currentMessageCount % txSize == 0) {
                     channel.txCommit();
                 }
 
                 long diff_time = timestampProvider.getDifference(nowTimestamp, messageTimestamp);
                 stats.handleRecv(id.equals(envelope.getRoutingKey()) ? diff_time : 0L);
 
-                now = System.currentTimeMillis();
+                long now = System.currentTimeMillis();
                 if (state.getRateLimit() > 0.0f) {
                     delay(now, state);
                 }
@@ -180,6 +177,42 @@ public class Consumer extends AgentBase implements Runnable {
         if (completed.compareAndSet(false, true)) {
             completionHandler.countDown();
         }
+    }
+
+    private static class ConsumerState implements AgentState {
+
+        private final float rateLimit;
+        private volatile long  lastStatsTime;
+        private final AtomicInteger msgCount = new AtomicInteger(0);
+
+        protected ConsumerState(float rateLimit) {
+            this.rateLimit = rateLimit;
+        }
+
+        public float getRateLimit() {
+            return rateLimit;
+        }
+
+        public long getLastStatsTime() {
+            return lastStatsTime;
+        }
+
+        protected void setLastStatsTime(long lastStatsTime) {
+            this.lastStatsTime = lastStatsTime;
+        }
+
+        public int getMsgCount() {
+            return msgCount.get();
+        }
+
+        protected void setMsgCount(int msgCount) {
+            this.msgCount.set(msgCount);
+        }
+
+        public int incrementMessageCount() {
+            return this.msgCount.incrementAndGet();
+        }
+
     }
 
     private interface ConsumerLatency {
