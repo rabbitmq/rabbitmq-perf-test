@@ -162,8 +162,8 @@ public class PerfTest {
             factory.setRequestedHeartbeat(heartbeat);
 
             String queuePattern        = strArg(cmd, "qp", null);
-            int from                   = intArg(cmd, 'F', -1);
-            int to                     = intArg(cmd, 'T', -1);
+            int from                   = intArg(cmd, "qpf", -1);
+            int to                     = intArg(cmd, "qpt", -1);
 
             if (queuePattern != null || from >= 0 || to >= 0) {
                 if (queuePattern == null || from < 0 || to < 0) {
@@ -347,8 +347,8 @@ public class PerfTest {
         options.addOption(new Option("v", "version",                false,"print version information"));
 
         options.addOption(new Option("qp", "queue-pattern",         true, "queue name pattern for creating queues in sequence"));
-        options.addOption(new Option("F", "queue-pattern-from",     true, "sequence start for queue pattern (included)"));
-        options.addOption(new Option("T", "queue-pattern-to",       true, "sequence end for queue pattern (included)"));
+        options.addOption(new Option("qpf", "queue-pattern-from",     true, "queue name pattern range start (inclusive)"));
+        options.addOption(new Option("qpt", "queue-pattern-to",       true, "queue name pattern range end (inclusive)"));
         options.addOption(new Option("hst", "heartbeat-sender-threads",       true, "number of threads for producers and consumers heartbeat senders"));
         options.addOption(new Option("mp", "message-properties",    true, "message properties as key/pair values, separated by commas, "
                                                                                                     + "e.g. priority=5"));
