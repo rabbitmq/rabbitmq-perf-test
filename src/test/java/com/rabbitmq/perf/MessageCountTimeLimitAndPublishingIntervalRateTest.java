@@ -203,6 +203,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
             () -> format("Only %d / %d messages have been published", publishedLatch.getCount(), messagesTotal)
         );
         waitAtMost(20, TimeUnit.SECONDS).untilTrue(testIsDone);
+
         verify(ch, times(messagesTotal))
             .basicPublish(anyString(), anyString(),
                 anyBoolean(), anyBoolean(),
