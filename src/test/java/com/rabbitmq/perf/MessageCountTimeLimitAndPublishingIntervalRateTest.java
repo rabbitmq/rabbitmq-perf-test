@@ -276,7 +276,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         sendMessagesToConsumer(nbMessages / 2, consumerArgumentCaptor.getValue());
 
         assertTrue(
-            publishedLatch.await(5, TimeUnit.SECONDS),
+            publishedLatch.await(10, TimeUnit.SECONDS),
             () -> format("Only %d / %d messages have been published", publishedLatch.getCount(), nbMessages)
         );
 
