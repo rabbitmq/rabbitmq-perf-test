@@ -403,16 +403,16 @@ public class TopologyTest {
         ));
     }
 
-    // --queue-pattern 'perf-test-%d' --queue-pattern-from 100 --queue-pattern-to 500
+    // --queue-pattern 'perf-test-%d' --queue-pattern-from 10 --queue-pattern-to 50
     @ParameterizedTest
     @ValueSource(strings = { "true", "false" })
-    public void sequenceQueuesDefinition100to500(String exclusive) throws Exception {
+    public void sequenceQueuesDefinition10to50(String exclusive) throws Exception {
         params.setExclusive(valueOf(exclusive));
         String queuePrefix = "perf-test-";
         params.setQueuePattern(queuePrefix + "%d");
-        params.setQueueSequenceFrom(100);
-        params.setQueueSequenceTo(500);
-        params.setConsumerCount(401);
+        params.setQueueSequenceFrom(10);
+        params.setQueueSequenceTo(50);
+        params.setConsumerCount(41);
 
         when(ch.queueDeclare(queueNameCaptor.capture(), anyBoolean(), anyBoolean(), anyBoolean(), isNull()))
             .then(invocation -> new AMQImpl.Queue.DeclareOk(invocation.getArgument(0), 0, 0));
@@ -421,33 +421,33 @@ public class TopologyTest {
 
         set.run();
 
-        verify(cf, times(1 + 401 + 1)).newConnection(anyString()); // configuration, consumers, producer
+        verify(cf, times(1 + 41 + 1)).newConnection(anyString()); // configuration, consumers, producer
         verify(c, atLeast(1 + 1 + 1)).createChannel(); // configuration, producer, consumer, and checks
-        verify(ch, times(401))
+        verify(ch, times(41))
             .queueDeclare(startsWith(queuePrefix), anyBoolean(), eq(valueOf(exclusive)), anyBoolean(), isNull());
-        verify(ch, times(401))
+        verify(ch, times(41))
             .queueBind(startsWith(queuePrefix), eq("direct"), routingKeyCaptor.capture());
 
         assertThat(queueNameCaptor.getAllValues(), allOf(
-            iterableWithSize(401),
-            hasItems(queuePrefix + "100", queuePrefix + "101", queuePrefix + "499", queuePrefix + "500")
+            iterableWithSize(41),
+            hasItems(queuePrefix + "10", queuePrefix + "11", queuePrefix + "49", queuePrefix + "50")
         ));
         assertThat(routingKeyCaptor.getAllValues(), allOf(
-            iterableWithSize(401),
-            hasItems(queuePrefix + "100", queuePrefix + "101", queuePrefix + "499", queuePrefix + "500")
+            iterableWithSize(41),
+            hasItems(queuePrefix + "10", queuePrefix + "11", queuePrefix + "49", queuePrefix + "50")
         ));
     }
 
-    //  --queue-pattern 'perf-test-%d' --queue-pattern-from 502 --queue-pattern-to 5001
+    //  --queue-pattern 'perf-test-%d' --queue-pattern-from 52 --queue-pattern-to 501
     @ParameterizedTest
     @ValueSource(strings = { "true", "false" })
     public void sequenceQueuesDefinition502to5001(String exclusive) throws Exception {
         params.setExclusive(valueOf(exclusive));
         String queuePrefix = "perf-test-";
         params.setQueuePattern(queuePrefix + "%d");
-        params.setQueueSequenceFrom(502);
-        params.setQueueSequenceTo(5001);
-        params.setConsumerCount(4500);
+        params.setQueueSequenceFrom(52);
+        params.setQueueSequenceTo(501);
+        params.setConsumerCount(450);
 
         when(ch.queueDeclare(queueNameCaptor.capture(), anyBoolean(), anyBoolean(), anyBoolean(), isNull()))
             .then(invocation -> new AMQImpl.Queue.DeclareOk(invocation.getArgument(0), 0, 0));
@@ -456,22 +456,22 @@ public class TopologyTest {
 
         set.run();
 
-        verify(cf, times(1 + 4500 + 1)).newConnection(anyString()); // configuration, consumers, producer
+        verify(cf, times(1 + 450 + 1)).newConnection(anyString()); // configuration, consumers, producer
         verify(c, atLeast(1 + 1 + 1)).createChannel(); // configuration, producer, consumer, and checks
-        verify(ch, times(4500))
+        verify(ch, times(450))
             .queueDeclare(startsWith(queuePrefix), anyBoolean(), eq(valueOf(exclusive)), anyBoolean(), isNull());
-        verify(ch, times(4500))
+        verify(ch, times(450))
             .queueBind(startsWith(queuePrefix), eq("direct"), routingKeyCaptor.capture());
 
         assertThat(queueNameCaptor.getAllValues(), allOf(
-            iterableWithSize(4500),
-            hasItems(queuePrefix + "502", queuePrefix + "503", queuePrefix + "5000", queuePrefix + "5001"),
-            not(hasItems(queuePrefix + "501"))
+            iterableWithSize(450),
+            hasItems(queuePrefix + "52", queuePrefix + "53", queuePrefix + "500", queuePrefix + "501"),
+            not(hasItems(queuePrefix + "51"))
         ));
         assertThat(routingKeyCaptor.getAllValues(), allOf(
-            iterableWithSize(4500),
-            hasItems(queuePrefix + "502", queuePrefix + "503", queuePrefix + "5000", queuePrefix + "5001"),
-            not(hasItems(queuePrefix + "501"))
+            iterableWithSize(450),
+            hasItems(queuePrefix + "52", queuePrefix + "53", queuePrefix + "500", queuePrefix + "501"),
+            not(hasItems(queuePrefix + "51"))
         ));
     }
 

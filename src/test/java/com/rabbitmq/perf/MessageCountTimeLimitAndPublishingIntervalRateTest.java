@@ -34,12 +34,17 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Proxy;
+import java.util.Arrays;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -75,8 +80,13 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
     Connection c;
     @Mock
     Channel ch;
-    @Mock
-    Stats stats;
+
+    Stats stats = new Stats(0) {
+
+        @Override
+        protected void report(long now) {
+        }
+    };
 
     MulticastParams params;
 
@@ -87,6 +97,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
     AtomicBoolean testIsDone;
 
     volatile long testDurationInMs;
+    int proxyCounter = 1;
 
     static Stream<Arguments> producerCountArguments() {
         return Stream.of(
@@ -114,6 +125,20 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
     @AfterAll
     public static void afterAllTests() {
         Awaitility.reset();
+    }
+
+    private static ConnectionFactory connectionFactoryThatReturns(Connection c) {
+        return new ConnectionFactory() {
+
+            @Override
+            public Connection newConnection(String name) throws IOException, TimeoutException {
+                return c;
+            }
+        };
+    }
+
+    private static ProxyCallback callback(String method, InvocationHandler handler) {
+        return new ProxyCallback(method, handler);
     }
 
     @BeforeEach
@@ -250,30 +275,37 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         int nbMessages = 10;
         countsAndTimeLimit(nbMessages, nbMessages, 5);
         params.setQueueNames(asList("queue"));
-        MulticastSet multicastSet = getMulticastSet();
 
         CountDownLatch publishedLatch = new CountDownLatch(nbMessages);
-        doAnswer(invocation -> {
-            publishedLatch.countDown();
-            return null;
-        }).when(ch).basicPublish(anyString(), anyString(),
-            anyBoolean(), eq(false),
-            any(), any());
 
         CountDownLatch consumersLatch = new CountDownLatch(1);
         AtomicInteger consumerTagCounter = new AtomicInteger(0);
-        ArgumentCaptor<Consumer> consumerArgumentCaptor = ArgumentCaptor.forClass(Consumer.class);
-        doAnswer(invocation -> {
-            consumersLatch.countDown();
-            return consumerTagCounter.getAndIncrement() + "";
-        }).when(ch).basicConsume(anyString(), anyBoolean(), consumerArgumentCaptor.capture());
+        AtomicReference<Consumer> consumer = new AtomicReference<>();
+
+        Channel channel = proxy(Channel.class,
+            callback("basicPublish", (proxy, method, args) -> {
+                publishedLatch.countDown();
+                return null;
+            }),
+            callback("basicConsume", (proxy, method, args) -> {
+                consumersLatch.countDown();
+                consumer.set((Consumer) args[2]);
+                return consumerTagCounter.getAndIncrement() + "";
+            }),
+            callback("getNextPublishSeqNo", (proxy, method, args) -> 0L)
+        );
+
+        Connection connection = proxy(Connection.class,
+            callback("createChannel", (proxy, method, args) -> channel));
+
+        MulticastSet multicastSet = getMulticastSet(connectionFactoryThatReturns(connection));
 
         run(multicastSet);
 
         assertThat("1 consumer should have been registered by now",
             consumersLatch.await(5, TimeUnit.SECONDS), is(true));
-        assertThat(consumerArgumentCaptor.getValue(), notNullValue());
-        sendMessagesToConsumer(nbMessages / 2, consumerArgumentCaptor.getValue());
+        assertThat(consumer.get(), notNullValue());
+        sendMessagesToConsumer(nbMessages / 2, consumer.get());
 
         assertTrue(
             publishedLatch.await(10, TimeUnit.SECONDS),
@@ -420,8 +452,12 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
     }
 
     private MulticastSet getMulticastSet() {
+        return getMulticastSet(cf);
+    }
+
+    private MulticastSet getMulticastSet(ConnectionFactory connectionFactory) {
         MulticastSet set = new MulticastSet(
-            stats, cf, params, singletonList("amqp://localhost"),
+            stats, connectionFactory, params, singletonList("amqp://localhost"),
             PerfTest.getCompletionHandler(params)
         );
         set.setThreadingHandler(th);
@@ -439,5 +475,31 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
                 throw new RuntimeException(e);
             }
         });
+    }
+
+    private <T> T proxy(Class<T> clazz, ProxyCallback... callbacks) {
+        final int id = ++proxyCounter;
+        ProxyCallback toString = new ProxyCallback("toString", (proxy, method, args) -> clazz.getSimpleName() + " " + id);
+        ProxyCallback[] proxyCallbacks = Arrays.copyOf(callbacks, callbacks.length + 1);
+        proxyCallbacks[callbacks.length] = toString;
+        return (T) Proxy.newProxyInstance(clazz.getClassLoader(), new Class[] { clazz }, (proxy, method, args) -> {
+            for (ProxyCallback callback : proxyCallbacks) {
+                if (method.getName().equals(callback.method)) {
+                    return callback.handler.invoke(proxy, method, args);
+                }
+            }
+            return null;
+        });
+    }
+
+    private static class ProxyCallback {
+
+        final String method;
+        final InvocationHandler handler;
+
+        private ProxyCallback(String method, InvocationHandler handler) {
+            this.method = method;
+            this.handler = handler;
+        }
     }
 }
