@@ -203,6 +203,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
             () -> format("Only %d / %d messages have been published", publishedLatch.getCount(), messagesTotal)
         );
         waitAtMost(20, TimeUnit.SECONDS).untilTrue(testIsDone);
+
         verify(ch, times(messagesTotal))
             .basicPublish(anyString(), anyString(),
                 anyBoolean(), anyBoolean(),
@@ -275,7 +276,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         sendMessagesToConsumer(nbMessages / 2, consumerArgumentCaptor.getValue());
 
         assertTrue(
-            publishedLatch.await(5, TimeUnit.SECONDS),
+            publishedLatch.await(10, TimeUnit.SECONDS),
             () -> format("Only %d / %d messages have been published", publishedLatch.getCount(), nbMessages)
         );
 
@@ -306,7 +307,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         run(multicastSet);
 
         assertThat("1 consumer should have been registered by now",
-            consumersLatch.await(5, TimeUnit.SECONDS), is(true));
+            consumersLatch.await(20, TimeUnit.SECONDS), is(true));
         assertThat(consumerArgumentCaptor.getValue(), notNullValue());
 
         assertThat(testIsDone.get(), is(false));
@@ -336,7 +337,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         run(multicastSet);
 
         assertTrue(
-            publishedLatch.await(5, TimeUnit.SECONDS),
+            publishedLatch.await(20, TimeUnit.SECONDS),
             () -> format("Only %d / %d messages have been published", publishedLatch.getCount(), nbMessages)
         );
         assertThat(testIsDone.get(), is(false));

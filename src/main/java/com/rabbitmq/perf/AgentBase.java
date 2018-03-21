@@ -38,38 +38,14 @@ public abstract class AgentBase {
         }
     }
 
-    protected static class AgentState {
+    protected interface AgentState {
 
-        private final float rateLimit;
-        private long  lastStatsTime;
-        private int   msgCount = 0;
+        float getRateLimit();
 
-        protected AgentState(float rateLimit) {
-            this.rateLimit = rateLimit;
-        }
+        long getLastStatsTime();
 
-        protected float getRateLimit() {
-            return rateLimit;
-        }
+        int getMsgCount();
 
-        protected long getLastStatsTime() {
-            return lastStatsTime;
-        }
-
-        protected void setLastStatsTime(long lastStatsTime) {
-            this.lastStatsTime = lastStatsTime;
-        }
-
-        protected int getMsgCount() {
-            return msgCount;
-        }
-
-        protected void setMsgCount(int msgCount) {
-            this.msgCount = msgCount;
-        }
-
-        protected void incrementMessageCount() {
-            msgCount++;
-        }
+        int incrementMessageCount();
     }
 }

@@ -554,7 +554,7 @@ public class TopologyTest {
         set.run();
 
         assertTrue(
-            latchPublishing.await(5, TimeUnit.SECONDS),
+            latchPublishing.await(10, TimeUnit.SECONDS),
             () -> format("Only %d / %d routing keys have been published to", routingKeys.size(), queueCount)
         );
 
