@@ -150,7 +150,7 @@ public class Consumer extends AgentBase implements Runnable {
                 }
                 consumerLatency.simulateLatency();
             }
-            if (msgLimit != 0 && state.getMsgCount() >= msgLimit) { // NB: not quite the inverse of above
+            if (msgLimit != 0 && currentMessageCount >= msgLimit) { // NB: not quite the inverse of above
                 countDown();
             }
         }
