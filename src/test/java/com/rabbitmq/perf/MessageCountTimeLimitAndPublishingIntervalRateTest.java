@@ -477,6 +477,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         });
     }
 
+    @SuppressWarnings("unchecked")
     private <T> T proxy(Class<T> clazz, ProxyCallback... callbacks) {
         final int id = ++proxyCounter;
         ProxyCallback toString = new ProxyCallback("toString", (proxy, method, args) -> clazz.getSimpleName() + " " + id);

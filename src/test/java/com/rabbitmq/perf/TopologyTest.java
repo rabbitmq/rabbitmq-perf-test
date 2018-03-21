@@ -525,7 +525,7 @@ public class TopologyTest {
     @Test
     public void sequenceProducersAndConsumersSpread() throws Exception {
         String queuePrefix = "perf-test-";
-        int queueCount = 10;
+        int queueCount = 5;
         params.setConsumerCount(30);
         params.setProducerCount(15);
         params.setQueuePattern(queuePrefix + "%d");
@@ -560,20 +560,20 @@ public class TopologyTest {
 
         verify(cf, times(1 + 30 + 15)).newConnection(anyString()); // configuration, consumers, producers
         verify(c, atLeast(1 + 30 + 15)).createChannel(); // configuration, producers, consumers, and checks
-        verify(ch, times(10))
+        verify(ch, times(queueCount))
             .queueDeclare(startsWith(queuePrefix), anyBoolean(), anyBoolean(), anyBoolean(), isNull());
-        verify(ch, times(10))
+        verify(ch, times(queueCount))
             .queueBind(startsWith(queuePrefix), eq("direct"), startsWith(queuePrefix));
         verify(ch, times(30)).basicConsume(consumerQueue.capture(), anyBoolean(), any());
 
         assertThat(routingKeyCaptor.getAllValues().stream().distinct().toArray(), allOf(
-            arrayWithSize(10),
-            arrayContainingInAnyOrder(range(1, 11).mapToObj(i -> queuePrefix + i).toArray())
+            arrayWithSize(queueCount),
+            arrayContainingInAnyOrder(range(1, queueCount + 1).mapToObj(i -> queuePrefix + i).toArray())
         ));
 
         assertThat(routingKeyCaptor.getAllValues().stream().distinct().toArray(), allOf(
-            arrayWithSize(10),
-            arrayContainingInAnyOrder(range(1, 11).mapToObj(i -> queuePrefix + i).toArray())
+            arrayWithSize(queueCount),
+            arrayContainingInAnyOrder(range(1, queueCount + 1).mapToObj(i -> queuePrefix + i).toArray())
         ));
 
         // the captor received all the queues that have at least one consumer
@@ -583,14 +583,14 @@ public class TopologyTest {
 
         // there are consumers on all queues
         assertThat(queueToConsumerNumber.keySet().toArray(), allOf(
-            arrayWithSize(10),
-            arrayContainingInAnyOrder(range(1, 11).mapToObj(i -> queuePrefix + i).toArray())
+            arrayWithSize(queueCount),
+            arrayContainingInAnyOrder(range(1, queueCount + 1).mapToObj(i -> queuePrefix + i).toArray())
         ));
 
         // there are 3 consumers per queue
         assertThat(queueToConsumerNumber.values().stream().distinct().toArray(), allOf(
             arrayWithSize(1),
-            arrayContaining(3)
+            arrayContaining(6)
         ));
     }
 
