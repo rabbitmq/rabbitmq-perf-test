@@ -168,8 +168,6 @@ public class MessageCountTimeLimitTest {
         params.setProducerChannelCount(channelsCount);
         MulticastSet multicastSet = getMulticastSet();
 
-        run(multicastSet);
-
         int messagesTotal = producersCount * channelsCount * messagesCount;
 
         CountDownLatch publishedLatch = new CountDownLatch(messagesTotal);
@@ -179,6 +177,8 @@ public class MessageCountTimeLimitTest {
         }).when(ch).basicPublish(anyString(), anyString(),
             anyBoolean(), anyBoolean(),
             any(), any());
+
+        run(multicastSet);
 
         assertThat(messagesTotal + " messages should have been published by now",
             publishedLatch.await(10, TimeUnit.SECONDS), is(true));
