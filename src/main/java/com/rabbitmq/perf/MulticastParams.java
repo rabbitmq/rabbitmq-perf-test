@@ -82,6 +82,9 @@ public class MulticastParams {
 
     private int routingKeyCacheSize = 0;
     private boolean exclusive = false;
+    private int publishingInterval = -1;
+    private int producerRandomStartDelayInSeconds;
+    private int producerSchedulerThreadCount = -1;
 
     public void setExchangeType(String exchangeType) {
         this.exchangeType = exchangeType;
@@ -252,18 +255,6 @@ public class MulticastParams {
         return minMsgSize;
     }
 
-    public String getRoutingKey() {
-        return routingKey;
-    }
-
-    public boolean getRandomRoutingKey() {
-        return randomRoutingKey;
-    }
-    
-    public boolean getSkipBindingQueues() {
-    	return skipBindingQueues;
-    }
-
     public void setBodyFiles(List<String> bodyFiles) {
         if (bodyFiles == null) {
             this.bodyFiles = new ArrayList<>();
@@ -280,24 +271,12 @@ public class MulticastParams {
         this.queuePattern = queuePattern;
     }
 
-    public String getQueuePattern() {
-        return queuePattern;
-    }
-
     public void setQueueSequenceFrom(int queueSequenceFrom) {
         this.queueSequenceFrom = queueSequenceFrom;
     }
 
-    public int getQueueSequenceFrom() {
-        return queueSequenceFrom;
-    }
-
     public void setQueueSequenceTo(int queueSequenceTo) {
         this.queueSequenceTo = queueSequenceTo;
-    }
-
-    public int getQueueSequenceTo() {
-        return queueSequenceTo;
     }
 
     public void setHeartbeatSenderThreads(int heartbeatSenderThreads) {
@@ -340,11 +319,21 @@ public class MulticastParams {
             tsp = new TimestampProvider(useMillis, false);
             messageBodySource = new TimeSequenceMessageBodySource(tsp, minMsgSize);
         }
-        final Producer producer = new Producer(channel, exchangeName, this.topologyHandler.getRoutingKey(),
-                                               randomRoutingKey, flags, producerTxSize,
-                                               producerRateLimit, producerMsgCount,
-                                               confirm, confirmTimeout, messageBodySource,
-                                               tsp, stats, messageProperties, completionHandler, this.routingKeyCacheSize);
+
+        float calculatedProducerRateLimit = this.producerRateLimit;
+        if (this.publishingInterval > 0) {
+            calculatedProducerRateLimit = 1.0f / (float) this.publishingInterval;
+        }
+
+        final Producer producer = new Producer(new ProducerParameters()
+            .setChannel(channel).setExchangeName(exchangeName).setId(this.topologyHandler.getRoutingKey())
+            .setRandomRoutingKey(randomRoutingKey).setFlags(flags).setTxSize(producerTxSize)
+            .setRateLimit(calculatedProducerRateLimit).setMsgLimit(producerMsgCount).setConfirm(confirm)
+            .setConfirmTimeout(confirmTimeout).setMessageBodySource(messageBodySource).setTsp(tsp)
+            .setStats(stats).setMessageProperties(messageProperties).setCompletionHandler(completionHandler)
+            .setRoutingKeyCacheSize(this.routingKeyCacheSize)
+            .setRandomStartDelayInSeconds(this.producerRandomStartDelayInSeconds)
+        );
         channel.addReturnListener(producer);
         channel.addConfirmListener(producer);
         this.topologyHandler.next();
@@ -413,6 +402,30 @@ public class MulticastParams {
 
     public boolean isExclusive() {
         return exclusive;
+    }
+
+    public void setPublishingInterval(int publishingIntervalInSeconds) {
+        this.publishingInterval = publishingIntervalInSeconds;
+    }
+
+    public int getPublishingInterval() {
+        return publishingInterval;
+    }
+
+    public void setProducerRandomStartDelayInSeconds(int producerRandomStartDelayInSeconds) {
+        this.producerRandomStartDelayInSeconds = producerRandomStartDelayInSeconds;
+    }
+
+    public int getProducerRandomStartDelayInSeconds() {
+        return producerRandomStartDelayInSeconds;
+    }
+
+    public int getProducerSchedulerThreadCount() {
+        return producerSchedulerThreadCount;
+    }
+
+    public void setProducerSchedulerThreadCount(int producerSchedulerThreadCount) {
+        this.producerSchedulerThreadCount = producerSchedulerThreadCount;
     }
 
     private interface Checker {

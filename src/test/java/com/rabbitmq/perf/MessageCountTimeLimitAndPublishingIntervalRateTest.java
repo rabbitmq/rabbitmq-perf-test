@@ -20,9 +20,13 @@ import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.Consumer;
 import com.rabbitmq.client.Envelope;
+import org.awaitility.Awaitility;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledIfSystemProperty;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -33,22 +37,25 @@ import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static org.awaitility.Awaitility.waitAtMost;
+import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.lessThan;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.junit.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -59,10 +66,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
 
-/**
- *
- */
-public class MessageCountTimeLimitTest {
+@DisabledIfSystemProperty(named = "travis", matches = "true")
+public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
     @Mock
     ConnectionFactory cf;
@@ -101,6 +106,16 @@ public class MessageCountTimeLimitTest {
         );
     }
 
+    @BeforeAll
+    public static void beforeAllTests() {
+        Awaitility.setDefaultPollInterval(200, TimeUnit.MILLISECONDS);
+    }
+
+    @AfterAll
+    public static void afterAllTests() {
+        Awaitility.reset();
+    }
+
     @BeforeEach
     public void init() throws Exception {
         initMocks(this);
@@ -127,7 +142,8 @@ public class MessageCountTimeLimitTest {
         countsAndTimeLimit(0, 0, 0);
         MulticastSet multicastSet = getMulticastSet();
 
-        CountDownLatch publishedLatch = new CountDownLatch(1000);
+        int nbMessages = 100;
+        CountDownLatch publishedLatch = new CountDownLatch(nbMessages);
         doAnswer(invocation -> {
             publishedLatch.countDown();
             return null;
@@ -137,8 +153,10 @@ public class MessageCountTimeLimitTest {
 
         run(multicastSet);
 
-        assertThat("1000 messages should have been published by now",
-            publishedLatch.await(5, TimeUnit.SECONDS), is(true));
+        assertTrue(
+            publishedLatch.await(10, TimeUnit.SECONDS),
+            () -> format("Only %d / %d messages have been published", publishedLatch.getCount(), nbMessages)
+        );
 
         assertThat(testIsDone.get(), is(false));
         // only the configuration connection has been closed
@@ -149,13 +167,13 @@ public class MessageCountTimeLimitTest {
     // --time 5
     @Test
     public void timeLimit() {
-        countsAndTimeLimit(0, 0, 5);
+        countsAndTimeLimit(0, 0, 3);
         MulticastSet multicastSet = getMulticastSet();
 
         run(multicastSet);
 
-        waitAtMost(10, TimeUnit.SECONDS).until(() -> testIsDone.get(), is(true));
-        assertThat(testDurationInMs, greaterThanOrEqualTo(5000L));
+        waitAtMost(15, TimeUnit.SECONDS).untilTrue(testIsDone);
+        assertThat(testDurationInMs, greaterThanOrEqualTo(3000L));
     }
 
     // -y 1 --pmessages 10 -x n -X m
@@ -180,9 +198,12 @@ public class MessageCountTimeLimitTest {
 
         run(multicastSet);
 
-        assertThat(messagesTotal + " messages should have been published by now",
-            publishedLatch.await(10, TimeUnit.SECONDS), is(true));
-        waitAtMost(5, TimeUnit.SECONDS).until(() -> testIsDone.get(), is(true));
+        assertTrue(
+            publishedLatch.await(60, TimeUnit.SECONDS),
+            () -> format("Only %d / %d messages have been published", publishedLatch.getCount(), messagesTotal)
+        );
+        waitAtMost(20, TimeUnit.SECONDS).untilTrue(testIsDone);
+
         verify(ch, times(messagesTotal))
             .basicPublish(anyString(), anyString(),
                 anyBoolean(), anyBoolean(),
@@ -214,13 +235,13 @@ public class MessageCountTimeLimitTest {
         assertThat(consumersCount * channelsCount + " consumer(s) should have been registered by now",
             consumersLatch.await(5, TimeUnit.SECONDS), is(true));
 
-        waitAtMost(5, TimeUnit.SECONDS).until(() -> consumerArgumentCaptor.getAllValues(), hasSize(consumersCount * channelsCount));
+        waitAtMost(20, TimeUnit.SECONDS).until(() -> consumerArgumentCaptor.getAllValues(), hasSize(consumersCount * channelsCount));
 
         for (Consumer consumer : consumerArgumentCaptor.getAllValues()) {
             sendMessagesToConsumer(messagesCount, consumer);
         }
 
-        waitAtMost(5, TimeUnit.SECONDS).until(() -> testIsDone.get(), is(true));
+        waitAtMost(20, TimeUnit.SECONDS).untilTrue(testIsDone);
     }
 
     // --time 5 -x 1 --pmessages 10 -y 1 --cmessages 10
@@ -254,12 +275,14 @@ public class MessageCountTimeLimitTest {
         assertThat(consumerArgumentCaptor.getValue(), notNullValue());
         sendMessagesToConsumer(nbMessages / 2, consumerArgumentCaptor.getValue());
 
-        assertThat(nbMessages + " messages should have been published by now",
-            publishedLatch.await(5, TimeUnit.SECONDS), is(true));
+        assertTrue(
+            publishedLatch.await(10, TimeUnit.SECONDS),
+            () -> format("Only %d / %d messages have been published", publishedLatch.getCount(), nbMessages)
+        );
 
         assertThat(testIsDone.get(), is(false));
 
-        waitAtMost(10, TimeUnit.SECONDS).until(() -> testIsDone.get(), is(true));
+        waitAtMost(10, TimeUnit.SECONDS).untilTrue(testIsDone);
         assertThat(testDurationInMs, greaterThanOrEqualTo(5000L));
     }
 
@@ -284,7 +307,7 @@ public class MessageCountTimeLimitTest {
         run(multicastSet);
 
         assertThat("1 consumer should have been registered by now",
-            consumersLatch.await(5, TimeUnit.SECONDS), is(true));
+            consumersLatch.await(20, TimeUnit.SECONDS), is(true));
         assertThat(consumerArgumentCaptor.getValue(), notNullValue());
 
         assertThat(testIsDone.get(), is(false));
@@ -302,7 +325,8 @@ public class MessageCountTimeLimitTest {
 
         MulticastSet multicastSet = getMulticastSet();
 
-        CountDownLatch publishedLatch = new CountDownLatch(1000);
+        int nbMessages = 100;
+        CountDownLatch publishedLatch = new CountDownLatch(nbMessages);
         doAnswer(invocation -> {
             publishedLatch.countDown();
             return null;
@@ -312,15 +336,65 @@ public class MessageCountTimeLimitTest {
 
         run(multicastSet);
 
-        assertThat("1000 messages should have been published by now",
-            publishedLatch.await(5, TimeUnit.SECONDS), is(true));
+        assertTrue(
+            publishedLatch.await(20, TimeUnit.SECONDS),
+            () -> format("Only %d / %d messages have been published", publishedLatch.getCount(), nbMessages)
+        );
         assertThat(testIsDone.get(), is(false));
         // only the configuration connection has been closed
         // so the test is still running in the background
         verify(c, times(1)).close();
     }
 
-    // producer only test doesn't stop immediately
+    @Test
+    public void publishingRateLimit() throws Exception {
+        countsAndTimeLimit(0, 0, 8);
+        params.setProducerRateLimit(10);
+        params.setProducerCount(3);
+        MulticastSet multicastSet = getMulticastSet();
+
+        AtomicInteger publishedMessageCount = new AtomicInteger();
+        doAnswer(invocation -> {
+            publishedMessageCount.incrementAndGet();
+            return null;
+        }).when(ch).basicPublish(anyString(), anyString(),
+            anyBoolean(), eq(false),
+            any(), any());
+
+        run(multicastSet);
+
+        waitAtMost(15, TimeUnit.SECONDS).untilTrue(testIsDone);
+        assertThat(publishedMessageCount.get(), allOf(
+            greaterThan(3 * 10 * 3), // 3 producers at 10 m/s for about 2 seconds at least
+            lessThan(3 * 10 * 8 * 2) // not too many messages though
+        ));
+        assertThat(testDurationInMs, greaterThan(5000L));
+    }
+
+    @Test
+    public void publishingInterval() throws Exception {
+        countsAndTimeLimit(0, 0, 6);
+        params.setPublishingInterval(2);
+        params.setProducerCount(3);
+        MulticastSet multicastSet = getMulticastSet();
+
+        AtomicInteger publishedMessageCount = new AtomicInteger();
+        doAnswer(invocation -> {
+            publishedMessageCount.incrementAndGet();
+            return null;
+        }).when(ch).basicPublish(anyString(), anyString(),
+            anyBoolean(), eq(false),
+            any(), any());
+
+        run(multicastSet);
+
+        waitAtMost(10, TimeUnit.SECONDS).untilTrue(testIsDone);
+        assertThat(publishedMessageCount.get(), allOf(
+            greaterThanOrEqualTo(3 * 2),  // 3 publishers should publish at least a couple of times
+            lessThan(3 * 2 * 4) //  but they don't publish
+        ));
+        assertThat(testDurationInMs, greaterThan(5000L));
+    }
 
     private void sendMessagesToConsumer(int messagesCount, Consumer consumer) {
         IntStream.range(0, messagesCount).forEach(i -> {

@@ -17,6 +17,7 @@ package com.rabbitmq.perf;
 
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -34,6 +35,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 
 import static java.lang.Math.min;
@@ -148,12 +150,35 @@ public class MulticastSet {
             }
         }
 
-        ExecutorService producersExecutorService = this.threadingHandler.executorService(
-            "perf-test-producer-", producerStates.length
-        );
-        for (AgentState producerState : producerStates) {
-            producerState.task = producersExecutorService.submit(producerState.runnable);
+        if (params.getPublishingInterval() > 0) {
+            ScheduledExecutorService producersExecutorService = this.threadingHandler.scheduledExecutorService(
+                "perf-test-producer-", nbThreadsForConsumer(params)
+            );
+            Supplier<Integer> startDelaySupplier;
+            if (params.getProducerRandomStartDelayInSeconds() > 0) {
+                Random random = new Random();
+                startDelaySupplier = () -> random.nextInt(params.getProducerRandomStartDelayInSeconds()) + 1;
+            } else {
+                startDelaySupplier = () -> 0;
+            }
+            int publishingInterval = params.getPublishingInterval();
+            for (int i = 0; i < producerStates.length; i++) {
+                AgentState producerState = producerStates[i];
+                int delay = startDelaySupplier.get();
+                producerState.task = producersExecutorService.scheduleAtFixedRate(
+                    producerState.runnable.createRunnableForScheduling(),
+                    delay, publishingInterval, TimeUnit.SECONDS
+                );
+            }
+        } else {
+            ExecutorService producersExecutorService = this.threadingHandler.executorService(
+                "perf-test-producer-", producerStates.length
+            );
+            for (AgentState producerState : producerStates) {
+                producerState.task = producersExecutorService.submit(producerState.runnable);
+            }
         }
+
 
         this.completionHandler.waitForCompletion();
 
@@ -179,10 +204,28 @@ public class MulticastSet {
     public final static int DEFAULT_CONSUMER_WORK_SERVICE_THREAD_POOL_SIZE = Runtime.getRuntime().availableProcessors() * 2;
 
     protected static int nbThreadsForConsumer(MulticastParams params) {
-        // for backward compatibility, the thread pool should large enough to dedicate
+        // for backward compatibility, the thread pool should be large enough to dedicate
         // one thread for each channel when channel number is <= DEFAULT_CONSUMER_WORK_SERVICE_THREAD_POOL_SIZE
         // Above this number, we stick to DEFAULT_CONSUMER_WORK_SERVICE_THREAD_POOL_SIZE
         return min(params.getConsumerChannelCount(), DEFAULT_CONSUMER_WORK_SERVICE_THREAD_POOL_SIZE);
+    }
+
+    /**
+     * Why 50? This is arbitrary. The fastest rate is 1 message / second when
+     * using a publishing interval, so 1 thread should be able to keep up easily with
+     * up to 50 messages / seconds (ie. 50 producers). Then, a new thread is used
+     * every 50 producers. This is 20 threads for 1000 producers, which seems reasonable.
+     * There's a command line argument to override this anyway.
+     */
+    private static final int PUBLISHING_INTERVAL_NB_PRODUCERS_PER_THREAD = 50;
+
+    protected static int nbThreadsForProducerScheduledExecutorService(MulticastParams params) {
+        int producerExecutorServiceNbThreads = params.getProducerSchedulerThreadCount();
+        if (producerExecutorServiceNbThreads <= 0) {
+            return params.getProducerThreadCount() / PUBLISHING_INTERVAL_NB_PRODUCERS_PER_THREAD + 1;
+        } else {
+            return producerExecutorServiceNbThreads;
+        }
     }
 
     private void setUri() throws URISyntaxException, NoSuchAlgorithmException, KeyManagementException {
@@ -217,6 +260,7 @@ public class MulticastSet {
     static class DefaultThreadingHandler implements ThreadingHandler {
 
         private final Collection<ExecutorService> executorServices = new ArrayList<>();
+        private final AtomicBoolean closing = new AtomicBoolean(false);
 
         @Override
         public ExecutorService executorService(String name, int nbThreads) {
@@ -240,15 +284,27 @@ public class MulticastSet {
 
         @Override
         public void shutdown() {
-            for (ExecutorService executorService : executorServices) {
-                executorService.shutdownNow();
+            if (closing.compareAndSet(false, true)) {
+                for (ExecutorService executorService : executorServices) {
+                    executorService.shutdownNow();
+                    try {
+                        boolean terminated = executorService.awaitTermination(10, TimeUnit.SECONDS);
+                        if (!terminated) {
+                            LoggerFactory.getLogger(DefaultThreadingHandler.class).warn(
+                                "Some producer and/or consumer tasks didn't finish"
+                            );
+                        }
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
             }
         }
     }
 
     private static class AgentState {
 
-        private Runnable runnable;
+        private Producer runnable;
 
         private Future<?> task;
 

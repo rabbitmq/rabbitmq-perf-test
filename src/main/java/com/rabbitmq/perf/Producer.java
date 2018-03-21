@@ -27,20 +27,21 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
 import static java.util.stream.Collectors.toMap;
 
-public class Producer extends ProducerConsumerBase implements Runnable, ReturnListener,
+public class Producer extends AgentBase implements Runnable, ReturnListener,
         ConfirmListener
 {
 
@@ -48,7 +49,6 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
     private final Channel channel;
     private final String  exchangeName;
     private final String  id;
-    private final boolean randomRoutingKey;
     private final boolean mandatory;
     private final boolean persistent;
     private final int     txSize;
@@ -69,47 +69,46 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
 
     private final Supplier<String> routingKeyGenerator;
 
-    public Producer(Channel channel, String exchangeName, String id, boolean randomRoutingKey,
-                    List<?> flags, int txSize,
-                    float rateLimit, int msgLimit,
-                    long confirm, int confirmTimeout,
-                    MessageBodySource messageBodySource,
-                    TimestampProvider tsp, Stats stats, Map<String, Object> messageProperties,
-                    MulticastSet.CompletionHandler completionHandler, int routingKeyCacheSize) {
-        this.channel           = channel;
-        this.exchangeName      = exchangeName;
-        this.id                = id;
-        this.randomRoutingKey  = randomRoutingKey;
-        this.mandatory         = flags.contains("mandatory");
-        this.persistent        = flags.contains("persistent");
+    private final int randomStartDelay;
+
+    private final float rateLimit;
+
+    public Producer(ProducerParameters parameters) {
+        this.channel           = parameters.getChannel();
+        this.exchangeName      = parameters.getExchangeName();
+        this.id                = parameters.getId();
+        this.mandatory         = parameters.getFlags().contains("mandatory");
+        this.persistent        = parameters.getFlags().contains("persistent");
 
         Function<AMQP.BasicProperties.Builder, AMQP.BasicProperties.Builder> builderProcessor = Function.identity();
-        this.txSize            = txSize;
-        this.rateLimit         = rateLimit;
-        this.msgLimit          = msgLimit;
-        this.messageBodySource = messageBodySource;
-        if (tsp.isTimestampInHeader()) {
-            builderProcessor = builderProcessor.andThen(builder -> builder.headers(Collections.singletonMap(TIMESTAMP_HEADER, tsp.getCurrentTime())));
+        this.txSize            = parameters.getTxSize();
+        this.msgLimit          = parameters.getMsgLimit();
+        this.messageBodySource = parameters.getMessageBodySource();
+        if (parameters.getTsp().isTimestampInHeader()) {
+            builderProcessor = builderProcessor.andThen(builder -> builder.headers(Collections.singletonMap(TIMESTAMP_HEADER, parameters.getTsp().getCurrentTime())));
         }
-        if (messageProperties != null && !messageProperties.isEmpty()) {
-            builderProcessor = builderProcessorWithMessageProperties(messageProperties, builderProcessor);
+        if (parameters.getMessageProperties() != null && !parameters.getMessageProperties().isEmpty()) {
+            builderProcessor = builderProcessorWithMessageProperties(parameters.getMessageProperties(), builderProcessor);
         }
-        if (confirm > 0) {
-            this.confirmPool  = new Semaphore((int)confirm);
-            this.confirmTimeout = confirmTimeout;
+        if (parameters.getConfirm() > 0) {
+            this.confirmPool  = new Semaphore((int)parameters.getConfirm());
+            this.confirmTimeout = parameters.getConfirmTimeout();
         }
-        this.stats = stats;
-        this.completionHandler = completionHandler;
+        this.stats = parameters.getStats();
+        this.completionHandler = parameters.getCompletionHandler();
         this.propertiesBuilderProcessor = builderProcessor;
-        if (randomRoutingKey || routingKeyCacheSize > 0) {
-            if (routingKeyCacheSize > 0) {
-                this.routingKeyGenerator = new CachingRoutingKeyGenerator(routingKeyCacheSize);
+        if (parameters.isRandomRoutingKey() || parameters.getRoutingKeyCacheSize() > 0) {
+            if (parameters.getRoutingKeyCacheSize() > 0) {
+                this.routingKeyGenerator = new CachingRoutingKeyGenerator(parameters.getRoutingKeyCacheSize());
             } else {
                 this.routingKeyGenerator = () -> UUID.randomUUID().toString();
             }
         } else {
             this.routingKeyGenerator = () -> this.id;
         }
+        this.randomStartDelay = parameters.getRandomStartDelayInSeconds();
+
+        this.rateLimit = parameters.getRateLimit();
     }
 
     private Function<AMQP.BasicProperties.Builder, AMQP.BasicProperties.Builder> builderProcessorWithMessageProperties(
@@ -257,43 +256,93 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
     }
 
     public void run() {
+        if (randomStartDelay > 0) {
+            int delay = new Random().nextInt(randomStartDelay) + 1;
+            try {
+                Thread.sleep(delay * 1000);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }
         long now;
         final long startTime;
         startTime = now = System.currentTimeMillis();
-        lastStatsTime = startTime;
-        msgCount = 0;
-        int totalMsgCount = 0;
+        ProducerState state = new ProducerState(this.rateLimit);
+        state.setLastStatsTime(startTime);
+        state.setMsgCount(0);
+        while (keepGoing(state)) {
+            delay(now, state);
+            handlePublish(state);
+            now = System.currentTimeMillis();
+        }
+        if (state.getMsgCount() >= msgLimit) {
+            countDown();
+        }
+    }
 
+    private boolean keepGoing(AgentState state) {
+        return (msgLimit == 0 || state.getMsgCount() < msgLimit) && !Thread.interrupted();
+    }
+
+
+
+    public Runnable createRunnableForScheduling() {
+        final AtomicBoolean initialized = new AtomicBoolean(false);
+        // make the producer state thread-safe for what we use in this case
+        final ProducerState state = new ProducerState(this.rateLimit) {
+            final AtomicInteger messageCount = new AtomicInteger(0);
+            @Override
+            protected void setMsgCount(int msgCount) {
+                messageCount.set(msgCount);
+            }
+            @Override
+            public int getMsgCount() {
+                return messageCount.get();
+            }
+
+            @Override
+            public int incrementMessageCount() {
+                return messageCount.incrementAndGet();
+            }
+        };
+        return () -> {
+            if (initialized.compareAndSet(false, true)) {
+                state.setLastStatsTime(System.currentTimeMillis());
+                state.setMsgCount(0);
+            }
+            maybeHandlePublish(state);
+        };
+    }
+
+    public void maybeHandlePublish(AgentState state) {
+        if (keepGoing(state)) {
+            handlePublish(state);
+        } else {
+            countDown();
+        }
+    }
+
+    public void handlePublish(AgentState currentState) {
         try {
-
-            while ((msgLimit == 0 || msgCount < msgLimit) && !Thread.interrupted()) {
-                delay(now);
-                if (confirmPool != null) {
-                    if (confirmTimeout < 0) {
-                        confirmPool.acquire();
-                    } else {
-                        boolean acquired = confirmPool.tryAcquire(confirmTimeout, TimeUnit.SECONDS);
-                        if (!acquired) {
-                            // waiting for too long, broker may be gone, stopping thread
-                            throw new RuntimeException("Waiting for publisher confirms for too long");
-                        }
+            if (confirmPool != null) {
+                if (confirmTimeout < 0) {
+                    confirmPool.acquire();
+                } else {
+                    boolean acquired = confirmPool.tryAcquire(confirmTimeout, TimeUnit.SECONDS);
+                    if (!acquired) {
+                        // waiting for too long, broker may be gone, stopping thread
+                        throw new RuntimeException("Waiting for publisher confirms for too long");
                     }
-
                 }
-                publish(messageBodySource.create(totalMsgCount));
-                totalMsgCount++;
-                msgCount++;
-
-                if (txSize != 0 && totalMsgCount % txSize == 0) {
-                    channel.txCommit();
-                }
-                stats.handleSend();
-                now = System.currentTimeMillis();
             }
-            if (msgCount >= msgLimit) {
-                countDown();
-            }
+            publish(messageBodySource.create(currentState.getMsgCount()));
 
+            int messageCount = currentState.incrementMessageCount();
+
+            if (txSize != 0 && messageCount % txSize == 0) {
+                channel.txCommit();
+            }
+            stats.handleSend();
         } catch (IOException e) {
             throw new RuntimeException(e);
         } catch (InterruptedException e) {
@@ -326,6 +375,45 @@ public class Producer extends ProducerConsumerBase implements Runnable, ReturnLi
         if (completed.compareAndSet(false, true)) {
             completionHandler.countDown();
         }
+    }
+
+    /**
+     * Not thread-safe (OK for non-scheduled Producer, as it runs inside the same thread).
+     */
+    private static class ProducerState implements AgentState {
+
+        private final float rateLimit;
+        private long  lastStatsTime;
+        private int msgCount = 0;
+
+        protected ProducerState(float rateLimit) {
+            this.rateLimit = rateLimit;
+        }
+
+        public float getRateLimit() {
+            return rateLimit;
+        }
+
+        public long getLastStatsTime() {
+            return lastStatsTime;
+        }
+
+        protected void setLastStatsTime(long lastStatsTime) {
+            this.lastStatsTime = lastStatsTime;
+        }
+
+        public int getMsgCount() {
+            return msgCount;
+        }
+
+        protected void setMsgCount(int msgCount) {
+            this.msgCount = msgCount;
+        }
+
+        public int incrementMessageCount() {
+            return ++this.msgCount;
+        }
+
     }
 
     static class CachingRoutingKeyGenerator implements Supplier<String> {
