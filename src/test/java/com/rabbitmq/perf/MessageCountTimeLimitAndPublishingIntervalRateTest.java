@@ -303,7 +303,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         run(multicastSet);
 
         assertThat("1 consumer should have been registered by now",
-            consumersLatch.await(5, TimeUnit.SECONDS), is(true));
+            consumersLatch.await(10, TimeUnit.SECONDS), is(true));
         assertThat(consumer.get(), notNullValue());
         sendMessagesToConsumer(nbMessages / 2, consumer.get());
 
