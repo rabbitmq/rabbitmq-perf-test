@@ -525,9 +525,9 @@ public class TopologyTest {
     @Test
     public void sequenceProducersAndConsumersSpread() throws Exception {
         String queuePrefix = "perf-test-";
-        int queueCount = 5;
-        params.setConsumerCount(30);
-        params.setProducerCount(15);
+        int queueCount = 3;
+        params.setConsumerCount(queueCount * 6);
+        params.setProducerCount(queueCount * 3);
         params.setQueuePattern(queuePrefix + "%d");
         params.setQueueSequenceFrom(1);
         params.setQueueSequenceTo(queueCount);
@@ -554,17 +554,17 @@ public class TopologyTest {
         set.run();
 
         assertTrue(
-            latchPublishing.await(10, TimeUnit.SECONDS),
+            latchPublishing.await(20, TimeUnit.SECONDS),
             () -> format("Only %d / %d routing keys have been published to", routingKeys.size(), queueCount)
         );
 
-        verify(cf, times(1 + 30 + 15)).newConnection(anyString()); // configuration, consumers, producers
-        verify(c, atLeast(1 + 30 + 15)).createChannel(); // configuration, producers, consumers, and checks
+        verify(cf, times(1 + queueCount * 6 + queueCount * 3)).newConnection(anyString()); // configuration, consumers, producers
+        verify(c, atLeast(1 + queueCount * 6 + queueCount * 3)).createChannel(); // configuration, producers, consumers, and checks
         verify(ch, times(queueCount))
             .queueDeclare(startsWith(queuePrefix), anyBoolean(), anyBoolean(), anyBoolean(), isNull());
         verify(ch, times(queueCount))
             .queueBind(startsWith(queuePrefix), eq("direct"), startsWith(queuePrefix));
-        verify(ch, times(30)).basicConsume(consumerQueue.capture(), anyBoolean(), any());
+        verify(ch, times(queueCount * 6)).basicConsume(consumerQueue.capture(), anyBoolean(), any());
 
         assertThat(routingKeyCaptor.getAllValues().stream().distinct().toArray(), allOf(
             arrayWithSize(queueCount),
