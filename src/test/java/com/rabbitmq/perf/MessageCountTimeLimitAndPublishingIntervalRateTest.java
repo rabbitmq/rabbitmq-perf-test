@@ -165,16 +165,24 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
     @Test
     public void noLimit() throws Exception {
         countsAndTimeLimit(0, 0, 0);
-        MulticastSet multicastSet = getMulticastSet();
 
-        int nbMessages = 100;
+        int nbMessages = 10;
         CountDownLatch publishedLatch = new CountDownLatch(nbMessages);
-        doAnswer(invocation -> {
-            publishedLatch.countDown();
-            return null;
-        }).when(ch).basicPublish(anyString(), anyString(),
-            anyBoolean(), eq(false),
-            any(), any());
+        Channel channel = proxy(Channel.class,
+            callback("basicPublish", (proxy, method, args) -> {
+                publishedLatch.countDown();
+                return null;
+            }),
+            callback("getNextPublishSeqNo", (proxy, method, args) -> 0L)
+        );
+
+        AtomicInteger connectionCloseCalls = new AtomicInteger(0);
+        Connection connection = proxy(Connection.class,
+            callback("createChannel", (proxy, method, args) -> channel),
+            callback("close", (proxy, method, args) -> connectionCloseCalls.incrementAndGet())
+        );
+
+        MulticastSet multicastSet = getMulticastSet(connectionFactoryThatReturns(connection));
 
         run(multicastSet);
 
@@ -186,7 +194,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         assertThat(testIsDone.get(), is(false));
         // only the configuration connection has been closed
         // so the test is still running in the background
-        verify(c, times(1)).close();
+        assertThat(connectionCloseCalls.get(), is(1));
     }
 
     // --time 5
@@ -288,9 +296,10 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
                 return null;
             }),
             callback("basicConsume", (proxy, method, args) -> {
-                consumersLatch.countDown();
                 consumer.set((Consumer) args[2]);
-                return consumerTagCounter.getAndIncrement() + "";
+                String ctag = consumerTagCounter.getAndIncrement() + "";
+                consumersLatch.countDown();
+                return ctag;
             }),
             callback("getNextPublishSeqNo", (proxy, method, args) -> 0L)
         );
@@ -314,7 +323,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         assertThat(testIsDone.get(), is(false));
 
-        waitAtMost(10, TimeUnit.SECONDS).untilTrue(testIsDone);
+        waitAtMost(20, TimeUnit.SECONDS).untilTrue(testIsDone);
         assertThat(testDurationInMs, greaterThanOrEqualTo(5000L));
     }
 
