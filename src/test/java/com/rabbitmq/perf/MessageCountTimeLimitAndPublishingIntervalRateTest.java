@@ -71,7 +71,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
 
-@DisabledIfSystemProperty(named = "travis", matches = "true")
+//@DisabledIfSystemProperty(named = "travis", matches = "true")
 public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
     @Mock
