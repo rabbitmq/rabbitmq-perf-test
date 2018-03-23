@@ -469,6 +469,9 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
                 multicastSet.run();
                 testDurationInMs = (System.nanoTime() - start) / 1_000_000;
                 testIsDone.set(true);
+            } catch (InterruptedException e) {
+                // one of the tests stops the execution, no need to be noisy
+                throw new RuntimeException(e);
             } catch (Exception e) {
                 e.printStackTrace();
             }
