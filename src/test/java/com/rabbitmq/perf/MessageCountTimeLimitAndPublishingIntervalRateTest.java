@@ -470,7 +470,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
                 testDurationInMs = (System.nanoTime() - start) / 1_000_000;
                 testIsDone.set(true);
             } catch (Exception e) {
-                throw new RuntimeException(e);
+                e.printStackTrace();
             }
         });
     }
