@@ -26,6 +26,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 public class MulticastParams {
     private long confirm = -1;
@@ -341,9 +343,11 @@ public class MulticastParams {
     }
 
     public Consumer createConsumer(Connection connection, Stats stats, MulticastSet.CompletionHandler completionHandler) throws IOException {
+        TopologyHandlerResult topologyHandlerResult = this.topologyHandler.configureQueuesForClient(connection);
+
+        connection = topologyHandlerResult.connection;
         Channel channel = connection.createChannel();
         if (consumerTxSize > 0) channel.txSelect();
-        List<String> generatedQueueNames = this.topologyHandler.configureQueuesForClient(connection);
         if (consumerPrefetch > 0) channel.basicQos(consumerPrefetch);
         if (channelPrefetch > 0) channel.basicQos(channelPrefetch, true);
 
@@ -354,7 +358,7 @@ public class MulticastParams {
             timestampInHeader = false;
         }
         TimestampProvider tsp = new TimestampProvider(useMillis, timestampInHeader);
-        Consumer consumer = new Consumer(channel, this.topologyHandler.getRoutingKey(), generatedQueueNames,
+        Consumer consumer = new Consumer(channel, this.topologyHandler.getRoutingKey(), topologyHandlerResult.configuredQueues,
                                          consumerTxSize, autoAck, multiAckEvery,
                                          stats, consumerRateLimit, consumerMsgCount,
                                          consumerLatencyInMicroseconds, tsp, completionHandler);
@@ -466,10 +470,10 @@ public class MulticastParams {
         /**
          * Configure the queues for the current client (e.g. consumer or producer)
          * @param connection
-         * @return the configured queues names (can be server-generated names)
+         * @return the configured queues names (can be server-generated names) and connection
          * @throws IOException
          */
-        List<String> configureQueuesForClient(Connection connection) throws IOException;
+        TopologyHandlerResult configureQueuesForClient(Connection connection) throws IOException;
 
         /**
          * Configure all the queues for this run
@@ -495,15 +499,47 @@ public class MulticastParams {
 
     }
 
+    static class TopologyHandlerResult {
+
+        /**
+         * The connection to use to work against the configured resources.
+         * Useful when using exclusive resources.
+         */
+        final Connection connection;
+
+        /**
+         * The configured queues.
+         */
+        final List<String> configuredQueues;
+
+        TopologyHandlerResult(Connection connection, List<String> configuredQueues) {
+            this.connection = connection;
+            this.configuredQueues = configuredQueues;
+        }
+    }
+
     /**
      * Support class that contains queue configuration.
      */
     static abstract class TopologyHandlerSupport {
 
         protected final MulticastParams params;
+        private final ConcurrentMap<String, Connection> connectionCache = new ConcurrentHashMap<>();
 
         protected TopologyHandlerSupport(MulticastParams params) {
             this.params = params;
+        }
+
+        protected Connection maybeUseCachedConnection(List<String> queues, Connection connection) throws IOException {
+            // if queues are exclusive, we create them for each consumer connection or re-use them
+            // in case they are more consumers than queues
+            Connection connectionToUse = connectionCache.putIfAbsent(queues.toString(), connection);
+            if (connectionToUse == null) {
+                connectionToUse = connection;
+            } else {
+                connection.close(AMQP.REPLY_SUCCESS, "Connection not used", -1);
+            }
+            return connectionToUse;
         }
 
         protected List<String> configureQueues(Connection connection, List<String> queues, Runnable afterQueueConfigurationCallback) throws IOException {
@@ -570,8 +606,17 @@ public class MulticastParams {
         }
 
         @Override
-        public List<String> configureQueuesForClient(Connection connection) throws IOException {
-            return configureQueues(connection, this.queueNames, () -> {});
+        public TopologyHandlerResult configureQueuesForClient(Connection connection) throws IOException {
+            if (this.params.isExclusive()) {
+                Connection connectionToUse = maybeUseCachedConnection(this.queueNames, connection);
+                return new TopologyHandlerResult(
+                    connectionToUse, configureQueues(connectionToUse, this.queueNames, () -> {})
+                );
+            } else {
+                return new TopologyHandlerResult(
+                    connection, configureQueues(connection, this.queueNames, () -> {})
+                ) ;
+            }
         }
 
         @Override
@@ -623,14 +668,18 @@ public class MulticastParams {
         }
 
         @Override
-        public List<String> configureQueuesForClient(Connection connection) throws IOException {
+        public TopologyHandlerResult configureQueuesForClient(Connection connection) throws IOException {
             if (this.params.isExclusive()) {
-                // if queues are exclusive, we create them for each consumer connection
-                return configureQueues(connection, getQueueNamesForClient(), () -> {});
+                Connection connectionToUse = maybeUseCachedConnection(getQueueNamesForClient(), connection);
+                return new TopologyHandlerResult(
+                    connectionToUse,
+                    configureQueues(connectionToUse, getQueueNamesForClient(), () -> {})
+                );
             } else {
-                // just returns the name of the current queue, no need to create it,
-                // it's been configured already
-                return getQueueNamesForClient();
+                return new TopologyHandlerResult(
+                    connection,
+                    getQueueNamesForClient()
+                );
             }
 
         }
