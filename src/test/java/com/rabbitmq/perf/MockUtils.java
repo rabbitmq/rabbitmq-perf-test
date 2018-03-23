@@ -45,6 +45,11 @@ public class MockUtils {
             // FIXME would be useful to inspect return type and use reasonable default
             // (e.g. false for boolean, 0 for numbers, etc)
             // this can be useful for future changes of code
+            if (long.class.equals(method.getReturnType()) || Long.class.equals(method.getReturnType())) {
+                return 0L;
+            } else if (boolean.class.equals(method.getReturnType()) || Boolean.class.equals(method.getReturnType())) {
+                return false;
+            }
             return null;
         });
     }

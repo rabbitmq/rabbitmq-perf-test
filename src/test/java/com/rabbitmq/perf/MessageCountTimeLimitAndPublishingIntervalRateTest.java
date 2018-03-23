@@ -156,8 +156,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
             callback("basicPublish", (proxy, method, args) -> {
                 publishedLatch.countDown();
                 return null;
-            }),
-            callback("getNextPublishSeqNo", (proxy, method, args) -> 0L)
+            })
         );
 
         AtomicInteger connectionCloseCalls = new AtomicInteger(0);
@@ -284,8 +283,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
                 String ctag = consumerTagCounter.getAndIncrement() + "";
                 consumersLatch.countDown();
                 return ctag;
-            }),
-            callback("getNextPublishSeqNo", (proxy, method, args) -> 0L)
+            })
         );
 
         Connection connection = proxy(Connection.class,
@@ -402,15 +400,21 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         countsAndTimeLimit(0, 0, 6);
         params.setPublishingInterval(2);
         params.setProducerCount(3);
-        MulticastSet multicastSet = getMulticastSet();
 
         AtomicInteger publishedMessageCount = new AtomicInteger();
-        doAnswer(invocation -> {
-            publishedMessageCount.incrementAndGet();
-            return null;
-        }).when(ch).basicPublish(anyString(), anyString(),
-            anyBoolean(), eq(false),
-            any(), any());
+        Channel channel = proxy(Channel.class,
+            callback("basicPublish", (proxy, method, args) -> {
+                publishedMessageCount.incrementAndGet();
+                return null;
+            }),
+            callback("getNextPublishSeqNo", (proxy, method, args) -> 0L)
+        );
+
+        Connection connection = proxy(Connection.class,
+            callback("createChannel", (proxy, method, args) -> channel)
+        );
+
+        MulticastSet multicastSet = getMulticastSet(connectionFactoryThatReturns(connection));
 
         run(multicastSet);
 

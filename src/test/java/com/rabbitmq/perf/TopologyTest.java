@@ -404,8 +404,7 @@ public class TopologyTest {
         params.setConsumerCount(consumers);
 
         Channel channel = proxy(Channel.class,
-            callback("queueDeclare", (proxy, method, args) -> new AMQImpl.Queue.DeclareOk(args[0].toString(), 0, 0)),
-            callback("getNextPublishSeqNo", (proxy, method, args) -> 0L)
+            callback("queueDeclare", (proxy, method, args) -> new AMQImpl.Queue.DeclareOk(args[0].toString(), 0, 0))
         );
 
         AtomicInteger unusedConnections = new AtomicInteger(0);
