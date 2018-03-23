@@ -95,7 +95,6 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
     AtomicBoolean testIsDone;
 
     volatile long testDurationInMs;
-    int proxyCounter = 1;
 
     static Stream<Arguments> producerCountArguments() {
         return Stream.of(
@@ -200,17 +199,21 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         countsAndTimeLimit(messagesCount, 0, 0);
         params.setProducerCount(producersCount);
         params.setProducerChannelCount(channelsCount);
-        MulticastSet multicastSet = getMulticastSet();
 
         int messagesTotal = producersCount * channelsCount * messagesCount;
-
         CountDownLatch publishedLatch = new CountDownLatch(messagesTotal);
-        doAnswer(invocation -> {
-            publishedLatch.countDown();
-            return null;
-        }).when(ch).basicPublish(anyString(), anyString(),
-            anyBoolean(), anyBoolean(),
-            any(), any());
+        Channel channel = proxy(Channel.class,
+            callback("basicPublish", (proxy, method, args) -> {
+                publishedLatch.countDown();
+                return null;
+            })
+        );
+
+        Connection connection = proxy(Connection.class,
+            callback("createChannel", (proxy, method, args) -> channel)
+        );
+
+        MulticastSet multicastSet = getMulticastSet(connectionFactoryThatReturns(connection));
 
         run(multicastSet);
 
@@ -219,12 +222,6 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
             () -> format("Only %d / %d messages have been published", publishedLatch.getCount(), messagesTotal)
         );
         waitAtMost(20, TimeUnit.SECONDS).untilTrue(testIsDone);
-
-        verify(ch, times(messagesTotal))
-            .basicPublish(anyString(), anyString(),
-                anyBoolean(), anyBoolean(),
-                any(), any(byte[].class)
-            );
     }
 
     // --cmessages 10 -y n -Y m
