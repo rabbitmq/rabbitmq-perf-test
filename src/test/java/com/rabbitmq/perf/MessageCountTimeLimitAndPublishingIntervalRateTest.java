@@ -99,18 +99,18 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
     static Stream<Arguments> producerCountArguments() {
         return Stream.of(
             Arguments.of(1, 1),
-            Arguments.of(10, 1),
-            Arguments.of(1, 10),
-            Arguments.of(2, 5)
+            Arguments.of(3, 1),
+            Arguments.of(1, 3),
+            Arguments.of(2, 3)
         );
     }
 
     static Stream<Arguments> consumerCountArguments() {
         return Stream.of(
             Arguments.of(1, 1),
-            Arguments.of(10, 1),
-            Arguments.of(1, 10),
-            Arguments.of(2, 5)
+            Arguments.of(3, 1),
+            Arguments.of(1, 3),
+            Arguments.of(2, 3)
         );
     }
 
@@ -195,7 +195,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
     @ParameterizedTest
     @MethodSource("producerCountArguments")
     public void producerCount(int producersCount, int channelsCount) throws Exception {
-        int messagesCount = 10;
+        int messagesCount = producersCount * channelsCount;
         countsAndTimeLimit(messagesCount, 0, 0);
         params.setProducerCount(producersCount);
         params.setProducerChannelCount(channelsCount);
@@ -228,7 +228,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
     @ParameterizedTest
     @MethodSource("consumerCountArguments")
     public void consumerCount(int consumersCount, int channelsCount) throws Exception {
-        int messagesCount = 10;
+        int messagesCount = consumersCount * channelsCount;
         countsAndTimeLimit(0, messagesCount, 0);
         params.setConsumerCount(consumersCount);
         params.setConsumerChannelCount(channelsCount);
