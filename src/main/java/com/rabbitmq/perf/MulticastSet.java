@@ -194,7 +194,11 @@ public class MulticastSet {
         }
 
         for (Connection consumerConnection : consumerConnections) {
-            consumerConnection.close();
+            // when using exclusive queues, some connections can have already been
+            // closed because of connection re-using, so checking before closing.
+            if (consumerConnection.isOpen()) {
+                consumerConnection.close();
+            }
         }
 
         this.threadingHandler.shutdown();

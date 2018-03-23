@@ -39,11 +39,16 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
+import static com.rabbitmq.perf.MockUtils.callback;
+import static com.rabbitmq.perf.MockUtils.connectionFactoryThatReturns;
+import static com.rabbitmq.perf.MockUtils.proxy;
 import static java.lang.Boolean.valueOf;
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
+import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.IntStream.range;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -98,6 +103,21 @@ public class TopologyTest {
         return Stream.of(
             Arguments.of(0, 12),
             Arguments.of(4000, 4000)
+        );
+    }
+
+    static Stream<Arguments> reuseConnectionForExclusiveQueuesWhenMoreConsumersThanQueuesArguments() {
+        return Stream.of(
+            // exclusive, sequence of queues, queues, consumers, expected number of non-used connections, message
+            // first with hard-coded queue names mechanism
+            Arguments.of(false, false, 2, 4, 0, "Non-exclusive queues, a connection is open for each consumer"),
+            Arguments.of(true, false, 2, 2, 1, "Exclusive queues with same number of queues and consumers, one connection each"),
+            Arguments.of(true, false, 5, 7, 6, "Exclusive queues with more consumers than queues, 1 shared connection for all consumers, "
+                + "as in this mode they listen on all queues each"),
+            // then with sequence of queues mechanism
+            Arguments.of(false, true, 5, 10, 0, "Non-exclusive queues, a connection is open for each consumer"),
+            Arguments.of(true, true, 5, 5, 0, "Exclusive queues with same number of queues and consumers, one connection each"),
+            Arguments.of(true, true, 5, 7, 2, "Exclusive queues with more consumers than queues, connections are re-used across consumers")
         );
     }
 
@@ -366,6 +386,49 @@ public class TopologyTest {
             .queueDeclare(eq(""), anyBoolean(), eq(valueOf(exclusive)), anyBoolean(), isNull());
         verify(ch, times(1))
             .queueBind(anyString(), eq("direct"), anyString());
+    }
+
+    @ParameterizedTest
+    @MethodSource("reuseConnectionForExclusiveQueuesWhenMoreConsumersThanQueuesArguments")
+    void reuseConnectionForExclusiveQueuesWhenMoreConsumersThanQueues(
+        boolean exclusive, boolean sequenceOfQueues, int queues, int consumers, int expectedUnusedConnections, String message) throws Exception {
+        params.setExclusive(exclusive);
+        String queuePrefix = "perf-test-";
+        if (sequenceOfQueues) {
+            params.setQueuePattern(queuePrefix + "%d");
+            params.setQueueSequenceFrom(1);
+            params.setQueueSequenceTo(queues);
+        } else {
+            params.setQueueNames(range(0, queues).mapToObj(i -> queuePrefix + i).collect(toList()));
+        }
+        params.setConsumerCount(consumers);
+
+        Channel channel = proxy(Channel.class,
+            callback("queueDeclare", (proxy, method, args) -> new AMQImpl.Queue.DeclareOk(args[0].toString(), 0, 0)),
+            callback("getNextPublishSeqNo", (proxy, method, args) -> 0L)
+        );
+
+        AtomicInteger unusedConnections = new AtomicInteger(0);
+        Connection connection = proxy(Connection.class,
+            callback("createChannel", (proxy, method, args) -> channel),
+            callback("isOpen", (proxy, method, args) -> true),
+            callback("close", (proxy, method, args) -> {
+                // un-used connections are closed in a specific manner (to ease testing)
+                // they can be un-used because some connections are re-used when there are more
+                // consumers than queues and queues are exclusive
+                if (args != null && args.length == 3) {
+                    unusedConnections.incrementAndGet();
+                }
+                return null;
+            }));
+
+        ConnectionFactory connectionFactory = connectionFactoryThatReturns(connection);
+
+        MulticastSet set = getMulticastSet(connectionFactory);
+
+        set.run();
+
+        assertThat(message, unusedConnections.get(), is(expectedUnusedConnections));
     }
 
     // --queue-pattern 'perf-test-%d' --queue-pattern-from 1 --queue-pattern-to 100
@@ -646,12 +709,20 @@ public class TopologyTest {
 
     private MulticastSet getMulticastSet() {
         NoOpThreadingHandler noOpThreadingHandler = new NoOpThreadingHandler();
-        return getMulticastSet(noOpThreadingHandler);
+        return getMulticastSet(noOpThreadingHandler, cf);
     }
 
     private MulticastSet getMulticastSet(MulticastSet.ThreadingHandler threadingHandler) {
+        return getMulticastSet(threadingHandler, cf);
+    }
+
+    private MulticastSet getMulticastSet(ConnectionFactory connectionFactory) {
+        return getMulticastSet(new NoOpThreadingHandler(), connectionFactory);
+    }
+
+    private MulticastSet getMulticastSet(MulticastSet.ThreadingHandler threadingHandler, ConnectionFactory connectionFactory) {
         MulticastSet set = new MulticastSet(
-            stats, cf, params, singletonList("amqp://localhost"), new MulticastSet.CompletionHandler() {
+            stats, connectionFactory, params, singletonList("amqp://localhost"), new MulticastSet.CompletionHandler() {
 
             @Override
             public void waitForCompletion() {

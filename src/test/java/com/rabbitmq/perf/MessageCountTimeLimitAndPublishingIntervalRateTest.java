@@ -26,7 +26,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.DisabledIfSystemProperty;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -34,20 +33,19 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 
 import java.io.IOException;
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.Proxy;
-import java.util.Arrays;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+import static com.rabbitmq.perf.MockUtils.callback;
+import static com.rabbitmq.perf.MockUtils.connectionFactoryThatReturns;
+import static com.rabbitmq.perf.MockUtils.proxy;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
@@ -125,20 +123,6 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
     @AfterAll
     public static void afterAllTests() {
         Awaitility.reset();
-    }
-
-    private static ConnectionFactory connectionFactoryThatReturns(Connection c) {
-        return new ConnectionFactory() {
-
-            @Override
-            public Connection newConnection(String name) throws IOException, TimeoutException {
-                return c;
-            }
-        };
-    }
-
-    private static ProxyCallback callback(String method, InvocationHandler handler) {
-        return new ProxyCallback(method, handler);
     }
 
     @BeforeEach
@@ -305,7 +289,8 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         );
 
         Connection connection = proxy(Connection.class,
-            callback("createChannel", (proxy, method, args) -> channel));
+            callback("createChannel", (proxy, method, args) -> channel),
+            callback("isOpen", (proxy, method, args) -> true));
 
         MulticastSet multicastSet = getMulticastSet(connectionFactoryThatReturns(connection));
 
@@ -484,32 +469,5 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
                 throw new RuntimeException(e);
             }
         });
-    }
-
-    @SuppressWarnings("unchecked")
-    private <T> T proxy(Class<T> clazz, ProxyCallback... callbacks) {
-        final int id = ++proxyCounter;
-        ProxyCallback toString = new ProxyCallback("toString", (proxy, method, args) -> clazz.getSimpleName() + " " + id);
-        ProxyCallback[] proxyCallbacks = Arrays.copyOf(callbacks, callbacks.length + 1);
-        proxyCallbacks[callbacks.length] = toString;
-        return (T) Proxy.newProxyInstance(clazz.getClassLoader(), new Class[] { clazz }, (proxy, method, args) -> {
-            for (ProxyCallback callback : proxyCallbacks) {
-                if (method.getName().equals(callback.method)) {
-                    return callback.handler.invoke(proxy, method, args);
-                }
-            }
-            return null;
-        });
-    }
-
-    private static class ProxyCallback {
-
-        final String method;
-        final InvocationHandler handler;
-
-        private ProxyCallback(String method, InvocationHandler handler) {
-            this.method = method;
-            this.handler = handler;
-        }
     }
 }
