@@ -42,6 +42,7 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
 import com.rabbitmq.client.ConnectionFactory;
+import com.rabbitmq.client.DefaultSaslConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -109,6 +110,7 @@ public class PerfTest {
             boolean legacyMetrics    = cmd.hasOption('l');
             boolean autoDelete       = boolArg(cmd, "ad", true);
             boolean useMillis        = cmd.hasOption("ms");
+            boolean saslExternal     = cmd.hasOption("se");
             String queueArgs         = strArg(cmd, "qa", null);
             int consumerLatencyInMicroseconds = intArg(cmd, 'L', 0);
             int heartbeatSenderThreads = intArg(cmd, "hst", -1);
@@ -157,10 +159,12 @@ public class PerfTest {
             SSLContext sslContext = perfTestOptions.skipSslContextConfiguration ? null :
                 getSslContextIfNecessary(cmd, System.getProperties());
 
-
             ConnectionFactory factory = new ConnectionFactory();
             if (sslContext != null) {
                 factory.useSslProtocol(sslContext);
+            }
+            if (saslExternal) {
+                factory.setSaslConfig(DefaultSaslConfig.EXTERNAL);
             }
             factory.setShutdownTimeout(0); // So we still shut down even with slow consumers
             factory.setUri(uris.get(0));
@@ -389,7 +393,10 @@ public class PerfTest {
         options.addOption(new Option("qa", "queue-args",            true, "queue arguments as key/pair values, separated by commas, "
                                                                                                     + "e.g. x-max-length=10"));
         options.addOption(new Option("L", "consumer-latency",       true, "consumer latency in microseconds"));
-        options.addOption(new Option("udsc", "use-default-ssl-context", false,"use JVM default SSL context"));
+
+        options.addOption(new Option("udsc", "use-default-ssl-context", false, "use JVM default SSL context"));
+        options.addOption(new Option("se", "sasl-external", false, "use SASL EXTERNAL authentication, default is false. " +
+                                                                   "Set to true if using client certificate authentication with the rabbitmq_auth_mechanism_ssl plugin."));
 
         options.addOption(new Option("v", "version",                false,"print version information"));
 
