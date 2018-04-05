@@ -22,6 +22,7 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Proxy;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 
 /**
  *
@@ -64,6 +65,15 @@ public class MockUtils {
             @Override
             public Connection newConnection(String name) {
                 return c;
+            }
+        };
+    }
+
+    public static ConnectionFactory connectionFactoryThatReturns(Supplier<Connection> supplier) {
+        return new ConnectionFactory() {
+            @Override
+            public Connection newConnection(String name) {
+                return supplier.get();
             }
         };
     }

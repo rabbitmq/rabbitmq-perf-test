@@ -40,6 +40,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import static com.rabbitmq.perf.MockUtils.callback;
@@ -388,6 +389,34 @@ public class TopologyTest {
             .queueBind(anyString(), eq("direct"), anyString());
     }
 
+    @Test
+    public void connectionIsNotClosedWithExclusiveQueuesAndSeveralChannels() throws Exception {
+        params.setExclusive(true);
+        params.setConsumerChannelCount(10);
+
+        Channel channel = proxy(Channel.class,
+            callback("queueDeclare", (proxy, method, args) -> new AMQImpl.Queue.DeclareOk(args[0].toString(), 0, 0))
+        );
+
+        AtomicInteger closedConnections = new AtomicInteger(0);
+        Supplier<Connection> connectionSupplier = () -> proxy(Connection.class,
+            callback("createChannel", (proxy, method, args) -> channel),
+            callback("isOpen", (proxy, method, args) -> true),
+            callback("close", (proxy, method, args) -> {
+                closedConnections.incrementAndGet();
+                return null;
+            }));
+
+        ConnectionFactory connectionFactory = connectionFactoryThatReturns(connectionSupplier);
+
+        MulticastSet set = getMulticastSet(connectionFactory);
+
+        set.run();
+
+        assertThat("Consumer connection shouldn't be closed several times",
+            closedConnections.get(), is(1 + 1 + 1)); // configuration, consumer, producer
+    }
+
     @ParameterizedTest
     @MethodSource("reuseConnectionForExclusiveQueuesWhenMoreConsumersThanQueuesArguments")
     void reuseConnectionForExclusiveQueuesWhenMoreConsumersThanQueues(
@@ -408,7 +437,8 @@ public class TopologyTest {
         );
 
         AtomicInteger unusedConnections = new AtomicInteger(0);
-        Connection connection = proxy(Connection.class,
+        // we want to return different instances because it matters when using connection caching
+        Supplier<Connection> connectionSupplier = () -> proxy(Connection.class,
             callback("createChannel", (proxy, method, args) -> channel),
             callback("isOpen", (proxy, method, args) -> true),
             callback("close", (proxy, method, args) -> {
@@ -419,9 +449,10 @@ public class TopologyTest {
                     unusedConnections.incrementAndGet();
                 }
                 return null;
-            }));
+            })
+        );
 
-        ConnectionFactory connectionFactory = connectionFactoryThatReturns(connection);
+        ConnectionFactory connectionFactory = connectionFactoryThatReturns(connectionSupplier);
 
         MulticastSet set = getMulticastSet(connectionFactory);
 
