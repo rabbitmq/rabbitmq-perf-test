@@ -19,11 +19,8 @@ import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.impl.AMQImpl;
-import org.hamcrest.Matchers;
-import org.hamcrest.junit.MatcherAssert;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -53,6 +50,7 @@ public class PublisherOnlyStopsCorrectlyTest {
     MulticastParams params;
 
     Stats stats = new Stats(0) {
+
         @Override
         protected void report(long now) {
         }
@@ -60,27 +58,29 @@ public class PublisherOnlyStopsCorrectlyTest {
 
     ExecutorService executorService;
 
-    @BeforeEach public void init() {
+    static Stream<Arguments> publisherOnlyStopsWhenBrokerCrashesArguments() {
+        return Stream.of(
+            // number of messages before throwing exception, configurator, assertion message
+            Arguments.of(10, (Consumer<MulticastParams>) (params) -> { }, "Sender should have failed and program should stop"),
+            Arguments.of(2, (Consumer<MulticastParams>) (params) -> params.setPublishingInterval(1), "Sender should have failed and program should stop")
+        );
+    }
+
+    @BeforeEach
+    public void init() {
         params = new MulticastParams();
         executorService = Executors.newSingleThreadExecutor();
     }
 
-    @AfterEach public void tearDown() {
+    @AfterEach
+    public void tearDown() {
         executorService.shutdownNow();
-    }
-
-    static Stream<Arguments> publisherOnlyStopsWhenBrokerCrashesArguments() {
-        return Stream.of(
-            // number of messages before throwing exception, configurator, assertion message
-            Arguments.of(10, (Consumer<MulticastParams>)(params) -> {}, "Sender should have failed and program should stop"),
-            Arguments.of(2, (Consumer<MulticastParams>)(params) -> params.setPublishingInterval(1), "Sender should have failed and program should stop")
-        );
     }
 
     @ParameterizedTest
     @MethodSource("publisherOnlyStopsWhenBrokerCrashesArguments")
     public void publisherOnlyStopsWhenBrokerCrashes(
-            int messageTotal, Consumer<MulticastParams> configurator, String message) throws Exception {
+        int messageTotal, Consumer<MulticastParams> configurator, String message) throws Exception {
         params.setConsumerCount(0);
         params.setProducerCount(1);
         configurator.accept(params);
@@ -112,7 +112,6 @@ public class PublisherOnlyStopsCorrectlyTest {
             return null;
         });
         assertThat(message, latch.await(10, TimeUnit.SECONDS), is(true));
-
     }
 
     private MulticastSet getMulticastSet(ConnectionFactory connectionFactory) {
@@ -123,5 +122,4 @@ public class PublisherOnlyStopsCorrectlyTest {
         set.setThreadingHandler(new MulticastSet.DefaultThreadingHandler());
         return set;
     }
-
 }
