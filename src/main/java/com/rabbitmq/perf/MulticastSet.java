@@ -188,7 +188,12 @@ public class MulticastSet {
             if(count % params.getProducerChannelCount() == 0) {
                 // this is the end of a group of threads on the same connection,
                 // closing the connection
-                producerConnections[count / params.getProducerChannelCount() - 1].close();
+                try {
+                    producerConnections[count / params.getProducerChannelCount() - 1].close();
+                } catch (Exception e) {
+                    // don't do anything, we need to close the other connections
+                }
+
             }
             count++;
         }
@@ -197,7 +202,11 @@ public class MulticastSet {
             // when using exclusive queues, some connections can have already been
             // closed because of connection re-using, so checking before closing.
             if (consumerConnection.isOpen()) {
-                consumerConnection.close();
+                try {
+                    consumerConnection.close();
+                } catch (Exception e) {
+                    // don't do anything, we need to close the other connections
+                }
             }
         }
 

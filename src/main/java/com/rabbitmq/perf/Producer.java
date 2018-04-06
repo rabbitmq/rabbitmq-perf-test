@@ -270,10 +270,16 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
         ProducerState state = new ProducerState(this.rateLimit);
         state.setLastStatsTime(startTime);
         state.setMsgCount(0);
-        while (keepGoing(state)) {
-            delay(now, state);
-            handlePublish(state);
-            now = System.currentTimeMillis();
+        try {
+            while (keepGoing(state)) {
+                delay(now, state);
+                handlePublish(state);
+                now = System.currentTimeMillis();
+            }
+        } catch (RuntimeException e) {
+            // failing, we don't want to block the whole process, so counting down
+            countDown();
+            throw e;
         }
         if (state.getMsgCount() >= msgLimit) {
             countDown();
@@ -310,7 +316,13 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
                 state.setLastStatsTime(System.currentTimeMillis());
                 state.setMsgCount(0);
             }
-            maybeHandlePublish(state);
+            try {
+                maybeHandlePublish(state);
+            } catch (RuntimeException e) {
+                // failing, we don't want to block the whole process, so counting down
+                countDown();
+                throw e;
+            }
         };
     }
 
