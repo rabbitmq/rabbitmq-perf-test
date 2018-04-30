@@ -182,20 +182,17 @@ public class MulticastSet {
 
         this.completionHandler.waitForCompletion();
 
-        int count = 1; // counting the threads
-        for (int i = 0; i < producerStates.length; i++) {
-            producerStates[i].task.cancel(true);
-            if(count % params.getProducerChannelCount() == 0) {
-                // this is the end of a group of threads on the same connection,
-                // closing the connection
-                try {
-                    producerConnections[count / params.getProducerChannelCount() - 1].close();
-                } catch (Exception e) {
-                    // don't do anything, we need to close the other connections
-                }
+        for (AgentState producerState : producerStates) {
+            producerState.task.cancel(true);
+        }
 
+        for (Connection producerConnection : producerConnections) {
+            try {
+                producerConnection.close();
+            } catch (Exception e) {
+                // don't do anything, we need to close the other connections
             }
-            count++;
+
         }
 
         for (Connection consumerConnection : consumerConnections) {
