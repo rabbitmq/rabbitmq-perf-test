@@ -20,16 +20,15 @@ import java.nio.charset.Charset;
 import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
-import java.util.concurrent.Executors;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 import com.rabbitmq.client.impl.ClientVersion;
 import com.rabbitmq.client.impl.nio.NioParams;
@@ -50,6 +49,7 @@ import javax.net.ssl.SSLContext;
 
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
+import static java.util.Collections.singletonList;
 
 public class PerfTest {
 
@@ -60,7 +60,8 @@ public class PerfTest {
         Options options = getOptions();
         CommandLineParser parser = new GnuParser();
         try {
-            CommandLine cmd = parser.parse(options, args);
+            CommandLine rawCmd = parser.parse(options, args);
+            CommandLineProxy cmd = new CommandLineProxy(options, rawCmd, perfTestOptions.argumentLookup);
 
             if (cmd.hasOption('?')) {
                 usage(options);
@@ -79,8 +80,8 @@ public class PerfTest {
             String exchangeName      = getExchangeName(cmd, exchangeType);
             String queueNames        = strArg(cmd, 'u', null);
             String routingKey        = strArg(cmd, 'k', null);
-            boolean randomRoutingKey = cmd.hasOption('K');
-            boolean skipBindingQueues= cmd.hasOption("sb");
+            boolean randomRoutingKey = hasOption(cmd, "K");
+            boolean skipBindingQueues= hasOption(cmd,"sb");
             int samplingInterval     = intArg(cmd, 'i', 1);
             float producerRateLimit  = floatArg(cmd, 'r', 0.0f);
             float consumerRateLimit  = floatArg(cmd, 'R', 0.0f);
@@ -92,12 +93,12 @@ public class PerfTest {
             int consumerTxSize       = intArg(cmd, 'n', 0);
             long confirm             = intArg(cmd, 'c', -1);
             int confirmTimeout       = intArg(cmd, "ct", 30);
-            boolean autoAck          = cmd.hasOption('a');
+            boolean autoAck          = hasOption(cmd,"a");
             int multiAckEvery        = intArg(cmd, 'A', 0);
             int channelPrefetch      = intArg(cmd, 'Q', 0);
             int consumerPrefetch     = intArg(cmd, 'q', 0);
             int minMsgSize           = intArg(cmd, 's', 0);
-            boolean slowStart        = cmd.hasOption('S');
+            boolean slowStart        = hasOption(cmd, "S");
             int timeLimit            = intArg(cmd, 'z', 0);
             int producerMsgCount     = intArg(cmd, 'C', 0);
             int consumerMsgCount     = intArg(cmd, 'D', 0);
@@ -106,17 +107,17 @@ public class PerfTest {
             int heartbeat            = intArg(cmd, 'b', 0);
             String bodyFiles         = strArg(cmd, 'B', null);
             String bodyContentType   = strArg(cmd, 'T', null);
-            boolean predeclared      = cmd.hasOption('p');
-            boolean legacyMetrics    = cmd.hasOption('l');
+            boolean predeclared      = hasOption(cmd, "p");
+            boolean legacyMetrics    = hasOption(cmd, "l");
             boolean autoDelete       = boolArg(cmd, "ad", true);
-            boolean useMillis        = cmd.hasOption("ms");
-            boolean saslExternal     = cmd.hasOption("se");
+            boolean useMillis        = hasOption(cmd,"ms");
+            boolean saslExternal     = hasOption(cmd, "se");
             String queueArgs         = strArg(cmd, "qa", null);
             int consumerLatencyInMicroseconds = intArg(cmd, 'L', 0);
             int heartbeatSenderThreads = intArg(cmd, "hst", -1);
             String messageProperties = strArg(cmd, "mp", null);
             int routingKeyCacheSize  = intArg(cmd, "rkcs", 0);
-            boolean exclusive = cmd.hasOption('E');
+            boolean exclusive = hasOption(cmd, "E");
             int publishingIntervalInSeconds = intArg(cmd, "P", -1);
             int producerRandomStartDelayInSeconds = intArg(cmd, "prsd", -1);
             int producerSchedulingThreads = intArg(cmd, "pst", -1);
@@ -145,7 +146,7 @@ public class PerfTest {
                 }
                 uris = asList(urisArray);
             } else {
-                uris = Collections.singletonList(uri);
+                uris = singletonList(uri);
             }
 
             //setup
@@ -254,7 +255,7 @@ public class PerfTest {
         }
     }
 
-    private static ConnectionFactory configureNioIfRequested(CommandLine cmd, ConnectionFactory factory) {
+    private static ConnectionFactory configureNioIfRequested(CommandLineProxy cmd, ConnectionFactory factory) {
         int nbThreads = intArg(cmd, "niot", -1);
         int executorSize = intArg(cmd, "niotp", -1);
         if (nbThreads > 0 || executorSize > 0) {
@@ -313,9 +314,9 @@ public class PerfTest {
         main(args, new PerfTestOptions().setSystemExiter(new JvmSystemExiter()).setSkipSslContextConfiguration(false));
     }
 
-    private static SSLContext getSslContextIfNecessary(CommandLine cmd, Properties systemProperties) throws NoSuchAlgorithmException {
+    private static SSLContext getSslContextIfNecessary(CommandLineProxy cmd, Properties systemProperties) throws NoSuchAlgorithmException {
         SSLContext sslContext = null;
-        if (cmd.hasOption("useDefaultSslContext")) {
+        if (hasOption(cmd, "udsc") || hasOption(cmd,"useDefaultSslContext")) {
             LOGGER.info("Using default SSL context as per command line option");
             sslContext = SSLContext.getDefault();
         }
@@ -338,7 +339,7 @@ public class PerfTest {
         formatter.printHelp("<program>", options);
     }
 
-    private static Options getOptions() {
+    public static Options getOptions() {
         Options options = new Options();
         options.addOption(new Option("?", "help",                   false,"show usage"));
         options.addOption(new Option("d", "id",                     true, "test ID"));
@@ -417,36 +418,40 @@ public class PerfTest {
         return options;
     }
 
-    private static String strArg(CommandLine cmd, char opt, String def) {
+    private static String strArg(CommandLineProxy cmd, char opt, String def) {
         return cmd.getOptionValue(opt, def);
     }
 
-    private static String strArg(CommandLine cmd, String opt, String def) {
+    private static String strArg(CommandLineProxy cmd, String opt, String def) {
         return cmd.getOptionValue(opt, def);
     }
 
-    private static int intArg(CommandLine cmd, char opt, int def) {
+    private static int intArg(CommandLineProxy cmd, char opt, int def) {
         return Integer.parseInt(cmd.getOptionValue(opt, Integer.toString(def)));
     }
 
-    private static int intArg(CommandLine cmd, String opt, int def) {
+    private static int intArg(CommandLineProxy cmd, String opt, int def) {
         return Integer.parseInt(cmd.getOptionValue(opt, Integer.toString(def)));
     }
 
-    private static float floatArg(CommandLine cmd, char opt, float def) {
+    private static float floatArg(CommandLineProxy cmd, char opt, float def) {
         return Float.parseFloat(cmd.getOptionValue(opt, Float.toString(def)));
     }
 
-    private static boolean boolArg(CommandLine cmd, String opt, boolean def) {
+    private static boolean boolArg(CommandLineProxy cmd, String opt, boolean def) {
         return Boolean.parseBoolean(cmd.getOptionValue(opt, Boolean.toString(def)));
     }
 
-    private static List<?> lstArg(CommandLine cmd, char opt) {
+    private static List<?> lstArg(CommandLineProxy cmd, char opt) {
         String[] vals = cmd.getOptionValues(opt);
         if (vals == null) {
             vals = new String[] {};
         }
         return asList(vals);
+    }
+
+    private static boolean hasOption(CommandLineProxy cmd, String opt) {
+        return cmd.hasOption(opt);
     }
 
     private static Map<String, Object> convertKeyValuePairs(String arg) {
@@ -465,7 +470,7 @@ public class PerfTest {
         return properties;
     }
 
-    private static String getExchangeName(CommandLine cmd, String def) {
+    private static String getExchangeName(CommandLineProxy cmd, String def) {
         String exchangeName = null;
         if (cmd.hasOption('e')) {
             exchangeName = cmd.getOptionValue('e');
@@ -648,6 +653,10 @@ public class PerfTest {
 
         private boolean skipSslContextConfiguration = false;
 
+        private Function<String, String> argumentLookup = LONG_OPTION_TO_ENVIRONMENT_VARIABLE
+            .andThen(ENVIRONMENT_VARIABLE_PREFIX)
+            .andThen(ENVIRONMENT_VARIABLE_LOOKUP);
+
         public PerfTestOptions setSystemExiter(SystemExiter systemExiter) {
             this.systemExiter = systemExiter;
             return this;
@@ -655,6 +664,11 @@ public class PerfTest {
 
         public PerfTestOptions setSkipSslContextConfiguration(boolean skipSslContextConfiguration) {
             this.skipSslContextConfiguration = skipSslContextConfiguration;
+            return this;
+        }
+
+        public PerfTestOptions setArgumentLookup(Function<String, String> argumentLookup) {
+            this.argumentLookup = argumentLookup;
             return this;
         }
     }
@@ -681,5 +695,22 @@ public class PerfTest {
         }
 
     }
+
+    public static Function<String, String> LONG_OPTION_TO_ENVIRONMENT_VARIABLE = option ->
+        option.replace('-', '_').toUpperCase(Locale.ENGLISH);
+
+    static Function<String, String> ENVIRONMENT_VARIABLE_PREFIX = name -> {
+        String prefix = System.getenv("RABBITMQ_PERF_TEST_ENV_PREFIX");
+        if (prefix == null || prefix.trim().isEmpty()) {
+            return name;
+        }
+        if (prefix.endsWith("_")) {
+            return prefix + name;
+        } else {
+            return prefix + "_" + name;
+        }
+    };
+
+    static Function<String, String> ENVIRONMENT_VARIABLE_LOOKUP = name -> System.getenv(name);
 
 }

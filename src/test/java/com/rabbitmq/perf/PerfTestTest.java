@@ -18,6 +18,7 @@ package com.rabbitmq.perf;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 
 /**
@@ -51,6 +52,21 @@ public class PerfTestTest {
                     fail(message + " (test shouldn't fail)");
                 }
             }
+        }
+    }
+
+    @Test public void longOptionToEnvironmentVariable() {
+        String [] [] parameters = {
+            {"queue", "QUEUE"},
+            {"routing-key", "ROUTING_KEY"},
+            {"random-routing-key", "RANDOM_ROUTING_KEY"},
+            {"skip-binding-queues", "SKIP_BINDING_QUEUES"},
+        };
+        for (String[] parameter : parameters) {
+            assertEquals(
+                parameter[1],
+                PerfTest.LONG_OPTION_TO_ENVIRONMENT_VARIABLE.apply(parameter[0])
+            );
         }
     }
 }
