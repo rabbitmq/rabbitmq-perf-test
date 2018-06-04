@@ -339,7 +339,7 @@ public class PerfTest {
         formatter.printHelp("<program>", options);
     }
 
-    static Options getOptions() {
+    public static Options getOptions() {
         Options options = new Options();
         options.addOption(new Option("?", "help",                   false,"show usage"));
         options.addOption(new Option("d", "id",                     true, "test ID"));
@@ -696,7 +696,7 @@ public class PerfTest {
 
     }
 
-    static Function<String, String> LONG_OPTION_TO_ENVIRONMENT_VARIABLE = option ->
+    public static Function<String, String> LONG_OPTION_TO_ENVIRONMENT_VARIABLE = option ->
         option.replace('-', '_').toUpperCase(Locale.ENGLISH);
 
     static Function<String, String> ENVIRONMENT_VARIABLE_PREFIX = name -> {
