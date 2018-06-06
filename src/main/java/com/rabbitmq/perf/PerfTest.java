@@ -56,6 +56,7 @@ public class PerfTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(PerfTest.class);
 
     public static void main(String [] args, PerfTestOptions perfTestOptions) {
+        args = "-r 100".split(" ");
         SystemExiter systemExiter = perfTestOptions.systemExiter;
         Options options = getOptions();
         CommandLineParser parser = new GnuParser();
@@ -499,7 +500,7 @@ public class PerfTest {
             boolean returnStatsEnabled, boolean confirmStatsEnabled,
             boolean legacyMetrics, boolean useMillis,
             PrintWriter out) {
-            super(interval);
+            super(interval, useMillis);
             this.sendStatsEnabled = sendStatsEnabled;
             this.recvStatsEnabled = recvStatsEnabled;
             this.returnStatsEnabled = returnStatsEnabled;

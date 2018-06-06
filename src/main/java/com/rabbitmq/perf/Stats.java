@@ -17,6 +17,25 @@ package com.rabbitmq.perf;
 
 import com.codahale.metrics.Histogram;
 import com.codahale.metrics.MetricRegistry;
+import io.micrometer.core.instrument.Tag;
+import io.micrometer.core.instrument.Timer;
+import io.micrometer.prometheus.PrometheusConfig;
+import io.micrometer.prometheus.PrometheusMeterRegistry;
+import org.eclipse.jetty.server.Request;
+import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.handler.AbstractHandler;
+
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 
 public abstract class Stats {
     protected final long    interval;
@@ -43,11 +62,66 @@ public abstract class Stats {
     protected long    elapsedInterval;
     protected long    elapsedTotal;
 
-    protected Histogram latency = new MetricRegistry().histogram("latency");;
+    protected Histogram latency = new MetricRegistry().histogram("latency");
+
+    private final Consumer<Long> updateLatency;
+
+//    private final AtomicInteger sent, received;
 
     public Stats(long interval) {
+        this(interval, false);
+    }
+
+    public Stats(long interval, boolean useMs) {
         this.interval = interval;
         startTime = System.currentTimeMillis();
+
+        PrometheusMeterRegistry registry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
+
+        try {
+            Server server = new Server(8080);
+            server.setHandler(new AbstractHandler() {
+
+                @Override
+                public void handle(String s, Request request, HttpServletRequest httpServletRequest, HttpServletResponse response)
+                    throws IOException, ServletException {
+                    String scraped = registry.scrape();
+
+                    response.setStatus(HttpServletResponse.SC_OK);
+                    response.setContentLength(scraped.length());
+                    response.setContentType("text/plain");
+
+                    response.getWriter().print(scraped);
+
+                    request.setHandled(true);
+                }
+            });
+
+            server.start();
+//            server.join();
+        } catch(Exception e) {
+            throw new RuntimeException(e);
+        }
+
+        List<Tag> tags = new ArrayList<>();
+        tags.add(Tag.of("client", "perf-test"));
+//        tags.add(Tag.of("id", UUID.randomUUID().toString()));
+
+        Timer latencyTimer = Timer
+            .builder("latency")
+            .description("message latency")
+            .publishPercentiles(0.5, 0.75, 0.95, 0.99)
+            .tags(tags)
+            .distributionStatisticExpiry(Duration.ofMillis(this.interval))
+            .sla()
+            .register(registry);
+
+//        sent = registry.gauge("sent", tags, new AtomicInteger(0));
+//        received = registry.gauge("received", tags, new AtomicInteger(0));
+
+        updateLatency = useMs ? latency -> latencyTimer.record(latency, TimeUnit.MILLISECONDS) :
+            latency -> latencyTimer.record(latency, TimeUnit.NANOSECONDS);
+
         reset(startTime);
     }
 
@@ -106,6 +180,7 @@ public abstract class Stats {
         recvCountTotal++;
         if (latency > 0) {
             this.latency.update(latency);
+            this.updateLatency.accept(latency);
             minLatency = Math.min(minLatency, latency);
             maxLatency = Math.max(maxLatency, latency);
             cumulativeLatencyInterval += latency;
@@ -115,5 +190,6 @@ public abstract class Stats {
         }
         report();
     }
+
 
 }
