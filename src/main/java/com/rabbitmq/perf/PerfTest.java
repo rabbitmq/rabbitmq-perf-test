@@ -19,7 +19,9 @@ import java.io.*;
 import java.nio.charset.Charset;
 import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -32,6 +34,10 @@ import java.util.function.Function;
 
 import com.rabbitmq.client.impl.ClientVersion;
 import com.rabbitmq.client.impl.nio.NioParams;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tag;
+import io.micrometer.prometheus.PrometheusConfig;
+import io.micrometer.prometheus.PrometheusMeterRegistry;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.GnuParser;
@@ -42,10 +48,16 @@ import org.apache.commons.cli.ParseException;
 
 import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.DefaultSaslConfig;
+import org.eclipse.jetty.server.Request;
+import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.handler.AbstractHandler;
+import org.eclipse.jetty.server.handler.ContextHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.SSLContext;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
@@ -56,7 +68,6 @@ public class PerfTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(PerfTest.class);
 
     public static void main(String [] args, PerfTestOptions perfTestOptions) {
-        args = "-r 100".split(" ");
         SystemExiter systemExiter = perfTestOptions.systemExiter;
         Options options = getOptions();
         CommandLineParser parser = new GnuParser();
@@ -127,6 +138,55 @@ public class PerfTest {
             String urisParameter     = strArg(cmd, 'H', null);
             String outputFile        = strArg(cmd, 'o', null);
 
+            int prometheusHttpEndpointPort = intArg(cmd, "mpp", -1);
+            String prometheusHttpEndpoint = strArg(cmd, "mpe", "metrics");
+            prometheusHttpEndpoint = prometheusHttpEndpoint.startsWith("/") ? prometheusHttpEndpoint : "/" + prometheusHttpEndpoint;
+            String argumentTags = strArg(cmd, "mt", null);
+
+            PrometheusMeterRegistry registry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
+
+            Collection<Tag> tags = new ArrayList<>();
+            if (argumentTags != null) {
+                for (String tag : argumentTags.split(",")) {
+                    String[] keyValue = tag.split("=");
+                    tags.add(Tag.of(keyValue[0], keyValue[1]));
+                }
+            }
+            registry.config().commonTags(tags);
+
+            try {
+                // FIXME configure Jetty (threads, etc)
+                Server server = new Server(prometheusHttpEndpointPort);
+
+                ContextHandler context = new ContextHandler();
+                context.setContextPath(prometheusHttpEndpoint);
+                context.setHandler(new AbstractHandler() {
+
+                    @Override
+                    public void handle(String s, Request request, HttpServletRequest httpServletRequest, HttpServletResponse response)
+                        throws IOException {
+                        String scraped = registry.scrape();
+
+                        response.setStatus(HttpServletResponse.SC_OK);
+                        response.setContentLength(scraped.length());
+                        response.setContentType("text/plain");
+
+                        response.getWriter().print(scraped);
+
+                        request.setHandled(true);
+                    }
+                });
+
+                server.setHandler(context);
+
+                // FIXME stop server
+                server.setStopAtShutdown(true);
+                server.start();
+            } catch(Exception e) {
+                throw new RuntimeException(e);
+            }
+
+
             final PrintWriter output;
             if (outputFile != null) {
                 File file = new File(outputFile);
@@ -156,7 +216,7 @@ public class PerfTest {
                 producerCount > 0,
                 consumerCount > 0,
                 (flags.contains("mandatory") || flags.contains("immediate")),
-                confirm != -1, legacyMetrics, useMillis, output);
+                confirm != -1, legacyMetrics, useMillis, output, registry);
 
             SSLContext sslContext = perfTestOptions.skipSslContextConfiguration ? null :
                 getSslContextIfNecessary(cmd, System.getProperties());
@@ -416,6 +476,10 @@ public class PerfTest {
         options.addOption(new Option("pst", "producer-scheduler-threads",true, "number of threads to use when using --publishing-interval"));
         options.addOption(new Option("niot", "nio-threads",true, "number of NIO threads to use"));
         options.addOption(new Option("niotp", "nio-thread-pool",true, "size of NIO thread pool, should be slightly higher than number of NIO threads"));
+
+        options.addOption(new Option("mt", "metrics-tags",true, "metrics tags as key-value pairs separated by commas"));
+        options.addOption(new Option("mpe", "metrics-prometheus-endpoint",true, "the HTTP endpoint"));
+        options.addOption(new Option("mpp", "metrics-prometheus-port",true, "the port to launch the HTTP metrics endpoint on"));
         return options;
     }
 
@@ -499,8 +563,8 @@ public class PerfTest {
             boolean sendStatsEnabled, boolean recvStatsEnabled,
             boolean returnStatsEnabled, boolean confirmStatsEnabled,
             boolean legacyMetrics, boolean useMillis,
-            PrintWriter out) {
-            super(interval, useMillis);
+            PrintWriter out, MeterRegistry registry) {
+            super(interval, useMillis, registry);
             this.sendStatsEnabled = sendStatsEnabled;
             this.recvStatsEnabled = recvStatsEnabled;
             this.returnStatsEnabled = returnStatsEnabled;

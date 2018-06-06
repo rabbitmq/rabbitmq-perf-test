@@ -17,8 +17,10 @@ package com.rabbitmq.perf;
 
 import com.codahale.metrics.Histogram;
 import com.codahale.metrics.MetricRegistry;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.Timer;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.micrometer.prometheus.PrometheusConfig;
 import io.micrometer.prometheus.PrometheusMeterRegistry;
 import org.eclipse.jetty.server.Request;
@@ -69,49 +71,17 @@ public abstract class Stats {
 //    private final AtomicInteger sent, received;
 
     public Stats(long interval) {
-        this(interval, false);
+        this(interval, false, new SimpleMeterRegistry());
     }
 
-    public Stats(long interval, boolean useMs) {
+    public Stats(long interval, boolean useMs, MeterRegistry registry) {
         this.interval = interval;
         startTime = System.currentTimeMillis();
-
-        PrometheusMeterRegistry registry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
-
-        try {
-            Server server = new Server(8080);
-            server.setHandler(new AbstractHandler() {
-
-                @Override
-                public void handle(String s, Request request, HttpServletRequest httpServletRequest, HttpServletResponse response)
-                    throws IOException {
-                    String scraped = registry.scrape();
-
-                    response.setStatus(HttpServletResponse.SC_OK);
-                    response.setContentLength(scraped.length());
-                    response.setContentType("text/plain");
-
-                    response.getWriter().print(scraped);
-
-                    request.setHandled(true);
-                }
-            });
-
-            server.start();
-//            server.join();
-        } catch(Exception e) {
-            throw new RuntimeException(e);
-        }
-
-        List<Tag> tags = new ArrayList<>();
-        tags.add(Tag.of("client", "perf-test"));
-//        tags.add(Tag.of("id", UUID.randomUUID().toString()));
 
         Timer latencyTimer = Timer
             .builder("latency")
             .description("message latency")
             .publishPercentiles(0.5, 0.75, 0.95, 0.99)
-            .tags(tags)
             .distributionStatisticExpiry(Duration.ofMillis(this.interval))
             .sla()
             .register(registry);
