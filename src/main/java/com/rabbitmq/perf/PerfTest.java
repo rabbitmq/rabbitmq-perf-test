@@ -700,7 +700,7 @@ public class PerfTest {
     public static Function<String, String> LONG_OPTION_TO_ENVIRONMENT_VARIABLE = option ->
         option.replace('-', '_').toUpperCase(Locale.ENGLISH);
 
-    static Function<String, String> ENVIRONMENT_VARIABLE_PREFIX = name -> {
+    public static Function<String, String> ENVIRONMENT_VARIABLE_PREFIX = name -> {
         String prefix = System.getenv("RABBITMQ_PERF_TEST_ENV_PREFIX");
         if (prefix == null || prefix.trim().isEmpty()) {
             return name;

@@ -84,7 +84,7 @@ public abstract class Stats {
 
                 @Override
                 public void handle(String s, Request request, HttpServletRequest httpServletRequest, HttpServletResponse response)
-                    throws IOException, ServletException {
+                    throws IOException {
                     String scraped = registry.scrape();
 
                     response.setStatus(HttpServletResponse.SC_OK);
