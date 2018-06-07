@@ -57,13 +57,15 @@
     <rabbitmq.version>5.2.0</rabbitmq.version>
     <commons-cli.version>1.1</commons-cli.version>
     <metrics.version>4.0.2</metrics.version>
+    <micrometer.version>1.0.4</micrometer.version>
     <logback.version>1.2.3</logback.version>
-    <jetty.version>9.4.9.v20180320</jetty.version>
+    <jetty.version>9.4.10.v20180503</jetty.version>
     <junit.jupiter.version>5.1.0</junit.jupiter.version>
     <junit.platform.version>1.1.0</junit.platform.version>
     <mockito.version>2.16.0</mockito.version>
     <hamcrest.version>2.0.0.0</hamcrest.version>
     <awaitility.version>3.1.0</awaitility.version>
+    <jmh.version>1.20</jmh.version>
 
     <!-- to sign artifacts when releasing -->
     <gpg.keyname>6026DFCA</gpg.keyname>
@@ -86,7 +88,6 @@
     <maven.build.timestamp.format>yyyy-MM-dd'T'HH:mm:ss'Z'</maven.build.timestamp.format>
 
     <finalName>rabbitmq-${project.build.finalName}</finalName>
-    <jmh.version>1.20</jmh.version>
   </properties>
 
   <dependencies>
@@ -113,12 +114,12 @@
     <dependency>
       <groupId>io.micrometer</groupId>
       <artifactId>micrometer-core</artifactId>
-      <version>1.0.4</version>
+      <version>${micrometer.version}</version>
     </dependency>
     <dependency>
       <groupId>io.micrometer</groupId>
       <artifactId>micrometer-registry-prometheus</artifactId>
-      <version>1.0.4</version>
+      <version>${micrometer.version}</version>
     </dependency>
 
     <dependency>

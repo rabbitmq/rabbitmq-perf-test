@@ -18,57 +18,39 @@ package com.rabbitmq.perf;
 import com.codahale.metrics.Histogram;
 import com.codahale.metrics.MetricRegistry;
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
-import io.micrometer.prometheus.PrometheusConfig;
-import io.micrometer.prometheus.PrometheusMeterRegistry;
-import org.eclipse.jetty.server.Request;
-import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.handler.AbstractHandler;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.DoubleAccumulator;
 import java.util.function.Consumer;
+import java.util.function.DoubleBinaryOperator;
 
 public abstract class Stats {
-    protected final long    interval;
 
-    protected final long    startTime;
-    protected long    lastStatsTime;
+    protected final long interval;
 
-    protected int     sendCountInterval;
-    protected int     returnCountInterval;
-    protected int     confirmCountInterval;
-    protected int     nackCountInterval;
-    protected int     recvCountInterval;
-
-    protected int     sendCountTotal;
-    protected int     recvCountTotal;
-
-    protected int     latencyCountInterval;
-    protected int     latencyCountTotal;
-    protected long    minLatency;
-    protected long    maxLatency;
-    protected long    cumulativeLatencyInterval;
-    protected long    cumulativeLatencyTotal;
-
-    protected long    elapsedInterval;
-    protected long    elapsedTotal;
-
-    protected Histogram latency = new MetricRegistry().histogram("latency");
-
+    protected final long startTime;
     private final Consumer<Long> updateLatency;
-
-//    private final AtomicInteger sent, received;
+    private final DoubleAccumulator sent, returned, confirmed, nacked, received;
+    protected long lastStatsTime;
+    protected int sendCountInterval;
+    protected int returnCountInterval;
+    protected int confirmCountInterval;
+    protected int nackCountInterval;
+    protected int recvCountInterval;
+    protected int sendCountTotal;
+    protected int recvCountTotal;
+    protected int latencyCountInterval;
+    protected int latencyCountTotal;
+    protected long minLatency;
+    protected long maxLatency;
+    protected long cumulativeLatencyInterval;
+    protected long cumulativeLatencyTotal;
+    protected long elapsedInterval;
+    protected long elapsedTotal;
+    protected Histogram latency = new MetricRegistry().histogram("latency");
 
     public Stats(long interval) {
         this(interval, false, new SimpleMeterRegistry());
@@ -86,8 +68,12 @@ public abstract class Stats {
             .sla()
             .register(registry);
 
-//        sent = registry.gauge("sent", tags, new AtomicInteger(0));
-//        received = registry.gauge("received", tags, new AtomicInteger(0));
+        DoubleBinaryOperator accumulatorFunction = (x, y) -> y;
+        sent = registry.gauge("sent", new DoubleAccumulator(accumulatorFunction, 0.0));
+        returned = registry.gauge("returned", new DoubleAccumulator(accumulatorFunction, 0.0));
+        confirmed = registry.gauge("confirmed", new DoubleAccumulator(accumulatorFunction, 0.0));
+        nacked = registry.gauge("nacked", new DoubleAccumulator(accumulatorFunction, 0.0));
+        received = registry.gauge("received", new DoubleAccumulator(accumulatorFunction, 0.0));
 
         updateLatency = useMs ? latency -> latencyTimer.record(latency, TimeUnit.MILLISECONDS) :
             latency -> latencyTimer.record(latency, TimeUnit.NANOSECONDS);
@@ -96,19 +82,19 @@ public abstract class Stats {
     }
 
     private void reset(long t) {
-        lastStatsTime             = t;
+        lastStatsTime = t;
 
-        sendCountInterval         = 0;
-        returnCountInterval       = 0;
-        confirmCountInterval      = 0;
-        nackCountInterval         = 0;
-        recvCountInterval         = 0;
+        sendCountInterval = 0;
+        returnCountInterval = 0;
+        confirmCountInterval = 0;
+        nackCountInterval = 0;
+        recvCountInterval = 0;
 
-        minLatency                = Long.MAX_VALUE;
-        maxLatency                = Long.MIN_VALUE;
-        latencyCountInterval      = 0;
+        minLatency = Long.MAX_VALUE;
+        maxLatency = Long.MIN_VALUE;
+        latencyCountInterval = 0;
         cumulativeLatencyInterval = 0L;
-        latency                   = new MetricRegistry().histogram("latency");
+        latency = new MetricRegistry().histogram("latency");
     }
 
     private void report() {
@@ -136,12 +122,12 @@ public abstract class Stats {
     }
 
     public synchronized void handleConfirm(int numConfirms) {
-        confirmCountInterval +=numConfirms;
+        confirmCountInterval += numConfirms;
         report();
     }
 
     public synchronized void handleNack(int numAcks) {
-        nackCountInterval +=numAcks;
+        nackCountInterval += numAcks;
         report();
     }
 
@@ -161,5 +147,23 @@ public abstract class Stats {
         report();
     }
 
+    protected void sent(double rate) {
+        this.sent.accumulate(rate);
+    }
 
+    protected void returned(double rate) {
+        this.returned.accumulate(rate);
+    }
+
+    protected void confirmed(double rate) {
+        this.confirmed.accumulate(rate);
+    }
+
+    protected void nacked(double rate) {
+        this.nacked.accumulate(rate);
+    }
+
+    protected void received(double rate) {
+        this.received.accumulate(rate);
+    }
 }

@@ -79,7 +79,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
     @Mock
     Channel ch;
 
-    Stats stats = new Stats(0) {
+    Stats stats = new Stats(1000) {
 
         @Override
         protected void report(long now) {
