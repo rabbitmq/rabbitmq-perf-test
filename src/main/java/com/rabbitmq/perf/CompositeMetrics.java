@@ -15,14 +15,16 @@
 
 package com.rabbitmq.perf;
 
+import com.rabbitmq.client.ConnectionFactory;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
-import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import static com.rabbitmq.perf.OptionsUtils.forEach;
 
 /**
  *
@@ -42,22 +44,21 @@ public class CompositeMetrics implements Metrics {
     public Options options() {
         Options options = new Options();
         for (Metrics metric : metrics) {
-            for (Object optObj : metric.options().getOptions()) {
-                Option option = (Option) optObj;
+            forEach(metric.options(), option -> {
                 if (options.hasOption(option.getOpt())) {
                     throw new IllegalStateException("Option already existing: " + option.getOpt());
                 } else {
                     options.addOption(option);
                 }
-            }
+            });
         }
         return options;
     }
 
     @Override
-    public void configure(CommandLineProxy cmd, CompositeMeterRegistry meterRegistry) throws Exception {
+    public void configure(CommandLineProxy cmd, CompositeMeterRegistry meterRegistry, ConnectionFactory factory) throws Exception {
         for (Metrics metric : metrics) {
-            metric.configure(cmd, meterRegistry);
+            metric.configure(cmd, meterRegistry, factory);
         }
     }
 

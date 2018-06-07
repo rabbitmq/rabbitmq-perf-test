@@ -15,6 +15,7 @@
 
 package com.rabbitmq.perf;
 
+import com.rabbitmq.client.ConnectionFactory;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
 import io.micrometer.prometheus.PrometheusConfig;
 import io.micrometer.prometheus.PrometheusMeterRegistry;
@@ -42,12 +43,12 @@ public class PrometheusMetrics implements Metrics {
     public Options options() {
         Options options = new Options();
         options.addOption(new Option("mpr", "metrics-prometheus", false, "enable Prometheus metrics"));
-        options.addOption(new Option("mpe", "metrics-prometheus-endpoint", true, "the HTTP metrics endpoint"));
-        options.addOption(new Option("mpp", "metrics-prometheus-port", true, "the port to launch the HTTP metrics endpoint on"));
+        options.addOption(new Option("mpe", "metrics-prometheus-endpoint", true, "the HTTP metrics endpoint, default is /metrics"));
+        options.addOption(new Option("mpp", "metrics-prometheus-port", true, "the port to launch the HTTP metrics endpoint on, default is 8080"));
         return options;
     }
 
-    public void configure(CommandLineProxy cmd, CompositeMeterRegistry meterRegistry) throws Exception {
+    public void configure(CommandLineProxy cmd, CompositeMeterRegistry meterRegistry, ConnectionFactory factory) throws Exception {
         if (isEnabled(cmd)) {
             PrometheusMeterRegistry registry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
             meterRegistry.add(registry);
@@ -60,6 +61,7 @@ public class PrometheusMetrics implements Metrics {
             ContextHandler context = new ContextHandler();
             context.setContextPath(prometheusHttpEndpoint);
             context.setHandler(new AbstractHandler() {
+
                 @Override
                 public void handle(String s, Request request, HttpServletRequest httpServletRequest, HttpServletResponse response)
                     throws IOException {

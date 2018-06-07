@@ -19,9 +19,7 @@ import java.io.*;
 import java.nio.charset.Charset;
 import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -35,7 +33,6 @@ import java.util.function.Function;
 import com.rabbitmq.client.impl.ClientVersion;
 import com.rabbitmq.client.impl.nio.NioParams;
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -52,6 +49,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.SSLContext;
 
+import static com.rabbitmq.perf.OptionsUtils.forEach;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
@@ -66,9 +64,7 @@ public class PerfTest {
         CommandLineParser parser = new GnuParser();
         CompositeMetrics metrics = new CompositeMetrics();
         Options metricsOptions = metrics.options();
-        for (Object objOpt : metricsOptions.getOptions()) {
-            options.addOption((Option) objOpt);
-        }
+        forEach(metricsOptions, option -> options.addOption(option));
         try {
             CommandLine rawCmd = parser.parse(options, args);
             CommandLineProxy cmd = new CommandLineProxy(options, rawCmd, perfTestOptions.argumentLookup);
@@ -150,20 +146,11 @@ public class PerfTest {
             String urisParameter     = strArg(cmd, 'H', null);
             String outputFile        = strArg(cmd, 'o', null);
 
-            String argumentTags = strArg(cmd, "mt", null);
+            ConnectionFactory factory = new ConnectionFactory();
 
             CompositeMeterRegistry registry = new CompositeMeterRegistry();
 
-            Collection<Tag> tags = new ArrayList<>();
-            if (argumentTags != null) {
-                for (String tag : argumentTags.split(",")) {
-                    String[] keyValue = tag.split("=");
-                    tags.add(Tag.of(keyValue[0], keyValue[1]));
-                }
-            }
-            registry.config().commonTags(tags);
-
-            metrics.configure(cmd, registry);
+            metrics.configure(cmd, registry, factory);
 
             final PrintWriter output;
             if (outputFile != null) {
@@ -199,7 +186,7 @@ public class PerfTest {
             SSLContext sslContext = perfTestOptions.skipSslContextConfiguration ? null :
                 getSslContextIfNecessary(cmd, System.getProperties());
 
-            ConnectionFactory factory = new ConnectionFactory();
+
             if (sslContext != null) {
                 factory.useSslProtocol(sslContext);
             }
@@ -386,13 +373,14 @@ public class PerfTest {
         HelpFormatter formatter = new HelpFormatter();
         formatter.setOptPrefix("");
         Options envOptions = new Options();
-        for (Object objOpt : options.getOptions()) {
-            Option option = (Option) objOpt;
+        forEach(options, option -> {
             if ("?".equals(option.getOpt()) || "v".equals(option.getOpt()) || "env".equals(option.getOpt())) {
-                continue;
+                // no op
+            } else {
+                envOptions.addOption(LONG_OPTION_TO_ENVIRONMENT_VARIABLE.apply(option.getLongOpt()), false, option.getDescription());
             }
-            envOptions.addOption(LONG_OPTION_TO_ENVIRONMENT_VARIABLE.apply(option.getLongOpt()), false, option.getDescription());
-        }
+
+        });
         formatter.printHelp("<program>", envOptions);
     }
 

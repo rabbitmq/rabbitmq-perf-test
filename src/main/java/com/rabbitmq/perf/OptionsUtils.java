@@ -15,30 +15,29 @@
 
 package com.rabbitmq.perf;
 
-import com.rabbitmq.client.ConnectionFactory;
-import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 
 /**
  *
  */
-public interface Metrics {
+public class OptionsUtils {
 
-    Options options();
-
-    default void configure(CommandLineProxy cmd, CompositeMeterRegistry meterRegistry, ConnectionFactory factory) throws Exception { }
-
-    default boolean isEnabled(CommandLineProxy cmd) {
-        for (Object optObj : this.options().getOptions()) {
-            Option option = (Option) optObj;
-            if (cmd.hasOption(option.getOpt())) {
-                return true;
+    static void forEach(Options options, OptionConsumer action) {
+        for (Object option : options.getOptions()) {
+            try {
+                action.apply((Option) option);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
             }
         }
-        return false;
     }
 
-    default void close() throws Exception { }
+    @FunctionalInterface
+    interface OptionConsumer {
+
+        void apply(Option option) throws Exception;
+
+    }
 
 }

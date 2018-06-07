@@ -60,7 +60,7 @@ public class PrometheusMetricsTest {
         CompositeMeterRegistry registry = new CompositeMeterRegistry();
         AtomicInteger metric = registry.gauge("dummy", new AtomicInteger(0));
         metric.set(42);
-        metrics.configure(cmd, registry);
+        metrics.configure(cmd, registry, null);
 
         URL url = new URL("http://localhost:" + port + "/metrics");
         HttpURLConnection con = (HttpURLConnection) url.openConnection();
