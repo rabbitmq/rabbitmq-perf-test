@@ -73,13 +73,22 @@ public class PerfTest {
             CommandLine rawCmd = parser.parse(options, args);
             CommandLineProxy cmd = new CommandLineProxy(options, rawCmd, perfTestOptions.argumentLookup);
 
-            if (cmd.hasOption('?')) {
-                usage(getOptions());
+            if (cmd.hasOption("mh")) {
+                if (cmd.hasOption("env")) {
+                    usageWithEnvironmentVariables(metricsOptions);
+                } else {
+                    usage(metricsOptions);
+                }
                 systemExiter.exit(0);
             }
 
-            if (cmd.hasOption("mh")) {
-                usage(metricsOptions);
+            if(cmd.hasOption("env")) {
+                usageWithEnvironmentVariables(getOptions());
+                systemExiter.exit(0);
+            }
+
+            if (cmd.hasOption('?')) {
+                usage(getOptions());
                 systemExiter.exit(0);
             }
 
@@ -140,7 +149,6 @@ public class PerfTest {
             String uri               = strArg(cmd, 'h', "amqp://localhost");
             String urisParameter     = strArg(cmd, 'H', null);
             String outputFile        = strArg(cmd, 'o', null);
-
 
             String argumentTags = strArg(cmd, "mt", null);
 
@@ -374,6 +382,20 @@ public class PerfTest {
         formatter.printHelp("<program>", options);
     }
 
+    private static void usageWithEnvironmentVariables(Options options) {
+        HelpFormatter formatter = new HelpFormatter();
+        formatter.setOptPrefix("");
+        Options envOptions = new Options();
+        for (Object objOpt : options.getOptions()) {
+            Option option = (Option) objOpt;
+            if ("?".equals(option.getOpt()) || "v".equals(option.getOpt()) || "env".equals(option.getOpt())) {
+                continue;
+            }
+            envOptions.addOption(LONG_OPTION_TO_ENVIRONMENT_VARIABLE.apply(option.getLongOpt()), false, option.getDescription());
+        }
+        formatter.printHelp("<program>", envOptions);
+    }
+
     public static Options getOptions() {
         Options options = new Options();
         options.addOption(new Option("?", "help",                   false,"show usage"));
@@ -452,6 +474,8 @@ public class PerfTest {
         options.addOption(new Option("niotp", "nio-thread-pool",true, "size of NIO thread pool, should be slightly higher than number of NIO threads"));
 
         options.addOption(new Option("mh", "metrics-help",false, "show metrics usage"));
+
+        options.addOption(new Option("env", "environment-variables",false, "show usage with environment variables"));
 
         return options;
     }
