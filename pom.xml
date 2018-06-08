@@ -59,7 +59,7 @@
     <metrics.version>4.0.2</metrics.version>
     <micrometer.version>1.0.4</micrometer.version>
     <logback.version>1.2.3</logback.version>
-    <jetty.version>9.4.10.v20180503</jetty.version>
+    <jetty.version>9.4.11.v20180605</jetty.version>
     <junit.jupiter.version>5.1.0</junit.jupiter.version>
     <junit.platform.version>1.1.0</junit.platform.version>
     <mockito.version>2.16.0</mockito.version>
