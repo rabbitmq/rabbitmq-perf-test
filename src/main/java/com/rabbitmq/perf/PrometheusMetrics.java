@@ -21,10 +21,13 @@ import io.micrometer.prometheus.PrometheusConfig;
 import io.micrometer.prometheus.PrometheusMeterRegistry;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
+import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.handler.AbstractHandler;
 import org.eclipse.jetty.server.handler.ContextHandler;
+import org.eclipse.jetty.util.thread.QueuedThreadPool;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -55,8 +58,14 @@ public class PrometheusMetrics implements Metrics {
             int prometheusHttpEndpointPort = intArg(cmd, "mpp", 8080);
             String prometheusHttpEndpoint = strArg(cmd, "mpe", "metrics");
             prometheusHttpEndpoint = prometheusHttpEndpoint.startsWith("/") ? prometheusHttpEndpoint : "/" + prometheusHttpEndpoint;
-            // FIXME configure Jetty (threads, etc)
-            server = new Server(prometheusHttpEndpointPort);
+            QueuedThreadPool threadPool = new QueuedThreadPool();
+            // difference between those 2 should be high enough to avoid a warning
+            threadPool.setMinThreads(2);
+            threadPool.setMaxThreads(12);
+            server = new Server(threadPool);
+            ServerConnector connector = new ServerConnector(server);
+            connector.setPort(prometheusHttpEndpointPort);
+            server.setConnectors(new Connector[] { connector });
 
             ContextHandler context = new ContextHandler();
             context.setContextPath(prometheusHttpEndpoint);
