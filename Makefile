@@ -10,7 +10,7 @@ export PATH 	:=$(CURDIR):$(CURDIR)/scripts:$(PATH)
 #
 
 binary: clean ## Build the binary distribution
-	@mvnw package -P assemblies -Dgpg.skip=true
+	@mvnw package -P assemblies -Dgpg.skip=true -Dmaven.test.skip
 
 help:
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
