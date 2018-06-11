@@ -30,6 +30,10 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
+import ch.qos.logback.classic.LoggerContext;
+import ch.qos.logback.classic.joran.JoranConfigurator;
+import ch.qos.logback.core.joran.spi.JoranException;
+import ch.qos.logback.core.util.StatusPrinter;
 import com.rabbitmq.client.impl.ClientVersion;
 import com.rabbitmq.client.impl.nio.NioParams;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -340,8 +344,27 @@ public class PerfTest {
         return completionHandler;
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
+        configureLogbackIfNecessary();
         main(args, new PerfTestOptions().setSystemExiter(new JvmSystemExiter()).setSkipSslContextConfiguration(false));
+    }
+
+    private static void configureLogbackIfNecessary() throws IOException {
+        if (System.getProperty("logback.configurationFile") == null) {
+            LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
+            InputStream configurationFile = PerfTest.class.getResourceAsStream("/logback-perf-test.xml");
+            try {
+                JoranConfigurator configurator = new JoranConfigurator();
+                configurator.setContext(context);
+                context.reset();
+                configurator.doConfigure(configurationFile);
+            } catch (JoranException je) {
+                // StatusPrinter will handle this
+            } finally {
+                configurationFile.close();
+            }
+            StatusPrinter.printInCaseOfErrorsOrWarnings(context);
+        }
     }
 
     private static SSLContext getSslContextIfNecessary(CommandLineProxy cmd, Properties systemProperties) throws NoSuchAlgorithmException {
