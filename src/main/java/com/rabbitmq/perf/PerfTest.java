@@ -179,13 +179,14 @@ public class PerfTest {
                 uris = singletonList(uri);
             }
 
+            String metricsPrefix = strArg(cmd, "mpx", "perftest_");
             //setup
             PrintlnStats stats = new PrintlnStats(testID,
                 1000L * samplingInterval,
                 producerCount > 0,
                 consumerCount > 0,
                 (flags.contains("mandatory") || flags.contains("immediate")),
-                confirm != -1, legacyMetrics, useMillis, output, registry);
+                confirm != -1, legacyMetrics, useMillis, output, registry, metricsPrefix);
 
             SSLContext sslContext = perfTestOptions.skipSslContextConfiguration ? null :
                 getSslContextIfNecessary(cmd, System.getProperties());
@@ -571,8 +572,8 @@ public class PerfTest {
             boolean sendStatsEnabled, boolean recvStatsEnabled,
             boolean returnStatsEnabled, boolean confirmStatsEnabled,
             boolean legacyMetrics, boolean useMillis,
-            PrintWriter out, MeterRegistry registry) {
-            super(interval, useMillis, registry);
+            PrintWriter out, MeterRegistry registry, String metricsPrefix) {
+            super(interval, useMillis, registry, metricsPrefix);
             this.sendStatsEnabled = sendStatsEnabled;
             this.recvStatsEnabled = recvStatsEnabled;
             this.returnStatsEnabled = returnStatsEnabled;
@@ -582,7 +583,7 @@ public class PerfTest {
             this.useMillis = useMillis;
             this.out = out;
             if (out != null) {
-                out.printf("id,time (s),sent (msg/s),returned (msg/s)," +
+                out.printf("id,time (s),published (msg/s),returned (msg/s)," +
                         "confirmed (msg/s),nacked (msg/s)," +
                         "received (msg/s),min latency (%s),median latency (%s)," +
                         "75th p. latency (%s),95th p. latency (%s),99th p. latency (%s)%n",
@@ -594,15 +595,15 @@ public class PerfTest {
         protected void report(long now) {
             String output = "id: " + testID + ", ";
 
-            double rateSent = 0.0;
+            double ratePublished = 0.0;
             double rateReturned = 0.0;
             double rateConfirmed = 0.0;
             double rateNacked = 0.0;
-            double rateReceived = 0.0;
+            double rateConsumed = 0.0;
 
             if (sendStatsEnabled) {
-                rateSent = rate(sendCountInterval, elapsedInterval);
-                sent(rateSent);
+                ratePublished = rate(sendCountInterval, elapsedInterval);
+                published(ratePublished);
             }
             if (sendStatsEnabled && returnStatsEnabled) {
                 rateReturned = rate(returnCountInterval, elapsedInterval);
@@ -617,17 +618,17 @@ public class PerfTest {
                 nacked(rateNacked);
             }
             if (recvStatsEnabled) {
-                rateReceived = rate(recvCountInterval, elapsedInterval);
-                received(rateReceived);
+                rateConsumed = rate(recvCountInterval, elapsedInterval);
+                received(rateConsumed);
             }
 
             output += "time: " + format("%.3f", (now - startTime)/1000.0) + "s";
             output +=
-                getRate("sent",      rateSent,    sendStatsEnabled) +
+                getRate("sent",      ratePublished,    sendStatsEnabled) +
                     getRate("returned",  rateReturned,  sendStatsEnabled && returnStatsEnabled) +
                     getRate("confirmed", rateConfirmed, sendStatsEnabled && confirmStatsEnabled) +
                     getRate("nacked",    rateNacked,    sendStatsEnabled && confirmStatsEnabled) +
-                    getRate("received",  rateReceived,    recvStatsEnabled);
+                    getRate("received",  rateConsumed,    recvStatsEnabled);
 
             if (legacyMetrics) {
                 output += (latencyCountInterval > 0 ?
@@ -649,11 +650,11 @@ public class PerfTest {
             System.out.println(output);
             if (out != null) {
                 out.println(testID + "," + format("%.3f", (now - startTime)/1000.0) + "," +
-                    rate(rateSent, sendStatsEnabled)+ "," +
+                    rate(ratePublished, sendStatsEnabled)+ "," +
                     rate(rateReturned, sendStatsEnabled && returnStatsEnabled)+ "," +
                     rate(rateConfirmed, sendStatsEnabled && confirmStatsEnabled)+ "," +
                     rate(rateNacked, sendStatsEnabled && confirmStatsEnabled)+ "," +
-                    rate(rateReceived, recvStatsEnabled) + "," +
+                    rate(rateConsumed, recvStatsEnabled) + "," +
                     (latencyCountInterval > 0 ?
                         div(latency.getSnapshot().getMin()) + "," +
                         div(latency.getSnapshot().getMedian()) + "," +

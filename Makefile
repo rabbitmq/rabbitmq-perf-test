@@ -21,6 +21,9 @@ clean: 	## Clean all build artefacts
 compile: ## Compile the source code
 	@mvnw compile
 
+install: clean ## Create and copy the binaries into the local Maven repository
+	@mvnw install -Dmaven.test.skip
+
 jar: clean ## Build the JAR file
 	@mvnw package
 

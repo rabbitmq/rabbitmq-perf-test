@@ -41,6 +41,7 @@ public class BaseMetrics implements Metrics {
     public Options options() {
         Options options = new Options();
         options.addOption(new Option("mt", "metrics-tags", true, "metrics tags as key-value pairs separated by commas"));
+        options.addOption(new Option("mpx", "metrics-prefix", true, "prefix for PerfTest metrics, default is perftest_"));
         options.addOption(new Option("mc", "metrics-client", false, "enable client metrics"));
         options.addOption(new Option("mcl", "metrics-class-loader", false, "enable JVM class loader metrics"));
         options.addOption(new Option("mjm", "metrics-jvm-memory", false, "enable JVM memory metrics"));
@@ -63,7 +64,7 @@ public class BaseMetrics implements Metrics {
         }
         meterRegistry.config().commonTags(tags);
         if (cmd.hasOption("mc")) {
-            factory.setMetricsCollector(new MicrometerMetricsCollector(meterRegistry));
+            factory.setMetricsCollector(new MicrometerMetricsCollector(meterRegistry, "client"));
         }
 
         if (cmd.hasOption("mcl")) {

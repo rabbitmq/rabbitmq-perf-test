@@ -582,7 +582,7 @@ public class TopologyTest {
         when(ch.queueDeclare(queueNameCaptor.capture(), anyBoolean(), anyBoolean(), anyBoolean(), isNull()))
             .then(invocation -> new AMQImpl.Queue.DeclareOk(invocation.getArgument(0), 0, 0));
 
-        // once all producers have sent messages (producerCount routing keys in the set),
+        // once all producers have published messages (producerCount routing keys in the set),
         // we open the latch so MulticastSet.run can end
         Set<String> routingKeys = new HashSet<>();
         CountDownLatch latchPublishing = new CountDownLatch(1);

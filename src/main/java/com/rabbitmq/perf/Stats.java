@@ -33,7 +33,7 @@ public abstract class Stats {
 
     protected final long startTime;
     private final Consumer<Long> updateLatency;
-    private final DoubleAccumulator sent, returned, confirmed, nacked, received;
+    private final DoubleAccumulator published, returned, confirmed, nacked, consumed;
     protected long lastStatsTime;
     protected int sendCountInterval;
     protected int returnCountInterval;
@@ -53,15 +53,17 @@ public abstract class Stats {
     protected Histogram latency = new MetricRegistry().histogram("latency");
 
     public Stats(long interval) {
-        this(interval, false, new SimpleMeterRegistry());
+        this(interval, false, new SimpleMeterRegistry(), null);
     }
 
-    public Stats(long interval, boolean useMs, MeterRegistry registry) {
+    public Stats(long interval, boolean useMs, MeterRegistry registry, String metricsPrefix) {
         this.interval = interval;
         startTime = System.currentTimeMillis();
 
+        metricsPrefix = metricsPrefix == null ? "" : metricsPrefix;
+
         Timer latencyTimer = Timer
-            .builder("latency")
+            .builder(metricsPrefix + "latency")
             .description("message latency")
             .publishPercentiles(0.5, 0.75, 0.95, 0.99)
             .distributionStatisticExpiry(Duration.ofMillis(this.interval))
@@ -69,11 +71,11 @@ public abstract class Stats {
             .register(registry);
 
         DoubleBinaryOperator accumulatorFunction = (x, y) -> y;
-        sent = registry.gauge("sent", new DoubleAccumulator(accumulatorFunction, 0.0));
-        returned = registry.gauge("returned", new DoubleAccumulator(accumulatorFunction, 0.0));
-        confirmed = registry.gauge("confirmed", new DoubleAccumulator(accumulatorFunction, 0.0));
-        nacked = registry.gauge("nacked", new DoubleAccumulator(accumulatorFunction, 0.0));
-        received = registry.gauge("received", new DoubleAccumulator(accumulatorFunction, 0.0));
+        published = registry.gauge(metricsPrefix + "published", new DoubleAccumulator(accumulatorFunction, 0.0));
+        returned = registry.gauge(metricsPrefix + "returned", new DoubleAccumulator(accumulatorFunction, 0.0));
+        confirmed = registry.gauge(metricsPrefix + "confirmed", new DoubleAccumulator(accumulatorFunction, 0.0));
+        nacked = registry.gauge(metricsPrefix + "nacked", new DoubleAccumulator(accumulatorFunction, 0.0));
+        consumed = registry.gauge(metricsPrefix + "consumed", new DoubleAccumulator(accumulatorFunction, 0.0));
 
         updateLatency = useMs ? latency -> latencyTimer.record(latency, TimeUnit.MILLISECONDS) :
             latency -> latencyTimer.record(latency, TimeUnit.NANOSECONDS);
@@ -147,8 +149,8 @@ public abstract class Stats {
         report();
     }
 
-    protected void sent(double rate) {
-        this.sent.accumulate(rate);
+    protected void published(double rate) {
+        this.published.accumulate(rate);
     }
 
     protected void returned(double rate) {
@@ -164,6 +166,6 @@ public abstract class Stats {
     }
 
     protected void received(double rate) {
-        this.received.accumulate(rate);
+        this.consumed.accumulate(rate);
     }
 }
