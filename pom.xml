@@ -57,13 +57,15 @@
     <rabbitmq.version>5.2.0</rabbitmq.version>
     <commons-cli.version>1.1</commons-cli.version>
     <metrics.version>4.0.2</metrics.version>
+    <micrometer.version>1.0.4</micrometer.version>
     <logback.version>1.2.3</logback.version>
-    <jetty.version>9.4.9.v20180320</jetty.version>
-    <junit.jupiter.version>5.1.0</junit.jupiter.version>
-    <junit.platform.version>1.1.0</junit.platform.version>
-    <mockito.version>2.16.0</mockito.version>
+    <jetty.version>9.4.11.v20180605</jetty.version>
+    <junit.jupiter.version>5.2.0</junit.jupiter.version>
+    <junit.platform.version>1.2.0</junit.platform.version>
+    <mockito.version>2.18.3</mockito.version>
     <hamcrest.version>2.0.0.0</hamcrest.version>
     <awaitility.version>3.1.0</awaitility.version>
+    <jmh.version>1.20</jmh.version>
 
     <!-- to sign artifacts when releasing -->
     <gpg.keyname>6026DFCA</gpg.keyname>
@@ -72,21 +74,20 @@
     <versions.maven.plugin.version>2.3</versions.maven.plugin.version>
     <maven.release.plugin.version>2.5.3</maven.release.plugin.version>
     <maven.source.plugin.version>3.0.1</maven.source.plugin.version>
-    <maven.javadoc.plugin.version>3.0.0-M1</maven.javadoc.plugin.version>
+    <maven.javadoc.plugin.version>3.0.1</maven.javadoc.plugin.version>
     <maven.gpg.plugin.version>1.6</maven.gpg.plugin.version>
     <maven.assembly.plugin.version>3.1.0</maven.assembly.plugin.version>
     <maven.install.plugin.version>2.5.2</maven.install.plugin.version>
     <checksum.maven.plugin.version>1.6</checksum.maven.plugin.version>
     <maven.jar.plugin.version>3.0.2</maven.jar.plugin.version>
     <buildnumber.plugin.version>1.4</buildnumber.plugin.version>
-    <maven.surefire.plugin.version>2.19.1</maven.surefire.plugin.version>
+    <maven.surefire.plugin.version>2.21.0</maven.surefire.plugin.version>
 
     <!-- because of https://issues.apache.org/jira/browse/MRESOURCES-99 -->
     <build.timestamp>${maven.build.timestamp}</build.timestamp>
     <maven.build.timestamp.format>yyyy-MM-dd'T'HH:mm:ss'Z'</maven.build.timestamp.format>
 
     <finalName>rabbitmq-${project.build.finalName}</finalName>
-    <jmh.version>1.20</jmh.version>
   </properties>
 
   <dependencies>
@@ -110,6 +111,29 @@
       <artifactId>jetty-servlet</artifactId>
       <version>${jetty.version}</version>
     </dependency>
+    <dependency>
+      <groupId>io.micrometer</groupId>
+      <artifactId>micrometer-core</artifactId>
+      <version>${micrometer.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.micrometer</groupId>
+      <artifactId>micrometer-registry-prometheus</artifactId>
+      <version>${micrometer.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-classic</artifactId>
+      <version>${logback.version}</version>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-core</artifactId>
+      <version>${logback.version}</version>
+      <optional>true</optional>
+    </dependency>
+
 
     <dependency>
       <groupId>org.junit.jupiter</groupId>
@@ -165,13 +189,6 @@
       <groupId>org.awaitility</groupId>
       <artifactId>awaitility</artifactId>
       <version>${awaitility.version}</version>
-      <scope>test</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>ch.qos.logback</groupId>
-      <artifactId>logback-classic</artifactId>
-      <version>${logback.version}</version>
       <scope>test</scope>
     </dependency>
 
@@ -450,6 +467,12 @@
         <dependency>
           <groupId>ch.qos.logback</groupId>
           <artifactId>logback-classic</artifactId>
+          <version>${logback.version}</version>
+        </dependency>
+
+        <dependency>
+          <groupId>ch.qos.logback</groupId>
+          <artifactId>logback-core</artifactId>
           <version>${logback.version}</version>
         </dependency>
 

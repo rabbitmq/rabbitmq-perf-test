@@ -62,7 +62,7 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
     private Semaphore confirmPool;
     private int confirmTimeout;
     private final SortedSet<Long> unconfirmedSet =
-        Collections.synchronizedSortedSet(new TreeSet<Long>());
+        Collections.synchronizedSortedSet(new TreeSet<>());
 
     private final MulticastSet.CompletionHandler completionHandler;
     private final AtomicBoolean completed = new AtomicBoolean(false);

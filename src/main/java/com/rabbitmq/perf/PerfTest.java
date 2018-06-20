@@ -30,8 +30,14 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
+import ch.qos.logback.classic.LoggerContext;
+import ch.qos.logback.classic.joran.JoranConfigurator;
+import ch.qos.logback.core.joran.spi.JoranException;
+import ch.qos.logback.core.util.StatusPrinter;
 import com.rabbitmq.client.impl.ClientVersion;
 import com.rabbitmq.client.impl.nio.NioParams;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.GnuParser;
@@ -47,6 +53,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.SSLContext;
 
+import static com.rabbitmq.perf.OptionsUtils.forEach;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
@@ -59,12 +66,29 @@ public class PerfTest {
         SystemExiter systemExiter = perfTestOptions.systemExiter;
         Options options = getOptions();
         CommandLineParser parser = new GnuParser();
+        CompositeMetrics metrics = new CompositeMetrics();
+        Options metricsOptions = metrics.options();
+        forEach(metricsOptions, option -> options.addOption(option));
         try {
             CommandLine rawCmd = parser.parse(options, args);
             CommandLineProxy cmd = new CommandLineProxy(options, rawCmd, perfTestOptions.argumentLookup);
 
+            if (cmd.hasOption("mh")) {
+                if (cmd.hasOption("env")) {
+                    usageWithEnvironmentVariables(metricsOptions);
+                } else {
+                    usage(metricsOptions);
+                }
+                systemExiter.exit(0);
+            }
+
+            if(cmd.hasOption("env")) {
+                usageWithEnvironmentVariables(getOptions());
+                systemExiter.exit(0);
+            }
+
             if (cmd.hasOption('?')) {
-                usage(options);
+                usage(getOptions());
                 systemExiter.exit(0);
             }
 
@@ -126,6 +150,12 @@ public class PerfTest {
             String urisParameter     = strArg(cmd, 'H', null);
             String outputFile        = strArg(cmd, 'o', null);
 
+            ConnectionFactory factory = new ConnectionFactory();
+
+            CompositeMeterRegistry registry = new CompositeMeterRegistry();
+
+            metrics.configure(cmd, registry, factory);
+
             final PrintWriter output;
             if (outputFile != null) {
                 File file = new File(outputFile);
@@ -149,18 +179,19 @@ public class PerfTest {
                 uris = singletonList(uri);
             }
 
+            String metricsPrefix = strArg(cmd, "mpx", "perftest_");
             //setup
             PrintlnStats stats = new PrintlnStats(testID,
                 1000L * samplingInterval,
                 producerCount > 0,
                 consumerCount > 0,
                 (flags.contains("mandatory") || flags.contains("immediate")),
-                confirm != -1, legacyMetrics, useMillis, output);
+                confirm != -1, legacyMetrics, useMillis, output, registry, metricsPrefix);
 
             SSLContext sslContext = perfTestOptions.skipSslContextConfiguration ? null :
                 getSslContextIfNecessary(cmd, System.getProperties());
 
-            ConnectionFactory factory = new ConnectionFactory();
+
             if (sslContext != null) {
                 factory.useSslProtocol(sslContext);
             }
@@ -252,6 +283,10 @@ public class PerfTest {
             System.err.println("Main thread caught exception: " + e);
             e.printStackTrace();
             systemExiter.exit(1);
+        } finally {
+            if (metrics != null) {
+                metrics.close();
+            }
         }
     }
 
@@ -310,8 +345,27 @@ public class PerfTest {
         return completionHandler;
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
+        configureLogbackIfNecessary();
         main(args, new PerfTestOptions().setSystemExiter(new JvmSystemExiter()).setSkipSslContextConfiguration(false));
+    }
+
+    private static void configureLogbackIfNecessary() throws IOException {
+        if (System.getProperty("logback.configurationFile") == null) {
+            LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
+            InputStream configurationFile = PerfTest.class.getResourceAsStream("/logback-perf-test.xml");
+            try {
+                JoranConfigurator configurator = new JoranConfigurator();
+                configurator.setContext(context);
+                context.reset();
+                configurator.doConfigure(configurationFile);
+            } catch (JoranException je) {
+                // StatusPrinter will handle this
+            } finally {
+                configurationFile.close();
+            }
+            StatusPrinter.printInCaseOfErrorsOrWarnings(context);
+        }
     }
 
     private static SSLContext getSslContextIfNecessary(CommandLineProxy cmd, Properties systemProperties) throws NoSuchAlgorithmException {
@@ -337,6 +391,21 @@ public class PerfTest {
     private static void usage(Options options) {
         HelpFormatter formatter = new HelpFormatter();
         formatter.printHelp("<program>", options);
+    }
+
+    private static void usageWithEnvironmentVariables(Options options) {
+        HelpFormatter formatter = new HelpFormatter();
+        formatter.setOptPrefix("");
+        Options envOptions = new Options();
+        forEach(options, option -> {
+            if ("?".equals(option.getOpt()) || "v".equals(option.getOpt()) || "env".equals(option.getOpt())) {
+                // no op
+            } else {
+                envOptions.addOption(LONG_OPTION_TO_ENVIRONMENT_VARIABLE.apply(option.getLongOpt()), false, option.getDescription());
+            }
+
+        });
+        formatter.printHelp("<program>", envOptions);
     }
 
     public static Options getOptions() {
@@ -415,34 +484,39 @@ public class PerfTest {
         options.addOption(new Option("pst", "producer-scheduler-threads",true, "number of threads to use when using --publishing-interval"));
         options.addOption(new Option("niot", "nio-threads",true, "number of NIO threads to use"));
         options.addOption(new Option("niotp", "nio-thread-pool",true, "size of NIO thread pool, should be slightly higher than number of NIO threads"));
+
+        options.addOption(new Option("mh", "metrics-help",false, "show metrics usage"));
+
+        options.addOption(new Option("env", "environment-variables",false, "show usage with environment variables"));
+
         return options;
     }
 
-    private static String strArg(CommandLineProxy cmd, char opt, String def) {
+    static String strArg(CommandLineProxy cmd, char opt, String def) {
         return cmd.getOptionValue(opt, def);
     }
 
-    private static String strArg(CommandLineProxy cmd, String opt, String def) {
+    static String strArg(CommandLineProxy cmd, String opt, String def) {
         return cmd.getOptionValue(opt, def);
     }
 
-    private static int intArg(CommandLineProxy cmd, char opt, int def) {
+    static int intArg(CommandLineProxy cmd, char opt, int def) {
         return Integer.parseInt(cmd.getOptionValue(opt, Integer.toString(def)));
     }
 
-    private static int intArg(CommandLineProxy cmd, String opt, int def) {
+    static int intArg(CommandLineProxy cmd, String opt, int def) {
         return Integer.parseInt(cmd.getOptionValue(opt, Integer.toString(def)));
     }
 
-    private static float floatArg(CommandLineProxy cmd, char opt, float def) {
+    static float floatArg(CommandLineProxy cmd, char opt, float def) {
         return Float.parseFloat(cmd.getOptionValue(opt, Float.toString(def)));
     }
 
-    private static boolean boolArg(CommandLineProxy cmd, String opt, boolean def) {
+    static boolean boolArg(CommandLineProxy cmd, String opt, boolean def) {
         return Boolean.parseBoolean(cmd.getOptionValue(opt, Boolean.toString(def)));
     }
 
-    private static List<?> lstArg(CommandLineProxy cmd, char opt) {
+    static List<?> lstArg(CommandLineProxy cmd, char opt) {
         String[] vals = cmd.getOptionValues(opt);
         if (vals == null) {
             vals = new String[] {};
@@ -450,11 +524,11 @@ public class PerfTest {
         return asList(vals);
     }
 
-    private static boolean hasOption(CommandLineProxy cmd, String opt) {
+    static boolean hasOption(CommandLineProxy cmd, String opt) {
         return cmd.hasOption(opt);
     }
 
-    private static Map<String, Object> convertKeyValuePairs(String arg) {
+    static Map<String, Object> convertKeyValuePairs(String arg) {
         if (arg == null || arg.trim().isEmpty()) {
             return null;
         }
@@ -498,8 +572,8 @@ public class PerfTest {
             boolean sendStatsEnabled, boolean recvStatsEnabled,
             boolean returnStatsEnabled, boolean confirmStatsEnabled,
             boolean legacyMetrics, boolean useMillis,
-            PrintWriter out) {
-            super(interval);
+            PrintWriter out, MeterRegistry registry, String metricsPrefix) {
+            super(interval, useMillis, registry, metricsPrefix);
             this.sendStatsEnabled = sendStatsEnabled;
             this.recvStatsEnabled = recvStatsEnabled;
             this.returnStatsEnabled = returnStatsEnabled;
@@ -509,7 +583,7 @@ public class PerfTest {
             this.useMillis = useMillis;
             this.out = out;
             if (out != null) {
-                out.printf("id,time (s),sent (msg/s),returned (msg/s)," +
+                out.printf("id,time (s),published (msg/s),returned (msg/s)," +
                         "confirmed (msg/s),nacked (msg/s)," +
                         "received (msg/s),min latency (%s),median latency (%s)," +
                         "75th p. latency (%s),95th p. latency (%s),99th p. latency (%s)%n",
@@ -521,13 +595,40 @@ public class PerfTest {
         protected void report(long now) {
             String output = "id: " + testID + ", ";
 
+            double ratePublished = 0.0;
+            double rateReturned = 0.0;
+            double rateConfirmed = 0.0;
+            double rateNacked = 0.0;
+            double rateConsumed = 0.0;
+
+            if (sendStatsEnabled) {
+                ratePublished = rate(sendCountInterval, elapsedInterval);
+                published(ratePublished);
+            }
+            if (sendStatsEnabled && returnStatsEnabled) {
+                rateReturned = rate(returnCountInterval, elapsedInterval);
+                returned(rateReturned);
+            }
+            if (sendStatsEnabled && confirmStatsEnabled) {
+                rateConfirmed = rate(confirmCountInterval, elapsedInterval);
+                confirmed(rateConfirmed);
+            }
+            if (sendStatsEnabled && confirmStatsEnabled) {
+                rateNacked = rate(nackCountInterval, elapsedInterval);
+                nacked(rateNacked);
+            }
+            if (recvStatsEnabled) {
+                rateConsumed = rate(recvCountInterval, elapsedInterval);
+                received(rateConsumed);
+            }
+
             output += "time: " + format("%.3f", (now - startTime)/1000.0) + "s";
             output +=
-                getRate("sent",      sendCountInterval,    sendStatsEnabled,                        elapsedInterval) +
-                    getRate("returned",  returnCountInterval,  sendStatsEnabled && returnStatsEnabled,  elapsedInterval) +
-                    getRate("confirmed", confirmCountInterval, sendStatsEnabled && confirmStatsEnabled, elapsedInterval) +
-                    getRate("nacked",    nackCountInterval,    sendStatsEnabled && confirmStatsEnabled, elapsedInterval) +
-                    getRate("received",  recvCountInterval,    recvStatsEnabled,                        elapsedInterval);
+                getRate("sent",      ratePublished,    sendStatsEnabled) +
+                    getRate("returned",  rateReturned,  sendStatsEnabled && returnStatsEnabled) +
+                    getRate("confirmed", rateConfirmed, sendStatsEnabled && confirmStatsEnabled) +
+                    getRate("nacked",    rateNacked,    sendStatsEnabled && confirmStatsEnabled) +
+                    getRate("received",  rateConsumed,    recvStatsEnabled);
 
             if (legacyMetrics) {
                 output += (latencyCountInterval > 0 ?
@@ -549,11 +650,11 @@ public class PerfTest {
             System.out.println(output);
             if (out != null) {
                 out.println(testID + "," + format("%.3f", (now - startTime)/1000.0) + "," +
-                    rate(sendCountInterval, elapsedInterval, sendStatsEnabled)+ "," +
-                    rate(returnCountInterval, elapsedInterval, sendStatsEnabled && returnStatsEnabled)+ "," +
-                    rate(confirmCountInterval, elapsedInterval, sendStatsEnabled && confirmStatsEnabled)+ "," +
-                    rate(nackCountInterval, elapsedInterval, sendStatsEnabled && confirmStatsEnabled)+ "," +
-                    rate(recvCountInterval, elapsedInterval, recvStatsEnabled) + "," +
+                    rate(ratePublished, sendStatsEnabled)+ "," +
+                    rate(rateReturned, sendStatsEnabled && returnStatsEnabled)+ "," +
+                    rate(rateConfirmed, sendStatsEnabled && confirmStatsEnabled)+ "," +
+                    rate(rateNacked, sendStatsEnabled && confirmStatsEnabled)+ "," +
+                    rate(rateConsumed, recvStatsEnabled) + "," +
                     (latencyCountInterval > 0 ?
                         div(latency.getSnapshot().getMin()) + "," +
                         div(latency.getSnapshot().getMedian()) + "," +
@@ -582,10 +683,9 @@ public class PerfTest {
             }
         }
 
-        private String getRate(String descr, long count, boolean display,
-            long elapsed) {
+        private String getRate(String descr, double rate, boolean display) {
             if (display) {
-                return ", " + descr + ": " + formatRate(1000.0 * count / elapsed) + " msg/s";
+                return ", " + descr + ": " + formatRate(rate) + " msg/s";
             } else {
                 return "";
             }
@@ -613,12 +713,16 @@ public class PerfTest {
             else                return format("%d", (long)rate);
         }
 
-        private static String rate(long count, long elapsed, boolean display) {
+        private static String rate(double rate, boolean display) {
             if (display) {
-                return formatRate(1000.0 * count / elapsed);
+                return formatRate(rate);
             } else {
                 return "";
             }
+        }
+
+        private static double rate(long count, long elapsed) {
+            return 1000.0 * count / elapsed;
         }
     }
 
@@ -699,7 +803,7 @@ public class PerfTest {
     public static Function<String, String> LONG_OPTION_TO_ENVIRONMENT_VARIABLE = option ->
         option.replace('-', '_').toUpperCase(Locale.ENGLISH);
 
-    static Function<String, String> ENVIRONMENT_VARIABLE_PREFIX = name -> {
+    public static Function<String, String> ENVIRONMENT_VARIABLE_PREFIX = name -> {
         String prefix = System.getenv("RABBITMQ_PERF_TEST_ENV_PREFIX");
         if (prefix == null || prefix.trim().isEmpty()) {
             return name;

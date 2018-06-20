@@ -24,8 +24,8 @@ public abstract class AgentBase {
 
         long elapsed = now - state.getLastStatsTime();
         //example: rateLimit is 5000 msg/s,
-        //10 ms have elapsed, we have sent 200 messages
-        //the 200 msgs we have actually sent should have taken us
+        //10 ms have elapsed, we have published 200 messages
+        //the 200 msgs we have actually published should have taken us
         //200 * 1000 / 5000 = 40 ms. So we pause for 40ms - 10ms
         long pause = (long) (state.getRateLimit() == 0.0f ?
             0.0f : (state.getMsgCount() * 1000.0 / state.getRateLimit() - elapsed));

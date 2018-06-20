@@ -315,7 +315,7 @@ public class ProducerTest {
     }
 
     private Stats stats() {
-        return new Stats(0) {
+        return new Stats(1000) {
 
             @Override
             protected void report(long now) {
