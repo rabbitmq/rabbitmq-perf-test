@@ -25,7 +25,7 @@ install: clean ## Create and copy the binaries into the local Maven repository
 	@mvnw install -Dmaven.test.skip
 
 jar: clean ## Build the JAR file
-	@mvnw package
+	@mvnw package -Dmaven.test.skip
 
 run: compile ## Run PerfTest, pass exec arguments via ARGS, e.g. ARGS="-x 1 -y 1 -r 1"
 	@mvnw exec:java -Dexec.mainClass="com.rabbitmq.perf.PerfTest" -Dexec.args="$(ARGS)"
