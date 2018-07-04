@@ -88,6 +88,10 @@
     <maven.build.timestamp.format>yyyy-MM-dd'T'HH:mm:ss'Z'</maven.build.timestamp.format>
 
     <finalName>rabbitmq-${project.build.finalName}</finalName>
+
+    <asciidoctor.maven.plugin.version>1.5.6</asciidoctor.maven.plugin.version>
+    <asciidoctorj.version>1.5.6</asciidoctorj.version>
+    <jruby.version>1.7.26</jruby.version>
   </properties>
 
   <dependencies>
@@ -326,6 +330,33 @@
           <doCheck>false</doCheck>
           <doUpdate>false</doUpdate>
           <revisionOnScmFailure>unknown</revisionOnScmFailure>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.asciidoctor</groupId>
+        <artifactId>asciidoctor-maven-plugin</artifactId>
+        <version>${asciidoctor.maven.plugin.version}</version>
+        <configuration>
+          <sourceDirectory>src/docs/asciidoc</sourceDirectory>
+          <sourceDocumentName>index.adoc</sourceDocumentName>
+          <!-- Attributes common to all output formats -->
+          <backend>html5</backend>
+          <sourceHighlighter>coderay</sourceHighlighter>
+          <attributes>
+            <endpoint-url>http://example.org</endpoint-url>
+            <sourcedir>${project.build.sourceDirectory}</sourcedir>
+            <project-version>${project.version}</project-version>
+            <imagesdir>./images</imagesdir>
+            <toc>left</toc>
+            <icons>font</icons>
+            <sectanchors>true</sectanchors>
+            <!-- set the idprefix to blank -->
+            <idprefix/>
+            <idseparator>-</idseparator>
+            <docinfo1>true</docinfo1>
+          </attributes>
+
         </configuration>
       </plugin>
 

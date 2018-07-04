@@ -1,0 +1,80 @@
+== Monitoring
+
+PerfTest can gather metrics and make them available to various monitoring
+systems. Metrics include messaging-centric metrics (message latency,
+number of connections and channels, number of published messages, etc) as well
+as OS process and JVM metrics (memory, CPU usage, garbage collection, JVM heap, etc).
+
+Here is how to list the available metrics options:
+
+----
+./runjava com.rabbitmq.perf.PerfTest --metrics-help
+----
+
+This command displays the available flags to enable the various metrics PerfTest
+can gather, as well as options to configure the exposure to the monitoring systems
+PerfTest supports.
+
+=== Supported Metrics
+
+Here are the metrics PerfTest can gather:
+
+* default metrics: number of published, returned, confirmed, nacked, and consumed messages, message
+latency. Latency is a major concern in many types of workload, it can be easily monitored here.
+Default metrics are available as long as PerfTest support for a monitoring system
+is enabled.
+* client metrics: these are the http://www.rabbitmq.com/api-guide.html#metrics[Java Client metrics].
+Enabling these metrics shouldn't bring much compared to the default PerfTest metrics,
+except to see how PerfTest behaves with regards to number of open connections
+and channels for instance. Client metrics are enabled with the `-mc` or `--metrics-client` flag.
+* JVM memory metrics: these metrics report memory usage of the JVM, e.g. current heap size, etc.
+They can be useful to have a better understanding of the client behavior, e.g. heap memory fluctuation
+could be due to frequent garbage collection that could explain high latency numbers. These metrics
+are enabled with the `-mjm` or `--metrics-jvm-memory` flag.
+* JVM thread metrics: these metrics report the number of JVM threads used in the PerfTest process,
+as well as their state. This can be useful to optimize the usage of PerfTest to simulate
+http://www.rabbitmq.com/java-tools.html#iot-workloads[high loads with fewer resources].
+These metrics are enabled with the `-mjt` or `--metrics-jvm-thread` flag.
+* JVM GC metrics: these metrics reports garbage collection activity. They can vary depending
+on the JVM used, its version, and the GC settings. They can be useful to correlate the GC
+activity with PerfTest behavior, e.g. abnormal low throughput because of very frequent
+garbage collection. These metrics are enabled with the `-mjgc` or `--metrics-jvm-gc` flag.
+* Processor metrics: there metrics report CPU activity as gathered by the JVM.
+They can be enabled with the `-mjp` or `--metrics-processor` flag.
+
+
+=== Tags
+
+One can specify metrics tags with the `-mt` or `--metrics-tags` options, e.g.
+`--metrics-tags env=performance,datacenter=eu` to tell monitoring systems that those
+metrics are from the `performance` environment located in the `eu` data center.
+Monitoring systems that support dimensions can then make it easier to
+navigate across metrics (group by, drill down). See http://micrometer.io[Micrometer] documentation
+for more information about tags and dimensions.
+
+=== Supported Monitoring Systems
+
+PerfTest builds on top http://micrometer.io[Micrometer] to report gathered metrics to various monitoring systems.
+Nevertheless, not all systems supported by Micrometer are actually supported by PerfTest. The only metrics
+system currently supported is https://prometheus.io/[Prometheus]. Don't hesitate to
+https://github.com/rabbitmq/rabbitmq-perf-test/issues[request support for other monitoring systems].
+
+==== Prometheus
+
+Use the `-mpr` or `--metrics-prometheus` flag to enable metrics reporting to Prometheus:
+
+```
+./runjava com.rabbitmq.perf.PerfTest --metrics-prometheus
+```
+
+Prometheus expects to scrape or poll individual app instances for metrics, so PerfTest starts up
+a web server listening on port 8080 and exposes metrics on the `/metrics` endpoint. These defaults
+can be changed:
+
+```
+./runjava com.rabbitmq.perf.PerfTest --metrics-prometheus \
+    --metrics-prometheus-port 8090 --metrics-prometheus-endpoint perf-test-metrics
+```
+
+
+
