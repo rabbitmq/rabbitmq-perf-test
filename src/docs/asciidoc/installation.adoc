@@ -1,0 +1,34 @@
+== Installation
+
+=== From binary
+
+PerfTest is distributed as a binary build archive
+from https://bintray.com/rabbitmq/java-tools/perf-test[Bintray] and
+https://github.com/rabbitmq/rabbitmq-perf-test/releases[GitHub releases]
+as well.
+
+It is also available on
+http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22com.rabbitmq%22%20AND%20a%3A%22perf-test%22[Maven Central]
+if one needs to use it as library.
+
+Milestone releases or release candidates are available in our
+https://bintray.com/rabbitmq/java-tools-milestones/perf-test[Java Tools milestones repository]
+and in
+https://github.com/rabbitmq/rabbitmq-perf-test/releases[GitHub releases] as well.
+
+
+The distribution contains a script (`bin/runjava` or `bin/runjava.bat`)
+to run Java with the class path correctly configured, e.g.
+`bin/runjava com.rabbitmq.perf.PerfTest` runs
+the `PerfTest` Java class.
+
+To verify a PerfTest installation, use:
+
+ $ bin/runjava com.rabbitmq.perf.PerfTest --help
+
+=== For Cloud Foundry
+
+There is a https://github.com/rabbitmq/rabbitmq-perf-test-for-cf[template project]
+to easily run PerfTest on https://www.cloudfoundry.org/[Cloud Foundry].
+
+

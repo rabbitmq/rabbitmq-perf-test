@@ -3,6 +3,7 @@
 :example-caption!:
 ifndef::imagesdir[:imagesdir: images]
 ifndef::sourcedir[:sourcedir: ../../main/java]
+:source-highlighter: prettify
 
 PerfTest is a throughput testing tool for RabbitMQ
 
@@ -10,7 +11,7 @@ PerfTest is a throughput testing tool for RabbitMQ
 
 RabbitMQ has a throughput testing tool, PerfTest, that is based on
 the Java client and can be configured to simulate basic
-workloads and more advanced workloads as well.
+workloads and link:#workloads-with-a-large-number-of-clients[more advanced workloads] as well.
 PerfTest has extra tools that produce HTML graphs of the output.
 
 A RabbitMQ cluster can be limited by a number of factors,
@@ -19,4 +20,7 @@ RabbitMQ configuration and topology to applications that publish
 and consume. PerfTest can demonstrate baseline performance of a
 node or a cluster of nodes.
 
+include::installation.adoc[]
+include::usage.adoc[]
+include::usage-advanced.adoc[]
 include::monitoring.adoc[]
