@@ -522,12 +522,27 @@ table.CodeRay td.code>pre{padding:0}
 <div id="header">
 <h1>RabbitMQ PerfTest</h1>
 <div class="details">
-<span id="revnumber">version 2.2.0-SNAPSHOT</span>
+<span id="revnumber">version 2.2.0.M1</span>
 </div>
 <div id="toc" class="toc2">
 <div id="toctitle">Table of Contents</div>
 <ul class="sectlevel1">
 <li><a href="#introduction">Introduction</a></li>
+<li><a href="#installation">Installation</a>
+<ul class="sectlevel2">
+<li><a href="#from-binary">From binary</a></li>
+<li><a href="#for-cloud-foundry">For Cloud Foundry</a></li>
+</ul>
+</li>
+<li><a href="#basic-usage">Basic Usage</a></li>
+<li><a href="#how-it-works">How It Works</a></li>
+<li><a href="#customising-queues-and-messages">Customising queues and messages</a></li>
+<li><a href="#working-with-many-queues">Working with many queues</a></li>
+<li><a href="#simulating-high-loads">Simulating High Loads</a></li>
+<li><a href="#workloads-with-a-large-number-of-clients">Workloads with a Large Number of Clients</a></li>
+<li><a href="#running-producers-and-consumers-on-different-machines">Running Producers and Consumers on Different Machines</a></li>
+<li><a href="#tls-support">TLS Support</a></li>
+<li><a href="#result-reporting-in-html">Result Reporting in HTML</a></li>
 <li><a href="#monitoring">Monitoring</a>
 <ul class="sectlevel2">
 <li><a href="#supported-metrics">Supported Metrics</a></li>
@@ -542,7 +557,7 @@ table.CodeRay td.code>pre{padding:0}
 <div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
-<p>PerfTest is a throughput testing tool for RabbitMQ</p>
+<p>PerfTest is a throughput testing tool for <a href="http://www.rabbitmq.com/">RabbitMQ</a></p>
 </div>
 </div>
 </div>
@@ -550,9 +565,10 @@ table.CodeRay td.code>pre{padding:0}
 <h2 id="introduction"><a class="anchor" href="#introduction"></a>Introduction</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>RabbitMQ has a throughput testing tool, PerfTest, that is based on
+<p><a href="http://www.rabbitmq.com/">RabbitMQ</a> has a throughput testing tool,
+PerfTest, that is based on
 the Java client and can be configured to simulate basic
-workloads and more advanced workloads as well.
+workloads and <a href="#workloads-with-a-large-number-of-clients">more advanced workloads</a> as well.
 PerfTest has extra tools that produce HTML graphs of the output.</p>
 </div>
 <div class="paragraph">
@@ -561,6 +577,648 @@ from infrastructure-level constraints (e.g. network bandwidth) to
 RabbitMQ configuration and topology to applications that publish
 and consume. PerfTest can demonstrate baseline performance of a
 node or a cluster of nodes.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="installation"><a class="anchor" href="#installation"></a>Installation</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="from-binary"><a class="anchor" href="#from-binary"></a>From binary</h3>
+<div class="paragraph">
+<p>PerfTest is distributed as a binary build archive
+from <a href="https://bintray.com/rabbitmq/java-tools/perf-test">Bintray</a> and
+<a href="https://github.com/rabbitmq/rabbitmq-perf-test/releases">GitHub releases</a>
+as well.</p>
+</div>
+<div class="paragraph">
+<p>It is also available on
+<a href="https://search.maven.org/#search%7Cga%7C1%7Cg%3A%22com.rabbitmq%22%20AND%20a%3A%22perf-test%22">Maven Central</a>
+if one needs to use it as library.</p>
+</div>
+<div class="paragraph">
+<p>Milestone releases or release candidates are available in our
+<a href="https://bintray.com/rabbitmq/java-tools-milestones/perf-test">Java Tools milestones repository</a>
+and in
+<a href="https://github.com/rabbitmq/rabbitmq-perf-test/releases">GitHub releases</a> as well.</p>
+</div>
+<div class="paragraph">
+<p>The distribution contains a script (<code>bin/runjava</code> or <code>bin/runjava.bat</code>)
+to run Java with the class path correctly configured, e.g.
+<code>bin/runjava com.rabbitmq.perf.PerfTest</code> runs
+the <code>PerfTest</code> Java class.</p>
+</div>
+<div class="paragraph">
+<p>To verify a PerfTest installation, use:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>$ bin/runjava com.rabbitmq.perf.PerfTest --help</pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="for-cloud-foundry"><a class="anchor" href="#for-cloud-foundry"></a>For Cloud Foundry</h3>
+<div class="paragraph">
+<p>There is a <a href="https://github.com/rabbitmq/rabbitmq-perf-test-for-cf">template project</a>
+to easily run PerfTest on <a href="https://www.cloudfoundry.org/">Cloud Foundry</a>.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="basic-usage"><a class="anchor" href="#basic-usage"></a>Basic Usage</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The most basic way of running PerfTest only specifies a URI to
+connect to, a number of publishers to use (say, 1) and a
+number of consumers to use (say, 2). Note that RabbitMQ Java
+client can achieve high rates for publishing (up to 80 to 90K
+messages per second per connection), given enough bandwidth and when some safety
+measures (publisher confirms) are disabled, so overprovisioning
+publishers is rarely necessary (unless that&#8217;s a specific objective of the test).</p>
+</div>
+<div class="paragraph">
+<p>The following command runs PerfTest with a single publisher
+without publisher confirms, two consumers (each receiving a
+copy of every message) that use automatic acknowledgement mode
+and a single queue named “throughput-test-x1-y2”. Publishers
+will publish as quickly as possible, without any rate
+limiting. Results will be prefixed with “test1” for easier
+identification and comparison:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>bin/runjava com.rabbitmq.perf.PerfTest -x 1 -y 2 -u "throughput-test-1" -a --id "test 1"</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This modification will use 2 publishers and 4 consumers,
+typically yielding higher throughput given enough CPU cores
+on the machine and RabbitMQ nodes:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>bin/runjava com.rabbitmq.perf.PerfTest -x 2 -y 4 -u "throughput-test-2" -a --id "test 2"</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This modification switches consumers to manual acknowledgements:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>bin/runjava com.rabbitmq.perf.PerfTest -x 1 -y 2 -u "throughput-test-3" --id "test 3"</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This modification changes message size from default (12 bytes) to 4 kB:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>bin/runjava com.rabbitmq.perf.PerfTest -x 1 -y 2 -u "throughput-test-4" --id "test 4" -s 4000</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>PerfTest can use durable queues and persistent messages:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>bin/runjava com.rabbitmq.perf.PerfTest -x 1 -y 2 -u "throughput-test-5" --id "test-5" -f persistent</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>When PerfTest is running, it is important to monitor various
+publisher and consumer metrics provided by the <a href="https://www.rabbitmq.com/management.html">management UI</a>.
+For example, it is possible to see how much network
+bandwidth a publisher has been using recently on the
+connection page.</p>
+</div>
+<div class="paragraph">
+<p>Queue page demonstrates message rates, consumer count,
+acknowledgement mode used by the consumers, consumer
+utilisation and message location break down (disk, RAM,
+paged out transient messages, etc). When durable queues and
+persistent messages are used, node I/O and message
+store/queue index operation metrics become particularly
+important to monitor.</p>
+</div>
+<div class="paragraph">
+<p>Consumers can ack multiple messages at once, for example, 100 in this configuration:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>bin/runjava com.rabbitmq.perf.PerfTest -x 1 -y 2 -u "throughput-test-6" --id "test-6" \
+  -f persistent --multi-ack-every 100</pre>
+</div>
+</div>
+<div class="paragraph">
+<p><a href="https://www.rabbitmq.com/confirms.html">Consumer prefetch (QoS)</a> can be configured as well
+(in this example to 500):</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>bin/runjava com.rabbitmq.perf.PerfTest -x 1 -y 2 -u "throughput-test-7" --id "test-7" \
+  -f persistent --multi-ack-every 200 -q 500</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Publisher confirms can be used with maximum of N outstanding publishes:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>bin/runjava com.rabbitmq.perf.PerfTest -x 1 -y 2 -u "throughput-test-8" --id "test-8" \
+  -f persistent -q 500 -c 500</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>PerfTest can publish only a certain number of messages instead of running until shut down:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>bin/runjava com.rabbitmq.perf.PerfTest -x 1 -y 2 -u "throughput-test-10" --id "test-10" \
+  -f persistent -q 500 -pmessages 100000</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Publisher rate can be limited:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>bin/runjava com.rabbitmq.perf.PerfTest -x 1 -y 2 -u "throughput-test-11" --id "test-11" \
+  -f persistent -q 500 --rate 5000</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Consumer rate can be limited as well to simulate slower consumers or create a backlog:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>bin/runjava com.rabbitmq.perf.PerfTest -x 1 -y 2 -u "throughput-test-12" --id "test-12" \
+  -f persistent --rate 5000 --consumer-rate 2000</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Note that the consumer rate limit is applied per consumer, so in the
+configuration above the limit is actually 2 * 2000 = 4000
+deliveries/second.</p>
+</div>
+<div class="paragraph">
+<p>PerfTest can be configured to run for a limited amount of time in seconds with the
+<code>-z</code> option:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>bin/runjava com.rabbitmq.perf.PerfTest -x 1 -y 2 -u "throughput-test-13" --id "test-13" \
+  -f persistent -z 30</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Running PerfTest without consumers and with a limited number
+of messages can be used to pre-populate a queue, e.g. with
+1M messages 1 kB in size each::</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>bin/runjava com.rabbitmq.perf.PerfTest -y0 -p -u "throughput-test-14" \
+  -s 1000 -C 1000000 --id "test-14" -f persistent</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Use the <code>-D</code> option to limit the number of consumed messages. Note
+the <code>-z</code> (time limit), <code>-C</code> (number of
+published messages), and <code>-D</code> (number of consumed messages)
+options can be used together but their combination can lead to funny results.
+<code>-r 1 -x 1 -C 10 -y 1 -D 20</code> would for example stop the producer
+once 10 messages have been published, letting the consumer wait forever
+the remaining 10 messages (as the publisher is stopped).</p>
+</div>
+<div class="paragraph">
+<p>To consume from a pre-declared and pre-populated queue without starting any publishers,
+use</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>bin/runjava com.rabbitmq.perf.PerfTest -x0 -y10 -p -u "throughput-test-14" --id "test-15"</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>PerfTest is useful for establishing baseline cluster throughput with
+various configurations but does not simulate many other aspects of
+real world applications. It is also biased towards very simplistic
+workloads that use a single queue, which provides <a href="https://www.rabbitmq.com/queues.html">limited CPU utilisation</a>
+on RabbitMQ nodes and is not recommended for most cases.</p>
+</div>
+<div class="paragraph">
+<p>Multiple PerfTest instances running simultaneously can be used to
+simulate more realistic workloads.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="how-it-works"><a class="anchor" href="#how-it-works"></a>How It Works</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>If a queue name is defined (<code>-u "queue-name"</code>),
+PerfTest will create a queue with this name and all
+consumers will consume from this queue. The queue will be
+bound to the direct exchange with its name as the routing
+key. The routing key will be used by producers to send
+messages.  This will cause messages from all producers to be
+sent to this single queue and all consumers to receive
+messages from this single queue.</p>
+</div>
+<div class="paragraph">
+<p>If the queue name is not defined, PerfTest will create a
+random UUID routing key with which producers will publish
+messages.  Each consumer will create its own anonymous queue
+and bind it to the direct exchange with this routing key.
+This will cause each message from all producers to be
+replicated to multiple queues (number of queues equals
+number of consumers), while each consumer will be receiving
+messages from only one queue.</p>
+</div>
+<div class="paragraph">
+<p>Note it is possible to <a href="#customising-queues-and-messages">customise</a>
+the queue and to work against <a href="#working-with-many-queues">several queues</a> as well.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="customising-queues-and-messages"><a class="anchor" href="#customising-queues-and-messages"></a>Customising queues and messages</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>PerfTest can create queues using provided queue arguments:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>bin/runjava com.rabbitmq.perf.PerfTest --queue-arguments x-max-length=10</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The previous command will create a <a href="https://www.rabbitmq.com/maxlength.html">queue with a length limit</a>
+of 10. You can also provide several queue arguments by separating the
+key/value pairs with commas:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>bin/runjava com.rabbitmq.perf.PerfTest \
+  --queue-arguments x-max-length=10,x-dead-letter-exchange=some.exchange.name</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>You can also specify message properties with key/value pairs separated by commas:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>bin/runjava com.rabbitmq.perf.PerfTest \
+  --message-properties priority=5,timestamp=2007-12-03T10:15:30+01:00</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The supported property keys are: <code>contentType</code>, <code>contentEncoding</code>,
+<code>deliveryMode</code>, <code>priority</code>, <code>correlationId</code>, <code>replyTo</code>, <code>expiration</code>, <code>messageId</code>,
+<code>timestamp</code>, <code>type</code>, <code>userId</code>, <code>appId</code>, <code>clusterId</code>. If some provided
+keys do not belong to the previous list, the pairs will be considered
+as headers (arbitrary key/value pairs):</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>bin/runjava com.rabbitmq.perf.PerfTest \
+  --message-properties priority=10,header1=value1,header2=value2</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>You can mimic real messages by specifying their content and
+content type. This can be useful when plugging real application
+consumers downstream. The content can come from one or several files and
+the content-type can be specified:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>bin/runjava com.rabbitmq.perf.PerfTest --consumers 0 \
+  --body content1.json,content2.json --body-content-type application/json</pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="working-with-many-queues"><a class="anchor" href="#working-with-many-queues"></a>Working with many queues</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>PertTest supports balancing the publishing and the consumption
+across a sequence of queues, e.g.:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>bin/runjava com.rabbitmq.perf.PerfTest --queue-pattern 'perf-test-%d' \
+  --queue-pattern-from 1 --queue-pattern-to 10 \
+  --producers 100 --consumers 100</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The previous command would create the <code>perf-test-1</code>, <code>perf-test-2</code>, &#8230;&#8203;,
+<code>perf-test-10</code> queues and spreads the producers and consumers across them.
+This way each queue will have 10 consumers and 10 producers sending messages to it.</p>
+</div>
+<div class="paragraph">
+<p>Load is balanced in a round-robin fashion:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>bin/runjava com.rabbitmq.perf.PerfTest --queue-pattern 'perf-test-%d' \
+  --queue-pattern-from 1 --queue-pattern-to 10 \
+  --producers 15 --consumers 30</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>With the previous command, queues from <code>perf-test-1</code> to <code>perf-test-5</code>
+will have 2 producers, and queues from <code>perf-test-6</code> to <code>perf-test-10</code>
+will have only 1 producer. Each queue will have 3 consumers.</p>
+</div>
+<div class="paragraph">
+<p>Note the <code>--queue-pattern</code> value is a
+<a href="https://docs.oracle.com/javase/7/docs/api/java/util/Formatter.html">Java printf-style format string</a>.
+The queue index is the only argument passed in. The formatting is very closed to C&#8217;s <code>printf</code>.
+<code>--queue-pattern 'perf-test-%03d' --queue-pattern-from 1 --queue-pattern-to 500</code> would for
+instance create queues from <code>perf-test-001</code> to <code>perf-test-500</code>.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="simulating-high-loads"><a class="anchor" href="#simulating-high-loads"></a>Simulating High Loads</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>PerfTest can easily run hundreds of connections on a simple desktop machine.
+Each producer and consumer use a Java thread and a TCP connection though,
+so a PerfTest process can quickly run out of file descriptors, depending
+on the OS settings. A simple solution is to use several PerfTest processes,
+on the same machine or not. This is especially handy when combined
+with the <a href="#working-with-many-queues">queue sequence</a> feature.</p>
+</div>
+<div class="paragraph">
+<p>The following command line launches a first PerfTest process that
+creates 500 queues (from <code>perf-test-1</code> to <code>perf-test-500</code>).
+Each queue will have 3 consumers and 1 producer sending messages to it:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>bin/runjava com.rabbitmq.perf.PerfTest --queue-pattern 'perf-test-%d' \
+  --queue-pattern-from 1 --queue-pattern-to 500 \
+  --producers 500 --consumers 1500</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Then the following command line launches a second PerfTest process
+that creates 500 queues (from <code>perf-test-501</code> to <code>perf-test-1000</code>).
+Each queue will have 3 consumers and 1 producer sending messages to it:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>bin/runjava com.rabbitmq.perf.PerfTest --queue-pattern 'perf-test-%d' \
+ --queue-pattern-from 501 --queue-pattern-to 1000 \
+ --producers 500 --consumers 1500</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Those 2 processes will simulate 1000 producers and 3000 consumers spread
+across 1000 queues.</p>
+</div>
+<div class="paragraph">
+<p>A PerfTest process can exhaust its file descriptors limit and throw
+<code>java.lang.OutOfMemoryError: unable to create new native thread</code>
+exceptions. A first way to avoid this is to reduce the number of Java threads
+PerfTest uses with the <code>--heartbeat-sender-threads</code> option:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>bin/runjava com.rabbitmq.perf.PerfTest --queue-pattern 'perf-test-%d' \
+  --queue-pattern-from 1 --queue-pattern-to 1000 \
+  --producers 1000 --consumers 3000 --heartbeat-sender-threads 10</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>By default, each producer and consumer connection uses a dedicated thread
+to send heartbeats to the broker, so this is 4000 threads for heartbeats
+in the previous sample. Considering producers and consumers always communicate
+with the broker by publishing messages or sending acknowledgments, connections
+are never idle, so using 10 threads for heartbeats for the 4000 connections
+should be enough. Don&#8217;t hesitate to experiment to come up with the appropriate
+<code>--heartbeat-sender-threads</code> value for your use case.</p>
+</div>
+<div class="paragraph">
+<p>Another way to avoid <code>java.lang.OutOfMemoryError: unable to create new native thread</code>
+exceptions is to tune the number of file descriptors allowed per process
+at the OS level, as some distributions use very low limits.
+Here the recommendations are the same as for the broker, so you
+can refer to our <a href="https://www.rabbitmq.com/networking.html#os-tuning">networking guide</a>.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="workloads-with-a-large-number-of-clients"><a class="anchor" href="#workloads-with-a-large-number-of-clients"></a>Workloads with a Large Number of Clients</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>A typical connected device workload (a.k.a "IoT workload") involves
+many producers and consumers (dozens or hundreds of thousands)
+that exchange messages at a low and mostly constant rate, usually a message every few seconds or minutes.
+Simulating such workloads requires a different set of settings compared to
+the workloads that have higher throughput and a small number of clients. With the appropriate set of flags,
+PerfTest can simulate IoT workloads without requiring too many resources.</p>
+</div>
+<div class="paragraph">
+<p>With an IoT workload, publishers usually don&#8217;t publish many messages per second,
+but rather a message every fixed period of time. This can be achieved by using the <code>--publishing-interval</code>
+flag instead of the <code>--rate</code> one. For example:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>bin/runjava com.rabbitmq.perf.PerfTest --publishing-interval 5</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The command above makes the publisher publish a message every 5 seconds.
+To simulate a group of consumers, use the <code>--queue-pattern</code> flag to simulate many consumers across
+many queues:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>bin/runjava com.rabbitmq.perf.PerfTest --queue-pattern 'perf-test-%d' \
+  --queue-pattern-from 1 --queue-pattern-to 1000 \
+  --producers 1000 --consumers 1000 \
+  --heartbeat-sender-threads 10 \
+  --publishing-interval 5</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>To prevent publishers from publishing at roughly the same time and
+distribute the rate more evenly, use
+the <code>--producer-random-start-delay</code> option to add an random
+delay before the first published message:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>bin/runjava com.rabbitmq.perf.PerfTest --queue-pattern 'perf-test-%d' \
+  --queue-pattern-from 1 --queue-pattern-to 1000 \
+  --producers 1000 --consumers 1000 \
+  --heartbeat-sender-threads 10 \
+  --publishing-interval 5 --producer-random-start-delay 120</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>With the command above, each publisher will start with a random delay
+between 1 and 120 seconds.</p>
+</div>
+<div class="paragraph">
+<p>When using <code>--publishing-interval</code>, PerfTest will use one thread
+for scheduling publishing for all 50 producers. So 1000 producers should keep 20 threads busy for
+the publishing scheduling. This ratio can be decreased or increased with the
+<code>--producer-scheduler-threads</code> options depending on the load and the target environment.
+Very few threads can be used for very slow publishers:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>bin/runjava com.rabbitmq.perf.PerfTest --queue-pattern 'perf-test-%d' \
+  --queue-pattern-from 1 --queue-pattern-to 1000 \
+  --producers 1000 --consumers 1000 \
+  --heartbeat-sender-threads 10 \
+  --publishing-interval 60 --producer-random-start-delay 1800 \
+  --producer-scheduler-threads 10</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>In the example above, 1000 publishers will publish every 60 seconds
+with a random start-up delay between 1 second and 15 minutes (1800 seconds). They
+will be scheduled by only 10 threads (instead of 20 by default). Such delay
+values are suitable for long running tests.</p>
+</div>
+<div class="paragraph">
+<p>By default, PerfTest uses blocking network socket I/O to communicate with
+the broker. This mode works fine for clients in many cases but the RabbitMQ Java client
+also supports an <a href="https://www.rabbitmq.com/api-guide.html#java-nio">asynchronous I/O mode</a>,
+where resources like threads can be easily tuned. The goal here is to use as few
+resources as possible to simulate as much load as possible with a single PerfTest instance.
+In the slow publisher example above, a handful of threads should be enough
+to handle the I/O. That&#8217;s what the
+<code>--nio-threads</code> flag is for:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>bin/runjava com.rabbitmq.perf.PerfTest --queue-pattern 'perf-test-%d' \
+  --queue-pattern-from 1 --queue-pattern-to 1000 \
+  --producers 1000 --consumers 1000 \
+  --heartbeat-sender-threads 10 \
+  --publishing-interval 60 --producer-random-start-delay 1800 \
+  --producer-scheduler-threads 10
+  --nio-threads 10</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>PerfTest will use 2 extra threads for internal bookkeeping needs, so the total will be 12 threads
+for I/O over all the connections. With the default blocking I/O mode, each producer (or consumer)
+uses a thread for the I/O loop, that is 2000 threads to simulate 1000 producers and
+1000 consumers.</p>
+</div>
+<div class="paragraph">
+<p>Using NIO in PerfTest can dramatically reduce the resources used to simulate workloads with a large
+number of connections with appropriate tuning.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="running-producers-and-consumers-on-different-machines"><a class="anchor" href="#running-producers-and-consumers-on-different-machines"></a>Running Producers and Consumers on Different Machines</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>If you run producers and consumers on different machines or even
+in different processes, and you want PerfTest to calculate latency,
+you need to use the <code>--use-millis</code> flag. E.g. for sending messages
+from one host:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>bin/runjava com.rabbitmq.perf.PerfTest --producers 1 --consumers 0 \
+  --predeclared --routing-key rk --queue q --use-millis</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>And for consuming messages from another host:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>bin/runjava com.rabbitmq.perf.PerfTest --producers 0 --consumers 1 \
+  --predeclared --routing-key rk --queue q --use-millis</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Note that as soon as you use <code>--use-millis</code>, latency is calculated in
+milliseconds instead of microseconds. Note also the different machines should have
+their clock synchronised, e.g. by NTP.
+If you don&#8217;t run producers and consumers on different machines or if you don&#8217;t
+want PerfTest to calculate latency, you don&#8217;t need the <code>--use-millis</code> flag.</p>
+</div>
+<div class="paragraph">
+<p>Why does one need to care about the <code>--use-millis</code> flag? PerfTest uses
+by default <code>System.nanoTime()</code> in messages to calculate latency
+between producers and senders. <code>System.nanoTime()</code> provides nanosecond precision
+but must be used only in the same Java process. So PerfTest can fall back to <code>System.currentTimeMillis()</code>,
+which provides only milliseconds precision, but is reliable between different machines
+as long as their clocks are synchronised.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="tls-support"><a class="anchor" href="#tls-support"></a>TLS Support</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>PerfTest can use TLS to connect to a node that is
+<a href="https://www.rabbitmq.com/ssl.html">configured to accept TLS connections</a>.
+To enable TLS, simply specify a URI that uses the <code>amqps</code> schema:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>bin/runjava com.rabbitmq.perf.PerfTest -h amqps://localhost:5671</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>By default PerfTest automatically trusts the server
+and doesn&#8217;t present any client certificate (a warning
+shows up in the console). In many benchmarking or load testing scenarios this may be sufficient.
+If peer verification is necessary, it is possible to use the
+<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/jsse/JSSERefGuide.html#InstallationAndCustomization">appropriate
+JVM properties</a> on the command line to override the default <code>SSLContext</code>.
+For example, to trust a given server:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>JAVA_OPTS="-Djavax.net.ssl.trustStore=/path/to/server_key.p12 -Djavax.net.ssl.trustStorePassword=bunnies -Djavax.net.ssl.trustStoreType=PKCS12" \
+  bin/runjava com.rabbitmq.perf.PerfTest -h amqps://localhost:5671</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The previous snippet uses a one-liner to define the <code>JAVA_OPTS</code> environment variable
+while running PerfTest. Please refer to the
+<a href="https://www.rabbitmq.com/ssl.html">TLS guide</a> to learn about how to set up RabbitMQ with TLS.
+A convenient way to generate a CA and some self-signed certificate/key pairs for development and QA environments
+is with <a href="https://github.com/michaelklishin/tls-gen/"><code>tls-gen</code></a>.
+`tls-gen&#8217;s basic profile is a good starting point. How to run PerfTest with
+a certificate/key pair generated by the aforementioned profile:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>JAVA_OPTS="-Djavax.net.ssl.trustStore=/path/to/server_key.p12 -Djavax.net.ssl.trustStorePassword=bunnies -Djavax.net.ssl.trustStoreType=PKCS12 -Djavax.net.ssl.keyStore=/path/to/client_key.p12 -Djavax.net.ssl.keyStorePassword=bunnies -Djavax.net.ssl.keyStoreType=PKCS12" \
+  bin/runjava com.rabbitmq.perf.PerfTest -h amqps://localhost:5671</pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="result-reporting-in-html"><a class="anchor" href="#result-reporting-in-html"></a>Result Reporting in HTML</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The <code>PerfTest HTML extension</code> are a set of tools
+that can help you run automated benchmarks by wrapping around PerfTest. You can provide
+benchmark specs, and the tool will take care of running the benchmark,
+collecting results and displaying them in an HTML page. Learn more
+<a href="https://github.com/rabbitmq/rabbitmq-perf-test/blob/master/html/README.md">here</a>.</p>
 </div>
 </div>
 </div>
@@ -600,7 +1258,7 @@ Default metrics are available as long as PerfTest support for a monitoring syste
 is enabled.</p>
 </li>
 <li>
-<p>client metrics: these are the <a href="http://www.rabbitmq.com/api-guide.html#metrics">Java Client metrics</a>.
+<p>client metrics: these are the <a href="https://www.rabbitmq.com/api-guide.html#metrics">Java Client metrics</a>.
 Enabling these metrics shouldn&#8217;t bring much compared to the default PerfTest metrics,
 except to see how PerfTest behaves with regards to number of open connections
 and channels for instance. Client metrics are enabled with the <code>-mc</code> or <code>--metrics-client</code> flag.</p>
@@ -614,7 +1272,7 @@ are enabled with the <code>-mjm</code> or <code>--metrics-jvm-memory</code> flag
 <li>
 <p>JVM thread metrics: these metrics report the number of JVM threads used in the PerfTest process,
 as well as their state. This can be useful to optimize the usage of PerfTest to simulate
-<a href="http://www.rabbitmq.com/java-tools.html#iot-workloads">high loads with fewer resources</a>.
+<a href="#workloads-with-a-large-number-of-clients">high loads with fewer resources</a>.
 These metrics are enabled with the <code>-mjt</code> or <code>--metrics-jvm-thread</code> flag.</p>
 </li>
 <li>
@@ -637,14 +1295,14 @@ They can be enabled with the <code>-mjp</code> or <code>--metrics-processor</cod
 <code>--metrics-tags env=performance,datacenter=eu</code> to tell monitoring systems that those
 metrics are from the <code>performance</code> environment located in the <code>eu</code> data center.
 Monitoring systems that support dimensions can then make it easier to
-navigate across metrics (group by, drill down). See <a href="http://micrometer.io">Micrometer</a> documentation
+navigate across metrics (group by, drill down). See <a href="https://micrometer.io">Micrometer</a> documentation
 for more information about tags and dimensions.</p>
 </div>
 </div>
 <div class="sect2">
 <h3 id="supported-monitoring-systems"><a class="anchor" href="#supported-monitoring-systems"></a>Supported Monitoring Systems</h3>
 <div class="paragraph">
-<p>PerfTest builds on top <a href="http://micrometer.io">Micrometer</a> to report gathered metrics to various monitoring systems.
+<p>PerfTest builds on top <a href="https://micrometer.io">Micrometer</a> to report gathered metrics to various monitoring systems.
 Nevertheless, not all systems supported by Micrometer are actually supported by PerfTest. The only metrics
 system currently supported is <a href="https://prometheus.io/">Prometheus</a>. Don&#8217;t hesitate to
 <a href="https://github.com/rabbitmq/rabbitmq-perf-test/issues">request support for other monitoring systems</a>.</p>
@@ -677,8 +1335,8 @@ can be changed:</p>
 </div>
 <div id="footer">
 <div id="footer-text">
-Version 2.2.0-SNAPSHOT<br>
-Last updated 2018-07-04 16:53:00 CEST
+Version 2.2.0.M1<br>
+Last updated 2018-07-17 17:12:00 CEST
 </div>
 </div>
 </body>
