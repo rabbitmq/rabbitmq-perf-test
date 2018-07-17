@@ -5,11 +5,12 @@ ifndef::imagesdir[:imagesdir: images]
 ifndef::sourcedir[:sourcedir: ../../main/java]
 :source-highlighter: prettify
 
-PerfTest is a throughput testing tool for RabbitMQ
+PerfTest is a throughput testing tool for http://www.rabbitmq.com/[RabbitMQ]
 
 == Introduction
 
-RabbitMQ has a throughput testing tool, PerfTest, that is based on
+http://www.rabbitmq.com/[RabbitMQ] has a throughput testing tool,
+PerfTest, that is based on
 the Java client and can be configured to simulate basic
 workloads and link:#workloads-with-a-large-number-of-clients[more advanced workloads] as well.
 PerfTest has extra tools that produce HTML graphs of the output.

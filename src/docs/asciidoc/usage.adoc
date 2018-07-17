@@ -1,4 +1,4 @@
-== Using PerfTest
+== Basic Usage
 
 The most basic way of running PerfTest only specifies a URI to
 connect to, a number of publishers to use (say, 1) and a
@@ -37,7 +37,7 @@ PerfTest can use durable queues and persistent messages:
  bin/runjava com.rabbitmq.perf.PerfTest -x 1 -y 2 -u "throughput-test-5" --id "test-5" -f persistent
 
 When PerfTest is running, it is important to monitor various
-publisher and consumer metrics provided by the http://www.rabbitmq.com/management.html[management UI].
+publisher and consumer metrics provided by the https://www.rabbitmq.com/management.html[management UI].
 For example, it is possible to see how much network
 bandwidth a publisher has been using recently on the
 connection page.
@@ -56,7 +56,7 @@ Consumers can ack multiple messages at once, for example, 100 in this configurat
    -f persistent --multi-ack-every 100
 
 
-http://www.rabbitmq.com/confirms.html[Consumer prefetch (QoS)] can be configured as well
+https://www.rabbitmq.com/confirms.html[Consumer prefetch (QoS)] can be configured as well
 (in this example to 500):
 
  bin/runjava com.rabbitmq.perf.PerfTest -x 1 -y 2 -u "throughput-test-7" --id "test-7" \
@@ -120,4 +120,27 @@ on RabbitMQ nodes and is not recommended for most cases.
 
 Multiple PerfTest instances running simultaneously can be used to
 simulate more realistic workloads.
+
+== How It Works
+
+If a queue name is defined (`-u "queue-name"`),
+PerfTest will create a queue with this name and all
+consumers will consume from this queue. The queue will be
+bound to the direct exchange with its name as the routing
+key. The routing key will be used by producers to send
+messages.  This will cause messages from all producers to be
+sent to this single queue and all consumers to receive
+messages from this single queue.
+
+If the queue name is not defined, PerfTest will create a
+random UUID routing key with which producers will publish
+messages.  Each consumer will create its own anonymous queue
+and bind it to the direct exchange with this routing key.
+This will cause each message from all producers to be
+replicated to multiple queues (number of queues equals
+number of consumers), while each consumer will be receiving
+messages from only one queue.
+
+Note it is possible to link:#customising-queues-and-messages[customise]
+the queue and to work against link:#working-with-many-queues[several queues] as well.
 

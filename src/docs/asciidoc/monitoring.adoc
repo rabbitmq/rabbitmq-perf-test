@@ -23,7 +23,7 @@ Here are the metrics PerfTest can gather:
 latency. Latency is a major concern in many types of workload, it can be easily monitored here.
 Default metrics are available as long as PerfTest support for a monitoring system
 is enabled.
-* client metrics: these are the http://www.rabbitmq.com/api-guide.html#metrics[Java Client metrics].
+* client metrics: these are the https://www.rabbitmq.com/api-guide.html#metrics[Java Client metrics].
 Enabling these metrics shouldn't bring much compared to the default PerfTest metrics,
 except to see how PerfTest behaves with regards to number of open connections
 and channels for instance. Client metrics are enabled with the `-mc` or `--metrics-client` flag.
@@ -33,7 +33,7 @@ could be due to frequent garbage collection that could explain high latency numb
 are enabled with the `-mjm` or `--metrics-jvm-memory` flag.
 * JVM thread metrics: these metrics report the number of JVM threads used in the PerfTest process,
 as well as their state. This can be useful to optimize the usage of PerfTest to simulate
-http://www.rabbitmq.com/java-tools.html#iot-workloads[high loads with fewer resources].
+link:#workloads-with-a-large-number-of-clients[high loads with fewer resources].
 These metrics are enabled with the `-mjt` or `--metrics-jvm-thread` flag.
 * JVM GC metrics: these metrics reports garbage collection activity. They can vary depending
 on the JVM used, its version, and the GC settings. They can be useful to correlate the GC
@@ -49,12 +49,12 @@ One can specify metrics tags with the `-mt` or `--metrics-tags` options, e.g.
 `--metrics-tags env=performance,datacenter=eu` to tell monitoring systems that those
 metrics are from the `performance` environment located in the `eu` data center.
 Monitoring systems that support dimensions can then make it easier to
-navigate across metrics (group by, drill down). See http://micrometer.io[Micrometer] documentation
+navigate across metrics (group by, drill down). See https://micrometer.io[Micrometer] documentation
 for more information about tags and dimensions.
 
 === Supported Monitoring Systems
 
-PerfTest builds on top http://micrometer.io[Micrometer] to report gathered metrics to various monitoring systems.
+PerfTest builds on top https://micrometer.io[Micrometer] to report gathered metrics to various monitoring systems.
 Nevertheless, not all systems supported by Micrometer are actually supported by PerfTest. The only metrics
 system currently supported is https://prometheus.io/[Prometheus]. Don't hesitate to
 https://github.com/rabbitmq/rabbitmq-perf-test/issues[request support for other monitoring systems].

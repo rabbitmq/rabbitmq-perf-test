@@ -130,7 +130,7 @@ flag instead of the `--rate` one. For example:
  bin/runjava com.rabbitmq.perf.PerfTest --publishing-interval 5
 
 The command above makes the publisher publish a message every 5 seconds.
-To simulate a group of consumers, use the`--queue-pattern` flag to simulate many consumers across
+To simulate a group of consumers, use the `--queue-pattern` flag to simulate many consumers across
 many queues:
 
  bin/runjava com.rabbitmq.perf.PerfTest --queue-pattern 'perf-test-%d' \
@@ -224,26 +224,6 @@ but must be used only in the same Java process. So PerfTest can fall back to `Sy
 which provides only milliseconds precision, but is reliable between different machines
 as long as their clocks are synchronised.
 
-== How It Works
-   
-If a queue name is defined (`-u "queue-name"`),
-PerfTest will create a queue with this name and all
-consumers will consume from this queue. The queue will be
-bound to the direct exchange with its name as the routing
-key. The routing key will be used by producers to send
-messages.  This will cause messages from all producers to be
-sent to this single queue and all consumers to receive
-messages from this single queue.
-
-If the queue name is not defined, PerfTest will create a
-random UUID routing key with which producers will publish
-messages.  Each consumer will create its own anonymous queue
-and bind it to the direct exchange with this routing key.
-This will cause each message from all producers to be
-replicated to multiple queues (number of queues equals
-number of consumers), while each consumer will be receiving
-messages from only one queue.
-
 == TLS Support
 
 PerfTest can use TLS to connect to a node that is
@@ -281,3 +261,4 @@ that can help you run automated benchmarks by wrapping around PerfTest. You can 
 benchmark specs, and the tool will take care of running the benchmark,
 collecting results and displaying them in an HTML page. Learn more
 https://github.com/rabbitmq/rabbitmq-perf-test/blob/master/html/README.md[here].
+
