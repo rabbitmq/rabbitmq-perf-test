@@ -2,7 +2,7 @@
 
 [![Travis CI](https://travis-ci.org/rabbitmq/rabbitmq-jms-client.svg?branch=master)](https://travis-ci.org/rabbitmq/rabbitmq-perf-test)
 
-This repository contains source code of the [RabbitMQ Performance Testing Tool](https://www.rabbitmq.com/java-tools.html).
+This repository contains source code of the RabbitMQ Performance Testing Tool.
 The client is maintained by the [RabbitMQ team at Pivotal](http://github.com/rabbitmq/).
 
 ## Installation
@@ -11,6 +11,12 @@ This is a standalone tool that is distributed in binary form using
 [Bintray](https://bintray.com/rabbitmq/java-tools/perf-test) or
 [GitHub releases](https://github.com/rabbitmq/rabbitmq-perf-test/releases)
 and as a JAR file on Maven Central (see below).
+
+## Documentation
+
+ * [Latest stable release](https://rabbitmq.github.io/rabbitmq-perf-test/stable/htmlsingle/)
+ * [Latest milestone release](https://rabbitmq.github.io/rabbitmq-perf-test/milestone/htmlsingle/)
+ * [Latest development build](https://rabbitmq.github.io/rabbitmq-perf-test/snapshot/htmlsingle/)
 
 ## Usage
 
