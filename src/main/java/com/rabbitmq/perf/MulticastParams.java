@@ -354,7 +354,7 @@ public class MulticastParams {
     public Consumer createConsumer(Connection connection, Stats stats, MulticastSet.CompletionHandler completionHandler) throws IOException {
         TopologyHandlerResult topologyHandlerResult = this.topologyHandler.configureQueuesForClient(connection);
         connection = topologyHandlerResult.connection;
-        Channel channel = topologyHandlerResult.channel;
+        Channel channel = connection.createChannel();
         if (consumerTxSize > 0) channel.txSelect();
         if (consumerPrefetch > 0) channel.basicQos(consumerPrefetch);
         if (channelPrefetch > 0) channel.basicQos(channelPrefetch, true);
@@ -554,19 +554,12 @@ public class MulticastParams {
         final Connection connection;
 
         /**
-         * The channel used to create the configured resources.
-         * Must be used by the agent that asked to declare resources.
-         */
-        final Channel channel;
-
-        /**
          * The configured queues.
          */
         final List<String> configuredQueues;
 
-        TopologyHandlerResult(Connection connection, Channel channel, List<String> configuredQueues) {
+        TopologyHandlerResult(Connection connection, List<String> configuredQueues) {
             this.connection = connection;
-            this.channel = channel;
             this.configuredQueues = configuredQueues;
         }
     }
@@ -601,7 +594,8 @@ public class MulticastParams {
             return connectionToUse;
         }
 
-        protected List<String> configureQueues(Connection connection, Channel channel, List<String> queues, Runnable afterQueueConfigurationCallback) throws IOException {
+        protected List<String> configureQueues(Connection connection, List<String> queues, Runnable afterQueueConfigurationCallback) throws IOException {
+            Channel channel = connection.createChannel();
             if (!params.predeclared || !exchangeExists(connection, params.exchangeName)) {
                 channel.exchangeDeclare(params.exchangeName, params.exchangeType);
             }
@@ -632,6 +626,7 @@ public class MulticastParams {
                 }
                 afterQueueConfigurationCallback.run();
             }
+            channel.abort();
             return generatedQueueNames;
         }
 
@@ -665,14 +660,12 @@ public class MulticastParams {
         public TopologyHandlerResult configureQueuesForClient(Connection connection) throws IOException {
             if (this.params.isExclusive()) {
                 Connection connectionToUse = maybeUseCachedConnection(this.queueNames, connection);
-                Channel channel = connectionToUse.createChannel();
                 return new TopologyHandlerResult(
-                    connectionToUse, channel, configureQueues(connectionToUse, channel, this.queueNames, () -> {})
+                    connectionToUse, configureQueues(connectionToUse, this.queueNames, () -> {})
                 );
             } else {
-                Channel channel = connection.createChannel();
                 return new TopologyHandlerResult(
-                    connection, channel, configureQueues(connection, channel, this.queueNames, () -> {})
+                    connection, configureQueues(connection, this.queueNames, () -> {})
                 ) ;
             }
         }
@@ -680,7 +673,7 @@ public class MulticastParams {
         @Override
         public List<String> configureAllQueues(Connection connection) throws IOException {
             if (shouldConfigureQueues() && !this.params.isExclusive()) {
-                return configureQueues(connection, connection.createChannel(), this.queueNames, () -> {});
+                return configureQueues(connection, this.queueNames, () -> {});
             }
             return null;
         }
@@ -729,17 +722,13 @@ public class MulticastParams {
         public TopologyHandlerResult configureQueuesForClient(Connection connection) throws IOException {
             if (this.params.isExclusive()) {
                 Connection connectionToUse = maybeUseCachedConnection(getQueueNamesForClient(), connection);
-                Channel channel = connectionToUse.createChannel();
                 return new TopologyHandlerResult(
                     connectionToUse,
-                    channel,
-                    configureQueues(connectionToUse, channel, getQueueNamesForClient(), () -> {})
+                    configureQueues(connectionToUse, getQueueNamesForClient(), () -> {})
                 );
             } else {
-                Channel channel = connection.createChannel();
                 return new TopologyHandlerResult(
                     connection,
-                    channel,
                     getQueueNamesForClient()
                 );
             }
@@ -752,8 +741,7 @@ public class MulticastParams {
             if (this.params.isExclusive()) {
                 return null;
             } else {
-                Channel channel = connection.createChannel();
-                return configureQueues(connection, channel, getQueueNames(), () -> this.next());
+                return configureQueues(connection, getQueueNames(), () -> this.next());
             }
         }
 
