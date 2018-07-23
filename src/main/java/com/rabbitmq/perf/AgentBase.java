@@ -15,10 +15,22 @@
 
 package com.rabbitmq.perf;
 
+import com.rabbitmq.client.MissedHeartbeatException;
+import com.rabbitmq.client.ShutdownSignalException;
+
+import java.io.IOException;
+import java.util.function.BooleanSupplier;
+import java.util.function.Predicate;
+
 /**
  *
  */
 public abstract class AgentBase {
+
+    // FIXME this is the condition to start connection recovery
+    // ensure it's the appropriate condition and get it from the Java client code
+    static final Predicate<ShutdownSignalException> CONNECTION_RECOVERY_TRIGGERED =
+        e -> !e.isInitiatedByApplication() || (e.getCause() instanceof MissedHeartbeatException);
 
     protected void delay(long now, AgentState state) {
 
@@ -38,6 +50,29 @@ public abstract class AgentBase {
         }
     }
 
+    protected boolean isConnectionRecoveryTriggered(ShutdownSignalException e) {
+        return CONNECTION_RECOVERY_TRIGGERED.test(e);
+    }
+
+    protected void handleShutdownSignalExceptionOnWrite(BooleanSupplier showStopper, ShutdownSignalException e) {
+        if (shouldStop(showStopper, e)) {
+            throw e;
+        }
+    }
+
+    protected boolean shouldStop(BooleanSupplier showStopper, ShutdownSignalException e) {
+        return !showStopper.getAsBoolean() || !isConnectionRecoveryTriggered(e);
+    }
+
+    protected void dealWithWriteOperation(WriteOperation writeOperation, BooleanSupplier showStopper) throws IOException {
+        try {
+            writeOperation.call();
+        } catch (ShutdownSignalException e) {
+            handleShutdownSignalExceptionOnWrite(showStopper, e);
+            // connection recovery is in progress, we ignore the exception if this point is reached
+        }
+    }
+
     protected interface AgentState {
 
         float getRateLimit();
@@ -47,5 +82,10 @@ public abstract class AgentBase {
         int getMsgCount();
 
         int incrementMessageCount();
+    }
+
+    @FunctionalInterface
+    interface WriteOperation {
+        void call() throws IOException;
     }
 }

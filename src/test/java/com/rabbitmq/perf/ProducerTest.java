@@ -142,7 +142,9 @@ public class ProducerTest {
             .setTsp(new TimestampProvider(true, true))
             .setStats(stats())
             .setMessageProperties(null).setCompletionHandler(completionHandler()).setRoutingKeyCacheSize(0)
-            .setRandomStartDelayInSeconds(-1));
+            .setRandomStartDelayInSeconds(-1)
+            .setShowStopper(() -> false)
+        );
 
         producer.run();
 
@@ -214,6 +216,7 @@ public class ProducerTest {
                 .setStats(stats())
                 .setMessageProperties(messageProperties).setCompletionHandler(completionHandler()).setRoutingKeyCacheSize(0)
                 .setRandomStartDelayInSeconds(-1)
+                .setShowStopper(() -> false)
         );
 
         producer.run();
@@ -273,6 +276,7 @@ public class ProducerTest {
                 .setStats(stats())
                 .setMessageProperties(messageProperties).setCompletionHandler(completionHandler()).setRoutingKeyCacheSize(0)
                 .setRandomStartDelayInSeconds(-1)
+                .setShowStopper(() -> false)
             );
 
         producer.run();
@@ -307,6 +311,7 @@ public class ProducerTest {
                 .setStats(stats())
                 .setMessageProperties(messageProperties).setCompletionHandler(completionHandler()).setRoutingKeyCacheSize(0)
                 .setRandomStartDelayInSeconds(-1)
+                .setShowStopper(() -> false)
         );
     }
 

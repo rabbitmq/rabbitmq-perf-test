@@ -146,11 +146,20 @@ public class PerfTest {
             int producerRandomStartDelayInSeconds = intArg(cmd, "prsd", -1);
             int producerSchedulingThreads = intArg(cmd, "pst", -1);
 
+            boolean disableConnectionRecovery = hasOption(cmd, "dcr");
+            boolean disableTopologyRecovery = hasOption(cmd, "dtr");
+
             String uri               = strArg(cmd, 'h', "amqp://localhost");
             String urisParameter     = strArg(cmd, 'H', null);
             String outputFile        = strArg(cmd, 'o', null);
 
             ConnectionFactory factory = new ConnectionFactory();
+            if (disableConnectionRecovery) {
+                factory.setAutomaticRecoveryEnabled(false);
+            }
+            if (disableTopologyRecovery) {
+                factory.setTopologyRecoveryEnabled(false);
+            }
 
             CompositeMeterRegistry registry = new CompositeMeterRegistry();
 
@@ -329,6 +338,8 @@ public class PerfTest {
         MulticastSet.CompletionHandler completionHandler;
         if (p.hasLimit()) {
             int countLimit = 0;
+            // producers and consumers will notify the completion
+            // handler when they reach their message count
             if (p.getProducerMsgCount() > 0) {
                 countLimit += p.getProducerThreadCount();
             }
@@ -337,7 +348,7 @@ public class PerfTest {
             }
             completionHandler = new MulticastSet.DefaultCompletionHandler(
                 p.getTimeLimit(),
-                 countLimit
+                countLimit
             );
         } else {
             completionHandler = new MulticastSet.NoLimitCompletionHandler();
@@ -488,6 +499,9 @@ public class PerfTest {
         options.addOption(new Option("mh", "metrics-help",false, "show metrics usage"));
 
         options.addOption(new Option("env", "environment-variables",false, "show usage with environment variables"));
+
+        options.addOption(new Option("dcr", "disable-connection-recovery",            false,"disable automatic connection recovery"));
+        options.addOption(new Option("dtr", "disable-topology-recovery",            false,"disable automatic topology recovery"));
 
         return options;
     }

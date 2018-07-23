@@ -19,6 +19,9 @@ import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.ConfirmListener;
 import com.rabbitmq.client.ReturnListener;
+import com.rabbitmq.client.ShutdownSignalException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.time.OffsetDateTime;
@@ -36,6 +39,7 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BooleanSupplier;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -44,6 +48,8 @@ import static java.util.stream.Collectors.toMap;
 public class Producer extends AgentBase implements Runnable, ReturnListener,
         ConfirmListener
 {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(Producer.class);
 
     public static final String TIMESTAMP_HEADER = "timestamp";
     private final Channel channel;
@@ -72,6 +78,8 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
     private final int randomStartDelay;
 
     private final float rateLimit;
+
+    private final BooleanSupplier showStopper;
 
     public Producer(ProducerParameters parameters) {
         this.channel           = parameters.getChannel();
@@ -109,6 +117,7 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
         this.randomStartDelay = parameters.getRandomStartDelayInSeconds();
 
         this.rateLimit = parameters.getRateLimit();
+        this.showStopper = parameters.getShowStopper();
     }
 
     private Function<AMQP.BasicProperties.Builder, AMQP.BasicProperties.Builder> builderProcessorWithMessageProperties(
@@ -277,6 +286,7 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
                 now = System.currentTimeMillis();
             }
         } catch (RuntimeException e) {
+            LOGGER.debug("Error in publisher", e);
             // failing, we don't want to block the whole process, so counting down
             countDown();
             throw e;
@@ -289,8 +299,6 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
     private boolean keepGoing(AgentState state) {
         return (msgLimit == 0 || state.getMsgCount() < msgLimit) && !Thread.interrupted();
     }
-
-
 
     public Runnable createRunnableForScheduling() {
         final AtomicBoolean initialized = new AtomicBoolean(false);
@@ -335,30 +343,32 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
     }
 
     public void handlePublish(AgentState currentState) {
-        try {
-            if (confirmPool != null) {
-                if (confirmTimeout < 0) {
-                    confirmPool.acquire();
-                } else {
-                    boolean acquired = confirmPool.tryAcquire(confirmTimeout, TimeUnit.SECONDS);
-                    if (!acquired) {
-                        // waiting for too long, broker may be gone, stopping thread
-                        throw new RuntimeException("Waiting for publisher confirms for too long");
+        if (!this.showStopper.getAsBoolean()) {
+            try {
+                if (confirmPool != null) {
+                    if (confirmTimeout < 0) {
+                        confirmPool.acquire();
+                    } else {
+                        boolean acquired = confirmPool.tryAcquire(confirmTimeout, TimeUnit.SECONDS);
+                        if (!acquired) {
+                            // waiting for too long, broker may be gone, stopping thread
+                            throw new RuntimeException("Waiting for publisher confirms for too long");
+                        }
                     }
                 }
-            }
-            publish(messageBodySource.create(currentState.getMsgCount()));
+                dealWithWriteOperation(() -> publish(messageBodySource.create(currentState.getMsgCount())), this.showStopper);
 
-            int messageCount = currentState.incrementMessageCount();
+                int messageCount = currentState.incrementMessageCount();
 
-            if (txSize != 0 && messageCount % txSize == 0) {
-                channel.txCommit();
+                if (txSize != 0 && messageCount % txSize == 0) {
+                    dealWithWriteOperation(() -> channel.txCommit(), this.showStopper);
+                }
+                stats.handleSend();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            } catch (InterruptedException e) {
+                throw new RuntimeException (e);
             }
-            stats.handleSend();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        } catch (InterruptedException e) {
-            throw new RuntimeException (e);
         }
     }
 

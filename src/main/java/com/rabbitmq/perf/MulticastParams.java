@@ -19,6 +19,8 @@ import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ShutdownSignalException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -28,8 +30,12 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.function.BooleanSupplier;
 
 public class MulticastParams {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(MulticastParams.class);
+
     private long confirm = -1;
     private int confirmTimeout = 30;
     private int consumerCount = 1;
@@ -327,6 +333,8 @@ public class MulticastParams {
             calculatedProducerRateLimit = 1.0f / (float) this.publishingInterval;
         }
 
+        BooleanSupplier showStopper = maybeCreateShowStopper(connection);
+
         final Producer producer = new Producer(new ProducerParameters()
             .setChannel(channel).setExchangeName(exchangeName).setId(this.topologyHandler.getRoutingKey())
             .setRandomRoutingKey(randomRoutingKey).setFlags(flags).setTxSize(producerTxSize)
@@ -335,6 +343,7 @@ public class MulticastParams {
             .setStats(stats).setMessageProperties(messageProperties).setCompletionHandler(completionHandler)
             .setRoutingKeyCacheSize(this.routingKeyCacheSize)
             .setRandomStartDelayInSeconds(this.producerRandomStartDelayInSeconds)
+            .setShowStopper(showStopper)
         );
         channel.addReturnListener(producer);
         channel.addConfirmListener(producer);
@@ -344,9 +353,8 @@ public class MulticastParams {
 
     public Consumer createConsumer(Connection connection, Stats stats, MulticastSet.CompletionHandler completionHandler) throws IOException {
         TopologyHandlerResult topologyHandlerResult = this.topologyHandler.configureQueuesForClient(connection);
-
         connection = topologyHandlerResult.connection;
-        Channel channel = connection.createChannel();
+        Channel channel = topologyHandlerResult.channel;
         if (consumerTxSize > 0) channel.txSelect();
         if (consumerPrefetch > 0) channel.basicQos(consumerPrefetch);
         if (channelPrefetch > 0) channel.basicQos(channelPrefetch, true);
@@ -358,12 +366,50 @@ public class MulticastParams {
             timestampInHeader = false;
         }
         TimestampProvider tsp = new TimestampProvider(useMillis, timestampInHeader);
+
+        BooleanSupplier showStopper = maybeCreateShowStopper(connection);
+
         Consumer consumer = new Consumer(channel, this.topologyHandler.getRoutingKey(), topologyHandlerResult.configuredQueues,
                                          consumerTxSize, autoAck, multiAckEvery,
                                          stats, consumerRateLimit, consumerMsgCount,
-                                         consumerLatencyInMicroseconds, tsp, completionHandler);
+                                         consumerLatencyInMicroseconds, tsp, completionHandler, showStopper);
         this.topologyHandler.next();
         return consumer;
+    }
+
+    private BooleanSupplier maybeCreateShowStopper(Connection connection) {
+//        BooleanSupplier showStopper;
+//        if (isRecoverable(connection)) {
+//            AtomicBoolean recoveryInProgress = new AtomicBoolean(false);
+//            ((AutorecoveringConnection) connection).addRecoveryListener(new RecoveryListener() {
+//                @Override
+//                public void handleRecoveryStarted(Recoverable recoverable) {
+//                    LOGGER.debug("Waiting synchronization signal to start connection recovery for connection {}", connection.getClientProvidedName());
+//                    recoveryInProgress.set(true);
+//                    try {
+//                        synchronizer.await();
+//                        LOGGER.debug("Starting connection recovery for connection {}", connection.getClientProvidedName());
+//                    } catch (InterruptedException e) {
+//                        LOGGER.warn("Publisher/Consumer connection recovery synchronizing has been interrupted");
+//                    }
+//                }
+//
+//                @Override
+//                public void handleRecovery(Recoverable recoverable) {
+//                    recoveryInProgress.set(false);
+//                    LOGGER.debug("Connection recovery done for connection {}", connection.getClientProvidedName());
+//                }
+//            });
+//            connection.addShutdownListener(cause -> {
+//                if (AgentBase.CONNECTION_RECOVERY_TRIGGERED.test(cause)) {
+//                    recoveryInProgress.set(true);
+//                }
+//            });
+//            showStopper = () -> recoveryInProgress.get();
+//        } else {
+//            showStopper = () -> false;
+//        }
+        return () -> false;
     }
 
     public List<String> configureAllQueues(Connection connection) throws IOException {
@@ -508,12 +554,19 @@ public class MulticastParams {
         final Connection connection;
 
         /**
+         * The channel used to create the configured resources.
+         * Must be used by the agent that asked to declare resources.
+         */
+        final Channel channel;
+
+        /**
          * The configured queues.
          */
         final List<String> configuredQueues;
 
-        TopologyHandlerResult(Connection connection, List<String> configuredQueues) {
+        TopologyHandlerResult(Connection connection, Channel channel, List<String> configuredQueues) {
             this.connection = connection;
+            this.channel = channel;
             this.configuredQueues = configuredQueues;
         }
     }
@@ -548,8 +601,7 @@ public class MulticastParams {
             return connectionToUse;
         }
 
-        protected List<String> configureQueues(Connection connection, List<String> queues, Runnable afterQueueConfigurationCallback) throws IOException {
-            Channel channel = connection.createChannel();
+        protected List<String> configureQueues(Connection connection, Channel channel, List<String> queues, Runnable afterQueueConfigurationCallback) throws IOException {
             if (!params.predeclared || !exchangeExists(connection, params.exchangeName)) {
                 channel.exchangeDeclare(params.exchangeName, params.exchangeType);
             }
@@ -580,8 +632,6 @@ public class MulticastParams {
                 }
                 afterQueueConfigurationCallback.run();
             }
-            channel.abort();
-
             return generatedQueueNames;
         }
 
@@ -615,12 +665,14 @@ public class MulticastParams {
         public TopologyHandlerResult configureQueuesForClient(Connection connection) throws IOException {
             if (this.params.isExclusive()) {
                 Connection connectionToUse = maybeUseCachedConnection(this.queueNames, connection);
+                Channel channel = connectionToUse.createChannel();
                 return new TopologyHandlerResult(
-                    connectionToUse, configureQueues(connectionToUse, this.queueNames, () -> {})
+                    connectionToUse, channel, configureQueues(connectionToUse, channel, this.queueNames, () -> {})
                 );
             } else {
+                Channel channel = connection.createChannel();
                 return new TopologyHandlerResult(
-                    connection, configureQueues(connection, this.queueNames, () -> {})
+                    connection, channel, configureQueues(connection, channel, this.queueNames, () -> {})
                 ) ;
             }
         }
@@ -628,7 +680,7 @@ public class MulticastParams {
         @Override
         public List<String> configureAllQueues(Connection connection) throws IOException {
             if (shouldConfigureQueues() && !this.params.isExclusive()) {
-                return configureQueues(connection, this.queueNames, () -> {});
+                return configureQueues(connection, connection.createChannel(), this.queueNames, () -> {});
             }
             return null;
         }
@@ -677,13 +729,17 @@ public class MulticastParams {
         public TopologyHandlerResult configureQueuesForClient(Connection connection) throws IOException {
             if (this.params.isExclusive()) {
                 Connection connectionToUse = maybeUseCachedConnection(getQueueNamesForClient(), connection);
+                Channel channel = connectionToUse.createChannel();
                 return new TopologyHandlerResult(
                     connectionToUse,
-                    configureQueues(connectionToUse, getQueueNamesForClient(), () -> {})
+                    channel,
+                    configureQueues(connectionToUse, channel, getQueueNamesForClient(), () -> {})
                 );
             } else {
+                Channel channel = connection.createChannel();
                 return new TopologyHandlerResult(
                     connection,
+                    channel,
                     getQueueNamesForClient()
                 );
             }
@@ -696,7 +752,8 @@ public class MulticastParams {
             if (this.params.isExclusive()) {
                 return null;
             } else {
-                return configureQueues(connection, getQueueNames(), () -> this.next());
+                Channel channel = connection.createChannel();
+                return configureQueues(connection, channel, getQueueNames(), () -> this.next());
             }
         }
 

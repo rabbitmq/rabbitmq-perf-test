@@ -143,7 +143,7 @@ public class TopologyTest {
         set.run();
 
         verify(cf, times(1 + 1 + 1)).newConnection(anyString()); // consumers, producers, configuration (not used)
-        verify(c, times(1 + 1 + 1)).createChannel(); // queue configuration, consumer, producer
+        verify(c, times(0 + 1 + 1)).createChannel(); // queue configuration (none), consumer, producer
         verify(ch, times(1))
             .queueDeclare(eq(""), anyBoolean(), anyBoolean(), anyBoolean(), isNull());
         verify(ch, times(1))
@@ -164,7 +164,7 @@ public class TopologyTest {
         set.run();
 
         verify(cf, times(10 + 10 + 1)).newConnection(anyString()); // consumers, producers, configuration (not used)
-        verify(c, times(10 + 10 + 10)).createChannel(); // queue configuration, consumer, producer
+        verify(c, times(0 + 10 + 10)).createChannel(); // queue configuration (none), consumer, producer
         verify(ch, times(10))
             .queueDeclare(eq(""), anyBoolean(), anyBoolean(), anyBoolean(), isNull());
         verify(ch, times(10))
@@ -187,7 +187,7 @@ public class TopologyTest {
         set.run();
 
         verify(cf, times(2 + 1 + 1)).newConnection(anyString()); // consumers, producers, configuration (not used)
-        verify(c, times(2 + 2 + 1)).createChannel(); // queue configuration, consumer, producer
+        verify(c, times(0 + 2 + 1)).createChannel(); // queue configuration (none), consumer, producer
         verify(ch, times(2))
             .queueDeclare(eq(queue), anyBoolean(), anyBoolean(), anyBoolean(), isNull());
         verify(ch, times(2))
@@ -210,7 +210,7 @@ public class TopologyTest {
         set.run();
 
         verify(cf, times(4 + 2 + 1)).newConnection(anyString()); // consumers, producers, configuration (not used)
-        verify(c, times(4 + 4 + 2)).createChannel(); // queue configuration, consumer, producer
+        verify(c, times(0 + 4 + 2)).createChannel(); // queue configuration (none), consumer, producer
         verify(ch, times(4))
             .queueDeclare(eq(queue), anyBoolean(), anyBoolean(), anyBoolean(), isNull());
         verify(ch, times(4))
@@ -261,7 +261,7 @@ public class TopologyTest {
         set.run();
 
         verify(cf, times(1 + 1 + 1)).newConnection(anyString()); // consumers, producers, configuration (not used)
-        verify(c, times(1 + 1 + 1)).createChannel(); // queue configuration, consumer, producer
+        verify(c, times(0 + 1 + 1)).createChannel(); // queue configuration (none), consumer, producer
         verify(ch, times(1))
             .queueDeclare(eq(""), anyBoolean(), anyBoolean(), anyBoolean(), isNull());
         verify(ch, times(1))
@@ -382,7 +382,7 @@ public class TopologyTest {
         set.run();
 
         verify(cf, times(1 + 1 + 1)).newConnection(anyString()); // consumers, producers, configuration (not used)
-        verify(c, times(1 + 1 + 1)).createChannel(); // queue configuration, consumer, producer
+        verify(c, times(0 + 1 + 1)).createChannel(); // queue configuration (none), consumer, producer
         verify(ch, times(1))
             .queueDeclare(eq(""), anyBoolean(), eq(valueOf(exclusive)), anyBoolean(), isNull());
         verify(ch, times(1))

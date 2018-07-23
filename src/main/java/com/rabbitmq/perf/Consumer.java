@@ -31,6 +31,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiFunction;
+import java.util.function.BooleanSupplier;
 
 public class Consumer extends AgentBase implements Runnable {
 
@@ -52,12 +53,15 @@ public class Consumer extends AgentBase implements Runnable {
 
     private final ConsumerState state;
 
+    private final BooleanSupplier showStopper;
+
     public Consumer(Channel channel, String id,
                     List<String> queueNames, int txSize, boolean autoAck,
                     int multiAckEvery, Stats stats, float rateLimit, int msgLimit,
                     int consumerLatencyInMicroSeconds,
                     TimestampProvider timestampProvider,
-                    MulticastSet.CompletionHandler completionHandler) {
+                    MulticastSet.CompletionHandler completionHandler,
+                    BooleanSupplier showStopper) {
 
         this.channel           = channel;
         this.id                = id;
@@ -97,6 +101,7 @@ public class Consumer extends AgentBase implements Runnable {
         }
 
         this.state = new ConsumerState(rateLimit);
+        this.showStopper = showStopper;
     }
 
     public void run() {
@@ -124,21 +129,22 @@ public class Consumer extends AgentBase implements Runnable {
         @Override
         public void handleDelivery(String consumerTag, Envelope envelope, BasicProperties properties, byte[] body) throws IOException {
             int currentMessageCount = state.incrementMessageCount();
-
             if (msgLimit == 0 || currentMessageCount <= msgLimit) {
                 long messageTimestamp = timestampExtractor.apply(properties, body);
                 long nowTimestamp = timestampProvider.getCurrentTime();
 
                 if (!autoAck) {
-                    if (multiAckEvery == 0) {
-                        channel.basicAck(envelope.getDeliveryTag(), false);
-                    } else if (currentMessageCount % multiAckEvery == 0) {
-                        channel.basicAck(envelope.getDeliveryTag(), true);
-                    }
+                    dealWithWriteOperation(() -> {
+                        if (multiAckEvery == 0) {
+                            channel.basicAck(envelope.getDeliveryTag(), false);
+                        } else if (currentMessageCount % multiAckEvery == 0) {
+                            channel.basicAck(envelope.getDeliveryTag(), true);
+                        }
+                    }, showStopper);
                 }
 
                 if (txSize != 0 && currentMessageCount % txSize == 0) {
-                    channel.txCommit();
+                    dealWithWriteOperation(() -> channel.txCommit(), showStopper);
                 }
 
                 long diff_time = timestampProvider.getDifference(nowTimestamp, messageTimestamp);

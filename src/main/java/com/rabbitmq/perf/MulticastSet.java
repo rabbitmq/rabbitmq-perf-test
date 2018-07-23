@@ -17,6 +17,7 @@ package com.rabbitmq.perf;
 
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
@@ -42,6 +43,8 @@ import static java.lang.Math.min;
 import static java.lang.String.format;
 
 public class MulticastSet {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(MulticastSet.class);
 
     private final Stats stats;
     private final ConnectionFactory factory;
@@ -87,7 +90,9 @@ public class MulticastSet {
 
         setUri();
         Connection conn = factory.newConnection("perf-test-configuration");
-        params.configureAllQueues(conn);
+        List<String> queues = params.configureAllQueues(conn);
+
+        // FIXME don't close it if it should handle topology recovery
         conn.close();
 
         this.params.resetTopologyHandler();
@@ -178,7 +183,6 @@ public class MulticastSet {
                 producerState.task = producersExecutorService.submit(producerState.runnable);
             }
         }
-
 
         this.completionHandler.waitForCompletion();
 
@@ -320,7 +324,7 @@ public class MulticastSet {
 
     }
 
-    interface CompletionHandler {
+    public interface CompletionHandler {
 
         void waitForCompletion() throws InterruptedException;
 
