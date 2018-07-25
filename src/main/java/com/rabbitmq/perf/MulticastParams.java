@@ -29,7 +29,10 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import static com.rabbitmq.perf.Recovery.setupRecoveryProcess;
+
 public class MulticastParams {
+
     private long confirm = -1;
     private int confirmTimeout = 30;
     private int consumerCount = 1;
@@ -309,8 +312,10 @@ public class MulticastParams {
         Channel channel = connection.createChannel();
         if (producerTxSize > 0) channel.txSelect();
         if (confirm >= 0) channel.confirmSelect();
+        TopologyRecording topologyRecording = new TopologyRecording();
         if (!predeclared || !exchangeExists(connection, exchangeName)) {
             channel.exchangeDeclare(exchangeName, exchangeType);
+            topologyRecording.recordExchange(exchangeName, exchangeType);
         }
         MessageBodySource messageBodySource;
         TimestampProvider tsp;
@@ -327,6 +332,8 @@ public class MulticastParams {
             calculatedProducerRateLimit = 1.0f / (float) this.publishingInterval;
         }
 
+        Recovery.RecoveryProcess recoveryProcess = setupRecoveryProcess(connection, topologyRecording);
+
         final Producer producer = new Producer(new ProducerParameters()
             .setChannel(channel).setExchangeName(exchangeName).setId(this.topologyHandler.getRoutingKey())
             .setRandomRoutingKey(randomRoutingKey).setFlags(flags).setTxSize(producerTxSize)
@@ -335,6 +342,7 @@ public class MulticastParams {
             .setStats(stats).setMessageProperties(messageProperties).setCompletionHandler(completionHandler)
             .setRoutingKeyCacheSize(this.routingKeyCacheSize)
             .setRandomStartDelayInSeconds(this.producerRandomStartDelayInSeconds)
+            .setRecoveryProcess(recoveryProcess)
         );
         channel.addReturnListener(producer);
         channel.addConfirmListener(producer);
@@ -344,7 +352,6 @@ public class MulticastParams {
 
     public Consumer createConsumer(Connection connection, Stats stats, MulticastSet.CompletionHandler completionHandler) throws IOException {
         TopologyHandlerResult topologyHandlerResult = this.topologyHandler.configureQueuesForClient(connection);
-
         connection = topologyHandlerResult.connection;
         Channel channel = connection.createChannel();
         if (consumerTxSize > 0) channel.txSelect();
@@ -358,15 +365,18 @@ public class MulticastParams {
             timestampInHeader = false;
         }
         TimestampProvider tsp = new TimestampProvider(useMillis, timestampInHeader);
+
+        Recovery.RecoveryProcess recoveryProcess = setupRecoveryProcess(connection, topologyHandlerResult.topologyRecording);
+
         Consumer consumer = new Consumer(channel, this.topologyHandler.getRoutingKey(), topologyHandlerResult.configuredQueues,
                                          consumerTxSize, autoAck, multiAckEvery,
                                          stats, consumerRateLimit, consumerMsgCount,
-                                         consumerLatencyInMicroseconds, tsp, completionHandler);
+                                         consumerLatencyInMicroseconds, tsp, completionHandler, recoveryProcess);
         this.topologyHandler.next();
         return consumer;
     }
 
-    public List<String> configureAllQueues(Connection connection) throws IOException {
+    public TopologyHandlerResult configureAllQueues(Connection connection) throws IOException {
         return this.topologyHandler.configureAllQueues(connection);
     }
 
@@ -470,7 +480,7 @@ public class MulticastParams {
         /**
          * Configure the queues for the current client (e.g. consumer or producer)
          * @param connection
-         * @return the configured queues names (can be server-generated names) and connection
+         * @return the configured queues names (can be server-generated names), connection, and topology recording
          * @throws IOException
          */
         TopologyHandlerResult configureQueuesForClient(Connection connection) throws IOException;
@@ -478,10 +488,10 @@ public class MulticastParams {
         /**
          * Configure all the queues for this run
          * @param connection
-         * @return the configured queues names (can be server-generated names)
+         * @return the configured queues names (can be server-generated names), connection, and topology recording
          * @throws IOException
          */
-        List<String> configureAllQueues(Connection connection) throws IOException;
+        TopologyHandlerResult configureAllQueues(Connection connection) throws IOException;
 
         /**
          * Move the cursor forward.
@@ -507,14 +517,17 @@ public class MulticastParams {
          */
         final Connection connection;
 
+        final TopologyRecording topologyRecording;
+
         /**
          * The configured queues.
          */
         final List<String> configuredQueues;
 
-        TopologyHandlerResult(Connection connection, List<String> configuredQueues) {
+        TopologyHandlerResult(Connection connection, List<String> configuredQueues, TopologyRecording topologyRecording) {
             this.connection = connection;
             this.configuredQueues = configuredQueues;
+            this.topologyRecording = topologyRecording;
         }
     }
 
@@ -548,10 +561,11 @@ public class MulticastParams {
             return connectionToUse;
         }
 
-        protected List<String> configureQueues(Connection connection, List<String> queues, Runnable afterQueueConfigurationCallback) throws IOException {
+        protected List<String> configureQueues(Connection connection, List<String> queues, TopologyRecording topologyRecording, Runnable afterQueueConfigurationCallback) throws IOException {
             Channel channel = connection.createChannel();
             if (!params.predeclared || !exchangeExists(connection, params.exchangeName)) {
                 channel.exchangeDeclare(params.exchangeName, params.exchangeType);
+                topologyRecording.recordExchange(params.exchangeName, params.exchangeType);
             }
 
             // To ensure we get at-least 1 default queue:
@@ -566,22 +580,29 @@ public class MulticastParams {
             List<String> generatedQueueNames = new ArrayList<>();
             for (String qName : queues) {
                 if (!params.predeclared || !queueExists(connection, qName)) {
+                    boolean serverNamed = qName == null || "".equals(qName);
                     qName = channel.queueDeclare(qName,
                         params.flags.contains("persistent"),
                         params.isExclusive(),
                         params.autoDelete,
                         params.queueArguments).getQueue();
+                    topologyRecording.recordQueue(
+                        qName, params.flags.contains("persistent"),
+                        params.isExclusive(), params.autoDelete,
+                        params.queueArguments, serverNamed
+                    );
                 }
                 generatedQueueNames.add(qName);
                 // skipping binding to default exchange,
                 // as it's not possible to explicitly bind to it.
                 if (!"".equals(params.exchangeName) && !"amq.default".equals(params.exchangeName) && !params.skipBindingQueues) {
-                    channel.queueBind(qName, params.exchangeName, params.topologyHandler.getRoutingKey());
+                    String routingKey = params.topologyHandler.getRoutingKey();
+                    channel.queueBind(qName, params.exchangeName, routingKey);
+                    topologyRecording.recordBinding(qName, params.exchangeName, routingKey);
                 }
                 afterQueueConfigurationCallback.run();
             }
             channel.abort();
-
             return generatedQueueNames;
         }
 
@@ -595,6 +616,8 @@ public class MulticastParams {
         final String routingKey;
 
         final List<String> queueNames;
+
+        final TopologyRecording topologyRecording = new TopologyRecording();
 
         FixedQueuesTopologyHandler(MulticastParams params, String routingKey, List<String> queueNames) {
             super(params);
@@ -616,21 +639,21 @@ public class MulticastParams {
             if (this.params.isExclusive()) {
                 Connection connectionToUse = maybeUseCachedConnection(this.queueNames, connection);
                 return new TopologyHandlerResult(
-                    connectionToUse, configureQueues(connectionToUse, this.queueNames, () -> {})
+                    connectionToUse, configureQueues(connectionToUse, this.queueNames, topologyRecording, () -> {}), topologyRecording
                 );
             } else {
                 return new TopologyHandlerResult(
-                    connection, configureQueues(connection, this.queueNames, () -> {})
-                ) ;
+                    connection, configureQueues(connection, this.queueNames, topologyRecording, () -> {}), topologyRecording
+                );
             }
         }
 
         @Override
-        public List<String> configureAllQueues(Connection connection) throws IOException {
+        public TopologyHandlerResult configureAllQueues(Connection connection) throws IOException {
             if (shouldConfigureQueues() && !this.params.isExclusive()) {
-                return configureQueues(connection, this.queueNames, () -> {});
+                return new TopologyHandlerResult(connection, configureQueues(connection, this.queueNames, topologyRecording, () -> {}), topologyRecording);
             }
-            return null;
+            return new TopologyHandlerResult(connection, new ArrayList<>(), new TopologyRecording());
         }
 
         public boolean shouldConfigureQueues() {
@@ -659,6 +682,7 @@ public class MulticastParams {
 
         final List<String> queues;
         int index = 0;
+        private final TopologyRecording topologyRecording = new TopologyRecording();
 
         public SequenceTopologyHandler(MulticastParams params, int from, int to, String queuePattern) {
             super(params);
@@ -677,26 +701,31 @@ public class MulticastParams {
         public TopologyHandlerResult configureQueuesForClient(Connection connection) throws IOException {
             if (this.params.isExclusive()) {
                 Connection connectionToUse = maybeUseCachedConnection(getQueueNamesForClient(), connection);
+                TopologyRecording clientTopologyRecording = new TopologyRecording();
                 return new TopologyHandlerResult(
                     connectionToUse,
-                    configureQueues(connectionToUse, getQueueNamesForClient(), () -> {})
+                    configureQueues(connectionToUse, getQueueNamesForClient(), clientTopologyRecording, () -> {}),
+                    clientTopologyRecording
                 );
             } else {
+                List<String> queues = getQueueNamesForClient();
+                TopologyRecording clientTopologyRecording = this.topologyRecording.subRecording(queues);
                 return new TopologyHandlerResult(
                     connection,
-                    getQueueNamesForClient()
+                    getQueueNamesForClient(),
+                    clientTopologyRecording
                 );
             }
 
         }
 
         @Override
-        public List<String> configureAllQueues(Connection connection) throws IOException {
+        public TopologyHandlerResult configureAllQueues(Connection connection) throws IOException {
             // if queues are exclusive, we'll create them for each consumer connection
             if (this.params.isExclusive()) {
-                return null;
+                return new TopologyHandlerResult(connection, new ArrayList<>(), new TopologyRecording());
             } else {
-                return configureQueues(connection, getQueueNames(), () -> this.next());
+                return new TopologyHandlerResult(connection, configureQueues(connection, getQueueNames(), this.topologyRecording, () -> this.next()), this.topologyRecording);
             }
         }
 

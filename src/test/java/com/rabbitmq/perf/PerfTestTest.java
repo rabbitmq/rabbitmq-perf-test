@@ -29,7 +29,7 @@ public class PerfTestTest {
     @Test
     void getNioNbThreadsAndExecutorSize() {
         Object parameters[][] = {
-            { 4, -1, 4, 6, "2 extra threads for executor when only number of threads is specified", true },
+            { 4, -1, 4, Integer.MAX_VALUE, "2 extra threads for executor when only number of threads is specified", true },
             { 4, 2, 4, 6, "2 extra threads for executor when specified number < nb threads", true },
             { -1, 4, 2, 4, "appropriate nb threads (-2) when only executor size is specified", true },
             { -1, 2, -1, -1, "executor should be large enough for IO threads + a couple of extra threads", false },

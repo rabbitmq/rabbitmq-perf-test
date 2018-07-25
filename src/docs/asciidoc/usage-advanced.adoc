@@ -188,13 +188,17 @@ to handle the I/O. That's what the
    --producer-scheduler-threads 10
    --nio-threads 10
 
-PerfTest will use 2 extra threads for internal bookkeeping needs, so the total will be 12 threads
-for I/O over all the connections. With the default blocking I/O mode, each producer (or consumer)
+This way PerfTest will use  12 threads for I/O over all the connections.
+With the default blocking I/O mode, each producer (or consumer)
 uses a thread for the I/O loop, that is 2000 threads to simulate 1000 producers and
-1000 consumers.
+1000 consumers. Using NIO in PerfTest can dramatically reduce the resources used
+to simulate workloads with a large number of connections with appropriate tuning.
 
-Using NIO in PerfTest can dramatically reduce the resources used to simulate workloads with a large
-number of connections with appropriate tuning.
+Note that in NIO mode the number of threads used can increase temporarily when connections close
+unexpectedly and connection recovery kicks in. This is due to the NIO mode dispatching
+connection closing to non-I/O threads to avoid deadlocks. Connection recovery can be disabled
+with the `--disable-connection-recovery` flag.
+
 
 == Running Producers and Consumers on Different Machines
 
