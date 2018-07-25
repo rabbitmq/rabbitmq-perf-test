@@ -85,17 +85,20 @@ public class Host {
             " " + command);
     }
 
+    public static void stopBrokerApp() throws IOException {
+        rabbitmqctl("stop_app");
+    }
+
+    public static void startBrokerApp() throws IOException {
+        rabbitmqctl("start_app");
+    }
+
     public static String rabbitmqctlCommand() {
         return System.getProperty("rabbitmqctl.bin");
     }
 
     public static void closeConnection(String pid) throws IOException {
         rabbitmqctl("close_connection '" + pid + "' 'Closed via rabbitmqctl'");
-    }
-
-    public static void closeConnection(NetworkConnection c) throws IOException {
-        Host.ConnectionInfo ci = findConnectionInfoFor(Host.listConnections(), c);
-        closeConnection(ci.getPid());
     }
 
     public static void closeAllConnections(List<ConnectionInfo> connectionInfos) throws IOException {

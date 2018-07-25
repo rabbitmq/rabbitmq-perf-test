@@ -147,7 +147,6 @@ public class PerfTest {
             int producerSchedulingThreads = intArg(cmd, "pst", -1);
 
             boolean disableConnectionRecovery = hasOption(cmd, "dcr");
-            boolean disableTopologyRecovery = hasOption(cmd, "dtr");
 
             String uri               = strArg(cmd, 'h', "amqp://localhost");
             String urisParameter     = strArg(cmd, 'H', null);
@@ -157,9 +156,8 @@ public class PerfTest {
             if (disableConnectionRecovery) {
                 factory.setAutomaticRecoveryEnabled(false);
             }
-            if (disableTopologyRecovery) {
-                factory.setTopologyRecoveryEnabled(false);
-            }
+
+            factory.setTopologyRecoveryEnabled(false);
 
             CompositeMeterRegistry registry = new CompositeMeterRegistry();
 
@@ -306,9 +304,16 @@ public class PerfTest {
             NioParams nioParams = new NioParams();
             int[] nbThreadsAndExecutorSize = getNioNbThreadsAndExecutorSize(nbThreads, executorSize);
             nioParams.setNbIoThreads(nbThreadsAndExecutorSize[0]);
+            // FIXME we cannot limit the max size of the thread pool because of
+            // the way NIO and automatic connection recovery work together.
+            // If set, the thread pool is also used to dispatch connection closing,
+            // where connection recovery actually occurs. In case of massive disconnecting,
+            // the thread pool is busy closing the connections, connection recovery
+            // kicks in the same used threads, and new connection cannot be opened as
+            // there are no available threads anymore in the pool for NIO!
             nioParams.setNioExecutor(new ThreadPoolExecutor(
-                nbThreadsAndExecutorSize[0], nbThreadsAndExecutorSize[1],
-                60L, TimeUnit.SECONDS,
+                nbThreadsAndExecutorSize[0], Integer.MAX_VALUE,
+                30L, TimeUnit.SECONDS,
                 new SynchronousQueue<>(),
                 new NamedThreadFactory("perf-test-nio-")
             ));
@@ -319,10 +324,10 @@ public class PerfTest {
     }
 
     protected static int [] getNioNbThreadsAndExecutorSize(int requestedNbThreads, int requestedExecutorSize) {
-        // executor size must slightly bigger than nb threads, see NioParams#setNioExecutor
+        // executor size must be slightly bigger than nb threads, see NioParams#setNioExecutor
         int extraThreadsForExecutor = 2;
         int nbThreadsToUse = requestedNbThreads > 0 ? requestedNbThreads : requestedExecutorSize - extraThreadsForExecutor;
-        int executorSizeToUse = requestedExecutorSize > 0 ? requestedExecutorSize : requestedNbThreads + extraThreadsForExecutor;
+        int executorSizeToUse = requestedExecutorSize > 0 ? requestedExecutorSize : Integer.MAX_VALUE;
         if (nbThreadsToUse <= 0 || executorSizeToUse <= 0) {
             throw new IllegalArgumentException(
                 format("NIO number of threads and executor must be greater than 0: %d, %d", nbThreadsToUse, executorSizeToUse)
@@ -501,7 +506,6 @@ public class PerfTest {
         options.addOption(new Option("env", "environment-variables",false, "show usage with environment variables"));
 
         options.addOption(new Option("dcr", "disable-connection-recovery",            false,"disable automatic connection recovery"));
-        options.addOption(new Option("dtr", "disable-topology-recovery",            false,"disable automatic topology recovery"));
 
         return options;
     }

@@ -20,6 +20,8 @@ import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.DefaultConsumer;
 import com.rabbitmq.client.Envelope;
 import com.rabbitmq.client.ShutdownSignalException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
@@ -31,11 +33,12 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiFunction;
-import java.util.function.BooleanSupplier;
 
 public class Consumer extends AgentBase implements Runnable {
 
-    private ConsumerImpl                q;
+    private static final Logger LOGGER = LoggerFactory.getLogger(Consumer.class);
+
+    private volatile ConsumerImpl       q;
     private final Channel               channel;
     private final String                id;
     private final List<String>          queueNames;
@@ -53,7 +56,7 @@ public class Consumer extends AgentBase implements Runnable {
 
     private final ConsumerState state;
 
-    private final BooleanSupplier showStopper;
+    private final Recovery.RecoveryProcess recoveryProcess;
 
     public Consumer(Channel channel, String id,
                     List<String> queueNames, int txSize, boolean autoAck,
@@ -61,7 +64,7 @@ public class Consumer extends AgentBase implements Runnable {
                     int consumerLatencyInMicroSeconds,
                     TimestampProvider timestampProvider,
                     MulticastSet.CompletionHandler completionHandler,
-                    BooleanSupplier showStopper) {
+                    Recovery.RecoveryProcess recoveryProcess) {
 
         this.channel           = channel;
         this.id                = id;
@@ -101,7 +104,8 @@ public class Consumer extends AgentBase implements Runnable {
         }
 
         this.state = new ConsumerState(rateLimit);
-        this.showStopper = showStopper;
+        this.recoveryProcess = recoveryProcess;
+        this.recoveryProcess.init(this);
     }
 
     public void run() {
@@ -140,11 +144,11 @@ public class Consumer extends AgentBase implements Runnable {
                         } else if (currentMessageCount % multiAckEvery == 0) {
                             channel.basicAck(envelope.getDeliveryTag(), true);
                         }
-                    }, showStopper);
+                    }, recoveryProcess);
                 }
 
                 if (txSize != 0 && currentMessageCount % txSize == 0) {
-                    dealWithWriteOperation(() -> channel.txCommit(), showStopper);
+                    dealWithWriteOperation(() -> channel.txCommit(), recoveryProcess);
                 }
 
                 long diff_time = timestampProvider.getDifference(nowTimestamp, messageTimestamp);
@@ -163,7 +167,14 @@ public class Consumer extends AgentBase implements Runnable {
 
         @Override
         public void handleShutdownSignal(String consumerTag, ShutdownSignalException sig) {
-            countDown();
+            LOGGER.debug(
+                "Consumer received shutdown signal, recovery process enabled? {}, condition to trigger connection recovery? {}",
+                recoveryProcess.isEnabled(), isConnectionRecoveryTriggered(sig)
+            );
+            if (!recoveryProcess.isEnabled()) {
+                LOGGER.debug("Counting down for consumer");
+                countDown();
+            }
         }
 
         @Override
@@ -182,6 +193,21 @@ public class Consumer extends AgentBase implements Runnable {
     private void countDown() {
         if (completed.compareAndSet(false, true)) {
             completionHandler.countDown();
+        }
+    }
+
+    @Override
+    public void recover(TopologyRecording topologyRecording) {
+        for (Map.Entry<String, String> entry : consumerTagBranchMap.entrySet()) {
+            TopologyRecording.RecordedQueue queue = topologyRecording.queue(entry.getValue());
+            try {
+                channel.basicConsume(queue.name(), autoAck, entry.getKey(), q);
+            } catch (IOException e) {
+                LOGGER.warn(
+                    "Error while recovering consumer {} on queue {} on connection {}",
+                    entry.getKey(), queue.name(), channel.getConnection().getClientProvidedName(), e
+                );
+            }
         }
     }
 

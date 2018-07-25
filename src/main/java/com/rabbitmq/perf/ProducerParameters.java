@@ -19,7 +19,6 @@ import com.rabbitmq.client.Channel;
 
 import java.util.List;
 import java.util.Map;
-import java.util.function.BooleanSupplier;
 
 /**
  *
@@ -44,7 +43,7 @@ public class ProducerParameters {
     private MulticastSet.CompletionHandler completionHandler;
     private int routingKeyCacheSize;
     private int randomStartDelayInSeconds;
-    private BooleanSupplier showStopper;
+    private Recovery.RecoveryProcess recoveryProcess;
 
     public Channel getChannel() {
         return channel;
@@ -199,12 +198,12 @@ public class ProducerParameters {
         return this;
     }
 
-    public ProducerParameters setShowStopper(BooleanSupplier showStopper) {
-        this.showStopper = showStopper;
+    public ProducerParameters setRecoveryProcess(Recovery.RecoveryProcess recoveryProcess) {
+        this.recoveryProcess = recoveryProcess;
         return this;
     }
 
-    public BooleanSupplier getShowStopper() {
-        return showStopper;
+    public Recovery.RecoveryProcess getRecoveryProcess() {
+        return recoveryProcess;
     }
 }

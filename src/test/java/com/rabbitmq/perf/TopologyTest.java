@@ -414,7 +414,7 @@ public class TopologyTest {
         set.run();
 
         assertThat("Consumer connection shouldn't be closed several times",
-            closedConnections.get(), is(1 + 1 + 1)); // configuration, consumer, producer
+            closedConnections.get(), is((1 + 1) + 1 + 1)); // configuration x 2, consumer, producer
     }
 
     @ParameterizedTest

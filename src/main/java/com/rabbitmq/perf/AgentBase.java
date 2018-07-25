@@ -17,15 +17,18 @@ package com.rabbitmq.perf;
 
 import com.rabbitmq.client.MissedHeartbeatException;
 import com.rabbitmq.client.ShutdownSignalException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.function.BooleanSupplier;
 import java.util.function.Predicate;
 
 /**
  *
  */
 public abstract class AgentBase {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(AgentBase.class);
 
     // FIXME this is the condition to start connection recovery
     // ensure it's the appropriate condition and get it from the Java client code
@@ -54,24 +57,37 @@ public abstract class AgentBase {
         return CONNECTION_RECOVERY_TRIGGERED.test(e);
     }
 
-    protected void handleShutdownSignalExceptionOnWrite(BooleanSupplier showStopper, ShutdownSignalException e) {
-        if (shouldStop(showStopper, e)) {
+    protected void handleShutdownSignalExceptionOnWrite(Recovery.RecoveryProcess recoveryProcess, ShutdownSignalException e) {
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug(
+                "Handling write error, recovery process enabled? {}, condition to trigger connection recovery? {}",
+                recoveryProcess.isEnabled(), isConnectionRecoveryTriggered(e)
+            );
+        }
+        if (shouldStop(recoveryProcess, e)) {
             throw e;
         }
     }
 
-    protected boolean shouldStop(BooleanSupplier showStopper, ShutdownSignalException e) {
-        return !showStopper.getAsBoolean() || !isConnectionRecoveryTriggered(e);
+    protected boolean shouldStop(Recovery.RecoveryProcess recoveryProcess, ShutdownSignalException e) {
+        if (recoveryProcess.isEnabled()) {
+            // we stop only if the error isn't likely to trigger connection recovery
+            return !isConnectionRecoveryTriggered(e);
+        } else {
+            return true;
+        }
     }
 
-    protected void dealWithWriteOperation(WriteOperation writeOperation, BooleanSupplier showStopper) throws IOException {
+    protected void dealWithWriteOperation(WriteOperation writeOperation, Recovery.RecoveryProcess recoveryProcess) throws IOException {
         try {
             writeOperation.call();
         } catch (ShutdownSignalException e) {
-            handleShutdownSignalExceptionOnWrite(showStopper, e);
+            handleShutdownSignalExceptionOnWrite(recoveryProcess, e);
             // connection recovery is in progress, we ignore the exception if this point is reached
         }
     }
+
+    public abstract void recover(TopologyRecording topologyRecording);
 
     protected interface AgentState {
 

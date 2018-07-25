@@ -15,8 +15,12 @@
 
 package com.rabbitmq.perf;
 
+import com.rabbitmq.client.AlreadyClosedException;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
+import com.rabbitmq.client.Recoverable;
+import com.rabbitmq.client.RecoveryListener;
+import com.rabbitmq.client.impl.recovery.AutorecoveringConnection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,24 +43,31 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 
+import static com.rabbitmq.perf.Utils.isRecoverable;
 import static java.lang.Math.min;
 import static java.lang.String.format;
 
 public class MulticastSet {
 
+    // from Java Client ConsumerWorkService
+    public final static int DEFAULT_CONSUMER_WORK_SERVICE_THREAD_POOL_SIZE = Runtime.getRuntime().availableProcessors() * 2;
     private static final Logger LOGGER = LoggerFactory.getLogger(MulticastSet.class);
-
+    /**
+     * Why 50? This is arbitrary. The fastest rate is 1 message / second when
+     * using a publishing interval, so 1 thread should be able to keep up easily with
+     * up to 50 messages / seconds (ie. 50 producers). Then, a new thread is used
+     * every 50 producers. This is 20 threads for 1000 producers, which seems reasonable.
+     * There's a command line argument to override this anyway.
+     */
+    private static final int PUBLISHING_INTERVAL_NB_PRODUCERS_PER_THREAD = 50;
     private final Stats stats;
     private final ConnectionFactory factory;
     private final MulticastParams params;
     private final String testID;
     private final List<String> uris;
-
     private final Random random = new Random();
-
-    private ThreadingHandler threadingHandler = new DefaultThreadingHandler();
-
     private final CompletionHandler completionHandler;
+    private ThreadingHandler threadingHandler = new DefaultThreadingHandler();
 
     public MulticastSet(Stats stats, ConnectionFactory factory,
         MulticastParams params, List<String> uris, CompletionHandler completionHandler) {
@@ -74,6 +85,22 @@ public class MulticastSet {
         this.params.init();
     }
 
+    protected static int nbThreadsForConsumer(MulticastParams params) {
+        // for backward compatibility, the thread pool should be large enough to dedicate
+        // one thread for each channel when channel number is <= DEFAULT_CONSUMER_WORK_SERVICE_THREAD_POOL_SIZE
+        // Above this number, we stick to DEFAULT_CONSUMER_WORK_SERVICE_THREAD_POOL_SIZE
+        return min(params.getConsumerChannelCount(), DEFAULT_CONSUMER_WORK_SERVICE_THREAD_POOL_SIZE);
+    }
+
+    protected static int nbThreadsForProducerScheduledExecutorService(MulticastParams params) {
+        int producerExecutorServiceNbThreads = params.getProducerSchedulerThreadCount();
+        if (producerExecutorServiceNbThreads <= 0) {
+            return params.getProducerThreadCount() / PUBLISHING_INTERVAL_NB_PRODUCERS_PER_THREAD + 1;
+        } else {
+            return producerExecutorServiceNbThreads;
+        }
+    }
+
     public void run()
         throws IOException, InterruptedException, TimeoutException, NoSuchAlgorithmException, KeyManagementException, URISyntaxException, ExecutionException {
         run(false);
@@ -81,19 +108,15 @@ public class MulticastSet {
 
     public void run(boolean announceStartup)
         throws IOException, InterruptedException, TimeoutException, NoSuchAlgorithmException, KeyManagementException, URISyntaxException, ExecutionException {
-
         ScheduledExecutorService heartbeatSenderExecutorService = this.threadingHandler.scheduledExecutorService(
             "perf-test-heartbeat-sender-",
             this.params.getHeartbeatSenderThreads()
         );
         factory.setHeartbeatExecutor(heartbeatSenderExecutorService);
-
         setUri();
-        Connection conn = factory.newConnection("perf-test-configuration");
-        List<String> queues = params.configureAllQueues(conn);
-
-        // FIXME don't close it if it should handle topology recovery
-        conn.close();
+        Connection configurationConnection = factory.newConnection("perf-test-configuration");
+        MulticastParams.TopologyHandlerResult topologyHandlerResult = params.configureAllQueues(configurationConnection);
+        enableTopologyRecoveryIfNecessary(configurationConnection, topologyHandlerResult);
 
         this.params.resetTopologyHandler();
 
@@ -110,13 +133,13 @@ public class MulticastSet {
             );
             factory.setSharedExecutor(executorService);
 
-            conn = factory.newConnection("perf-test-consumer-" + i);
-            consumerConnections[i] = conn;
+            Connection consumerConnection = factory.newConnection("perf-test-consumer-" + i);
+            consumerConnections[i] = consumerConnection;
             for (int j = 0; j < params.getConsumerChannelCount(); j++) {
                 if (announceStartup) {
                     System.out.println("id: " + testID + ", starting consumer #" + i + ", channel #" + j);
                 }
-                consumerRunnables[(i * params.getConsumerChannelCount()) + j] = params.createConsumer(conn, stats, this.completionHandler);
+                consumerRunnables[(i * params.getConsumerChannelCount()) + j] = params.createConsumer(consumerConnection, stats, this.completionHandler);
             }
         }
 
@@ -135,21 +158,21 @@ public class MulticastSet {
                 System.out.println("id: " + testID + ", starting producer #" + i);
             }
             setUri();
-            conn = factory.newConnection("perf-test-producer-" + i);
-            producerConnections[i] = conn;
+            Connection producerConnection = factory.newConnection("perf-test-producer-" + i);
+            producerConnections[i] = producerConnection;
             for (int j = 0; j < params.getProducerChannelCount(); j++) {
                 if (announceStartup) {
                     System.out.println("id: " + testID + ", starting producer #" + i + ", channel #" + j);
                 }
                 AgentState agentState = new AgentState();
-                agentState.runnable = params.createProducer(conn, stats, this.completionHandler);
+                agentState.runnable = params.createProducer(producerConnection, stats, this.completionHandler);
                 producerStates[(i * params.getProducerChannelCount()) + j] = agentState;
             }
         }
 
         for (Runnable runnable : consumerRunnables) {
             runnable.run();
-            if(params.getConsumerSlowStart()) {
+            if (params.getConsumerSlowStart()) {
                 System.out.println("Delaying start by 1 second because -S/--slow-start was requested");
                 Thread.sleep(1000);
             }
@@ -186,64 +209,78 @@ public class MulticastSet {
 
         this.completionHandler.waitForCompletion();
 
-        for (AgentState producerState : producerStates) {
-            producerState.task.cancel(true);
-        }
-
-        for (Connection producerConnection : producerConnections) {
-            try {
-                producerConnection.close();
-            } catch (Exception e) {
-                // don't do anything, we need to close the other connections
+        try {
+            LOGGER.debug("Starting test shutdown");
+            for (AgentState producerState : producerStates) {
+                producerState.task.cancel(true);
             }
 
-        }
+            try {
+                LOGGER.debug("Closing configuration connection");
+                configurationConnection.close();
+                LOGGER.debug("Configuration connection closed");
+            } catch (AlreadyClosedException e) {
+                LOGGER.debug("Configuration connection was already closed");
+            } catch (Exception e) {
+                LOGGER.debug("Error while closing configuration connection: {}", e.getMessage());
+            }
 
-        for (Connection consumerConnection : consumerConnections) {
-            // when using exclusive queues, some connections can have already been
-            // closed because of connection re-using, so checking before closing.
-            if (consumerConnection.isOpen()) {
+            for (Connection producerConnection : producerConnections) {
                 try {
-                    consumerConnection.close();
+                    producerConnection.close();
                 } catch (Exception e) {
                     // don't do anything, we need to close the other connections
                 }
             }
+
+            for (Connection consumerConnection : consumerConnections) {
+                try {
+                    LOGGER.debug("Closing consumer connection {}", consumerConnection.getClientProvidedName());
+                    consumerConnection.close();
+                    LOGGER.debug("Consumer connection {} has been closed", consumerConnection.getClientProvidedName());
+                } catch (AlreadyClosedException e) {
+                    LOGGER.debug("Consumer connection {} already closed", consumerConnection.getClientProvidedName());
+                } catch (Exception e) {
+                    // don't do anything, we need to close the other connections
+                    LOGGER.debug("Error while closing consumer connection {}: {}", consumerConnection.getClientProvidedName(), e.getMessage());
+                }
+            }
+
+            LOGGER.debug("Shutting down threading handler");
+            this.threadingHandler.shutdown();
+            LOGGER.debug("Threading handler shut down");
+            LOGGER.debug("Test shutdown done");
+        } catch (Exception e) {
+            LOGGER.warn("Error during test shutdown", e);
         }
-
-        this.threadingHandler.shutdown();
     }
 
-    // from Java Client ConsumerWorkService
-    public final static int DEFAULT_CONSUMER_WORK_SERVICE_THREAD_POOL_SIZE = Runtime.getRuntime().availableProcessors() * 2;
+    private void enableTopologyRecoveryIfNecessary(Connection configurationConnection, MulticastParams.TopologyHandlerResult topologyHandlerResult)
+        throws IOException {
+        if (isRecoverable(topologyHandlerResult.connection)) {
+            Connection connection = topologyHandlerResult.connection;
+            String connectionName = connection.getClientProvidedName();
+            ((AutorecoveringConnection) connection).addRecoveryListener(new RecoveryListener() {
 
-    protected static int nbThreadsForConsumer(MulticastParams params) {
-        // for backward compatibility, the thread pool should be large enough to dedicate
-        // one thread for each channel when channel number is <= DEFAULT_CONSUMER_WORK_SERVICE_THREAD_POOL_SIZE
-        // Above this number, we stick to DEFAULT_CONSUMER_WORK_SERVICE_THREAD_POOL_SIZE
-        return min(params.getConsumerChannelCount(), DEFAULT_CONSUMER_WORK_SERVICE_THREAD_POOL_SIZE);
-    }
+                @Override
+                public void handleRecoveryStarted(Recoverable recoverable) {
+                    LOGGER.debug("Connection recovery started for connection {}", connectionName);
+                }
 
-    /**
-     * Why 50? This is arbitrary. The fastest rate is 1 message / second when
-     * using a publishing interval, so 1 thread should be able to keep up easily with
-     * up to 50 messages / seconds (ie. 50 producers). Then, a new thread is used
-     * every 50 producers. This is 20 threads for 1000 producers, which seems reasonable.
-     * There's a command line argument to override this anyway.
-     */
-    private static final int PUBLISHING_INTERVAL_NB_PRODUCERS_PER_THREAD = 50;
-
-    protected static int nbThreadsForProducerScheduledExecutorService(MulticastParams params) {
-        int producerExecutorServiceNbThreads = params.getProducerSchedulerThreadCount();
-        if (producerExecutorServiceNbThreads <= 0) {
-            return params.getProducerThreadCount() / PUBLISHING_INTERVAL_NB_PRODUCERS_PER_THREAD + 1;
+                @Override
+                public void handleRecovery(Recoverable recoverable) {
+                    LOGGER.debug("Starting topology recovery for connection {}", connectionName);
+                    topologyHandlerResult.topologyRecording.recover(connection);
+                    LOGGER.debug("Topology recovery done for connection {}", connectionName);
+                }
+            });
         } else {
-            return producerExecutorServiceNbThreads;
+            configurationConnection.close();
         }
     }
 
     private void setUri() throws URISyntaxException, NoSuchAlgorithmException, KeyManagementException {
-        if(uris != null) {
+        if (uris != null) {
             factory.setUri(uri());
         }
     }
@@ -268,7 +305,13 @@ public class MulticastSet {
         ScheduledExecutorService scheduledExecutorService(String name, int nbThreads);
 
         void shutdown();
+    }
 
+    public interface CompletionHandler {
+
+        void waitForCompletion() throws InterruptedException;
+
+        void countDown();
     }
 
     static class DefaultThreadingHandler implements ThreadingHandler {
@@ -321,15 +364,6 @@ public class MulticastSet {
         private Producer runnable;
 
         private Future<?> task;
-
-    }
-
-    public interface CompletionHandler {
-
-        void waitForCompletion() throws InterruptedException;
-
-        void countDown();
-
     }
 
     static class DefaultCompletionHandler implements CompletionHandler {
@@ -367,8 +401,7 @@ public class MulticastSet {
         }
 
         @Override
-        public void countDown() { }
+        public void countDown() {
+        }
     }
-
-
 }

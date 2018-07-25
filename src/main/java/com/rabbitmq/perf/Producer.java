@@ -19,7 +19,6 @@ import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.ConfirmListener;
 import com.rabbitmq.client.ReturnListener;
-import com.rabbitmq.client.ShutdownSignalException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,7 +38,6 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.BooleanSupplier;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -79,7 +77,7 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
 
     private final float rateLimit;
 
-    private final BooleanSupplier showStopper;
+    private final Recovery.RecoveryProcess recoveryProcess;
 
     public Producer(ProducerParameters parameters) {
         this.channel           = parameters.getChannel();
@@ -117,7 +115,8 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
         this.randomStartDelay = parameters.getRandomStartDelayInSeconds();
 
         this.rateLimit = parameters.getRateLimit();
-        this.showStopper = parameters.getShowStopper();
+        this.recoveryProcess = parameters.getRecoveryProcess();
+        this.recoveryProcess.init(this);
     }
 
     private Function<AMQP.BasicProperties.Builder, AMQP.BasicProperties.Builder> builderProcessorWithMessageProperties(
@@ -343,7 +342,7 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
     }
 
     public void handlePublish(AgentState currentState) {
-        if (!this.showStopper.getAsBoolean()) {
+        if (!this.recoveryProcess.isRecoverying()) {
             try {
                 if (confirmPool != null) {
                     if (confirmTimeout < 0) {
@@ -356,12 +355,12 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
                         }
                     }
                 }
-                dealWithWriteOperation(() -> publish(messageBodySource.create(currentState.getMsgCount())), this.showStopper);
+                dealWithWriteOperation(() -> publish(messageBodySource.create(currentState.getMsgCount())), this.recoveryProcess);
 
                 int messageCount = currentState.incrementMessageCount();
 
                 if (txSize != 0 && messageCount % txSize == 0) {
-                    dealWithWriteOperation(() -> channel.txCommit(), this.showStopper);
+                    dealWithWriteOperation(() -> channel.txCommit(), this.recoveryProcess);
                 }
                 stats.handleSend();
             } catch (IOException e) {
@@ -369,6 +368,14 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
             } catch (InterruptedException e) {
                 throw new RuntimeException (e);
             }
+        } else {
+            // the connection is recovering, waiting a bit
+            // the duration is arbitrary: don't want to empty loop
+            // too much and don't want to catch too late with recovery
+            try {
+                LOGGER.debug("Recovery in progress, sleeping for a sec");
+                Thread.sleep(1000L);
+            } catch (InterruptedException e) { }
         }
     }
 
@@ -398,6 +405,9 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
             completionHandler.countDown();
         }
     }
+
+    @Override
+    public void recover(TopologyRecording topologyRecording) { }
 
     /**
      * Not thread-safe (OK for non-scheduled Producer, as it runs inside the same thread).
