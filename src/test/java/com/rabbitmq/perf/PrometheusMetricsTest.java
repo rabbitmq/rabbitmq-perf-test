@@ -30,6 +30,7 @@ import java.net.ServerSocket;
 import java.net.URL;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static com.rabbitmq.perf.TestUtils.randomNetworkPort;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -37,14 +38,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  */
 public class PrometheusMetricsTest {
-
-    static int randomNetworkPort() throws IOException {
-        ServerSocket socket = new ServerSocket();
-        socket.bind(null);
-        int port = socket.getLocalPort();
-        socket.close();
-        return port;
-    }
 
     @Test
     public void prometheusHttpEndpointExposed() throws Exception {

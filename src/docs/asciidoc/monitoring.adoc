@@ -55,9 +55,26 @@ for more information about tags and dimensions.
 === Supported Monitoring Systems
 
 PerfTest builds on top https://micrometer.io[Micrometer] to report gathered metrics to various monitoring systems.
-Nevertheless, not all systems supported by Micrometer are actually supported by PerfTest. The only metrics
-system currently supported is https://prometheus.io/[Prometheus]. Don't hesitate to
+Nevertheless, not all systems supported by Micrometer are actually supported by PerfTest.
+PerfTest currently supports https://www.datadoghq.com/[Datadog] and https://prometheus.io/[Prometheus].
+Don't hesitate to
 https://github.com/rabbitmq/rabbitmq-perf-test/issues[request support for other monitoring systems].
+
+==== Datadog
+
+The API key is the only required option to send metrics to Datadog:
+
+```
+./runjava com.rabbitmq.perf.PerfTest --metrics-datadog-api-key YOUR_API_KEY
+```
+
+Another useful option is the step size or reporting frequency. The default value is
+10 seconds.
+
+```
+./runjava com.rabbitmq.perf.PerfTest --metrics-datadog-api-key YOUR_API_KEY \
+    --metrics-datadog-step-size 20
+```
 
 ==== Prometheus
 
@@ -75,6 +92,4 @@ can be changed:
 ./runjava com.rabbitmq.perf.PerfTest --metrics-prometheus \
     --metrics-prometheus-port 8090 --metrics-prometheus-endpoint perf-test-metrics
 ```
-
-
 

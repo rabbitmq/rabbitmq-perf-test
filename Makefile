@@ -33,4 +33,7 @@ run: compile ## Run PerfTest, pass exec arguments via ARGS, e.g. ARGS="-x 1 -y 1
 signed-binary: clean ## Build a GPG signed binary
 	@mvnw package -P assemblies
 
+doc: clean ## Generate PerfTest documentation
+	@mvnw asciidoctor:process-asciidoc
+
 .PHONY: binary help clean compile jar run signed-binary
