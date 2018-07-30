@@ -369,8 +369,8 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
                 throw new RuntimeException (e);
             }
         } else {
-            // the connection is recovering, waiting a bit
-            // the duration is arbitrary: don't want to empty loop
+            // The connection is recovering, waiting a bit.
+            // The duration is arbitrary: don't want to empty loop
             // too much and don't want to catch too late with recovery
             try {
                 LOGGER.debug("Recovery in progress, sleeping for a sec");
