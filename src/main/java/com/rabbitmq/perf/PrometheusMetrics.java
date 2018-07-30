@@ -43,6 +43,8 @@ public class PrometheusMetrics implements Metrics {
 
     private volatile Server server;
 
+    private volatile PrometheusMeterRegistry registry;
+
     public Options options() {
         Options options = new Options();
         options.addOption(new Option("mpr", "metrics-prometheus", false, "enable Prometheus metrics"));
@@ -53,7 +55,7 @@ public class PrometheusMetrics implements Metrics {
 
     public void configure(CommandLineProxy cmd, CompositeMeterRegistry meterRegistry, ConnectionFactory factory) throws Exception {
         if (isEnabled(cmd)) {
-            PrometheusMeterRegistry registry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
+            registry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
             meterRegistry.add(registry);
             int prometheusHttpEndpointPort = intArg(cmd, "mpp", 8080);
             String prometheusHttpEndpoint = strArg(cmd, "mpe", "metrics");
@@ -96,6 +98,9 @@ public class PrometheusMetrics implements Metrics {
     public void close() throws Exception {
         if (server != null) {
             server.stop();
+        }
+        if (registry != null) {
+            registry.close();
         }
     }
 

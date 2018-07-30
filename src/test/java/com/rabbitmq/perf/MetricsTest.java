@@ -37,6 +37,8 @@ public class MetricsTest {
         Set<String> options = new HashSet<>();
         List<Metrics> metrics = new ArrayList<>();
         metrics.add(new BaseMetrics());
+        metrics.add(new DatadogMetrics());
+        metrics.add(new JmxMetrics());
         metrics.add(new PrometheusMetrics());
         for (Metrics metric : metrics) {
             for (Object optObj : metric.options().getOptions()) {

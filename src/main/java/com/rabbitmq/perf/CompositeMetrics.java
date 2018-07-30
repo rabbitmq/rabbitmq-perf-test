@@ -39,6 +39,7 @@ public class CompositeMetrics implements Metrics {
         metrics.add(new BaseMetrics());
         metrics.add(new PrometheusMetrics());
         metrics.add(new DatadogMetrics());
+        metrics.add(new JmxMetrics());
     }
 
     @Override

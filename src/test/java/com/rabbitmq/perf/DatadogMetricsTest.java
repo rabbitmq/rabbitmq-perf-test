@@ -76,8 +76,8 @@ public class DatadogMetricsTest {
     }
 
     @Test
-    public void datadog() throws Exception {
-        DatadogMetrics metrics = new DatadogMetrics();
+    public void metricsShouldBeSentToDatadogHttpEndpoint() throws Exception {
+        metrics = new DatadogMetrics();
         Options options = metrics.options();
 
         CommandLineParser parser = new GnuParser();
@@ -103,8 +103,6 @@ public class DatadogMetricsTest {
         assertTrue(content.get().contains("\"metric\":\"dummy\""));
         assertTrue(content.get().contains("42.0"));
         assertTrue(content.get().contains("\"host\":\"test\""));
-
-        metrics.close();
     }
 
     private Server startMockDatadogService() throws Exception {

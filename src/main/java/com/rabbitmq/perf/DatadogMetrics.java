@@ -17,6 +17,7 @@ package com.rabbitmq.perf;
 
 import com.rabbitmq.client.ConnectionFactory;
 import io.micrometer.core.instrument.Clock;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
 import io.micrometer.datadog.DatadogConfig;
 import io.micrometer.datadog.DatadogMeterRegistry;
@@ -36,7 +37,7 @@ import static java.lang.Boolean.valueOf;
  */
 public class DatadogMetrics implements Metrics {
 
-    private volatile DatadogMeterRegistry registry;
+    private volatile MeterRegistry registry;
 
     public Options options() {
         Options options = new Options();
@@ -63,6 +64,7 @@ public class DatadogMetrics implements Metrics {
             dataCfg.put("datadog.uri", strArg(cmd, "mdu", null));
 
             DatadogConfig config = new DatadogConfig() {
+
                 @Override
                 public Duration step() {
                     return Duration.ofSeconds(Integer.valueOf(dataCfg.get("datadog.step")));
@@ -83,7 +85,9 @@ public class DatadogMetrics implements Metrics {
     }
 
     public void close() {
-        registry.close();
+        if (registry != null) {
+            registry.close();
+        }
     }
 
     @Override

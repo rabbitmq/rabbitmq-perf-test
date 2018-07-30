@@ -56,7 +56,8 @@ for more information about tags and dimensions.
 
 PerfTest builds on top https://micrometer.io[Micrometer] to report gathered metrics to various monitoring systems.
 Nevertheless, not all systems supported by Micrometer are actually supported by PerfTest.
-PerfTest currently supports https://www.datadoghq.com/[Datadog] and https://prometheus.io/[Prometheus].
+PerfTest currently supports https://www.datadoghq.com/[Datadog], https://en.wikipedia.org/wiki/Java_Management_Extensions[JMX],
+and https://prometheus.io/[Prometheus].
 Don't hesitate to
 https://github.com/rabbitmq/rabbitmq-perf-test/issues[request support for other monitoring systems].
 
@@ -74,6 +75,15 @@ Another useful option is the step size or reporting frequency. The default value
 ```
 ./runjava com.rabbitmq.perf.PerfTest --metrics-datadog-api-key YOUR_API_KEY \
     --metrics-datadog-step-size 20
+```
+
+==== JMX
+
+JMX support provides a simple way to view metrics locally. Use the `--metrics-jmx` flag to
+export metrics to JMX:
+
+```
+./runjava com.rabbitmq.perf.PerfTest --metrics-jmx
 ```
 
 ==== Prometheus
