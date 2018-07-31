@@ -391,6 +391,11 @@ public class MulticastSet {
         }
     }
 
+    /**
+     * This completion handler waits forever, but it can be counted down,
+     * typically when a producer or a consumer fails. This avoids
+     * PerfTest hanging after a failure.
+     */
     static class NoLimitCompletionHandler implements CompletionHandler {
 
         private final CountDownLatch latch = new CountDownLatch(1);
@@ -402,6 +407,7 @@ public class MulticastSet {
 
         @Override
         public void countDown() {
+            latch.countDown();
         }
     }
 }
