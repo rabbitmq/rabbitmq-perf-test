@@ -21,6 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.net.SocketException;
 import java.util.function.Predicate;
 
 /**
@@ -83,7 +84,16 @@ public abstract class AgentBase {
             writeOperation.call();
         } catch (ShutdownSignalException e) {
             handleShutdownSignalExceptionOnWrite(recoveryProcess, e);
-            // connection recovery is in progress, we ignore the exception if this point is reached
+        } catch (SocketException e) {
+            if (recoveryProcess.isEnabled()) {
+                if (LOGGER.isDebugEnabled()) {
+                    LOGGER.debug(
+                        "Socket exception in write, recovery process is enabled, ignoring to let connection recovery carry on"
+                    );
+                }
+            } else {
+                throw e;
+            }
         }
     }
 
