@@ -69,7 +69,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
 
-
 public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
     @Mock
@@ -233,7 +232,6 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         params.setConsumerCount(consumersCount);
         params.setConsumerChannelCount(channelsCount);
         params.setQueueNames(asList("queue"));
-        MulticastSet multicastSet = getMulticastSet();
 
         CountDownLatch consumersLatch = new CountDownLatch(consumersCount * channelsCount);
         AtomicInteger consumerTagCounter = new AtomicInteger(0);
@@ -243,6 +241,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
             return consumerTagCounter.getAndIncrement() + "";
         }).when(ch).basicConsume(anyString(), anyBoolean(), consumerArgumentCaptor.capture());
 
+        MulticastSet multicastSet = getMulticastSet();
         run(multicastSet);
 
         assertThat(consumersCount * channelsCount + " consumer(s) should have been registered by now",
@@ -315,8 +314,6 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         params.setProducerCount(0);
         params.setConsumerCount(1);
 
-        MulticastSet multicastSet = getMulticastSet();
-
         CountDownLatch consumersLatch = new CountDownLatch(1);
         AtomicInteger consumerTagCounter = new AtomicInteger(0);
         ArgumentCaptor<Consumer> consumerArgumentCaptor = ArgumentCaptor.forClass(Consumer.class);
@@ -325,6 +322,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
             return consumerTagCounter.getAndIncrement() + "";
         }).when(ch).basicConsume(anyString(), anyBoolean(), consumerArgumentCaptor.capture());
 
+        MulticastSet multicastSet = getMulticastSet();
         run(multicastSet);
 
         assertThat("1 consumer should have been registered by now",
@@ -344,8 +342,6 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         params.setProducerCount(1);
         params.setConsumerCount(0);
 
-        MulticastSet multicastSet = getMulticastSet();
-
         int nbMessages = 100;
         CountDownLatch publishedLatch = new CountDownLatch(nbMessages);
         doAnswer(invocation -> {
@@ -355,6 +351,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
             anyBoolean(), eq(false),
             any(), any());
 
+        MulticastSet multicastSet = getMulticastSet();
         run(multicastSet);
 
         assertTrue(
@@ -372,7 +369,6 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         countsAndTimeLimit(0, 0, 8);
         params.setProducerRateLimit(10);
         params.setProducerCount(3);
-        MulticastSet multicastSet = getMulticastSet();
 
         AtomicInteger publishedMessageCount = new AtomicInteger();
         doAnswer(invocation -> {
@@ -382,6 +378,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
             anyBoolean(), eq(false),
             any(), any());
 
+        MulticastSet multicastSet = getMulticastSet();
         run(multicastSet);
 
         waitAtMost(15, TimeUnit.SECONDS).untilTrue(testIsDone);

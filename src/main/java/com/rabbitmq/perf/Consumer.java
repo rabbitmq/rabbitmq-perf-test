@@ -20,6 +20,8 @@ import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.DefaultConsumer;
 import com.rabbitmq.client.Envelope;
 import com.rabbitmq.client.ShutdownSignalException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
@@ -34,7 +36,9 @@ import java.util.function.BiFunction;
 
 public class Consumer extends AgentBase implements Runnable {
 
-    private ConsumerImpl                q;
+    private static final Logger LOGGER = LoggerFactory.getLogger(Consumer.class);
+
+    private volatile ConsumerImpl       q;
     private final Channel               channel;
     private final String                id;
     private final List<String>          queueNames;
@@ -52,12 +56,15 @@ public class Consumer extends AgentBase implements Runnable {
 
     private final ConsumerState state;
 
+    private final Recovery.RecoveryProcess recoveryProcess;
+
     public Consumer(Channel channel, String id,
                     List<String> queueNames, int txSize, boolean autoAck,
                     int multiAckEvery, Stats stats, float rateLimit, int msgLimit,
                     int consumerLatencyInMicroSeconds,
                     TimestampProvider timestampProvider,
-                    MulticastSet.CompletionHandler completionHandler) {
+                    MulticastSet.CompletionHandler completionHandler,
+                    Recovery.RecoveryProcess recoveryProcess) {
 
         this.channel           = channel;
         this.id                = id;
@@ -97,6 +104,8 @@ public class Consumer extends AgentBase implements Runnable {
         }
 
         this.state = new ConsumerState(rateLimit);
+        this.recoveryProcess = recoveryProcess;
+        this.recoveryProcess.init(this);
     }
 
     public void run() {
@@ -124,21 +133,22 @@ public class Consumer extends AgentBase implements Runnable {
         @Override
         public void handleDelivery(String consumerTag, Envelope envelope, BasicProperties properties, byte[] body) throws IOException {
             int currentMessageCount = state.incrementMessageCount();
-
             if (msgLimit == 0 || currentMessageCount <= msgLimit) {
                 long messageTimestamp = timestampExtractor.apply(properties, body);
                 long nowTimestamp = timestampProvider.getCurrentTime();
 
                 if (!autoAck) {
-                    if (multiAckEvery == 0) {
-                        channel.basicAck(envelope.getDeliveryTag(), false);
-                    } else if (currentMessageCount % multiAckEvery == 0) {
-                        channel.basicAck(envelope.getDeliveryTag(), true);
-                    }
+                    dealWithWriteOperation(() -> {
+                        if (multiAckEvery == 0) {
+                            channel.basicAck(envelope.getDeliveryTag(), false);
+                        } else if (currentMessageCount % multiAckEvery == 0) {
+                            channel.basicAck(envelope.getDeliveryTag(), true);
+                        }
+                    }, recoveryProcess);
                 }
 
                 if (txSize != 0 && currentMessageCount % txSize == 0) {
-                    channel.txCommit();
+                    dealWithWriteOperation(() -> channel.txCommit(), recoveryProcess);
                 }
 
                 long diff_time = timestampProvider.getDifference(nowTimestamp, messageTimestamp);
@@ -157,7 +167,14 @@ public class Consumer extends AgentBase implements Runnable {
 
         @Override
         public void handleShutdownSignal(String consumerTag, ShutdownSignalException sig) {
-            countDown();
+            LOGGER.debug(
+                "Consumer received shutdown signal, recovery process enabled? {}, condition to trigger connection recovery? {}",
+                recoveryProcess.isEnabled(), isConnectionRecoveryTriggered(sig)
+            );
+            if (!recoveryProcess.isEnabled()) {
+                LOGGER.debug("Counting down for consumer");
+                countDown();
+            }
         }
 
         @Override
@@ -176,6 +193,21 @@ public class Consumer extends AgentBase implements Runnable {
     private void countDown() {
         if (completed.compareAndSet(false, true)) {
             completionHandler.countDown();
+        }
+    }
+
+    @Override
+    public void recover(TopologyRecording topologyRecording) {
+        for (Map.Entry<String, String> entry : consumerTagBranchMap.entrySet()) {
+            TopologyRecording.RecordedQueue queue = topologyRecording.queue(entry.getValue());
+            try {
+                channel.basicConsume(queue.name(), autoAck, entry.getKey(), q);
+            } catch (IOException e) {
+                LOGGER.warn(
+                    "Error while recovering consumer {} on queue {} on connection {}",
+                    entry.getKey(), queue.name(), channel.getConnection().getClientProvidedName(), e
+                );
+            }
         }
     }
 

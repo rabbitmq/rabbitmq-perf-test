@@ -43,6 +43,7 @@ public class ProducerParameters {
     private MulticastSet.CompletionHandler completionHandler;
     private int routingKeyCacheSize;
     private int randomStartDelayInSeconds;
+    private Recovery.RecoveryProcess recoveryProcess;
 
     public Channel getChannel() {
         return channel;
@@ -195,5 +196,14 @@ public class ProducerParameters {
     public ProducerParameters setRandomStartDelayInSeconds(int randomStartDelayInSeconds) {
         this.randomStartDelayInSeconds = randomStartDelayInSeconds;
         return this;
+    }
+
+    public ProducerParameters setRecoveryProcess(Recovery.RecoveryProcess recoveryProcess) {
+        this.recoveryProcess = recoveryProcess;
+        return this;
+    }
+
+    public Recovery.RecoveryProcess getRecoveryProcess() {
+        return recoveryProcess;
     }
 }

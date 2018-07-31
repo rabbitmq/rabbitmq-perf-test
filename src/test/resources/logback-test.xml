@@ -5,6 +5,9 @@
         </encoder>
     </appender>
 
+    <logger name="com.rabbitmq.perf" level="warn"/>
+
+
     <root level="warn">
         <appender-ref ref="STDOUT" />
     </root>
