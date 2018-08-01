@@ -38,6 +38,8 @@ public class CompositeMetrics implements Metrics {
     public CompositeMetrics() {
         metrics.add(new BaseMetrics());
         metrics.add(new PrometheusMetrics());
+        metrics.add(new DatadogMetrics());
+        metrics.add(new JmxMetrics());
     }
 
     @Override

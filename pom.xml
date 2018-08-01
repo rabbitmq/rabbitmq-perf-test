@@ -56,7 +56,7 @@
 
     <rabbitmq.version>5.3.0</rabbitmq.version>
     <commons-cli.version>1.1</commons-cli.version>
-    <metrics.version>4.0.3</metrics.version>
+    <metrics.version>3.2.6</metrics.version>
     <micrometer.version>1.0.6</micrometer.version>
     <logback.version>1.2.3</logback.version>
     <jetty.version>9.4.11.v20180605</jetty.version>
@@ -123,9 +123,20 @@
     </dependency>
     <dependency>
       <groupId>io.micrometer</groupId>
+      <artifactId>micrometer-registry-datadog</artifactId>
+      <version>${micrometer.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.micrometer</groupId>
+      <artifactId>micrometer-registry-jmx</artifactId>
+      <version>${micrometer.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.micrometer</groupId>
       <artifactId>micrometer-registry-prometheus</artifactId>
       <version>${micrometer.version}</version>
     </dependency>
+
     <dependency>
       <groupId>ch.qos.logback</groupId>
       <artifactId>logback-classic</artifactId>

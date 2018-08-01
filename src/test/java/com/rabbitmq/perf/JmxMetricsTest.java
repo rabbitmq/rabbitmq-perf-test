@@ -20,34 +20,38 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.Options;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.ServerSocket;
-import java.net.URL;
+import javax.management.MBeanInfo;
+import javax.management.MBeanServer;
+import javax.management.ObjectName;
+import java.lang.management.ManagementFactory;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static com.rabbitmq.perf.TestUtils.randomNetworkPort;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  *
  */
-public class PrometheusMetricsTest {
+public class JmxMetricsTest {
+
+    Metrics metrics = new JmxMetrics();
+
+    @AfterEach
+    public void tearDown() throws Exception {
+        metrics.close();
+    }
 
     @Test
-    public void prometheusHttpEndpointExposed() throws Exception {
-        PrometheusMetrics metrics = new PrometheusMetrics();
+    public void metricsShouldBeExposedAsMbeans() throws Exception {
         Options options = metrics.options();
-        int port = randomNetworkPort();
+
         CommandLineParser parser = new GnuParser();
         CommandLine rawCmd = parser.parse(
             options,
-            ("--metrics-prometheus-port " + port).split(" ")
+            ("--metrics-jmx").split(" ")
         );
         CommandLineProxy cmd = new CommandLineProxy(options, rawCmd, name -> null);
         CompositeMeterRegistry registry = new CompositeMeterRegistry();
@@ -55,26 +59,12 @@ public class PrometheusMetricsTest {
         metric.set(42);
         metrics.configure(cmd, registry, null);
 
-        URL url = new URL("http://localhost:" + port + "/metrics");
-        HttpURLConnection con = (HttpURLConnection) url.openConnection();
-        con.setRequestMethod("GET");
-        assertEquals(200, con.getResponseCode());
-        String content = response(con);
-        con.disconnect();
-        assertTrue(content.contains("dummy 42.0"));
-
-        metrics.close();
-    }
-
-    private String response(HttpURLConnection con) throws IOException {
-        BufferedReader in = new BufferedReader(
-            new InputStreamReader(con.getInputStream()));
-        String inputLine;
-        StringBuilder content = new StringBuilder();
-        while ((inputLine = in.readLine()) != null) {
-            content.append(inputLine);
-        }
-        in.close();
-        return content.toString();
+        MBeanServer server = ManagementFactory.getPlatformMBeanServer();
+        Set<ObjectName> objectNames = server.queryNames(new ObjectName("*:name=dummy"), null);
+        assertEquals(1, objectNames.size());
+        ObjectName objectName = objectNames.iterator().next();
+        MBeanInfo info = server.getMBeanInfo(objectName);
+        Object attribute = server.getAttribute(objectName, info.getAttributes()[0].getName());
+        assertEquals(metric.get(), Double.valueOf(attribute.toString()).intValue());
     }
 }
