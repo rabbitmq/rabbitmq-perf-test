@@ -522,7 +522,7 @@ table.CodeRay td.code>pre{padding:0}
 <div id="header">
 <h1>RabbitMQ PerfTest</h1>
 <div class="details">
-<span id="revnumber">version 2.2.0.M1</span>
+<span id="revnumber">version 2.2.0.RC1</span>
 </div>
 <div id="toc" class="toc2">
 <div id="toctitle">Table of Contents</div>
@@ -1113,14 +1113,17 @@ to handle the I/O. That&#8217;s what the
 </div>
 </div>
 <div class="paragraph">
-<p>PerfTest will use 2 extra threads for internal bookkeeping needs, so the total will be 12 threads
-for I/O over all the connections. With the default blocking I/O mode, each producer (or consumer)
+<p>This way PerfTest will use  12 threads for I/O over all the connections.
+With the default blocking I/O mode, each producer (or consumer)
 uses a thread for the I/O loop, that is 2000 threads to simulate 1000 producers and
-1000 consumers.</p>
+1000 consumers. Using NIO in PerfTest can dramatically reduce the resources used
+to simulate workloads with a large number of connections with appropriate tuning.</p>
 </div>
 <div class="paragraph">
-<p>Using NIO in PerfTest can dramatically reduce the resources used to simulate workloads with a large
-number of connections with appropriate tuning.</p>
+<p>Note that in NIO mode the number of threads used can increase temporarily when connections close
+unexpectedly and connection recovery kicks in. This is due to the NIO mode dispatching
+connection closing to non-I/O threads to avoid deadlocks. Connection recovery can be disabled
+with the <code>--disable-connection-recovery</code> flag.</p>
 </div>
 </div>
 </div>
@@ -1303,9 +1306,44 @@ for more information about tags and dimensions.</p>
 <h3 id="supported-monitoring-systems"><a class="anchor" href="#supported-monitoring-systems"></a>Supported Monitoring Systems</h3>
 <div class="paragraph">
 <p>PerfTest builds on top <a href="https://micrometer.io">Micrometer</a> to report gathered metrics to various monitoring systems.
-Nevertheless, not all systems supported by Micrometer are actually supported by PerfTest. The only metrics
-system currently supported is <a href="https://prometheus.io/">Prometheus</a>. Don&#8217;t hesitate to
+Nevertheless, not all systems supported by Micrometer are actually supported by PerfTest.
+PerfTest currently supports <a href="https://www.datadoghq.com/">Datadog</a>, <a href="https://en.wikipedia.org/wiki/Java_Management_Extensions">JMX</a>,
+and <a href="https://prometheus.io/">Prometheus</a>.
+Don&#8217;t hesitate to
 <a href="https://github.com/rabbitmq/rabbitmq-perf-test/issues">request support for other monitoring systems</a>.</p>
+</div>
+<div class="sect3">
+<h4 id="datadog"><a class="anchor" href="#datadog"></a>Datadog</h4>
+<div class="paragraph">
+<p>The API key is the only required option to send metrics to Datadog:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>./runjava com.rabbitmq.perf.PerfTest --metrics-datadog-api-key YOUR_API_KEY</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Another useful option is the step size or reporting frequency. The default value is
+10 seconds.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>./runjava com.rabbitmq.perf.PerfTest --metrics-datadog-api-key YOUR_API_KEY \
+    --metrics-datadog-step-size 20</code></pre>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="jmx"><a class="anchor" href="#jmx"></a>JMX</h4>
+<div class="paragraph">
+<p>JMX support provides a simple way to view metrics locally. Use the <code>--metrics-jmx</code> flag to
+export metrics to JMX:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>./runjava com.rabbitmq.perf.PerfTest --metrics-jmx</code></pre>
+</div>
+</div>
 </div>
 <div class="sect3">
 <h4 id="prometheus"><a class="anchor" href="#prometheus"></a>Prometheus</h4>
@@ -1335,8 +1373,8 @@ can be changed:</p>
 </div>
 <div id="footer">
 <div id="footer-text">
-Version 2.2.0.M1<br>
-Last updated 2018-07-17 17:12:00 CEST
+Version 2.2.0.RC1<br>
+Last updated 2018-08-01 15:43:45 CEST
 </div>
 </div>
 </body>
