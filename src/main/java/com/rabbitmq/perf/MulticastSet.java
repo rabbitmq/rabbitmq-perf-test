@@ -41,7 +41,9 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.stream.IntStream;
 
 import static com.rabbitmq.perf.Utils.isRecoverable;
 import static java.lang.Math.min;
@@ -122,15 +124,22 @@ public class MulticastSet {
 
         Runnable[] consumerRunnables = new Runnable[params.getConsumerThreadCount()];
         Connection[] consumerConnections = new Connection[params.getConsumerCount()];
+        Function<Integer, ExecutorService> consumersExecutorsFactory;
+        if (params.getConsumersThreadPools() > 0) {
+            consumersExecutorsFactory = new CacheConsumersExecutorsFactory(
+                this.threadingHandler, this.params, params.getConsumersThreadPools()
+            );
+        } else {
+            consumersExecutorsFactory = new NoCacheConsumersExecutorsFactory(
+                this.threadingHandler, this.params
+            );
+        }
         for (int i = 0; i < consumerConnections.length; i++) {
             if (announceStartup) {
                 System.out.println("id: " + testID + ", starting consumer #" + i);
             }
             setUri();
-            ExecutorService executorService = this.threadingHandler.executorService(
-                format("perf-test-consumer-%s-worker-", i),
-                nbThreadsForConsumer(this.params)
-            );
+            ExecutorService executorService = consumersExecutorsFactory.apply(i);
             factory.setSharedExecutor(executorService);
 
             Connection consumerConnection = factory.newConnection("perf-test-consumer-" + i);
@@ -408,6 +417,56 @@ public class MulticastSet {
         @Override
         public void countDown() {
             latch.countDown();
+        }
+    }
+
+    static class NoCacheConsumersExecutorsFactory implements Function<Integer, ExecutorService> {
+
+        private final ThreadingHandler threadingHandler;
+        private final MulticastParams params;
+
+        NoCacheConsumersExecutorsFactory(ThreadingHandler threadingHandler, MulticastParams params) {
+            this.threadingHandler = threadingHandler;
+            this.params = params;
+        }
+
+        @Override
+        public ExecutorService apply(Integer consumerNumber) {
+            ExecutorService executorService = this.threadingHandler.executorService(
+                format("perf-test-consumer-%d-worker-", consumerNumber),
+                nbThreadsForConsumer(this.params)
+            );
+            return executorService;
+        }
+    }
+
+    static class CacheConsumersExecutorsFactory implements Function<Integer, ExecutorService> {
+
+        private final ThreadingHandler threadingHandler;
+        private final MulticastParams params;
+        private final int modulo;
+        private final List<ExecutorService> cache;
+
+        CacheConsumersExecutorsFactory(ThreadingHandler threadingHandler, MulticastParams params, int modulo) {
+            this.threadingHandler = threadingHandler;
+            this.params = params;
+            this.modulo = modulo;
+            this.cache = new ArrayList<>(modulo);
+            IntStream.range(0, modulo).forEach(i -> cache.add(null));
+        }
+
+        @Override
+        public ExecutorService apply(Integer consumerNumber) {
+            int remaining = consumerNumber % modulo;
+            ExecutorService executorService = cache.get(remaining);
+            if (executorService == null) {
+                executorService = this.threadingHandler.executorService(
+                    format("perf-test-shared-consumer-worker-%d-", remaining),
+                    nbThreadsForConsumer(this.params)
+                );
+                cache.set(remaining, executorService);
+            }
+            return executorService;
         }
     }
 }

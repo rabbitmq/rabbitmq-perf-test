@@ -90,6 +90,7 @@ public class MulticastParams {
     private int publishingInterval = -1;
     private int producerRandomStartDelayInSeconds;
     private int producerSchedulerThreadCount = -1;
+    private int consumersThreadPools = -1;
 
     public void setExchangeType(String exchangeType) {
         this.exchangeType = exchangeType;
@@ -228,6 +229,10 @@ public class MulticastParams {
         this.messageProperties = messageProperties;
     }
 
+    public void setConsumersThreadPools(int consumersThreadPools) {
+        this.consumersThreadPools = consumersThreadPools;
+    }
+
     public int getConsumerCount() {
         return consumerCount;
     }
@@ -306,6 +311,10 @@ public class MulticastParams {
 
     public void setRoutingKeyCacheSize(int routingKeyCacheSize) {
         this.routingKeyCacheSize = routingKeyCacheSize;
+    }
+
+    public int getConsumersThreadPools() {
+        return consumersThreadPools;
     }
 
     public Producer createProducer(Connection connection, Stats stats, MulticastSet.CompletionHandler completionHandler) throws IOException {

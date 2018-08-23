@@ -121,7 +121,7 @@ many producers and consumers (dozens or hundreds of thousands)
 that exchange messages at a low and mostly constant rate, usually a message every few seconds or minutes.
 Simulating such workloads requires a different set of settings compared to
 the workloads that have higher throughput and a small number of clients. With the appropriate set of flags,
-PerfTest can simulate IoT workloads without requiring too many resources.
+PerfTest can simulate IoT workloads without requiring too many resources, especially threads.
 
 With an IoT workload, publishers usually don't publish many messages per second,
 but rather a message every fixed period of time. This can be achieved by using the `--publishing-interval`
@@ -170,6 +170,25 @@ In the example above, 1000 publishers will publish every 60 seconds
 with a random start-up delay between 1 second and 15 minutes (1800 seconds). They
 will be scheduled by only 10 threads (instead of 20 by default). Such delay
 values are suitable for long running tests.
+
+Another option can be useful when simulating many consumers with a moderate message rate:
+`--consumers-thread-pools`. It allows to use a given number of thread pools for all the consumers,
+instead of one thread pool for each consumer by default. In the previous example, each consumer
+would use a 1-thread thread pool, which is overkill considering consumers processing
+is fast and producers publish one message every second. We can set the number of thread pools
+to use with `--consumers-thread-pools` and they will be shared by the consumers:
+
+ bin/runjava com.rabbitmq.perf.PerfTest --queue-pattern 'perf-test-%d' \
+   --queue-pattern-from 1 --queue-pattern-to 1000 \
+   --producers 1000 --consumers 1000 \
+   --heartbeat-sender-threads 10 \
+   --publishing-interval 60 --producer-random-start-delay 1800 \
+   --producer-scheduler-threads 10 \
+   --consumers-thread-pools 10
+
+The previous example uses only 10 thread pools for all consumers instead of 1000 by default.
+These are 1-thread thread pools in this case, so this is 10 threads overall instead of 1000, another
+huge resource saving to simulate more clients with a single PerfTest instance for large IoT workloads.
 
 By default, PerfTest uses blocking network socket I/O to communicate with
 the broker. This mode works fine for clients in many cases but the RabbitMQ Java client

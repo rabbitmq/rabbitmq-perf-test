@@ -147,6 +147,7 @@ public class PerfTest {
             int producerSchedulingThreads = intArg(cmd, "pst", -1);
 
             boolean disableConnectionRecovery = hasOption(cmd, "dcr");
+            int consumersThreadPools = intArg(cmd, "ctp", -1);
 
             String uri               = strArg(cmd, 'h', "amqp://localhost");
             String urisParameter     = strArg(cmd, 'H', null);
@@ -271,6 +272,7 @@ public class PerfTest {
             p.setPublishingInterval(publishingIntervalInSeconds);
             p.setProducerRandomStartDelayInSeconds(producerRandomStartDelayInSeconds);
             p.setProducerSchedulerThreadCount(producerSchedulingThreads);
+            p.setConsumersThreadPools(consumersThreadPools);
 
             MulticastSet.CompletionHandler completionHandler = getCompletionHandler(p);
 
@@ -507,6 +509,8 @@ public class PerfTest {
 
         options.addOption(new Option("dcr", "disable-connection-recovery",            false,"disable automatic connection recovery"));
 
+        options.addOption(new Option("ctp", "consumers-thread-pools",true, "number of thread pools to use for all consumers, "
+            + "default is to use a thread pool for each consumer"));
         return options;
     }
 
