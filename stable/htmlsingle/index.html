@@ -522,7 +522,7 @@ table.CodeRay td.code>pre{padding:0}
 <div id="header">
 <h1>RabbitMQ PerfTest</h1>
 <div class="details">
-<span id="revnumber">version 2.1.2</span>
+<span id="revnumber">version 2.2.0</span>
 </div>
 <div id="toc" class="toc2">
 <div id="toctitle">Table of Contents</div>
@@ -543,6 +543,13 @@ table.CodeRay td.code>pre{padding:0}
 <li><a href="#running-producers-and-consumers-on-different-machines">Running Producers and Consumers on Different Machines</a></li>
 <li><a href="#tls-support">TLS Support</a></li>
 <li><a href="#result-reporting-in-html">Result Reporting in HTML</a></li>
+<li><a href="#monitoring">Monitoring</a>
+<ul class="sectlevel2">
+<li><a href="#supported-metrics">Supported Metrics</a></li>
+<li><a href="#tags">Tags</a></li>
+<li><a href="#supported-monitoring-systems">Supported Monitoring Systems</a></li>
+</ul>
+</li>
 </ul>
 </div>
 </div>
@@ -1016,7 +1023,7 @@ many producers and consumers (dozens or hundreds of thousands)
 that exchange messages at a low and mostly constant rate, usually a message every few seconds or minutes.
 Simulating such workloads requires a different set of settings compared to
 the workloads that have higher throughput and a small number of clients. With the appropriate set of flags,
-PerfTest can simulate IoT workloads without requiring too many resources.</p>
+PerfTest can simulate IoT workloads without requiring too many resources, especially threads.</p>
 </div>
 <div class="paragraph">
 <p>With an IoT workload, publishers usually don&#8217;t publish many messages per second,
@@ -1085,6 +1092,30 @@ will be scheduled by only 10 threads (instead of 20 by default). Such delay
 values are suitable for long running tests.</p>
 </div>
 <div class="paragraph">
+<p>Another option can be useful when simulating many consumers with a moderate message rate:
+<code>--consumers-thread-pools</code>. It allows to use a given number of thread pools for all the consumers,
+instead of one thread pool for each consumer by default. In the previous example, each consumer
+would use a 1-thread thread pool, which is overkill considering consumers processing
+is fast and producers publish one message every second. We can set the number of thread pools
+to use with <code>--consumers-thread-pools</code> and they will be shared by the consumers:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>bin/runjava com.rabbitmq.perf.PerfTest --queue-pattern 'perf-test-%d' \
+  --queue-pattern-from 1 --queue-pattern-to 1000 \
+  --producers 1000 --consumers 1000 \
+  --heartbeat-sender-threads 10 \
+  --publishing-interval 60 --producer-random-start-delay 1800 \
+  --producer-scheduler-threads 10 \
+  --consumers-thread-pools 10</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The previous example uses only 10 thread pools for all consumers instead of 1000 by default.
+These are 1-thread thread pools in this case, so this is 10 threads overall instead of 1000, another
+huge resource saving to simulate more clients with a single PerfTest instance for large IoT workloads.</p>
+</div>
+<div class="paragraph">
 <p>By default, PerfTest uses blocking network socket I/O to communicate with
 the broker. This mode works fine for clients in many cases but the RabbitMQ Java client
 also supports an <a href="https://www.rabbitmq.com/api-guide.html#java-nio">asynchronous I/O mode</a>,
@@ -1106,14 +1137,17 @@ to handle the I/O. That&#8217;s what the
 </div>
 </div>
 <div class="paragraph">
-<p>PerfTest will use 2 extra threads for internal bookkeeping needs, so the total will be 12 threads
-for I/O over all the connections. With the default blocking I/O mode, each producer (or consumer)
+<p>This way PerfTest will use  12 threads for I/O over all the connections.
+With the default blocking I/O mode, each producer (or consumer)
 uses a thread for the I/O loop, that is 2000 threads to simulate 1000 producers and
-1000 consumers.</p>
+1000 consumers. Using NIO in PerfTest can dramatically reduce the resources used
+to simulate workloads with a large number of connections with appropriate tuning.</p>
 </div>
 <div class="paragraph">
-<p>Using NIO in PerfTest can dramatically reduce the resources used to simulate workloads with a large
-number of connections with appropriate tuning.</p>
+<p>Note that in NIO mode the number of threads used can increase temporarily when connections close
+unexpectedly and connection recovery kicks in. This is due to the NIO mode dispatching
+connection closing to non-I/O threads to avoid deadlocks. Connection recovery can be disabled
+with the <code>--disable-connection-recovery</code> flag.</p>
 </div>
 </div>
 </div>
@@ -1215,11 +1249,156 @@ collecting results and displaying them in an HTML page. Learn more
 </div>
 </div>
 </div>
+<div class="sect1">
+<h2 id="monitoring"><a class="anchor" href="#monitoring"></a>Monitoring</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>PerfTest can gather metrics and make them available to various monitoring
+systems. Metrics include messaging-centric metrics (message latency,
+number of connections and channels, number of published messages, etc) as well
+as OS process and JVM metrics (memory, CPU usage, garbage collection, JVM heap, etc).</p>
+</div>
+<div class="paragraph">
+<p>Here is how to list the available metrics options:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre>./runjava com.rabbitmq.perf.PerfTest --metrics-help</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This command displays the available flags to enable the various metrics PerfTest
+can gather, as well as options to configure the exposure to the monitoring systems
+PerfTest supports.</p>
+</div>
+<div class="sect2">
+<h3 id="supported-metrics"><a class="anchor" href="#supported-metrics"></a>Supported Metrics</h3>
+<div class="paragraph">
+<p>Here are the metrics PerfTest can gather:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>default metrics: number of published, returned, confirmed, nacked, and consumed messages, message
+latency. Latency is a major concern in many types of workload, it can be easily monitored here.
+Default metrics are available as long as PerfTest support for a monitoring system
+is enabled.</p>
+</li>
+<li>
+<p>client metrics: these are the <a href="https://www.rabbitmq.com/api-guide.html#metrics">Java Client metrics</a>.
+Enabling these metrics shouldn&#8217;t bring much compared to the default PerfTest metrics,
+except to see how PerfTest behaves with regards to number of open connections
+and channels for instance. Client metrics are enabled with the <code>-mc</code> or <code>--metrics-client</code> flag.</p>
+</li>
+<li>
+<p>JVM memory metrics: these metrics report memory usage of the JVM, e.g. current heap size, etc.
+They can be useful to have a better understanding of the client behavior, e.g. heap memory fluctuation
+could be due to frequent garbage collection that could explain high latency numbers. These metrics
+are enabled with the <code>-mjm</code> or <code>--metrics-jvm-memory</code> flag.</p>
+</li>
+<li>
+<p>JVM thread metrics: these metrics report the number of JVM threads used in the PerfTest process,
+as well as their state. This can be useful to optimize the usage of PerfTest to simulate
+<a href="#workloads-with-a-large-number-of-clients">high loads with fewer resources</a>.
+These metrics are enabled with the <code>-mjt</code> or <code>--metrics-jvm-thread</code> flag.</p>
+</li>
+<li>
+<p>JVM GC metrics: these metrics reports garbage collection activity. They can vary depending
+on the JVM used, its version, and the GC settings. They can be useful to correlate the GC
+activity with PerfTest behavior, e.g. abnormal low throughput because of very frequent
+garbage collection. These metrics are enabled with the <code>-mjgc</code> or <code>--metrics-jvm-gc</code> flag.</p>
+</li>
+<li>
+<p>Processor metrics: there metrics report CPU activity as gathered by the JVM.
+They can be enabled with the <code>-mjp</code> or <code>--metrics-processor</code> flag.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="tags"><a class="anchor" href="#tags"></a>Tags</h3>
+<div class="paragraph">
+<p>One can specify metrics tags with the <code>-mt</code> or <code>--metrics-tags</code> options, e.g.
+<code>--metrics-tags env=performance,datacenter=eu</code> to tell monitoring systems that those
+metrics are from the <code>performance</code> environment located in the <code>eu</code> data center.
+Monitoring systems that support dimensions can then make it easier to
+navigate across metrics (group by, drill down). See <a href="https://micrometer.io">Micrometer</a> documentation
+for more information about tags and dimensions.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="supported-monitoring-systems"><a class="anchor" href="#supported-monitoring-systems"></a>Supported Monitoring Systems</h3>
+<div class="paragraph">
+<p>PerfTest builds on top <a href="https://micrometer.io">Micrometer</a> to report gathered metrics to various monitoring systems.
+Nevertheless, not all systems supported by Micrometer are actually supported by PerfTest.
+PerfTest currently supports <a href="https://www.datadoghq.com/">Datadog</a>, <a href="https://en.wikipedia.org/wiki/Java_Management_Extensions">JMX</a>,
+and <a href="https://prometheus.io/">Prometheus</a>.
+Don&#8217;t hesitate to
+<a href="https://github.com/rabbitmq/rabbitmq-perf-test/issues">request support for other monitoring systems</a>.</p>
+</div>
+<div class="sect3">
+<h4 id="datadog"><a class="anchor" href="#datadog"></a>Datadog</h4>
+<div class="paragraph">
+<p>The API key is the only required option to send metrics to Datadog:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>./runjava com.rabbitmq.perf.PerfTest --metrics-datadog-api-key YOUR_API_KEY</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Another useful option is the step size or reporting frequency. The default value is
+10 seconds.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>./runjava com.rabbitmq.perf.PerfTest --metrics-datadog-api-key YOUR_API_KEY \
+    --metrics-datadog-step-size 20</code></pre>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="jmx"><a class="anchor" href="#jmx"></a>JMX</h4>
+<div class="paragraph">
+<p>JMX support provides a simple way to view metrics locally. Use the <code>--metrics-jmx</code> flag to
+export metrics to JMX:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>./runjava com.rabbitmq.perf.PerfTest --metrics-jmx</code></pre>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="prometheus"><a class="anchor" href="#prometheus"></a>Prometheus</h4>
+<div class="paragraph">
+<p>Use the <code>-mpr</code> or <code>--metrics-prometheus</code> flag to enable metrics reporting to Prometheus:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>./runjava com.rabbitmq.perf.PerfTest --metrics-prometheus</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Prometheus expects to scrape or poll individual app instances for metrics, so PerfTest starts up
+a web server listening on port 8080 and exposes metrics on the <code>/metrics</code> endpoint. These defaults
+can be changed:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>./runjava com.rabbitmq.perf.PerfTest --metrics-prometheus \
+    --metrics-prometheus-port 8090 --metrics-prometheus-endpoint perf-test-metrics</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
 </div>
 <div id="footer">
 <div id="footer-text">
-Version 2.1.2<br>
-Last updated 2018-07-17 17:44:43 CEST
+Version 2.2.0<br>
+Last updated 2018-08-31 09:49:30 CEST
 </div>
 </div>
 </body>
