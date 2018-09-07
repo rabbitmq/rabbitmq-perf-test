@@ -390,7 +390,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
     }
 
     @Test
-    public void publishingInterval() throws Exception {
+    public void publishingInterval() {
         countsAndTimeLimit(0, 0, 6);
         params.setPublishingInterval(2);
         params.setProducerCount(3);
@@ -415,7 +415,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         waitAtMost(10, TimeUnit.SECONDS).untilTrue(testIsDone);
         assertThat(publishedMessageCount.get(), allOf(
             greaterThanOrEqualTo(3 * 2),  // 3 publishers should publish at least a couple of times
-            lessThan(3 * 2 * 4) //  but they don't publish
+            lessThan(3 * 2 * 8) //  but they don't publish too much
         ));
         assertThat(testDurationInMs, greaterThan(5000L));
     }
