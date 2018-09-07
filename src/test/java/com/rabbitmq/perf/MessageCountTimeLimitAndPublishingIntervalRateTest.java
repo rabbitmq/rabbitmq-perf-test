@@ -465,7 +465,6 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
                 testIsDone.set(true);
             } catch (InterruptedException e) {
                 // one of the tests stops the execution, no need to be noisy
-                throw new RuntimeException(e);
             } catch (Exception e) {
                 e.printStackTrace();
             }
