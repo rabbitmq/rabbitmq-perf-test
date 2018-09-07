@@ -60,11 +60,10 @@
     <micrometer.version>1.0.6</micrometer.version>
     <logback.version>1.2.3</logback.version>
     <jetty.version>9.4.11.v20180605</jetty.version>
-    <junit.jupiter.version>5.2.0</junit.jupiter.version>
-    <junit.platform.version>1.2.0</junit.platform.version>
-    <mockito.version>2.18.3</mockito.version>
+    <junit.jupiter.version>5.3.0</junit.jupiter.version>
+    <mockito.version>2.21.0</mockito.version>
     <hamcrest.version>2.0.0.0</hamcrest.version>
-    <awaitility.version>3.1.0</awaitility.version>
+    <awaitility.version>3.1.2</awaitility.version>
     <jmh.version>1.20</jmh.version>
 
     <!-- to sign artifacts when releasing -->
@@ -81,8 +80,8 @@
     <checksum.maven.plugin.version>1.6</checksum.maven.plugin.version>
     <maven.jar.plugin.version>3.0.2</maven.jar.plugin.version>
     <buildnumber.plugin.version>1.4</buildnumber.plugin.version>
-    <maven.surefire.plugin.version>2.21.0</maven.surefire.plugin.version>
-    <maven.failsafe.plugin.version>2.21.0</maven.failsafe.plugin.version>
+    <maven.surefire.plugin.version>2.22.0</maven.surefire.plugin.version>
+    <maven.failsafe.plugin.version>2.22.0</maven.failsafe.plugin.version>
 
     <!-- because of https://issues.apache.org/jira/browse/MRESOURCES-99 -->
     <build.timestamp>${maven.build.timestamp}</build.timestamp>
@@ -267,13 +266,6 @@
             <include>**/*Test.java</include>
           </includes>
         </configuration>
-        <dependencies>
-          <dependency>
-            <groupId>org.junit.platform</groupId>
-            <artifactId>junit-platform-surefire-provider</artifactId>
-            <version>${junit.platform.version}</version>
-          </dependency>
-        </dependencies>
       </plugin>
 
       <plugin>
@@ -285,13 +277,6 @@
           </includes>
           <encoding>UTF-8</encoding>
         </configuration>
-        <dependencies>
-          <dependency>
-            <groupId>org.junit.platform</groupId>
-            <artifactId>junit-platform-surefire-provider</artifactId>
-            <version>${junit.platform.version}</version>
-          </dependency>
-        </dependencies>
 
         <executions>
           <execution>
