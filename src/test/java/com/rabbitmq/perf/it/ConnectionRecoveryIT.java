@@ -21,6 +21,7 @@ import com.rabbitmq.perf.MulticastParams;
 import com.rabbitmq.perf.MulticastSet;
 import com.rabbitmq.perf.NamedThreadFactory;
 import com.rabbitmq.perf.Stats;
+import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -78,7 +79,7 @@ public class ConnectionRecoveryIT {
 
     AtomicInteger msgPublished, msgConsumed;
 
-    Stats stats = new Stats(1000) {
+    Stats stats = new Stats(1000, false, new CompositeMeterRegistry(), "") {
 
         @Override
         protected void report(long now) {

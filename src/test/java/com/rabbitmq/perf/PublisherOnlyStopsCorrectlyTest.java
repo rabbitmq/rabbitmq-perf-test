@@ -49,12 +49,7 @@ public class PublisherOnlyStopsCorrectlyTest {
 
     MulticastParams params;
 
-    Stats stats = new Stats(1000) {
-
-        @Override
-        protected void report(long now) {
-        }
-    };
+    Stats stats = new NoOpStats();
 
     ExecutorService executorService;
 

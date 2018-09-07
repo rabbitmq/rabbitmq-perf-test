@@ -35,11 +35,13 @@ import org.mockito.Mock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -76,31 +78,18 @@ import static org.mockito.MockitoAnnotations.initMocks;
 public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MessageCountTimeLimitAndPublishingIntervalRateTest.class);
-
     @Mock
     ConnectionFactory cf;
     @Mock
     Connection c;
     @Mock
     Channel ch;
-
     MulticastSet.CompletionHandler completionHandler;
-
-    Stats stats = new Stats(1000) {
-
-        @Override
-        protected void report(long now) {
-        }
-    };
-
+    Stats stats = new NoOpStats();
     MulticastParams params;
-
     ExecutorService executorService;
-
     MulticastSet.ThreadingHandler th;
-
     AtomicBoolean testIsDone;
-
     volatile long testDurationInMs;
 
     static Stream<Arguments> producerCountArguments() {
@@ -140,7 +129,8 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         when(c.createChannel()).thenReturn(ch);
 
         testIsDone = new AtomicBoolean(false);
-        executorService = Executors.newCachedThreadPool();
+        executorService = Executors.newCachedThreadPool(new NamedThreadFactory(
+            info.getTestMethod().get().getName() + "-" + info.getDisplayName() + "-"));
         th = new MulticastSet.DefaultThreadingHandler();
         testDurationInMs = -1;
         params = new MulticastParams();
@@ -148,11 +138,15 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
     }
 
     @AfterEach
-    public void tearDown() {
+    public void tearDown() throws InterruptedException {
         th.shutdown();
         List<Runnable> runnables = executorService.shutdownNow();
         if (runnables.size() > 0) {
-            LOGGER.warn("Some tasks are not done: {}", runnables);
+            LOGGER.warn("Some tasks are still waiting execution: {}", runnables);
+        }
+        boolean allTerminated = executorService.awaitTermination(5, TimeUnit.SECONDS);
+        if (!allTerminated) {
+            LOGGER.warn("All tasks couldn't finish in time");
         }
         if (!testIsDone.get()) {
             LOGGER.warn("PerfTest run not done");
@@ -265,8 +259,14 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         waitAtMost(20, TimeUnit.SECONDS).until(() -> consumerArgumentCaptor.getAllValues(), hasSize(consumersCount * channelsCount));
 
+        Collection<Future<?>> sendTasks = new ArrayList<>(consumerArgumentCaptor.getAllValues().size());
         for (Consumer consumer : consumerArgumentCaptor.getAllValues()) {
-            sendMessagesToConsumer(messagesCount, consumer);
+            Collection<Future<?>> tasks = sendMessagesToConsumer(messagesCount, consumer);
+            sendTasks.addAll(tasks);
+        }
+
+        for (Future<?> latch : sendTasks) {
+            latch.get(10, TimeUnit.SECONDS);
         }
 
         waitAtMost(20, TimeUnit.SECONDS).untilTrue(testIsDone);
@@ -350,6 +350,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         // so the test is still running in the background
         verify(c, times(1)).close();
         completionHandler.countDown();
+        waitAtMost(10, TimeUnit.SECONDS).untilTrue(testIsDone);
     }
 
     // -x 0 -y 1
@@ -380,6 +381,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         // so the test is still running in the background
         verify(c, times(1)).close();
         completionHandler.countDown();
+        waitAtMost(10, TimeUnit.SECONDS).untilTrue(testIsDone);
     }
 
     @Test
@@ -438,9 +440,10 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         assertThat(testDurationInMs, greaterThan(5000L));
     }
 
-    private void sendMessagesToConsumer(int messagesCount, Consumer consumer) {
+    private Collection<Future<?>> sendMessagesToConsumer(int messagesCount, Consumer consumer) {
+        final Collection<Future<?>> tasks = new ArrayList<>(messagesCount);
         IntStream.range(0, messagesCount).forEach(i -> {
-            executorService.submit(() -> {
+            Future<?> task = executorService.submit(() -> {
                 try {
                     consumer.handleDelivery(
                         "",
@@ -448,11 +451,13 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
                         null,
                         new byte[20]
                     );
-                } catch (IOException e) {
+                } catch (Exception e) {
                     e.printStackTrace();
                 }
             });
+            tasks.add(task);
         });
+        return tasks;
     }
 
     private void countsAndTimeLimit(int pmc, int cmc, int time) {

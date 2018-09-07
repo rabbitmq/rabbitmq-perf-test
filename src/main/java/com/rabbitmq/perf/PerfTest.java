@@ -284,6 +284,8 @@ public class PerfTest {
             if (factory.getNioParams().getNioExecutor() != null) {
                 factory.getNioParams().getNioExecutor().shutdownNow();
             }
+
+            registry.close();
         }
         catch (ParseException exp) {
             System.err.println("Parsing failed. Reason: " + exp.getMessage());

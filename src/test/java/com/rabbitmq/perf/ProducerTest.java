@@ -320,13 +320,7 @@ public class ProducerTest {
     }
 
     private Stats stats() {
-        return new Stats(1000) {
-
-            @Override
-            protected void report(long now) {
-
-            }
-        };
+        return new NoOpStats();
     }
 
     private MulticastSet.CompletionHandler completionHandler() {
