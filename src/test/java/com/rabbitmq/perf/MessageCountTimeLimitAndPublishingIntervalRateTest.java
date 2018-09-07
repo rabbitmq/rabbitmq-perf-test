@@ -146,8 +146,8 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
     @AfterEach
     public void tearDown() {
-        executorService.shutdownNow();
         th.shutdown();
+        executorService.shutdownNow();
     }
 
     @Test
@@ -373,7 +373,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
     @Test
     public void publishingRateLimit() throws Exception {
         countsAndTimeLimit(0, 0, 8);
-        params.setProducerRateLimit(10);
+        params.setProducerRateLimit(100);
         params.setProducerCount(3);
 
         AtomicInteger publishedMessageCount = new AtomicInteger();
@@ -389,8 +389,8 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         waitAtMost(15, TimeUnit.SECONDS).untilTrue(testIsDone);
         assertThat(publishedMessageCount.get(), allOf(
-            greaterThan(3 * 10 * 3), // 3 producers at 10 m/s for about 2 seconds at least
-            lessThan(3 * 10 * 8 * 2) // not too many messages though
+            greaterThan(3 * 100 * 3), // 3 producers at 10 m/s for about 2 seconds at least
+            lessThan(3 * 100 * 8 * 2) // not too many messages though
         ));
         assertThat(testDurationInMs, greaterThan(5000L));
     }
