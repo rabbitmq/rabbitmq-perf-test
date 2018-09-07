@@ -36,6 +36,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -82,6 +83,8 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
     Connection c;
     @Mock
     Channel ch;
+
+    MulticastSet.CompletionHandler completionHandler;
 
     Stats stats = new Stats(1000) {
 
@@ -147,7 +150,13 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
     @AfterEach
     public void tearDown() {
         th.shutdown();
-        executorService.shutdownNow();
+        List<Runnable> runnables = executorService.shutdownNow();
+        if (runnables.size() > 0) {
+            LOGGER.warn("Some tasks are not done: {}", runnables);
+        }
+        if (!testIsDone.get()) {
+            LOGGER.warn("PerfTest run not done");
+        }
     }
 
     @Test
@@ -182,6 +191,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         // only the configuration connection has been closed
         // so the test is still running in the background
         assertThat(connectionCloseCalls.get(), is(1));
+        completionHandler.countDown();
     }
 
     // --time 5
@@ -339,6 +349,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         // only the configuration connection has been closed
         // so the test is still running in the background
         verify(c, times(1)).close();
+        completionHandler.countDown();
     }
 
     // -x 0 -y 1
@@ -368,6 +379,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         // only the configuration connection has been closed
         // so the test is still running in the background
         verify(c, times(1)).close();
+        completionHandler.countDown();
     }
 
     @Test
@@ -454,11 +466,16 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
     }
 
     private MulticastSet getMulticastSet(ConnectionFactory connectionFactory) {
+        return getMulticastSet(connectionFactory, PerfTest.getCompletionHandler(params));
+    }
+
+    private MulticastSet getMulticastSet(ConnectionFactory connectionFactory, MulticastSet.CompletionHandler completionHandler) {
         MulticastSet set = new MulticastSet(
             stats, connectionFactory, params, singletonList("amqp://localhost"),
-            PerfTest.getCompletionHandler(params)
+            completionHandler
         );
         set.setThreadingHandler(th);
+        this.completionHandler = completionHandler;
         return set;
     }
 
