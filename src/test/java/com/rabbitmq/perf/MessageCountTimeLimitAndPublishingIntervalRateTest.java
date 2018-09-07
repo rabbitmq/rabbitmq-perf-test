@@ -26,11 +26,14 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
@@ -70,6 +73,8 @@ import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
 
 public class MessageCountTimeLimitAndPublishingIntervalRateTest {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(MessageCountTimeLimitAndPublishingIntervalRateTest.class);
 
     @Mock
     ConnectionFactory cf;
@@ -124,7 +129,8 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
     }
 
     @BeforeEach
-    public void init() throws Exception {
+    public void init(TestInfo info) throws Exception {
+        LOGGER.info("Starting test {} ({})", info.getTestMethod().get().getName(), info.getDisplayName());
         initMocks(this);
 
         when(cf.newConnection(anyString())).thenReturn(c);
