@@ -165,7 +165,8 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
             callback("basicPublish", (proxy, method, args) -> {
                 publishedLatch.countDown();
                 return null;
-            })
+            }),
+            callback("getNextPublishSeqNo", (proxy, method, args) -> 0L)
         );
 
         AtomicInteger connectionCloseCalls = new AtomicInteger(0);
@@ -220,7 +221,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
     @ParameterizedTest
     @MethodSource("producerCountArguments")
     public void producerCount(int producersCount, int channelsCount) throws Exception {
-        int messagesCount = producersCount * channelsCount;
+        int messagesCount = 100;
         countsAndTimeLimit(messagesCount, 0, 0);
         params.setProducerCount(producersCount);
         params.setProducerChannelCount(channelsCount);
@@ -231,7 +232,8 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
             callback("basicPublish", (proxy, method, args) -> {
                 publishedLatch.countDown();
                 return null;
-            })
+            }),
+            callback("getNextPublishSeqNo", (proxy, method, args) -> 0L)
         );
 
         Connection connection = proxy(Connection.class,
@@ -317,6 +319,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
                 publishedLatch.countDown();
                 return null;
             }),
+            callback("getNextPublishSeqNo", (proxy, method, args) -> 0L),
             callback("basicConsume", (proxy, method, args) -> {
                 consumer.set((Consumer) args[2]);
                 String ctag = consumerTagCounter.getAndIncrement() + "";
@@ -464,7 +467,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         waitAtMost(30, TimeUnit.SECONDS).untilTrue(testIsDone);
         assertThat(publishedMessageCount.get(), allOf(
-            greaterThan(3 * 100 * 3), // 3 producers at 10 m/s for about 2 seconds at least
+            greaterThan(3 * 100 * 1), // 3 producers at 100 m/s for about 3 seconds at least
             lessThan(3 * 100 * 8 * 2) // not too many messages though
         ));
         assertThat(testDurationInMs, greaterThan(5000L));
@@ -534,7 +537,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
     }
 
     void waitForRunToStart() throws InterruptedException {
-        assertTrue(runStartedLatch.await(10, TimeUnit.SECONDS), "Run should have started by now");
+        assertTrue(runStartedLatch.await(20, TimeUnit.SECONDS), "Run should have started by now");
     }
 
     private MulticastSet getMulticastSet(ConnectionFactory connectionFactory, MulticastSet.CompletionHandler completionHandler) {
