@@ -20,26 +20,32 @@ import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.Consumer;
 import com.rabbitmq.client.Envelope;
-import org.awaitility.Awaitility;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Mock;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BooleanSupplier;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -49,7 +55,6 @@ import static com.rabbitmq.perf.MockUtils.proxy;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
-import static org.awaitility.Awaitility.waitAtMost;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
@@ -59,41 +64,20 @@ import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.junit.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-import static org.mockito.MockitoAnnotations.initMocks;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
-    @Mock
-    ConnectionFactory cf;
-    @Mock
-    Connection c;
-    @Mock
-    Channel ch;
-
-    Stats stats = new Stats(1000) {
-
-        @Override
-        protected void report(long now) {
-        }
-    };
-
+    static final Set<String> threads = new LinkedHashSet<>();
+    private static final Logger LOGGER = LoggerFactory.getLogger(MessageCountTimeLimitAndPublishingIntervalRateTest.class);
+    MulticastSet.CompletionHandler completionHandler;
+    Stats stats = new NoOpStats();
     MulticastParams params;
-
     ExecutorService executorService;
-
     MulticastSet.ThreadingHandler th;
-
-    AtomicBoolean testIsDone;
-
+    volatile AtomicBoolean testIsDone;
     volatile long testDurationInMs;
+    CountDownLatch runStartedLatch;
 
     static Stream<Arguments> producerCountArguments() {
         return Stream.of(
@@ -113,35 +97,67 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         );
     }
 
-    @BeforeAll
-    public static void beforeAllTests() {
-        Awaitility.setDefaultPollInterval(200, TimeUnit.MILLISECONDS);
-    }
-
-    @AfterAll
-    public static void afterAllTests() {
-        Awaitility.reset();
+    static void waitAtMost(int timeoutInSeconds, BooleanSupplier condition) throws InterruptedException {
+        if (condition.getAsBoolean()) {
+            return;
+        }
+        int waitTime = 100;
+        int waitedTime = 0;
+        int timeoutInMs = timeoutInSeconds * 1000;
+        while (waitedTime <= timeoutInMs) {
+            Thread.sleep(waitTime);
+            if (condition.getAsBoolean()) {
+                return;
+            }
+            waitedTime += waitTime;
+        }
+        fail("Waited " + timeoutInSeconds + " second(s), condition never got true");
     }
 
     @BeforeEach
-    public void init() throws Exception {
-        initMocks(this);
+    public void init(TestInfo info) {
+        LOGGER.info("Starting test {} ({})", info.getTestMethod().get().getName(), info.getDisplayName());
 
-        when(cf.newConnection(anyString())).thenReturn(c);
-        when(c.createChannel()).thenReturn(ch);
+        Set<Thread> threadSet = Thread.getAllStackTraces().keySet();
+
+        Set<String> newThreads = threadSet.stream().filter(thread -> {
+            if (threads.contains(thread.getName())) {
+                return false;
+            }
+            threads.add(thread.getName());
+            return true;
+        }).map(thread -> thread.getName()).collect(Collectors.toSet());
+
+        if (newThreads.size() > 0) {
+            LOGGER.warn("New threads: {}", newThreads);
+        }
+
+        LOGGER.info("Number of threads: {}", threads.size());
 
         testIsDone = new AtomicBoolean(false);
-        executorService = Executors.newCachedThreadPool();
+        executorService = Executors.newCachedThreadPool(new NamedThreadFactory(
+            info.getTestMethod().get().getName() + "-" + info.getDisplayName() + "-"));
         th = new MulticastSet.DefaultThreadingHandler();
         testDurationInMs = -1;
         params = new MulticastParams();
         params.setPredeclared(true);
+        runStartedLatch = new CountDownLatch(1);
     }
 
     @AfterEach
-    public void tearDown() {
-        executorService.shutdownNow();
+    public void tearDown() throws InterruptedException {
         th.shutdown();
+        List<Runnable> runnables = executorService.shutdownNow();
+        if (runnables.size() > 0) {
+            LOGGER.warn("Some tasks are still waiting execution: {}", runnables);
+        }
+        boolean allTerminated = executorService.awaitTermination(5, TimeUnit.SECONDS);
+        if (!allTerminated) {
+            LOGGER.warn("All tasks couldn't finish in time");
+        }
+        if (!testIsDone.get()) {
+            LOGGER.warn("PerfTest run not done");
+        }
     }
 
     @Test
@@ -154,7 +170,8 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
             callback("basicPublish", (proxy, method, args) -> {
                 publishedLatch.countDown();
                 return null;
-            })
+            }),
+            callback("getNextPublishSeqNo", (proxy, method, args) -> 0L)
         );
 
         AtomicInteger connectionCloseCalls = new AtomicInteger(0);
@@ -167,6 +184,8 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         run(multicastSet);
 
+        waitForRunToStart();
+
         assertTrue(
             publishedLatch.await(10, TimeUnit.SECONDS),
             () -> format("Only %d / %d messages have been published", publishedLatch.getCount(), nbMessages)
@@ -176,36 +195,17 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         // only the configuration connection has been closed
         // so the test is still running in the background
         assertThat(connectionCloseCalls.get(), is(1));
+        completionHandler.countDown();
     }
 
     // --time 5
     @Test
-    public void timeLimit() {
-        countsAndTimeLimit(0, 0, 3);
-        MulticastSet multicastSet = getMulticastSet();
+    public void timeLimit() throws InterruptedException {
+        countsAndTimeLimit(1, 1, 3);
 
-        run(multicastSet);
-
-        waitAtMost(15, TimeUnit.SECONDS).untilTrue(testIsDone);
-        assertThat(testDurationInMs, greaterThanOrEqualTo(3000L));
-    }
-
-    // -y 1 --pmessages 10 -x n -X m
-    @ParameterizedTest
-    @MethodSource("producerCountArguments")
-    public void producerCount(int producersCount, int channelsCount) throws Exception {
-        int messagesCount = producersCount * channelsCount;
-        countsAndTimeLimit(messagesCount, 0, 0);
-        params.setProducerCount(producersCount);
-        params.setProducerChannelCount(channelsCount);
-
-        int messagesTotal = producersCount * channelsCount * messagesCount;
-        CountDownLatch publishedLatch = new CountDownLatch(messagesTotal);
         Channel channel = proxy(Channel.class,
-            callback("basicPublish", (proxy, method, args) -> {
-                publishedLatch.countDown();
-                return null;
-            })
+            callback("basicPublish", (proxy, method, args) -> null),
+            callback("getNextPublishSeqNo", (proxy, method, args) -> 0L)
         );
 
         Connection connection = proxy(Connection.class,
@@ -216,11 +216,47 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         run(multicastSet);
 
+        waitForRunToStart();
+
+        waitAtMost(15, () -> testIsDone.get());
+
+        assertThat(testDurationInMs, greaterThanOrEqualTo(3000L));
+    }
+
+    // -y 1 --pmessages 10 -x n -X m
+    @ParameterizedTest
+    @MethodSource("producerCountArguments")
+    public void producerCount(int producersCount, int channelsCount) throws Exception {
+        int messagesCount = 100;
+        countsAndTimeLimit(messagesCount, 0, 0);
+        params.setProducerCount(producersCount);
+        params.setProducerChannelCount(channelsCount);
+
+        int messagesTotal = producersCount * channelsCount * messagesCount;
+        CountDownLatch publishedLatch = new CountDownLatch(messagesTotal);
+        Channel channel = proxy(Channel.class,
+            callback("basicPublish", (proxy, method, args) -> {
+                publishedLatch.countDown();
+                return null;
+            }),
+            callback("getNextPublishSeqNo", (proxy, method, args) -> 0L)
+        );
+
+        Connection connection = proxy(Connection.class,
+            callback("createChannel", (proxy, method, args) -> channel)
+        );
+
+        MulticastSet multicastSet = getMulticastSet(connectionFactoryThatReturns(connection));
+
+        run(multicastSet);
+
+        waitForRunToStart();
+
         assertTrue(
             publishedLatch.await(60, TimeUnit.SECONDS),
             () -> format("Only %d / %d messages have been published", publishedLatch.getCount(), messagesTotal)
         );
-        waitAtMost(20, TimeUnit.SECONDS).untilTrue(testIsDone);
+        waitAtMost(20, () -> testIsDone.get());
     }
 
     // --cmessages 10 -y n -Y m
@@ -235,25 +271,40 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         CountDownLatch consumersLatch = new CountDownLatch(consumersCount * channelsCount);
         AtomicInteger consumerTagCounter = new AtomicInteger(0);
-        ArgumentCaptor<Consumer> consumerArgumentCaptor = ArgumentCaptor.forClass(Consumer.class);
-        doAnswer(invocation -> {
-            consumersLatch.countDown();
-            return consumerTagCounter.getAndIncrement() + "";
-        }).when(ch).basicConsume(anyString(), anyBoolean(), consumerArgumentCaptor.capture());
+        List<Consumer> consumers = new CopyOnWriteArrayList<>();
+        Channel channel = proxy(Channel.class,
+            callback("basicConsume", (proxy, method, args) -> {
+                consumers.add((Consumer) args[2]);
+                consumersLatch.countDown();
+                return consumerTagCounter.getAndIncrement() + "";
+            })
+        );
 
-        MulticastSet multicastSet = getMulticastSet();
+        Connection connection = proxy(Connection.class,
+            callback("createChannel", (proxy, method, args) -> channel)
+        );
+
+        MulticastSet multicastSet = getMulticastSet(connectionFactoryThatReturns(connection));
         run(multicastSet);
+
+        waitForRunToStart();
 
         assertThat(consumersCount * channelsCount + " consumer(s) should have been registered by now",
             consumersLatch.await(5, TimeUnit.SECONDS), is(true));
 
-        waitAtMost(20, TimeUnit.SECONDS).until(() -> consumerArgumentCaptor.getAllValues(), hasSize(consumersCount * channelsCount));
+        waitAtMost(20, () -> consumers.size() == (consumersCount * channelsCount));
 
-        for (Consumer consumer : consumerArgumentCaptor.getAllValues()) {
-            sendMessagesToConsumer(messagesCount, consumer);
+        Collection<Future<?>> sendTasks = new ArrayList<>(consumers.size());
+        for (Consumer consumer : consumers) {
+            Collection<Future<?>> tasks = sendMessagesToConsumer(messagesCount, consumer);
+            sendTasks.addAll(tasks);
         }
 
-        waitAtMost(20, TimeUnit.SECONDS).untilTrue(testIsDone);
+        for (Future<?> latch : sendTasks) {
+            latch.get(10, TimeUnit.SECONDS);
+        }
+
+        waitAtMost(20, () -> testIsDone.get());
     }
 
     // --time 5 -x 1 --pmessages 10 -y 1 --cmessages 10
@@ -274,6 +325,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
                 publishedLatch.countDown();
                 return null;
             }),
+            callback("getNextPublishSeqNo", (proxy, method, args) -> 0L),
             callback("basicConsume", (proxy, method, args) -> {
                 consumer.set((Consumer) args[2]);
                 String ctag = consumerTagCounter.getAndIncrement() + "";
@@ -290,6 +342,8 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         run(multicastSet);
 
+        waitForRunToStart();
+
         assertThat("1 consumer should have been registered by now",
             consumersLatch.await(10, TimeUnit.SECONDS), is(true));
         assertThat(consumer.get(), notNullValue());
@@ -302,7 +356,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         assertThat(testIsDone.get(), is(false));
 
-        waitAtMost(20, TimeUnit.SECONDS).untilTrue(testIsDone);
+        waitAtMost(20, () -> testIsDone.get());
         assertThat(testDurationInMs, greaterThanOrEqualTo(5000L));
     }
 
@@ -316,23 +370,37 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         CountDownLatch consumersLatch = new CountDownLatch(1);
         AtomicInteger consumerTagCounter = new AtomicInteger(0);
-        ArgumentCaptor<Consumer> consumerArgumentCaptor = ArgumentCaptor.forClass(Consumer.class);
-        doAnswer(invocation -> {
-            consumersLatch.countDown();
-            return consumerTagCounter.getAndIncrement() + "";
-        }).when(ch).basicConsume(anyString(), anyBoolean(), consumerArgumentCaptor.capture());
 
-        MulticastSet multicastSet = getMulticastSet();
+        List<Consumer> consumers = new CopyOnWriteArrayList<>();
+        Channel channel = proxy(Channel.class,
+            callback("basicConsume", (proxy, method, args) -> {
+                consumers.add((Consumer) args[2]);
+                consumersLatch.countDown();
+                return consumerTagCounter.getAndIncrement() + "";
+            })
+        );
+
+        AtomicInteger closeCount = new AtomicInteger(0);
+        Connection connection = proxy(Connection.class,
+            callback("createChannel", (proxy, method, args) -> channel),
+            callback("close", (proxy, method, args) -> closeCount.incrementAndGet())
+        );
+
+        MulticastSet multicastSet = getMulticastSet(connectionFactoryThatReturns(connection));
         run(multicastSet);
+
+        waitForRunToStart();
 
         assertThat("1 consumer should have been registered by now",
             consumersLatch.await(20, TimeUnit.SECONDS), is(true));
-        assertThat(consumerArgumentCaptor.getValue(), notNullValue());
+        assertThat(consumers, hasSize(1));
 
         assertThat(testIsDone.get(), is(false));
         // only the configuration connection has been closed
         // so the test is still running in the background
-        verify(c, times(1)).close();
+        assertThat(closeCount.get(), is(1));
+        completionHandler.countDown();
+        waitAtMost(20, () -> testIsDone.get());
     }
 
     // -x 0 -y 1
@@ -341,18 +409,30 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         countsAndTimeLimit(0, 0, 0);
         params.setProducerCount(1);
         params.setConsumerCount(0);
+        params.setProducerRateLimit(100);
 
         int nbMessages = 100;
         CountDownLatch publishedLatch = new CountDownLatch(nbMessages);
-        doAnswer(invocation -> {
-            publishedLatch.countDown();
-            return null;
-        }).when(ch).basicPublish(anyString(), anyString(),
-            anyBoolean(), eq(false),
-            any(), any());
 
-        MulticastSet multicastSet = getMulticastSet();
+        Channel channel = proxy(Channel.class,
+            callback("basicPublish", (proxy, method, args) -> {
+                publishedLatch.countDown();
+                return null;
+            }),
+            callback("getNextPublishSeqNo", (proxy, method, args) -> 0L)
+        );
+
+        AtomicInteger closeCount = new AtomicInteger(0);
+        Connection connection = proxy(Connection.class,
+            callback("createChannel", (proxy, method, args) -> channel),
+            callback("close", (proxy, method, args) -> closeCount.incrementAndGet())
+        );
+
+        MulticastSet multicastSet = getMulticastSet(connectionFactoryThatReturns(connection));
+
         run(multicastSet);
+
+        waitForRunToStart();
 
         assertTrue(
             publishedLatch.await(20, TimeUnit.SECONDS),
@@ -361,38 +441,15 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         assertThat(testIsDone.get(), is(false));
         // only the configuration connection has been closed
         // so the test is still running in the background
-        verify(c, times(1)).close();
+        assertThat(closeCount.get(), is(1));
+        completionHandler.countDown();
+        waitAtMost(20, () -> testIsDone.get());
     }
 
     @Test
-    public void publishingRateLimit() throws Exception {
+    public void publishingRateLimit() throws InterruptedException {
         countsAndTimeLimit(0, 0, 8);
-        params.setProducerRateLimit(10);
-        params.setProducerCount(3);
-
-        AtomicInteger publishedMessageCount = new AtomicInteger();
-        doAnswer(invocation -> {
-            publishedMessageCount.incrementAndGet();
-            return null;
-        }).when(ch).basicPublish(anyString(), anyString(),
-            anyBoolean(), eq(false),
-            any(), any());
-
-        MulticastSet multicastSet = getMulticastSet();
-        run(multicastSet);
-
-        waitAtMost(15, TimeUnit.SECONDS).untilTrue(testIsDone);
-        assertThat(publishedMessageCount.get(), allOf(
-            greaterThan(3 * 10 * 3), // 3 producers at 10 m/s for about 2 seconds at least
-            lessThan(3 * 10 * 8 * 2) // not too many messages though
-        ));
-        assertThat(testDurationInMs, greaterThan(5000L));
-    }
-
-    @Test
-    public void publishingInterval() {
-        countsAndTimeLimit(0, 0, 6);
-        params.setPublishingInterval(2);
+        params.setProducerRateLimit(100);
         params.setProducerCount(3);
 
         AtomicInteger publishedMessageCount = new AtomicInteger();
@@ -412,7 +469,42 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         run(multicastSet);
 
-        waitAtMost(10, TimeUnit.SECONDS).untilTrue(testIsDone);
+        waitForRunToStart();
+
+        waitAtMost(30, () -> testIsDone.get());
+        assertThat(publishedMessageCount.get(), allOf(
+            greaterThan(0),
+            lessThan(3 * 100 * 8 * 2) // not too many messages
+        ));
+        assertThat(testDurationInMs, greaterThan(5000L));
+    }
+
+    @Test
+    public void publishingInterval() throws InterruptedException {
+        countsAndTimeLimit(0, 0, 6);
+        params.setPublishingInterval(1);
+        params.setProducerCount(3);
+
+        AtomicInteger publishedMessageCount = new AtomicInteger();
+        Channel channel = proxy(Channel.class,
+            callback("basicPublish", (proxy, method, args) -> {
+                publishedMessageCount.incrementAndGet();
+                return null;
+            }),
+            callback("getNextPublishSeqNo", (proxy, method, args) -> 0L)
+        );
+
+        Connection connection = proxy(Connection.class,
+            callback("createChannel", (proxy, method, args) -> channel)
+        );
+
+        MulticastSet multicastSet = getMulticastSet(connectionFactoryThatReturns(connection));
+
+        run(multicastSet);
+
+        waitForRunToStart();
+
+        waitAtMost(10, () -> testIsDone.get());
         assertThat(publishedMessageCount.get(), allOf(
             greaterThanOrEqualTo(3 * 2),  // 3 publishers should publish at least a couple of times
             lessThan(3 * 2 * 8) //  but they don't publish too much
@@ -420,9 +512,10 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         assertThat(testDurationInMs, greaterThan(5000L));
     }
 
-    private void sendMessagesToConsumer(int messagesCount, Consumer consumer) {
+    private Collection<Future<?>> sendMessagesToConsumer(int messagesCount, Consumer consumer) {
+        final Collection<Future<?>> tasks = new ArrayList<>(messagesCount);
         IntStream.range(0, messagesCount).forEach(i -> {
-            executorService.submit(() -> {
+            Future<?> task = executorService.submit(() -> {
                 try {
                     consumer.handleDelivery(
                         "",
@@ -430,11 +523,13 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
                         null,
                         new byte[20]
                     );
-                } catch (IOException e) {
+                } catch (Exception e) {
                     e.printStackTrace();
                 }
             });
+            tasks.add(task);
         });
+        return tasks;
     }
 
     private void countsAndTimeLimit(int pmc, int cmc, int time) {
@@ -443,16 +538,34 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         params.setTimeLimit(time);
     }
 
-    private MulticastSet getMulticastSet() {
-        return getMulticastSet(cf);
+    private MulticastSet getMulticastSet(ConnectionFactory connectionFactory) {
+        return getMulticastSet(connectionFactory, PerfTest.getCompletionHandler(params));
     }
 
-    private MulticastSet getMulticastSet(ConnectionFactory connectionFactory) {
+    void waitForRunToStart() throws InterruptedException {
+        assertTrue(runStartedLatch.await(20, TimeUnit.SECONDS), "Run should have started by now");
+    }
+
+    private MulticastSet getMulticastSet(ConnectionFactory connectionFactory, MulticastSet.CompletionHandler completionHandler) {
+        MulticastSet.CompletionHandler completionHandlerWrapper = new MulticastSet.CompletionHandler() {
+
+            @Override
+            public void waitForCompletion() throws InterruptedException {
+                runStartedLatch.countDown();
+                completionHandler.waitForCompletion();
+            }
+
+            @Override
+            public void countDown() {
+                completionHandler.countDown();
+            }
+        };
         MulticastSet set = new MulticastSet(
             stats, connectionFactory, params, singletonList("amqp://localhost"),
-            PerfTest.getCompletionHandler(params)
+            completionHandlerWrapper
         );
         set.setThreadingHandler(th);
+        this.completionHandler = completionHandlerWrapper;
         return set;
     }
 
@@ -465,8 +578,9 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
                 testIsDone.set(true);
             } catch (InterruptedException e) {
                 // one of the tests stops the execution, no need to be noisy
+                LOGGER.warn("Run has been interrupted");
             } catch (Exception e) {
-                e.printStackTrace();
+                LOGGER.warn("Error during run", e);
             }
         });
     }
