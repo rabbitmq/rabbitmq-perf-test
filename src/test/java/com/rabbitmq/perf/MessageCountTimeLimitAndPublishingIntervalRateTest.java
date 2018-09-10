@@ -20,10 +20,7 @@ import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.Consumer;
 import com.rabbitmq.client.Envelope;
-import org.awaitility.Awaitility;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
@@ -47,6 +44,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BooleanSupplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -57,7 +55,6 @@ import static com.rabbitmq.perf.MockUtils.proxy;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
-import static org.awaitility.Awaitility.waitAtMost;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
@@ -67,6 +64,7 @@ import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.junit.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
@@ -99,18 +97,25 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         );
     }
 
-    @BeforeAll
-    public static void beforeAllTests() {
-        Awaitility.setDefaultPollInterval(200, TimeUnit.MILLISECONDS);
-    }
-
-    @AfterAll
-    public static void afterAllTests() {
-        Awaitility.reset();
+    static void waitAtMost(int timeoutInSeconds, BooleanSupplier condition) throws InterruptedException {
+        if (condition.getAsBoolean()) {
+            return;
+        }
+        int waitTime = 100;
+        int waitedTime = 0;
+        int timeoutInMs = timeoutInSeconds * 1000;
+        while (waitedTime <= timeoutInMs) {
+            Thread.sleep(waitTime);
+            if (condition.getAsBoolean()) {
+                return;
+            }
+            waitedTime += waitTime;
+        }
+        fail("Waited " + timeoutInSeconds + " second(s), condition never got true");
     }
 
     @BeforeEach
-    public void init(TestInfo info) throws Exception {
+    public void init(TestInfo info) {
         LOGGER.info("Starting test {} ({})", info.getTestMethod().get().getName(), info.getDisplayName());
 
         Set<Thread> threadSet = Thread.getAllStackTraces().keySet();
@@ -213,7 +218,8 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         waitForRunToStart();
 
-        waitAtMost(15, TimeUnit.SECONDS).untilTrue(testIsDone);
+        waitAtMost(15, () -> testIsDone.get());
+
         assertThat(testDurationInMs, greaterThanOrEqualTo(3000L));
     }
 
@@ -250,7 +256,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
             publishedLatch.await(60, TimeUnit.SECONDS),
             () -> format("Only %d / %d messages have been published", publishedLatch.getCount(), messagesTotal)
         );
-        waitAtMost(20, TimeUnit.SECONDS).untilTrue(testIsDone);
+        waitAtMost(20, () -> testIsDone.get());
     }
 
     // --cmessages 10 -y n -Y m
@@ -286,7 +292,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         assertThat(consumersCount * channelsCount + " consumer(s) should have been registered by now",
             consumersLatch.await(5, TimeUnit.SECONDS), is(true));
 
-        waitAtMost(20, TimeUnit.SECONDS).until(() -> consumers, hasSize(consumersCount * channelsCount));
+        waitAtMost(20, () -> consumers.size() == (consumersCount * channelsCount));
 
         Collection<Future<?>> sendTasks = new ArrayList<>(consumers.size());
         for (Consumer consumer : consumers) {
@@ -298,7 +304,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
             latch.get(10, TimeUnit.SECONDS);
         }
 
-        waitAtMost(20, TimeUnit.SECONDS).untilTrue(testIsDone);
+        waitAtMost(20, () -> testIsDone.get());
     }
 
     // --time 5 -x 1 --pmessages 10 -y 1 --cmessages 10
@@ -350,7 +356,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         assertThat(testIsDone.get(), is(false));
 
-        waitAtMost(20, TimeUnit.SECONDS).untilTrue(testIsDone);
+        waitAtMost(20, () -> testIsDone.get());
         assertThat(testDurationInMs, greaterThanOrEqualTo(5000L));
     }
 
@@ -394,7 +400,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         // so the test is still running in the background
         assertThat(closeCount.get(), is(1));
         completionHandler.countDown();
-        waitAtMost(20, TimeUnit.SECONDS).untilTrue(testIsDone);
+        waitAtMost(20, () -> testIsDone.get());
     }
 
     // -x 0 -y 1
@@ -437,7 +443,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         // so the test is still running in the background
         assertThat(closeCount.get(), is(1));
         completionHandler.countDown();
-        waitAtMost(20, TimeUnit.SECONDS).untilTrue(testIsDone);
+        waitAtMost(20, () -> testIsDone.get());
     }
 
     @Test
@@ -465,7 +471,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         waitForRunToStart();
 
-        waitAtMost(30, TimeUnit.SECONDS).untilTrue(testIsDone);
+        waitAtMost(30, () -> testIsDone.get());
         assertThat(publishedMessageCount.get(), allOf(
             greaterThan(3 * 100 * 1), // 3 producers at 100 m/s for about 3 seconds at least
             lessThan(3 * 100 * 8 * 2) // not too many messages though
@@ -498,7 +504,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         waitForRunToStart();
 
-        waitAtMost(10, TimeUnit.SECONDS).untilTrue(testIsDone);
+        waitAtMost(10, () -> testIsDone.get());
         assertThat(publishedMessageCount.get(), allOf(
             greaterThanOrEqualTo(3 * 2),  // 3 publishers should publish at least a couple of times
             lessThan(3 * 2 * 8) //  but they don't publish too much
