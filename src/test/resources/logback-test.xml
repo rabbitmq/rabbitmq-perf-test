@@ -5,7 +5,7 @@
         </encoder>
     </appender>
 
-    <logger name="com.rabbitmq.perf" level="info"/>
+    <logger name="com.rabbitmq.perf" level="debug"/>
 
 
     <root level="warn">

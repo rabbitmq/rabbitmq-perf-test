@@ -390,12 +390,18 @@ public class MulticastSet {
             if (timeLimit <= 0) {
                 this.latch.await();
             } else {
-                this.latch.await(timeLimit, TimeUnit.SECONDS);
+                boolean countedDown = this.latch.await(timeLimit, TimeUnit.SECONDS);
+                if (LOGGER.isDebugEnabled()) {
+                    LOGGER.debug("Completed, counted down? {}", countedDown);
+                }
             }
         }
 
         @Override
         public void countDown() {
+            if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug("Counting down");
+            }
             latch.countDown();
         }
     }
