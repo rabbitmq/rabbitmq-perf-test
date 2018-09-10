@@ -568,8 +568,9 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
                 testIsDone.set(true);
             } catch (InterruptedException e) {
                 // one of the tests stops the execution, no need to be noisy
+                LOGGER.warn("Run has been interrupted");
             } catch (Exception e) {
-                e.printStackTrace();
+                LOGGER.warn("Error during run", e);
             }
         });
     }
