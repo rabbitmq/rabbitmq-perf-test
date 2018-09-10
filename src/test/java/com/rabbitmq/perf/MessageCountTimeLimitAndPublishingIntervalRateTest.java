@@ -77,8 +77,9 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
     MulticastParams params;
     ExecutorService executorService;
     MulticastSet.ThreadingHandler th;
-    AtomicBoolean testIsDone;
+    volatile AtomicBoolean testIsDone;
     volatile long testDurationInMs;
+    CountDownLatch runStartedLatch;
 
     static Stream<Arguments> producerCountArguments() {
         return Stream.of(
@@ -135,6 +136,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         testDurationInMs = -1;
         params = new MulticastParams();
         params.setPredeclared(true);
+        runStartedLatch = new CountDownLatch(1);
     }
 
     @AfterEach
@@ -176,6 +178,8 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         run(multicastSet);
 
+        waitForRunToStart();
+
         assertTrue(
             publishedLatch.await(10, TimeUnit.SECONDS),
             () -> format("Only %d / %d messages have been published", publishedLatch.getCount(), nbMessages)
@@ -190,7 +194,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
     // --time 5
     @Test
-    public void timeLimit() {
+    public void timeLimit() throws InterruptedException {
         countsAndTimeLimit(1, 1, 3);
 
         Channel channel = proxy(Channel.class,
@@ -205,6 +209,8 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         MulticastSet multicastSet = getMulticastSet(connectionFactoryThatReturns(connection));
 
         run(multicastSet);
+
+        waitForRunToStart();
 
         waitAtMost(15, TimeUnit.SECONDS).untilTrue(testIsDone);
         assertThat(testDurationInMs, greaterThanOrEqualTo(3000L));
@@ -235,6 +241,8 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         MulticastSet multicastSet = getMulticastSet(connectionFactoryThatReturns(connection));
 
         run(multicastSet);
+
+        waitForRunToStart();
 
         assertTrue(
             publishedLatch.await(60, TimeUnit.SECONDS),
@@ -270,6 +278,8 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         MulticastSet multicastSet = getMulticastSet(connectionFactoryThatReturns(connection));
         run(multicastSet);
+
+        waitForRunToStart();
 
         assertThat(consumersCount * channelsCount + " consumer(s) should have been registered by now",
             consumersLatch.await(5, TimeUnit.SECONDS), is(true));
@@ -323,6 +333,8 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         run(multicastSet);
 
+        waitForRunToStart();
+
         assertThat("1 consumer should have been registered by now",
             consumersLatch.await(10, TimeUnit.SECONDS), is(true));
         assertThat(consumer.get(), notNullValue());
@@ -368,6 +380,8 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         MulticastSet multicastSet = getMulticastSet(connectionFactoryThatReturns(connection));
         run(multicastSet);
 
+        waitForRunToStart();
+
         assertThat("1 consumer should have been registered by now",
             consumersLatch.await(20, TimeUnit.SECONDS), is(true));
         assertThat(consumers, hasSize(1));
@@ -408,6 +422,8 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         run(multicastSet);
 
+        waitForRunToStart();
+
         assertTrue(
             publishedLatch.await(20, TimeUnit.SECONDS),
             () -> format("Only %d / %d messages have been published", publishedLatch.getCount(), nbMessages)
@@ -421,7 +437,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
     }
 
     @Test
-    public void publishingRateLimit() {
+    public void publishingRateLimit() throws InterruptedException {
         countsAndTimeLimit(0, 0, 8);
         params.setProducerRateLimit(100);
         params.setProducerCount(3);
@@ -443,6 +459,8 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         run(multicastSet);
 
+        waitForRunToStart();
+
         waitAtMost(15, TimeUnit.SECONDS).untilTrue(testIsDone);
         assertThat(publishedMessageCount.get(), allOf(
             greaterThan(3 * 100 * 3), // 3 producers at 10 m/s for about 2 seconds at least
@@ -452,7 +470,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
     }
 
     @Test
-    public void publishingInterval() {
+    public void publishingInterval() throws InterruptedException {
         countsAndTimeLimit(0, 0, 6);
         params.setPublishingInterval(1);
         params.setProducerCount(3);
@@ -473,6 +491,8 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         MulticastSet multicastSet = getMulticastSet(connectionFactoryThatReturns(connection));
 
         run(multicastSet);
+
+        waitForRunToStart();
 
         waitAtMost(10, TimeUnit.SECONDS).untilTrue(testIsDone);
         assertThat(publishedMessageCount.get(), allOf(
@@ -512,13 +532,30 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         return getMulticastSet(connectionFactory, PerfTest.getCompletionHandler(params));
     }
 
+    void waitForRunToStart() throws InterruptedException {
+        assertTrue(runStartedLatch.await(10, TimeUnit.SECONDS), "Run should have started by now");
+    }
+
     private MulticastSet getMulticastSet(ConnectionFactory connectionFactory, MulticastSet.CompletionHandler completionHandler) {
+        MulticastSet.CompletionHandler completionHandlerWrapper = new MulticastSet.CompletionHandler() {
+
+            @Override
+            public void waitForCompletion() throws InterruptedException {
+                runStartedLatch.countDown();
+                completionHandler.waitForCompletion();
+            }
+
+            @Override
+            public void countDown() {
+                completionHandler.countDown();
+            }
+        };
         MulticastSet set = new MulticastSet(
             stats, connectionFactory, params, singletonList("amqp://localhost"),
-            completionHandler
+            completionHandlerWrapper
         );
         set.setThreadingHandler(th);
-        this.completionHandler = completionHandler;
+        this.completionHandler = completionHandlerWrapper;
         return set;
     }
 
