@@ -37,7 +37,10 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -46,6 +49,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -77,6 +81,7 @@ import static org.mockito.MockitoAnnotations.initMocks;
 
 public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
+    static final Set<String> threads = new LinkedHashSet<>();
     private static final Logger LOGGER = LoggerFactory.getLogger(MessageCountTimeLimitAndPublishingIntervalRateTest.class);
     @Mock
     ConnectionFactory cf;
@@ -124,6 +129,22 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
     public void init(TestInfo info) throws Exception {
         LOGGER.info("Starting test {} ({})", info.getTestMethod().get().getName(), info.getDisplayName());
         initMocks(this);
+
+        Set<Thread> threadSet = Thread.getAllStackTraces().keySet();
+
+        Set<String> newThreads = threadSet.stream().filter(thread -> {
+            if (threads.contains(thread.getName())) {
+                return false;
+            }
+            threads.add(thread.getName());
+            return true;
+        }).map(thread -> thread.getName()).collect(Collectors.toSet());
+
+        if (newThreads.size() > 0) {
+            LOGGER.warn("New threads: {}", newThreads);
+        }
+
+        LOGGER.info("Number of threads: {}", threads.size());
 
         when(cf.newConnection(anyString())).thenReturn(c);
         when(c.createChannel()).thenReturn(ch);
@@ -245,22 +266,29 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         CountDownLatch consumersLatch = new CountDownLatch(consumersCount * channelsCount);
         AtomicInteger consumerTagCounter = new AtomicInteger(0);
-        ArgumentCaptor<Consumer> consumerArgumentCaptor = ArgumentCaptor.forClass(Consumer.class);
-        doAnswer(invocation -> {
-            consumersLatch.countDown();
-            return consumerTagCounter.getAndIncrement() + "";
-        }).when(ch).basicConsume(anyString(), anyBoolean(), consumerArgumentCaptor.capture());
+        List<Consumer> consumers = new CopyOnWriteArrayList<>();
+        Channel channel = proxy(Channel.class,
+            callback("basicConsume", (proxy, method, args) -> {
+                consumersLatch.countDown();
+                consumers.add((Consumer) args[2]);
+                return consumerTagCounter.getAndIncrement() + "";
+            })
+        );
 
-        MulticastSet multicastSet = getMulticastSet();
+        Connection connection = proxy(Connection.class,
+            callback("createChannel", (proxy, method, args) -> channel)
+        );
+
+        MulticastSet multicastSet = getMulticastSet(connectionFactoryThatReturns(connection));
         run(multicastSet);
 
         assertThat(consumersCount * channelsCount + " consumer(s) should have been registered by now",
             consumersLatch.await(5, TimeUnit.SECONDS), is(true));
 
-        waitAtMost(20, TimeUnit.SECONDS).until(() -> consumerArgumentCaptor.getAllValues(), hasSize(consumersCount * channelsCount));
+        waitAtMost(20, TimeUnit.SECONDS).until(() -> consumers, hasSize(consumersCount * channelsCount));
 
-        Collection<Future<?>> sendTasks = new ArrayList<>(consumerArgumentCaptor.getAllValues().size());
-        for (Consumer consumer : consumerArgumentCaptor.getAllValues()) {
+        Collection<Future<?>> sendTasks = new ArrayList<>(consumers.size());
+        for (Consumer consumer : consumers) {
             Collection<Future<?>> tasks = sendMessagesToConsumer(messagesCount, consumer);
             sendTasks.addAll(tasks);
         }
@@ -412,7 +440,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
     @Test
     public void publishingInterval() {
         countsAndTimeLimit(0, 0, 6);
-        params.setPublishingInterval(2);
+        params.setPublishingInterval(1);
         params.setProducerCount(3);
 
         AtomicInteger publishedMessageCount = new AtomicInteger();
