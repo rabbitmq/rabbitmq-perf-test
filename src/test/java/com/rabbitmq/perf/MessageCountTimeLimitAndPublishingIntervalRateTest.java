@@ -391,7 +391,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         // so the test is still running in the background
         assertThat(closeCount.get(), is(1));
         completionHandler.countDown();
-        waitAtMost(10, TimeUnit.SECONDS).untilTrue(testIsDone);
+        waitAtMost(20, TimeUnit.SECONDS).untilTrue(testIsDone);
     }
 
     // -x 0 -y 1
@@ -400,6 +400,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         countsAndTimeLimit(0, 0, 0);
         params.setProducerCount(1);
         params.setConsumerCount(0);
+        params.setProducerRateLimit(100);
 
         int nbMessages = 100;
         CountDownLatch publishedLatch = new CountDownLatch(nbMessages);
@@ -433,7 +434,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         // so the test is still running in the background
         assertThat(closeCount.get(), is(1));
         completionHandler.countDown();
-        waitAtMost(10, TimeUnit.SECONDS).untilTrue(testIsDone);
+        waitAtMost(20, TimeUnit.SECONDS).untilTrue(testIsDone);
     }
 
     @Test
@@ -461,7 +462,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         waitForRunToStart();
 
-        waitAtMost(15, TimeUnit.SECONDS).untilTrue(testIsDone);
+        waitAtMost(30, TimeUnit.SECONDS).untilTrue(testIsDone);
         assertThat(publishedMessageCount.get(), allOf(
             greaterThan(3 * 100 * 3), // 3 producers at 10 m/s for about 2 seconds at least
             lessThan(3 * 100 * 8 * 2) // not too many messages though
