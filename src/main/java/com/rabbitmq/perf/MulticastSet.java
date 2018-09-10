@@ -258,7 +258,6 @@ public class MulticastSet {
             LOGGER.debug("Shutting down threading handler");
             this.threadingHandler.shutdown();
             LOGGER.debug("Threading handler shut down");
-            LOGGER.debug("Test shutdown done");
         } catch (Exception e) {
             LOGGER.warn("Error during test shutdown", e);
         }
