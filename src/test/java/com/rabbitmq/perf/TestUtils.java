@@ -17,6 +17,9 @@ package com.rabbitmq.perf;
 
 import java.io.IOException;
 import java.net.ServerSocket;
+import java.util.function.BooleanSupplier;
+
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  *
@@ -29,6 +32,23 @@ public abstract class TestUtils {
         int port = socket.getLocalPort();
         socket.close();
         return port;
+    }
+
+    public static void waitAtMost(int timeoutInSeconds, BooleanSupplier condition) throws InterruptedException {
+        if (condition.getAsBoolean()) {
+            return;
+        }
+        int waitTime = 100;
+        int waitedTime = 0;
+        int timeoutInMs = timeoutInSeconds * 1000;
+        while (waitedTime <= timeoutInMs) {
+            Thread.sleep(waitTime);
+            if (condition.getAsBoolean()) {
+                return;
+            }
+            waitedTime += waitTime;
+        }
+        fail("Waited " + timeoutInSeconds + " second(s), condition never got true");
     }
 
 }

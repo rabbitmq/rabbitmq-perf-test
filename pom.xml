@@ -63,7 +63,6 @@
     <junit.jupiter.version>5.3.0</junit.jupiter.version>
     <mockito.version>2.21.0</mockito.version>
     <hamcrest.version>2.0.0.0</hamcrest.version>
-    <awaitility.version>3.1.2</awaitility.version>
     <jmh.version>1.20</jmh.version>
 
     <!-- to sign artifacts when releasing -->
@@ -197,13 +196,6 @@
       <groupId>org.hamcrest</groupId>
       <artifactId>hamcrest-junit</artifactId>
       <version>${hamcrest.version}</version>
-      <scope>test</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>org.awaitility</groupId>
-      <artifactId>awaitility</artifactId>
-      <version>${awaitility.version}</version>
       <scope>test</scope>
     </dependency>
 

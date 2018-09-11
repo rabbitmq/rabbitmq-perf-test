@@ -47,13 +47,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
+import static com.rabbitmq.perf.TestUtils.waitAtMost;
 import static java.lang.String.format;
 import static java.lang.String.valueOf;
 import static java.util.Arrays.asList;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.range;
-import static org.awaitility.Awaitility.waitAtMost;
-import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.junit.Assert.assertFalse;
 
 /**
@@ -190,9 +189,9 @@ public class ConnectionRecoveryIT {
         int producerConsumerCount = params.getProducerCount();
         MulticastSet set = new MulticastSet(stats, cf, params, "", URIS, latchCompletionHandler(1, info));
         run(set);
-        waitAtMost(10, TimeUnit.SECONDS).untilAtomic(msgConsumed, greaterThanOrEqualTo(3 * producerConsumerCount * RATE));
+        waitAtMost(10, () -> msgConsumed.get() >= 3 * producerConsumerCount * RATE);
         closeAllConnections();
-        waitAtMost(10, TimeUnit.SECONDS).untilTrue(testIsDone);
+        waitAtMost(10, () -> testIsDone.get());
     }
 
     @ParameterizedTest
@@ -208,9 +207,9 @@ public class ConnectionRecoveryIT {
 
         MulticastSet set = new MulticastSet(stats, cf, params, "", URIS, latchCompletionHandler(1, info));
         run(set);
-        waitAtMost(10, TimeUnit.SECONDS).untilAtomic(msgConsumed, greaterThanOrEqualTo(3 * producerConsumerCount));
+        waitAtMost(10, () -> msgConsumed.get() >= 3 * producerConsumerCount);
         closeAllConnections();
-        waitAtMost(10, TimeUnit.SECONDS).untilTrue(testIsDone);
+        waitAtMost(10, () -> testIsDone.get());
     }
 
     @ParameterizedTest
@@ -222,10 +221,10 @@ public class ConnectionRecoveryIT {
         int producerConsumerCount = params.getProducerCount();
         MulticastSet set = new MulticastSet(stats, cf, params, "", URIS, latchCompletionHandler(1, info));
         run(set);
-        waitAtMost(10, TimeUnit.SECONDS).untilAtomic(msgConsumed, greaterThanOrEqualTo(3 * producerConsumerCount * RATE));
+        waitAtMost(10, () -> msgConsumed.get() >= 3 * producerConsumerCount * RATE);
         int messageCountBeforeClosing = msgConsumed.get();
         closeAllConnections();
-        waitAtMost(10, TimeUnit.SECONDS).untilAtomic(msgConsumed, greaterThanOrEqualTo(2 * messageCountBeforeClosing));
+        waitAtMost(10, () -> msgConsumed.get() >= 2 * messageCountBeforeClosing);
         assertFalse(testIsDone.get());
     }
 
@@ -239,10 +238,10 @@ public class ConnectionRecoveryIT {
         int producerConsumerCount = params.getProducerCount();
         MulticastSet set = new MulticastSet(stats, cf, params, "", URIS, latchCompletionHandler(1, info));
         run(set);
-        waitAtMost(10, TimeUnit.SECONDS).untilAtomic(msgConsumed, greaterThanOrEqualTo(3 * producerConsumerCount));
+        waitAtMost(10, () -> msgConsumed.get() >= 3 * producerConsumerCount);
         int messageCountBeforeClosing = msgConsumed.get();
         closeAllConnections();
-        waitAtMost(20, TimeUnit.SECONDS).untilAtomic(msgConsumed, greaterThanOrEqualTo(2 * messageCountBeforeClosing));
+        waitAtMost(10, () -> msgConsumed.get() >= 2 * messageCountBeforeClosing);
         assertFalse(testIsDone.get());
     }
 
@@ -265,10 +264,10 @@ public class ConnectionRecoveryIT {
         int producerConsumerCount = params.getProducerCount();
         MulticastSet set = new MulticastSet(stats, cf, params, "", URIS, latchCompletionHandler(1, info));
         run(set);
-        waitAtMost(10, TimeUnit.SECONDS).untilAtomic(msgConsumed, greaterThanOrEqualTo(3 * producerConsumerCount * RATE));
+        waitAtMost(10, () -> msgConsumed.get() >= 3 * producerConsumerCount * RATE);
         int messageCountBeforeClosing = msgConsumed.get();
         closeAllConnections();
-        waitAtMost(10, TimeUnit.SECONDS).untilAtomic(msgConsumed, greaterThanOrEqualTo(2 * messageCountBeforeClosing));
+        waitAtMost(10, () -> msgConsumed.get() >= 2 * messageCountBeforeClosing);
         assertFalse(testIsDone.get());
     }
 
