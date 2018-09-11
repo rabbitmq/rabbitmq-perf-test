@@ -32,9 +32,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -44,14 +42,13 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.BooleanSupplier;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static com.rabbitmq.perf.MockUtils.callback;
 import static com.rabbitmq.perf.MockUtils.connectionFactoryThatReturns;
 import static com.rabbitmq.perf.MockUtils.proxy;
+import static com.rabbitmq.perf.TestUtils.waitAtMost;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
@@ -64,11 +61,9 @@ import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.junit.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
-    static final Set<String> threads = new LinkedHashSet<>();
     private static final Logger LOGGER = LoggerFactory.getLogger(MessageCountTimeLimitAndPublishingIntervalRateTest.class);
     MulticastSet.CompletionHandler completionHandler;
     Stats stats = new NoOpStats();
@@ -97,43 +92,8 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         );
     }
 
-    static void waitAtMost(int timeoutInSeconds, BooleanSupplier condition) throws InterruptedException {
-        if (condition.getAsBoolean()) {
-            return;
-        }
-        int waitTime = 100;
-        int waitedTime = 0;
-        int timeoutInMs = timeoutInSeconds * 1000;
-        while (waitedTime <= timeoutInMs) {
-            Thread.sleep(waitTime);
-            if (condition.getAsBoolean()) {
-                return;
-            }
-            waitedTime += waitTime;
-        }
-        fail("Waited " + timeoutInSeconds + " second(s), condition never got true");
-    }
-
     @BeforeEach
     public void init(TestInfo info) {
-        LOGGER.info("Starting test {} ({})", info.getTestMethod().get().getName(), info.getDisplayName());
-
-        Set<Thread> threadSet = Thread.getAllStackTraces().keySet();
-
-        Set<String> newThreads = threadSet.stream().filter(thread -> {
-            if (threads.contains(thread.getName())) {
-                return false;
-            }
-            threads.add(thread.getName());
-            return true;
-        }).map(thread -> thread.getName()).collect(Collectors.toSet());
-
-        if (newThreads.size() > 0) {
-            LOGGER.warn("New threads: {}", newThreads);
-        }
-
-        LOGGER.info("Number of threads: {}", threads.size());
-
         testIsDone = new AtomicBoolean(false);
         executorService = Executors.newCachedThreadPool(new NamedThreadFactory(
             info.getTestMethod().get().getName() + "-" + info.getDisplayName() + "-"));
