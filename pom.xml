@@ -421,7 +421,7 @@
             <artifactId>maven-javadoc-plugin</artifactId>
             <version>${maven.javadoc.plugin.version}</version>
             <configuration>
-              <additionalparam>${javadoc.opts}</additionalparam>
+              <additionalOptions>${javadoc.opts}</additionalOptions>
               <quiet>true</quiet>
             </configuration>
             <executions>
@@ -475,7 +475,7 @@
             <artifactId>maven-javadoc-plugin</artifactId>
             <version>${maven.javadoc.plugin.version}</version>
             <configuration>
-              <additionalparam>${javadoc.opts}</additionalparam>
+              <additionalOptions>${javadoc.opts}</additionalOptions>
               <quiet>true</quiet>
             </configuration>
             <executions>
@@ -651,7 +651,7 @@
             <artifactId>maven-javadoc-plugin</artifactId>
             <version>${maven.javadoc.plugin.version}</version>
             <configuration>
-              <additionalparam>${javadoc.opts}</additionalparam>
+              <additionalOptions>${javadoc.opts}</additionalOptions>
               <quiet>true</quiet>
             </configuration>
             <executions>
