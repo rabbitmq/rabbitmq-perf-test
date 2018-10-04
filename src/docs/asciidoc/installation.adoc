@@ -10,11 +10,10 @@ It is also available on
 https://search.maven.org/#search%7Cga%7C1%7Cg%3A%22com.rabbitmq%22%20AND%20a%3A%22perf-test%22[Maven Central]
 if one needs to use it as library.
 
-Milestone releases or release candidates are available in our
+Milestone releases or release candidates are available from
+https://github.com/rabbitmq/rabbitmq-perf-test/releases[GitHub releases] and from our
 https://bintray.com/rabbitmq/java-tools-milestones/perf-test[Java Tools milestones repository]
-and in
-https://github.com/rabbitmq/rabbitmq-perf-test/releases[GitHub releases] as well.
-
+as well.
 
 The distribution contains a script (`bin/runjava` or `bin/runjava.bat`)
 to run Java with the class path correctly configured, e.g.
