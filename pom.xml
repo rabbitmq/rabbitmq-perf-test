@@ -252,6 +252,17 @@
 
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <version>${maven.javadoc.plugin.version}</version>
+        <configuration>
+          <additionalOptions>${javadoc.opts}</additionalOptions>
+          <additionalJOption>${javadoc.joption}</additionalJOption>
+          <quiet>true</quiet>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <version>${maven.surefire.plugin.version}</version>
         <configuration>
@@ -408,6 +419,20 @@
       </properties>
     </profile>
 
+    <profile>
+      <!--
+      We need this option in Java 11+ to avoid an
+      extra 'undefined' segment in the URL
+      -->
+      <id>javadoc-no-module-dir-java-11</id>
+      <activation>
+        <jdk>[11,)</jdk>
+      </activation>
+      <properties>
+        <javadoc.joption>--no-module-directories</javadoc.joption>
+      </properties>
+    </profile>
+
     <!--
       The "bintray-release" Maven profile is used to push release artifacts to the
       Bintray Release Maven Repository.
@@ -422,6 +447,7 @@
             <version>${maven.javadoc.plugin.version}</version>
             <configuration>
               <additionalOptions>${javadoc.opts}</additionalOptions>
+              <additionalJOption>${javadoc.joption}</additionalJOption>
               <quiet>true</quiet>
             </configuration>
             <executions>
@@ -476,6 +502,7 @@
             <version>${maven.javadoc.plugin.version}</version>
             <configuration>
               <additionalOptions>${javadoc.opts}</additionalOptions>
+              <additionalJOption>${javadoc.joption}</additionalJOption>
               <quiet>true</quiet>
             </configuration>
             <executions>
@@ -652,6 +679,7 @@
             <version>${maven.javadoc.plugin.version}</version>
             <configuration>
               <additionalOptions>${javadoc.opts}</additionalOptions>
+              <additionalJOption>${javadoc.joption}</additionalJOption>
               <quiet>true</quiet>
             </configuration>
             <executions>
