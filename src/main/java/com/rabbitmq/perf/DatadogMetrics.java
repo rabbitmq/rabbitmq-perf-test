@@ -19,6 +19,7 @@ import com.rabbitmq.client.ConnectionFactory;
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
+import io.micrometer.core.ipc.http.HttpUrlConnectionSender;
 import io.micrometer.datadog.DatadogConfig;
 import io.micrometer.datadog.DatadogMeterRegistry;
 import org.apache.commons.cli.Option;
@@ -75,11 +76,12 @@ public class DatadogMetrics implements Metrics {
                     return dataCfg.get(k);
                 }
             };
-            registry = new DatadogMeterRegistry(
-                config,
-                Clock.SYSTEM,
-                new NamedThreadFactory("perf-test-metrics-datadog-")
-            );
+            registry = DatadogMeterRegistry
+                    .builder(config)
+                    .clock(Clock.SYSTEM)
+                    .threadFactory(new NamedThreadFactory("perf-test-metrics-datadog-"))
+                    .httpClient(new HttpUrlConnectionSender())
+                    .build();
             meterRegistry.add(registry);
         }
     }

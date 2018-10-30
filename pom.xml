@@ -54,21 +54,21 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
-    <rabbitmq.version>5.3.0</rabbitmq.version>
+    <rabbitmq.version>5.5.0</rabbitmq.version>
     <commons-cli.version>1.1</commons-cli.version>
-    <metrics.version>3.2.6</metrics.version>
-    <micrometer.version>1.0.6</micrometer.version>
+    <metrics.version>4.0.3</metrics.version>
+    <micrometer.version>1.1.0</micrometer.version>
     <logback.version>1.2.3</logback.version>
-    <jetty.version>9.4.11.v20180605</jetty.version>
+    <jetty.version>9.4.12.v20180830</jetty.version>
     <junit.jupiter.version>5.3.0</junit.jupiter.version>
-    <mockito.version>2.21.0</mockito.version>
+    <mockito.version>2.23.0</mockito.version>
     <hamcrest.version>2.0.0.0</hamcrest.version>
     <jmh.version>1.20</jmh.version>
 
     <!-- to sign artifacts when releasing -->
     <gpg.keyname>6026DFCA</gpg.keyname>
 
-    <maven.compiler.plugin.version>3.7.0</maven.compiler.plugin.version>
+    <maven.compiler.plugin.version>3.8.0</maven.compiler.plugin.version>
     <versions.maven.plugin.version>2.3</versions.maven.plugin.version>
     <maven.release.plugin.version>2.5.3</maven.release.plugin.version>
     <maven.source.plugin.version>3.0.1</maven.source.plugin.version>
