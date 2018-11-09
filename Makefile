@@ -16,13 +16,13 @@ binary: clean ## Build the binary distribution
 	@mvnw package -P assemblies -Dgpg.skip=true -Dmaven.test.skip
 
 native-image: clean ## Build the native image
-	@mvnw package -DskipTests -P native-image -P '!java-packaging'
+	@mvnw -q package -DskipTests -P native-image -P '!java-packaging'
 	native-image -jar target/perf-test.jar -H:Features="com.rabbitmq.perf.NativeImageFeature"
 
 
 package-native-image: native-image ## Package the native image
 	cp perf-test target/perf-test_$(OS)_$(HARDWARE)
-	@mvnw checksum:files -P native-image
+	@mvnw -q checksum:files -P native-image
 	gpg --armor --local-user $(GPG_KEYNAME) --detach-sign target/perf-test_$(OS)_$(HARDWARE)
 
 help:
