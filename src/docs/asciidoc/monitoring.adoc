@@ -39,9 +39,16 @@ These metrics are enabled with the `-mjt` or `--metrics-jvm-thread` flag.
 on the JVM used, its version, and the GC settings. They can be useful to correlate the GC
 activity with PerfTest behavior, e.g. abnormal low throughput because of very frequent
 garbage collection. These metrics are enabled with the `-mjgc` or `--metrics-jvm-gc` flag.
+* JVM class loader metrics: the number of loaded and unloaded classes. These metrics
+are enabled with the `-mcl` or `--metrics-class-loader` flag.
 * Processor metrics: there metrics report CPU activity as gathered by the JVM.
 They can be enabled with the `-mjp` or `--metrics-processor` flag.
 
+[WARNING]
+====
+The JVM-related metrics are not available when using the
+link:#native-executable[native executable].
+====
 
 === Tags
 
