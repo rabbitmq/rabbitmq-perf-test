@@ -24,6 +24,11 @@ To verify a PerfTest installation, use:
 
  $ bin/runjava com.rabbitmq.perf.PerfTest --help
 
+=== From Native Executable
+
+PerfTest is also distributed as a native executable binary. This is an experimental
+feature, see the link:#native-executable[dedicated section] for more information.
+
 === For Cloud Foundry
 
 There is a https://github.com/rabbitmq/rabbitmq-perf-test-for-cf[template project]
