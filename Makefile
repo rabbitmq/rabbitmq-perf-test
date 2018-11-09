@@ -5,6 +5,9 @@
 ### VARIABLES ###
 #
 export PATH 	:=$(CURDIR):$(CURDIR)/scripts:$(PATH)
+OS              := $(shell uname -s | tr '[:upper:]' '[:lower:]')
+HARDWARE        := $(shell uname -m | tr '[:upper:]' '[:lower:]')
+GPG_KEYNAME     := $(shell cat pom.xml | grep -oPm1 "(?<=<gpg.keyname>)[^<]+")
 
 ### TARGETS ###
 #
@@ -12,9 +15,15 @@ export PATH 	:=$(CURDIR):$(CURDIR)/scripts:$(PATH)
 binary: clean ## Build the binary distribution
 	@mvnw package -P assemblies -Dgpg.skip=true -Dmaven.test.skip
 
-native-image: clean ## Build the binary distribution
-	@mvnw package -DskipTests -P uber-jar -P '!java-packaging'
+native-image: clean ## Build the native image
+	@mvnw package -DskipTests -P native-image -P '!java-packaging'
 	native-image -jar target/perf-test.jar -H:Features="com.rabbitmq.perf.NativeImageFeature"
+
+
+package-native-image: native-image ## Package the native image
+	cp perf-test target/perf-test_$(OS)_$(HARDWARE)
+	@mvnw checksum:files -P native-image
+	gpg --armor --local-user $(GPG_KEYNAME) --detach-sign target/perf-test_$(OS)_$(HARDWARE)
 
 help:
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
