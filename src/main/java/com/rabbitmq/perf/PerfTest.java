@@ -63,9 +63,6 @@ public class PerfTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(PerfTest.class);
 
     public static void main(String [] args, PerfTestOptions perfTestOptions) {
-        args = ("--uri amqp://admin:admin@192.168.1.11/%2f " +
-                "-r 1000")
-                .split(" ");
         SystemExiter systemExiter = perfTestOptions.systemExiter;
         Options options = getOptions();
         CommandLineParser parser = new GnuParser();
