@@ -4,10 +4,10 @@
 
 ### VARIABLES ###
 #
-export PATH 	:=$(CURDIR):$(CURDIR)/scripts:$(PATH)
-OS              := $(shell uname -s | tr '[:upper:]' '[:lower:]')
-HARDWARE        := $(shell uname -m | tr '[:upper:]' '[:lower:]')
-GPG_KEYNAME     := $(shell cat pom.xml | grep -oPm1 "(?<=<gpg.keyname>)[^<]+")
+export PATH 	 := $(CURDIR):$(CURDIR)/scripts:$(PATH)
+OS               := $(shell uname -s | tr '[:upper:]' '[:lower:]')
+HARDWARE         := $(shell uname -m | tr '[:upper:]' '[:lower:]')
+GPG_KEYNAME      := $(shell cat pom.xml | grep -oPm1 "(?<=<gpg.keyname>)[^<]+")
 
 ### TARGETS ###
 #
@@ -19,6 +19,12 @@ native-image: clean ## Build the native image
 	@mvnw -q package -DskipTests -P native-image -P '!java-packaging'
 	native-image -jar target/perf-test.jar -H:Features="com.rabbitmq.perf.NativeImageFeature"
 
+docker-image:
+	rm -rf rabbitmq-perf-test-$(RELEASE_VERSION)*
+	wget https://github.com/rabbitmq/rabbitmq-perf-test/releases/download/v$(RELEASE_VERSION)/rabbitmq-perf-test-$(RELEASE_VERSION)-bin.tar.gz
+	tar -xf rabbitmq-perf-test-$(RELEASE_VERSION)-bin.tar.gz
+	docker build --build-arg perf_test_distribution=rabbitmq-perf-test-$(RELEASE_VERSION) -t pivotalrabbitmq/perf-test:$(RELEASE_VERSION) -t pivotalrabbitmq/perf-test:latest .
+	rm -rf rabbitmq-perf-test-$(RELEASE_VERSION)*
 
 package-native-image: native-image ## Package the native image
 	cp perf-test target/perf-test_$(OS)_$(HARDWARE)
