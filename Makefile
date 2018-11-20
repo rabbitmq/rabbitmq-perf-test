@@ -1,4 +1,4 @@
-.ONESHELL:# single shell invocation for all lines in the recipe
+SHELL := bash# we want bash behaviour in all shell invocations
 
 .DEFAULT_GOAL = help
 
