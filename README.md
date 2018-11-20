@@ -10,7 +10,7 @@ The client is maintained by the [RabbitMQ team at Pivotal](http://github.com/rab
 This is a standalone tool that is distributed in binary form using
 [GitHub releases](https://github.com/rabbitmq/rabbitmq-perf-test/releases) or
 [Bintray](https://bintray.com/rabbitmq/java-tools/perf-test)
-and as a JAR file on Maven Central (see below).
+and as a JAR file on Maven Central (see below). A [Docker image](https://hub.docker.com/r/pivotalrabbitmq/perf-test/) is available as well.
 
 ## Documentation
 
