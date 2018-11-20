@@ -7,7 +7,7 @@ SHELL := bash# we want bash behaviour in all shell invocations
 export PATH 	 := $(CURDIR):$(CURDIR)/scripts:$(PATH)
 OS               := $(shell uname -s | tr '[:upper:]' '[:lower:]')
 HARDWARE         := $(shell uname -m | tr '[:upper:]' '[:lower:]')
-GPG_KEYNAME      := $(shell cat pom.xml | grep -oPm1 "(?<=<gpg.keyname>)[^<]+")
+GPG_KEYNAME := $$(awk -F'[<>]' '/<gpg.keyname>/ { print $$3 }' pom.xml)
 
 ### TARGETS ###
 #
