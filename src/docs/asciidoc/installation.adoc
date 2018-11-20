@@ -1,6 +1,6 @@
 == Installation
 
-=== From binary
+=== From Binary
 
 PerfTest is distributed as a binary build archive
 from https://github.com/rabbitmq/rabbitmq-perf-test/releases[GitHub releases] and
@@ -22,43 +22,34 @@ the `PerfTest` Java class.
 
 To verify a PerfTest installation, use:
 
- $ bin/runjava com.rabbitmq.perf.PerfTest --help
+ bin/runjava com.rabbitmq.perf.PerfTest --help
 
 === From Native Executable
 
 PerfTest is also distributed as a native executable binary. This is an experimental
 feature, see the link:#native-executable[dedicated section] for more information.
 
-=== With Docker Image
+=== From Docker Image
 
 PerfTest has a https://hub.docker.com/r/pivotalrabbitmq/perf-test/[Docker image] as well.
-To us it:
+To use it:
 
- $ docker run -it --rm pivotalrabbitmq/perf-test:latest --help
+ docker run -it --rm pivotalrabbitmq/perf-test:latest --help
 
-Note the Docker container needs to be able to contact the host where the broker runs.
-Please see the https://docs.docker.com/network/[Docker network documentation]
-to find out more about this topic. Once network access is sorted out, PerfTest options
-can be used normally, e.g.:
+Note that the Docker container needs to be able to connect to the host where
+the RabbitMQ broker runs.  Find out more at
+https://docs.docker.com/network/[Docker network documentation].  Once the
+Docker container where PerfTest runs can connect to the RabbitMQ broker,
+PerfTest can be run with the regular options, e.g.:
 
- $ docker run -it --rm pivotalrabbitmq/perf-test:latest -x 1 -y 2 \
-    -u "throughput-test-1" -a --id "test 1"
+ docker run -it --rm pivotalrabbitmq/perf-test:latest -x 1 -y 2 -u "throughput-test-1" -a --id "test 1"
 
-[NOTE]
-====
-If both the broker and the container run on the machine, the following Docker options
-can be useful for Linux hosts:
+To run the RabbitMQ broker within Docker, and run PerfTest against it, run the
+following commands:
 
- $ docker run -it --rm --network host pivotalrabbitmq/perf-test:latest
-
-Note the use of the https://docs.docker.com/network/host/[`host` network driver].
-This does not work on macOS but a https://docs.docker.com/docker-for-mac/networking/[workaround]
-exists:
-
- $ docker run -it --rm pivotalrabbitmq/perf-test:latest -h amqp://host.docker.internal
-
-The special DNS name `host.docker.internal` resolves to the internal IP address used by the host.
-====
+ docker network create perf-test
+ docker run -it --rm --network perf-test --name rabbitmq -p 15672:15672 rabbitmq:3.7.8-management
+ docker run -it --rm --network perf-test pivotalrabbitmq/perf-test:latest --uri amqp://rabbitmq
 
 === For Cloud Foundry
 
