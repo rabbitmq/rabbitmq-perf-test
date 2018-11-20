@@ -522,7 +522,7 @@ table.CodeRay td.code>pre{padding:0}
 <div id="header">
 <h1>RabbitMQ PerfTest</h1>
 <div class="details">
-<span id="revnumber">version 2.3.0.RC1</span>
+<span id="revnumber">version 2.4.0.RC1</span>
 </div>
 <div id="toc" class="toc2">
 <div id="toctitle">Table of Contents</div>
@@ -530,18 +530,21 @@ table.CodeRay td.code>pre{padding:0}
 <li><a href="#introduction">Introduction</a></li>
 <li><a href="#installation">Installation</a>
 <ul class="sectlevel2">
-<li><a href="#from-binary">From binary</a></li>
+<li><a href="#from-binary">From Binary</a></li>
+<li><a href="#from-native-executable">From Native Executable</a></li>
+<li><a href="#from-docker-image">From Docker Image</a></li>
 <li><a href="#for-cloud-foundry">For Cloud Foundry</a></li>
 </ul>
 </li>
 <li><a href="#basic-usage">Basic Usage</a></li>
 <li><a href="#how-it-works">How It Works</a></li>
 <li><a href="#customising-queues-and-messages">Customising queues and messages</a></li>
-<li><a href="#working-with-many-queues">Working with many queues</a></li>
+<li><a href="#working-with-many-queues">Working With Many Queues</a></li>
 <li><a href="#simulating-high-loads">Simulating High Loads</a></li>
-<li><a href="#workloads-with-a-large-number-of-clients">Workloads with a Large Number of Clients</a></li>
+<li><a href="#workloads-with-a-large-number-of-clients">Workloads With a Large Number of Clients</a></li>
 <li><a href="#running-producers-and-consumers-on-different-machines">Running Producers and Consumers on Different Machines</a></li>
 <li><a href="#tls-support">TLS Support</a></li>
+<li><a href="#native-executable">Native Executable</a></li>
 <li><a href="#result-reporting-in-html">Result Reporting in HTML</a></li>
 <li><a href="#monitoring">Monitoring</a>
 <ul class="sectlevel2">
@@ -584,7 +587,7 @@ node or a cluster of nodes.</p>
 <h2 id="installation"><a class="anchor" href="#installation"></a>Installation</h2>
 <div class="sectionbody">
 <div class="sect2">
-<h3 id="from-binary"><a class="anchor" href="#from-binary"></a>From binary</h3>
+<h3 id="from-binary"><a class="anchor" href="#from-binary"></a>From Binary</h3>
 <div class="paragraph">
 <p>PerfTest is distributed as a binary build archive
 from <a href="https://github.com/rabbitmq/rabbitmq-perf-test/releases">GitHub releases</a> and
@@ -612,7 +615,49 @@ the <code>PerfTest</code> Java class.</p>
 </div>
 <div class="literalblock">
 <div class="content">
-<pre>$ bin/runjava com.rabbitmq.perf.PerfTest --help</pre>
+<pre>bin/runjava com.rabbitmq.perf.PerfTest --help</pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="from-native-executable"><a class="anchor" href="#from-native-executable"></a>From Native Executable</h3>
+<div class="paragraph">
+<p>PerfTest is also distributed as a native executable binary. This is an experimental
+feature, see the <a href="#native-executable">dedicated section</a> for more information.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="from-docker-image"><a class="anchor" href="#from-docker-image"></a>From Docker Image</h3>
+<div class="paragraph">
+<p>PerfTest has a <a href="https://hub.docker.com/r/pivotalrabbitmq/perf-test/">Docker image</a> as well.
+To use it:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>docker run -it --rm pivotalrabbitmq/perf-test:latest --help</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Note that the Docker container needs to be able to connect to the host where
+the RabbitMQ broker runs.  Find out more at
+<a href="https://docs.docker.com/network/">Docker network documentation</a>.  Once the
+Docker container where PerfTest runs can connect to the RabbitMQ broker,
+PerfTest can be run with the regular options, e.g.:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>docker run -it --rm pivotalrabbitmq/perf-test:latest -x 1 -y 2 -u "throughput-test-1" -a --id "test 1"</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>To run the RabbitMQ broker within Docker, and run PerfTest against it, run the
+following commands:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>docker network create perf-test
+docker run -it --rm --network perf-test --name rabbitmq -p 15672:15672 rabbitmq:3.7.8-management
+docker run -it --rm --network perf-test pivotalrabbitmq/perf-test:latest --uri amqp://rabbitmq</pre>
 </div>
 </div>
 </div>
@@ -901,7 +946,7 @@ the content-type can be specified:</p>
 </div>
 </div>
 <div class="sect1">
-<h2 id="working-with-many-queues"><a class="anchor" href="#working-with-many-queues"></a>Working with many queues</h2>
+<h2 id="working-with-many-queues"><a class="anchor" href="#working-with-many-queues"></a>Working With Many Queues</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>PertTest supports balancing the publishing and the consumption
@@ -1014,7 +1059,7 @@ can refer to our <a href="https://www.rabbitmq.com/networking.html#os-tuning">ne
 </div>
 </div>
 <div class="sect1">
-<h2 id="workloads-with-a-large-number-of-clients"><a class="anchor" href="#workloads-with-a-large-number-of-clients"></a>Workloads with a Large Number of Clients</h2>
+<h2 id="workloads-with-a-large-number-of-clients"><a class="anchor" href="#workloads-with-a-large-number-of-clients"></a>Workloads With a Large Number of Clients</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>A typical connected device workload (a.k.a "IoT workload") involves
@@ -1237,6 +1282,44 @@ a certificate/key pair generated by the aforementioned profile:</p>
 </div>
 </div>
 <div class="sect1">
+<h2 id="native-executable"><a class="anchor" href="#native-executable"></a>Native Executable</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>PerfTest is also distributed as a <a href="https://www.graalvm.org/docs/reference-manual/aot-compilation/">native executable</a>
+built with <a href="https://www.graalvm.org/">GraalVM</a>. The native executable has the following
+advantages: it doesn&#8217;t need a JVM to run, it has faster startup time
+and lower runtime memory overhead compared to a Java VM.</p>
+</div>
+<div class="paragraph">
+<p>PerfTest native executable has also some limitations:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="#supported-metrics">JVM metrics</a> are not supported</p>
+</li>
+<li>
+<p>it is not possible to configure logging</p>
+</li>
+</ul>
+</div>
+<div class="admonitionblock warning">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-warning" title="Warning"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>The native executable is considered an experimental feature.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+<div class="sect1">
 <h2 id="result-reporting-in-html"><a class="anchor" href="#result-reporting-in-html"></a>Result Reporting in HTML</h2>
 <div class="sectionbody">
 <div class="paragraph">
@@ -1308,10 +1391,29 @@ activity with PerfTest behavior, e.g. abnormal low throughput because of very fr
 garbage collection. These metrics are enabled with the <code>-mjgc</code> or <code>--metrics-jvm-gc</code> flag.</p>
 </li>
 <li>
+<p>JVM class loader metrics: the number of loaded and unloaded classes. These metrics
+are enabled with the <code>-mcl</code> or <code>--metrics-class-loader</code> flag.</p>
+</li>
+<li>
 <p>Processor metrics: there metrics report CPU activity as gathered by the JVM.
 They can be enabled with the <code>-mjp</code> or <code>--metrics-processor</code> flag.</p>
 </li>
 </ul>
+</div>
+<div class="admonitionblock warning">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-warning" title="Warning"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>The JVM-related metrics are not available when using the
+<a href="#native-executable">native executable</a>.</p>
+</div>
+</td>
+</tr>
+</table>
 </div>
 </div>
 <div class="sect2">
@@ -1396,8 +1498,8 @@ can be changed:</p>
 </div>
 <div id="footer">
 <div id="footer-text">
-Version 2.3.0.RC1<br>
-Last updated 2018-10-31 11:30:51 CET
+Version 2.4.0.RC1<br>
+Last updated 2018-11-20 15:10:14 CET
 </div>
 </div>
 </body>
