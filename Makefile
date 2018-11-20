@@ -11,6 +11,8 @@ HARDWARE := $$(uname -m | tr '[:upper:]' '[:lower:]')
 
 GPG_KEYNAME := $$(awk -F'[<>]' '/<gpg.keyname>/ { print $$3 }' pom.xml)
 
+RELEASE_VERSION ?= 2.3.0
+
 ### TARGETS ###
 #
 
@@ -23,12 +25,12 @@ native-image: clean ## Build the native image
 	@mvnw -q package -DskipTests -P native-image -P '!java-packaging'
 	native-image -jar target/perf-test.jar -H:Features="com.rabbitmq.perf.NativeImageFeature"
 
-docker-image:
-	rm -rf rabbitmq-perf-test-$(RELEASE_VERSION)*
-	wget https://github.com/rabbitmq/rabbitmq-perf-test/releases/download/v$(RELEASE_VERSION)/rabbitmq-perf-test-$(RELEASE_VERSION)-bin.tar.gz
-	tar -xf rabbitmq-perf-test-$(RELEASE_VERSION)-bin.tar.gz
-	docker build --build-arg perf_test_distribution=rabbitmq-perf-test-$(RELEASE_VERSION) -t pivotalrabbitmq/perf-test:$(RELEASE_VERSION) -t pivotalrabbitmq/perf-test:latest .
-	rm -rf rabbitmq-perf-test-$(RELEASE_VERSION)*
+.PHONY: docker-image
+docker-image: ## Build Docker image
+	@docker build \
+	  --tag pivotalrabbitmq/perf-test:$(RELEASE_VERSION) \
+	  --tag pivotalrabbitmq/perf-test:latest \
+	  --build-arg perf_test_version=$(RELEASE_VERSION) .
 
 .PHONY: package-native-image
 package-native-image: native-image ## Package the native image
