@@ -4,9 +4,11 @@ SHELL := bash# we want bash behaviour in all shell invocations
 
 ### VARIABLES ###
 #
-export PATH 	 := $(CURDIR):$(CURDIR)/scripts:$(PATH)
-OS               := $(shell uname -s | tr '[:upper:]' '[:lower:]')
-HARDWARE         := $(shell uname -m | tr '[:upper:]' '[:lower:]')
+export PATH := $(CURDIR):$(CURDIR)/scripts:$(PATH)
+
+OS := $$(uname -s | tr '[:upper:]' '[:lower:]')
+HARDWARE := $$(uname -m | tr '[:upper:]' '[:lower:]')
+
 GPG_KEYNAME := $$(awk -F'[<>]' '/<gpg.keyname>/ { print $$3 }' pom.xml)
 
 ### TARGETS ###
