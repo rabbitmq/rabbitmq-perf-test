@@ -245,7 +245,7 @@ public class TopologyTest {
 
         set.run();
 
-        assertThat("basicPublish should have been called", latch.await(1, TimeUnit.SECONDS), is(true));
+        assertThat("basicPublish should have been called", latch.await(5, TimeUnit.SECONDS), is(true));
 
         verify(ch, atLeastOnce())
             .basicPublish(anyString(), anyString(),
