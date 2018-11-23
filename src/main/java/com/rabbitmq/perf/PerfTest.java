@@ -656,7 +656,7 @@ public class PerfTest {
                 if (confirmStatsEnabled) {
                     output += ", confirm latency: ";
                     confirmLatencyStats = getStats(confirmLatency);
-                    output += ", " + confirmLatencyStats[0] + "/"
+                    output += confirmLatencyStats[0] + "/"
                               + confirmLatencyStats[1] + "/"
                               + confirmLatencyStats[2] + "/"
                               + confirmLatencyStats[3] + "/"
