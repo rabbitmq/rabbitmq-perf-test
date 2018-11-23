@@ -46,6 +46,7 @@ import java.util.stream.Stream;
 import static com.rabbitmq.perf.MockUtils.callback;
 import static com.rabbitmq.perf.MockUtils.connectionFactoryThatReturns;
 import static com.rabbitmq.perf.MockUtils.proxy;
+import static com.rabbitmq.perf.TestUtils.threadFactory;
 import static com.rabbitmq.perf.TestUtils.waitAtMost;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
@@ -113,8 +114,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         LOGGER.info("Existing threads: {}", THREADS);
 
         testIsDone = new AtomicBoolean(false);
-        executorService = Executors.newCachedThreadPool(new NamedThreadFactory(
-            info.getTestMethod().get().getName() + "-" + info.getDisplayName() + "-"));
+        executorService = Executors.newCachedThreadPool(threadFactory(info));
         th = new MulticastSet.DefaultThreadingHandler();
         testDurationInMs = -1;
         params = new MulticastParams();

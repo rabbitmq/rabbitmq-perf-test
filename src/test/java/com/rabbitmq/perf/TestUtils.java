@@ -15,8 +15,11 @@
 
 package com.rabbitmq.perf;
 
+import org.junit.jupiter.api.TestInfo;
+
 import java.io.IOException;
 import java.net.ServerSocket;
+import java.util.concurrent.ThreadFactory;
 import java.util.function.BooleanSupplier;
 
 import static org.junit.jupiter.api.Assertions.fail;
@@ -49,6 +52,11 @@ public abstract class TestUtils {
             waitedTime += waitTime;
         }
         fail("Waited " + timeoutInSeconds + " second(s), condition never got true");
+    }
+
+    public static ThreadFactory threadFactory(TestInfo info) {
+        return new NamedThreadFactory(
+                info.getTestMethod().get().getName() + "-" + info.getDisplayName() + "-");
     }
 
 }

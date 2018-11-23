@@ -21,6 +21,7 @@ import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.impl.AMQImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -46,6 +47,7 @@ import java.util.stream.Stream;
 import static com.rabbitmq.perf.MockUtils.callback;
 import static com.rabbitmq.perf.MockUtils.connectionFactoryThatReturns;
 import static com.rabbitmq.perf.MockUtils.proxy;
+import static com.rabbitmq.perf.TestUtils.threadFactory;
 import static java.lang.Boolean.valueOf;
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
@@ -220,7 +222,7 @@ public class TopologyTest {
     // -x 1 -y 2 -u "throughput-test-4" --id "test 4" -s 4000
     @ParameterizedTest
     @MethodSource("messageSizeArguments")
-    public void messageIsPublishedWithExpectedMessageSize(int requestedSize, int actualSize)
+    public void messageIsPublishedWithExpectedMessageSize(int requestedSize, int actualSize, TestInfo testInfo)
         throws Exception {
         CountDownLatch latch = new CountDownLatch(1);
         when(ch.queueDeclare(eq(""), anyBoolean(), anyBoolean(), anyBoolean(), isNull()))
@@ -233,7 +235,7 @@ public class TopologyTest {
             any(), bodyCaptor.capture());
 
         params.setMinMsgSize(requestedSize);
-        MulticastSet set = getMulticastSet(new InterruptThreadHandler(latch));
+        MulticastSet set = getMulticastSet(new InterruptThreadHandler(testInfo, latch));
 
         set.run();
 
@@ -689,7 +691,7 @@ public class TopologyTest {
 
     // --queue-pattern 'perf-test-%d' --queue-pattern-from 101 --queue-pattern-to 110 --producers 0 --consumers 110
     @Test
-    public void sequenceConsumersSpread() throws Exception {
+    public void sequenceConsumersSpread(TestInfo testInfo) throws Exception {
         String queuePrefix = "perf-test-";
         params.setConsumerCount(110);
         params.setProducerCount(0);
@@ -707,7 +709,7 @@ public class TopologyTest {
             return UUID.randomUUID().toString();
         }).when(ch).basicConsume(consumerQueue.capture(), anyBoolean(), any());
 
-        MulticastSet set = getMulticastSet(new InterruptThreadHandler(latch));
+        MulticastSet set = getMulticastSet(new InterruptThreadHandler(testInfo, latch));
 
         set.run();
 
@@ -816,12 +818,13 @@ public class TopologyTest {
     static class InterruptThreadHandler implements MulticastSet.ThreadingHandler {
 
         final CountDownLatch[] latches;
-        final ExecutorService backingExecutorService = Executors.newCachedThreadPool();
+        final ExecutorService backingExecutorService;
         final ExecutorService executorService = mock(ExecutorService.class);
         final ScheduledExecutorService scheduledExecutorService = mock(ScheduledExecutorService.class);
 
-        InterruptThreadHandler(CountDownLatch... latches) {
+        InterruptThreadHandler(TestInfo testInfo, CountDownLatch... latches) {
             this.latches = latches;
+            this.backingExecutorService = Executors.newCachedThreadPool(threadFactory(testInfo));
             Future future = mock(Future.class);
             try {
                 when(future.get()).then(invocation -> {

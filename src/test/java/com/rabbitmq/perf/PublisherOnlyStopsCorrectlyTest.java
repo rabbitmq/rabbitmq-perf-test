@@ -21,6 +21,7 @@ import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.impl.AMQImpl;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -38,6 +39,7 @@ import java.util.stream.Stream;
 import static com.rabbitmq.perf.MockUtils.callback;
 import static com.rabbitmq.perf.MockUtils.connectionFactoryThatReturns;
 import static com.rabbitmq.perf.MockUtils.proxy;
+import static com.rabbitmq.perf.TestUtils.threadFactory;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.junit.MatcherAssert.assertThat;
@@ -62,9 +64,9 @@ public class PublisherOnlyStopsCorrectlyTest {
     }
 
     @BeforeEach
-    public void init() {
+    public void init(TestInfo info) {
         params = new MulticastParams();
-        executorService = Executors.newSingleThreadExecutor();
+        executorService = Executors.newSingleThreadExecutor(threadFactory(info));
     }
 
     @AfterEach

@@ -17,10 +17,7 @@ package com.rabbitmq.perf.it;
 
 import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.impl.nio.NioParams;
-import com.rabbitmq.perf.MulticastParams;
-import com.rabbitmq.perf.MulticastSet;
-import com.rabbitmq.perf.NamedThreadFactory;
-import com.rabbitmq.perf.Stats;
+import com.rabbitmq.perf.*;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -48,6 +45,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
+import static com.rabbitmq.perf.TestUtils.threadFactory;
 import static com.rabbitmq.perf.TestUtils.waitAtMost;
 import static java.lang.String.format;
 import static java.lang.String.valueOf;
@@ -156,8 +154,8 @@ public class ConnectionRecoveryIT {
     }
 
     @BeforeEach
-    public void init() {
-        executorService = Executors.newCachedThreadPool();
+    public void init(TestInfo info) {
+        executorService = Executors.newCachedThreadPool(threadFactory(info));
         params = new MulticastParams();
         params.setProducerCount(1);
         params.setConsumerCount(1);
