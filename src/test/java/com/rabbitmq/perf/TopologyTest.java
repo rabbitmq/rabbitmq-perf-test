@@ -29,6 +29,8 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashSet;
 import java.util.Map;
@@ -40,6 +42,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
@@ -81,6 +84,8 @@ import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
 
 public class TopologyTest {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(TopologyTest.class);
 
     @Mock
     ConnectionFactory cf;
@@ -235,7 +240,8 @@ public class TopologyTest {
             any(), bodyCaptor.capture());
 
         params.setMinMsgSize(requestedSize);
-        MulticastSet set = getMulticastSet(new InterruptThreadHandler(testInfo, latch));
+        InterruptThreadHandler threadHandler = new InterruptThreadHandler(testInfo, latch);
+        MulticastSet set = getMulticastSet(threadHandler);
 
         set.run();
 
@@ -248,6 +254,7 @@ public class TopologyTest {
             );
 
         assertThat(bodyCaptor.getValue().length, is(actualSize));
+        threadHandler.shutdown();
     }
 
     // -x 1 -y 2 -u "throughput-test-7" --id "test-7" -f persistent --multi-ack-every 200 -q 500
@@ -709,7 +716,8 @@ public class TopologyTest {
             return UUID.randomUUID().toString();
         }).when(ch).basicConsume(consumerQueue.capture(), anyBoolean(), any());
 
-        MulticastSet set = getMulticastSet(new InterruptThreadHandler(testInfo, latch));
+        InterruptThreadHandler threadHandler = new InterruptThreadHandler(testInfo, latch);
+        MulticastSet set = getMulticastSet(threadHandler);
 
         set.run();
 
@@ -737,6 +745,7 @@ public class TopologyTest {
             arrayWithSize(1),
             arrayContaining(11)
         ));
+        threadHandler.shutdown();
     }
 
     private MulticastSet getMulticastSet() {
@@ -821,6 +830,7 @@ public class TopologyTest {
         final ExecutorService backingExecutorService;
         final ExecutorService executorService = mock(ExecutorService.class);
         final ScheduledExecutorService scheduledExecutorService = mock(ScheduledExecutorService.class);
+        final AtomicBoolean closed = new AtomicBoolean(false);
 
         InterruptThreadHandler(TestInfo testInfo, CountDownLatch... latches) {
             this.latches = latches;
@@ -854,7 +864,17 @@ public class TopologyTest {
 
         @Override
         public void shutdown() {
-            backingExecutorService.shutdown();
+            if (closed.compareAndSet(false, true)) {
+                backingExecutorService.shutdownNow();
+                try {
+                    boolean terminated = backingExecutorService.awaitTermination(5, TimeUnit.SECONDS);
+                    if (!terminated) {
+                        LOGGER.warn("Couldn't terminate threading handler executor service");
+                    }
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }
         }
     }
 }
