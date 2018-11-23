@@ -20,7 +20,10 @@ PerfTest supports.
 Here are the metrics PerfTest can gather:
 
 * default metrics: number of published, returned, confirmed, nacked, and consumed messages, message
-latency. Latency is a major concern in many types of workload, it can be easily monitored here.
+latency, publisher confirm latency. Message latency is a major concern in many types of workload, it can be easily monitored here.
+https://www.rabbitmq.com/confirms.html#publisher-confirms[Publisher confirm]
+latency reflects the time a message can be considered unsafe. It is
+calculated as soon as the `--confirm`/`-c` option is used.
 Default metrics are available as long as PerfTest support for a monitoring system
 is enabled.
 * client metrics: these are the https://www.rabbitmq.com/api-guide.html#metrics[Java Client metrics].

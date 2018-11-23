@@ -24,6 +24,8 @@ import java.util.List;
  */
 public class LocalFilesMessageBodySource implements MessageBodySource {
 
+    private final long ZERO = 0L;
+
     private final List<byte[]> bodies;
 
     private final String contentType;
@@ -56,9 +58,9 @@ public class LocalFilesMessageBodySource implements MessageBodySource {
     }
 
     @Override
-    public MessageBodyAndContentType create(int sequenceNumber) {
-        return new MessageBodyAndContentType(
-            bodies.get(sequenceNumber % bodies.size()), contentType
+    public MessageEnvelope create(int sequenceNumber) {
+        return new MessageEnvelope(
+            bodies.get(sequenceNumber % bodies.size()), contentType, ZERO
         );
     }
 }

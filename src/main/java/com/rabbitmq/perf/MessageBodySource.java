@@ -23,15 +23,17 @@ import java.io.IOException;
  */
 public interface MessageBodySource {
 
-    MessageBodyAndContentType create(int sequenceNumber) throws IOException;
+    MessageEnvelope create(int sequenceNumber) throws IOException;
 
-    class MessageBodyAndContentType {
+    class MessageEnvelope {
         private final byte [] body;
         private final String contentType;
+        private final long time;
 
-        public MessageBodyAndContentType(byte[] body, String contentType) {
+        public MessageEnvelope(byte[] body, String contentType, long time) {
             this.body = body;
             this.contentType = contentType;
+            this.time = time;
         }
 
         public byte[] getBody() {
@@ -40,6 +42,10 @@ public interface MessageBodySource {
 
         public String getContentType() {
             return contentType;
+        }
+
+        public long getTime() {
+            return time;
         }
     }
 

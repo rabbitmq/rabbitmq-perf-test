@@ -30,6 +30,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
+import com.codahale.metrics.Histogram;
 import com.rabbitmq.client.impl.ClientVersion;
 import com.rabbitmq.client.impl.nio.NioParams;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -566,6 +567,7 @@ public class PerfTest {
         private final boolean confirmStatsEnabled;
         private final boolean legacyMetrics;
         private final boolean useMillis;
+        private final String units;
 
         private final String testID;
         private final PrintWriter out;
@@ -583,13 +585,17 @@ public class PerfTest {
             this.testID = testID;
             this.legacyMetrics = legacyMetrics;
             this.useMillis = useMillis;
+            this.units = useMillis ? "ms" : "µs";
             this.out = out;
+
             if (out != null) {
                 out.printf("id,time (s),published (msg/s),returned (msg/s)," +
                         "confirmed (msg/s),nacked (msg/s)," +
                         "received (msg/s),min latency (%s),median latency (%s)," +
-                        "75th p. latency (%s),95th p. latency (%s),99th p. latency (%s)%n",
-                        units(), units(), units(), units(), units());
+                        "75th p. latency (%s),95th p. latency (%s),99th p. latency (%s)," +
+                        "min confirm latency (%s),median confirm latency (%s)," +
+                        "75th p. confirm latency (%s),95th p. confirm latency (%s),99th p. confirm latency (%s)%n",
+                        units, units, units, units, units, units, units, units, units, units);
             }
         }
 
@@ -632,26 +638,40 @@ public class PerfTest {
                     getRate("nacked",    rateNacked,    sendStatsEnabled && confirmStatsEnabled) +
                     getRate("received",  rateConsumed,    recvStatsEnabled);
 
-            if (legacyMetrics) {
-                output += (latencyCountInterval > 0 ?
-                    ", min/avg/max latency: " +
-                        minLatency/1000L + "/" +
-                        cumulativeLatencyInterval / (1000L * latencyCountInterval) + "/" +
-                        maxLatency/1000L + " µs " :
-                    "");
-            } else {
-                output += (latencyCountInterval > 0 ?
-                    ", min/median/75th/95th/99th latency: "
-                        + div(latency.getSnapshot().getMin()) + "/"
-                        + div(latency.getSnapshot().getMedian()) + "/"
-                        + div(latency.getSnapshot().get75thPercentile()) + "/"
-                        + div(latency.getSnapshot().get95thPercentile()) + "/"
-                        + div(latency.getSnapshot().get99thPercentile()) + " " + units() :
-                    "");
+            long[] latencyStats = null;
+            long [] confirmLatencyStats = null;
+            if (legacyMetrics && latencyCountInterval > 0) {
+                output += ", min/avg/max latency: " +
+                                minLatency/1000L + "/" +
+                                cumulativeLatencyInterval / (1000L * latencyCountInterval) + "/" +
+                                maxLatency/1000L + " µs ";
+            } else if (latencyCountInterval > 0) {
+                if (confirmStatsEnabled) {
+                    output += ", min/median/75th/95th/99th message and confirm latency: ";
+                } else {
+                    output += ", min/median/75th/95th/99th latency: ";
+                }
+                latencyStats = getStats(latency);
+                output += latencyStats[0] + "/"
+                          + latencyStats[1] + "/"
+                          + latencyStats[2] + "/"
+                          + latencyStats[3] + "/"
+                          + latencyStats[4] + " " + units;
+                if (confirmStatsEnabled) {
+                    confirmLatencyStats = getStats(confirmLatency);
+                    output += ", " + confirmLatencyStats[0] + "/"
+                              + confirmLatencyStats[1] + "/"
+                              + confirmLatencyStats[2] + "/"
+                              + confirmLatencyStats[3] + "/"
+                              + confirmLatencyStats[4] + " " + units;
+                }
             }
 
             System.out.println(output);
             if (out != null) {
+                if (latencyStats == null) {
+                    latencyStats = getStats(latency);
+                }
                 out.println(testID + "," + format("%.3f", (now - startTime)/1000.0) + "," +
                     rate(ratePublished, sendStatsEnabled)+ "," +
                     rate(rateReturned, sendStatsEnabled && returnStatsEnabled)+ "," +
@@ -659,23 +679,33 @@ public class PerfTest {
                     rate(rateNacked, sendStatsEnabled && confirmStatsEnabled)+ "," +
                     rate(rateConsumed, recvStatsEnabled) + "," +
                     (latencyCountInterval > 0 ?
-                        div(latency.getSnapshot().getMin()) + "," +
-                        div(latency.getSnapshot().getMedian()) + "," +
-                        div(latency.getSnapshot().get75thPercentile()) + "," +
-                        div(latency.getSnapshot().get95thPercentile()) + "," +
-                        div(latency.getSnapshot().get99thPercentile())
+                        latencyStats[0] + "," +
+                        latencyStats[1] + "," +
+                        latencyStats[2] + "," +
+                        latencyStats[3] + "," +
+                        latencyStats[4] + ","
+                        : ",,,,,") +
+                    (latencyCountInterval > 0 && confirmStatsEnabled?
+                        confirmLatencyStats[0] + "," +
+                        confirmLatencyStats[1] + "," +
+                        confirmLatencyStats[2] + "," +
+                        confirmLatencyStats[3] + "," +
+                        confirmLatencyStats[4]
                         : ",,,,")
+
                 );
             }
 
         }
 
-        private String units() {
-            if (useMillis) {
-                return "ms";
-            } else {
-                return "µs";
-            }
+        private long[] getStats(Histogram histogram) {
+            return new long[] {
+                div(histogram.getSnapshot().getMin()),
+                div(histogram.getSnapshot().getMedian()),
+                div(histogram.getSnapshot().get75thPercentile()),
+                div(histogram.getSnapshot().get95thPercentile()),
+                div(histogram.getSnapshot().get99thPercentile())
+            };
         }
 
         private long div(double p) {

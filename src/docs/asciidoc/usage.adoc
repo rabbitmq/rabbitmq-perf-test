@@ -62,7 +62,7 @@ https://www.rabbitmq.com/confirms.html[Consumer prefetch (QoS)] can be configure
  bin/runjava com.rabbitmq.perf.PerfTest -x 1 -y 2 -u "throughput-test-7" --id "test-7" \
    -f persistent --multi-ack-every 200 -q 500
 
-Publisher confirms can be used with maximum of N outstanding publishes:
+Publisher confirms can be used with a maximum of N outstanding publishes:
 
  bin/runjava com.rabbitmq.perf.PerfTest -x 1 -y 2 -u "throughput-test-8" --id "test-8" \
    -f persistent -q 500 -c 500

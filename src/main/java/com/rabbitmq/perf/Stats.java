@@ -22,6 +22,8 @@ import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 
 import java.time.Duration;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.DoubleAccumulator;
 import java.util.function.Consumer;
@@ -33,6 +35,7 @@ public abstract class Stats {
 
     protected final long startTime;
     private final Consumer<Long> updateLatency;
+    private final Consumer<Long> updateConfirmLatency;
     private final DoubleAccumulator published, returned, confirmed, nacked, consumed;
     protected long lastStatsTime;
     protected int sendCountInterval;
@@ -51,6 +54,7 @@ public abstract class Stats {
     protected long elapsedInterval;
     protected long elapsedTotal;
     protected Histogram latency = new MetricRegistry().histogram("latency");
+    protected Histogram confirmLatency = new MetricRegistry().histogram("confirm-latency");
 
     public Stats(long interval) {
         this(interval, false, new SimpleMeterRegistry(), null);
@@ -70,6 +74,14 @@ public abstract class Stats {
             .sla()
             .register(registry);
 
+        Timer confirmLatencyTimer = Timer
+                .builder(metricsPrefix + "confirm.latency")
+                .description("confirm latency")
+                .publishPercentiles(0.5, 0.75, 0.95, 0.99)
+                .distributionStatisticExpiry(Duration.ofMillis(this.interval))
+                .sla()
+                .register(registry);
+
         DoubleBinaryOperator accumulatorFunction = (x, y) -> y;
         published = registry.gauge(metricsPrefix + "published", new DoubleAccumulator(accumulatorFunction, 0.0));
         returned = registry.gauge(metricsPrefix + "returned", new DoubleAccumulator(accumulatorFunction, 0.0));
@@ -79,6 +91,9 @@ public abstract class Stats {
 
         updateLatency = useMs ? latency -> latencyTimer.record(latency, TimeUnit.MILLISECONDS) :
             latency -> latencyTimer.record(latency, TimeUnit.NANOSECONDS);
+
+        updateConfirmLatency = useMs ? latency -> confirmLatencyTimer.record(latency, TimeUnit.MILLISECONDS) :
+                latency -> confirmLatencyTimer.record(latency, TimeUnit.NANOSECONDS);
 
         reset(startTime);
     }
@@ -97,6 +112,7 @@ public abstract class Stats {
         latencyCountInterval = 0;
         cumulativeLatencyInterval = 0L;
         latency = new MetricRegistry().histogram("latency");
+        confirmLatency = new MetricRegistry().histogram("confirm-latency");
     }
 
     private void report() {
@@ -123,8 +139,12 @@ public abstract class Stats {
         report();
     }
 
-    public synchronized void handleConfirm(int numConfirms) {
+    public synchronized void handleConfirm(int numConfirms, long[] latencies) {
         confirmCountInterval += numConfirms;
+        for (long latency : latencies) {
+            this.confirmLatency.update(latency);
+            this.updateConfirmLatency.accept(latency);
+        }
         report();
     }
 
