@@ -55,8 +55,11 @@ public abstract class TestUtils {
     }
 
     public static ThreadFactory threadFactory(TestInfo info) {
-        return new NamedThreadFactory(
-                info.getTestMethod().get().getName() + "-" + info.getDisplayName() + "-");
+        return new NamedThreadFactory(name(info));
+    }
+
+    public static String name(TestInfo info) {
+        return info.getTestMethod().get().getName() + "-" + info.getDisplayName() + "-";
     }
 
 }

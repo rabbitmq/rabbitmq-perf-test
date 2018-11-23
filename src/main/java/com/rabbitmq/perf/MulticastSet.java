@@ -326,13 +326,22 @@ public class MulticastSet {
 
         private final Collection<ExecutorService> executorServices = new ArrayList<>();
         private final AtomicBoolean closing = new AtomicBoolean(false);
+        private final String prefix;
+
+        DefaultThreadingHandler(String prefix) {
+            this.prefix = prefix;
+        }
+
+        DefaultThreadingHandler() {
+            this("");
+        }
 
         @Override
         public ExecutorService executorService(String name, int nbThreads) {
             if (nbThreads <= 0) {
-                return create(() -> Executors.newSingleThreadExecutor(new NamedThreadFactory(name)));
+                return create(() -> Executors.newSingleThreadExecutor(new NamedThreadFactory(prefix + name)));
             } else {
-                return create(() -> Executors.newFixedThreadPool(nbThreads, new NamedThreadFactory(name)));
+                return create(() -> Executors.newFixedThreadPool(nbThreads, new NamedThreadFactory(prefix + name)));
             }
         }
 
