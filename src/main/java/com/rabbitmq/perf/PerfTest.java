@@ -646,11 +646,7 @@ public class PerfTest {
                                 cumulativeLatencyInterval / (1000L * latencyCountInterval) + "/" +
                                 maxLatency/1000L + " µs ";
             } else if (latencyCountInterval > 0) {
-                if (confirmStatsEnabled) {
-                    output += ", min/median/75th/95th/99th message and confirm latency: ";
-                } else {
-                    output += ", min/median/75th/95th/99th latency: ";
-                }
+                output += ", min/median/75th/95th/99th message latency: ";
                 latencyStats = getStats(latency);
                 output += latencyStats[0] + "/"
                           + latencyStats[1] + "/"
@@ -658,6 +654,7 @@ public class PerfTest {
                           + latencyStats[3] + "/"
                           + latencyStats[4] + " " + units;
                 if (confirmStatsEnabled) {
+                    output += ", confirm latency: ";
                     confirmLatencyStats = getStats(confirmLatency);
                     output += ", " + confirmLatencyStats[0] + "/"
                               + confirmLatencyStats[1] + "/"
