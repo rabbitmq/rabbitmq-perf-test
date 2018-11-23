@@ -30,9 +30,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -64,6 +62,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
+    static Set<String> THREADS = new LinkedHashSet<>();
+
     private static final Logger LOGGER = LoggerFactory.getLogger(MessageCountTimeLimitAndPublishingIntervalRateTest.class);
     MulticastSet.CompletionHandler completionHandler;
     Stats stats = new NoOpStats();
@@ -94,6 +94,24 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
     @BeforeEach
     public void init(TestInfo info) {
+        LOGGER.info("Starting {} {}", info.getTestMethod().get().getName(), info.getDisplayName());
+        Set<Thread> threads = Thread.getAllStackTraces().keySet();
+        if (THREADS.isEmpty()) {
+            for (Thread thread : threads) {
+                THREADS.add(thread.getId() + " " + thread.getName());
+            }
+        } else {
+            for (Thread thread : threads) {
+                String key = thread.getId() + " " + thread.getName();
+                if (THREADS.add(key)) {
+                    LOGGER.warn("Thread not present in the previous test: {}", key);
+                }
+
+            }
+
+        }
+        LOGGER.info("Existing threads: {}", THREADS);
+
         testIsDone = new AtomicBoolean(false);
         executorService = Executors.newCachedThreadPool(new NamedThreadFactory(
             info.getTestMethod().get().getName() + "-" + info.getDisplayName() + "-"));
@@ -102,10 +120,12 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         params = new MulticastParams();
         params.setPredeclared(true);
         runStartedLatch = new CountDownLatch(1);
+        LOGGER.info("Done initializing {} {}", info.getTestMethod().get().getName(), info.getDisplayName());
     }
 
     @AfterEach
-    public void tearDown() throws InterruptedException {
+    public void tearDown(TestInfo info) throws InterruptedException {
+        LOGGER.info("Tearing down {} {}", info.getTestMethod().get().getName(), info.getDisplayName());
         th.shutdown();
         List<Runnable> runnables = executorService.shutdownNow();
         if (runnables.size() > 0) {
@@ -118,6 +138,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         if (!testIsDone.get()) {
             LOGGER.warn("PerfTest run not done");
         }
+        LOGGER.info("Done tearing down {} {}", info.getTestMethod().get().getName(), info.getDisplayName());
     }
 
     @Test
