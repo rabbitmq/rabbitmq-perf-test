@@ -63,6 +63,7 @@
     <junit.jupiter.version>5.3.0</junit.jupiter.version>
     <mockito.version>2.23.0</mockito.version>
     <hamcrest.version>2.0.0.0</hamcrest.version>
+    <commons-lang3.version>3.8.1</commons-lang3.version>
     <jmh.version>1.20</jmh.version>
 
     <!-- to sign artifacts when releasing -->
@@ -204,6 +205,15 @@
       <version>${hamcrest.version}</version>
       <scope>test</scope>
     </dependency>
+
+    <!-- https://mvnrepository.com/artifact/org.apache.commons/commons-lang3 -->
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-lang3</artifactId>
+      <version>${commons-lang3.version}</version>
+      <scope>test</scope>
+    </dependency>
+
 
     <dependency>
       <groupId>org.openjdk.jmh</groupId>

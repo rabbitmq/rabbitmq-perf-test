@@ -15,40 +15,25 @@
 
 package com.rabbitmq.perf;
 
-import java.io.*;
-import java.nio.charset.Charset;
-import java.security.NoSuchAlgorithmException;
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Properties;
-import java.util.concurrent.SynchronousQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
-
-import com.codahale.metrics.Histogram;
-import com.rabbitmq.client.impl.ClientVersion;
-import com.rabbitmq.client.impl.nio.NioParams;
-import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.GnuParser;
-import org.apache.commons.cli.HelpFormatter;
-import org.apache.commons.cli.Option;
-import org.apache.commons.cli.Options;
-import org.apache.commons.cli.ParseException;
-
 import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.DefaultSaslConfig;
+import com.rabbitmq.client.impl.ClientVersion;
+import com.rabbitmq.client.impl.nio.NioParams;
+import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
+import org.apache.commons.cli.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.SSLContext;
+import java.io.*;
+import java.nio.charset.Charset;
+import java.security.NoSuchAlgorithmException;
+import java.text.SimpleDateFormat;
+import java.util.*;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 import static com.rabbitmq.perf.OptionsUtils.forEach;
 import static java.lang.String.format;
@@ -558,202 +543,6 @@ public class PerfTest {
             exchangeName = def;
         }
         return exchangeName;
-    }
-
-    private static class PrintlnStats extends Stats {
-        private final boolean sendStatsEnabled;
-        private final boolean recvStatsEnabled;
-        private final boolean returnStatsEnabled;
-        private final boolean confirmStatsEnabled;
-        private final boolean legacyMetrics;
-        private final boolean useMillis;
-        private final String units;
-
-        private final String testID;
-        private final PrintWriter out;
-
-        public PrintlnStats(String testID, long interval,
-            boolean sendStatsEnabled, boolean recvStatsEnabled,
-            boolean returnStatsEnabled, boolean confirmStatsEnabled,
-            boolean legacyMetrics, boolean useMillis,
-            PrintWriter out, MeterRegistry registry, String metricsPrefix) {
-            super(interval, useMillis, registry, metricsPrefix);
-            this.sendStatsEnabled = sendStatsEnabled;
-            this.recvStatsEnabled = recvStatsEnabled;
-            this.returnStatsEnabled = returnStatsEnabled;
-            this.confirmStatsEnabled = confirmStatsEnabled;
-            this.testID = testID;
-            this.legacyMetrics = legacyMetrics;
-            this.useMillis = useMillis;
-            this.units = useMillis ? "ms" : "µs";
-            this.out = out;
-
-            if (out != null) {
-                out.printf("id,time (s),published (msg/s),returned (msg/s)," +
-                        "confirmed (msg/s),nacked (msg/s)," +
-                        "received (msg/s),min latency (%s),median latency (%s)," +
-                        "75th p. latency (%s),95th p. latency (%s),99th p. latency (%s)," +
-                        "min confirm latency (%s),median confirm latency (%s)," +
-                        "75th p. confirm latency (%s),95th p. confirm latency (%s),99th p. confirm latency (%s)%n",
-                        units, units, units, units, units, units, units, units, units, units);
-            }
-        }
-
-        @Override
-        protected void report(long now) {
-            String output = "id: " + testID + ", ";
-
-            double ratePublished = 0.0;
-            double rateReturned = 0.0;
-            double rateConfirmed = 0.0;
-            double rateNacked = 0.0;
-            double rateConsumed = 0.0;
-
-            if (sendStatsEnabled) {
-                ratePublished = rate(sendCountInterval, elapsedInterval);
-                published(ratePublished);
-            }
-            if (sendStatsEnabled && returnStatsEnabled) {
-                rateReturned = rate(returnCountInterval, elapsedInterval);
-                returned(rateReturned);
-            }
-            if (sendStatsEnabled && confirmStatsEnabled) {
-                rateConfirmed = rate(confirmCountInterval, elapsedInterval);
-                confirmed(rateConfirmed);
-            }
-            if (sendStatsEnabled && confirmStatsEnabled) {
-                rateNacked = rate(nackCountInterval, elapsedInterval);
-                nacked(rateNacked);
-            }
-            if (recvStatsEnabled) {
-                rateConsumed = rate(recvCountInterval, elapsedInterval);
-                received(rateConsumed);
-            }
-
-            output += "time: " + format("%.3f", (now - startTime)/1000.0) + "s";
-            output +=
-                getRate("sent",      ratePublished,    sendStatsEnabled) +
-                    getRate("returned",  rateReturned,  sendStatsEnabled && returnStatsEnabled) +
-                    getRate("confirmed", rateConfirmed, sendStatsEnabled && confirmStatsEnabled) +
-                    getRate("nacked",    rateNacked,    sendStatsEnabled && confirmStatsEnabled) +
-                    getRate("received",  rateConsumed,    recvStatsEnabled);
-
-            long[] latencyStats = null;
-            long [] confirmLatencyStats = null;
-            if (legacyMetrics && latencyCountInterval > 0) {
-                output += ", min/avg/max latency: " +
-                                minLatency/1000L + "/" +
-                                cumulativeLatencyInterval / (1000L * latencyCountInterval) + "/" +
-                                maxLatency/1000L + " µs ";
-            } else if (latencyCountInterval > 0) {
-                output += ", min/median/75th/95th/99th message latency: ";
-                latencyStats = getStats(latency);
-                output += latencyStats[0] + "/"
-                          + latencyStats[1] + "/"
-                          + latencyStats[2] + "/"
-                          + latencyStats[3] + "/"
-                          + latencyStats[4] + " " + units;
-                if (confirmStatsEnabled) {
-                    output += ", confirm latency: ";
-                    confirmLatencyStats = getStats(confirmLatency);
-                    output += confirmLatencyStats[0] + "/"
-                              + confirmLatencyStats[1] + "/"
-                              + confirmLatencyStats[2] + "/"
-                              + confirmLatencyStats[3] + "/"
-                              + confirmLatencyStats[4] + " " + units;
-                }
-            }
-
-            System.out.println(output);
-            if (out != null) {
-                if (latencyStats == null) {
-                    latencyStats = getStats(latency);
-                }
-                out.println(testID + "," + format("%.3f", (now - startTime)/1000.0) + "," +
-                    rate(ratePublished, sendStatsEnabled)+ "," +
-                    rate(rateReturned, sendStatsEnabled && returnStatsEnabled)+ "," +
-                    rate(rateConfirmed, sendStatsEnabled && confirmStatsEnabled)+ "," +
-                    rate(rateNacked, sendStatsEnabled && confirmStatsEnabled)+ "," +
-                    rate(rateConsumed, recvStatsEnabled) + "," +
-                    (latencyCountInterval > 0 ?
-                        latencyStats[0] + "," +
-                        latencyStats[1] + "," +
-                        latencyStats[2] + "," +
-                        latencyStats[3] + "," +
-                        latencyStats[4] + ","
-                        : ",,,,,") +
-                    (latencyCountInterval > 0 && confirmStatsEnabled?
-                        confirmLatencyStats[0] + "," +
-                        confirmLatencyStats[1] + "," +
-                        confirmLatencyStats[2] + "," +
-                        confirmLatencyStats[3] + "," +
-                        confirmLatencyStats[4]
-                        : ",,,,")
-
-                );
-            }
-
-        }
-
-        private long[] getStats(Histogram histogram) {
-            return new long[] {
-                div(histogram.getSnapshot().getMin()),
-                div(histogram.getSnapshot().getMedian()),
-                div(histogram.getSnapshot().get75thPercentile()),
-                div(histogram.getSnapshot().get95thPercentile()),
-                div(histogram.getSnapshot().get99thPercentile())
-            };
-        }
-
-        private long div(double p) {
-            if (useMillis) {
-                return (long)p;
-            } else {
-                return (long)(p / 1000L);
-            }
-        }
-
-        private String getRate(String descr, double rate, boolean display) {
-            if (display) {
-                return ", " + descr + ": " + formatRate(rate) + " msg/s";
-            } else {
-                return "";
-            }
-        }
-
-        public void printFinal() {
-            long now = System.currentTimeMillis();
-
-            System.out.println("id: " + testID + ", sending rate avg: " +
-                formatRate(sendCountTotal * 1000.0 / (now - startTime)) +
-                " msg/s");
-
-            long elapsed = now - startTime;
-            if (elapsed > 0) {
-                System.out.println("id: " + testID + ", receiving rate avg: " +
-                    formatRate(recvCountTotal * 1000.0 / elapsed) +
-                    " msg/s");
-            }
-        }
-
-        private static String formatRate(double rate) {
-            if (rate == 0.0)    return format("%d", (long)rate);
-            else if (rate < 1)  return format("%1.2f", rate);
-            else if (rate < 10) return format("%1.1f", rate);
-            else                return format("%d", (long)rate);
-        }
-
-        private static String rate(double rate, boolean display) {
-            if (display) {
-                return formatRate(rate);
-            } else {
-                return "";
-            }
-        }
-
-        private static double rate(long count, long elapsed) {
-            return 1000.0 * count / elapsed;
-        }
     }
 
     private static void versionInformation() {
