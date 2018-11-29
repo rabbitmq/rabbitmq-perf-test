@@ -164,9 +164,12 @@ public class PerfTest {
             if (outputFile != null) {
                 File file = new File(outputFile);
                 if (file.exists()) {
-                    file.delete();
+                    boolean deleted = file.delete();
+                    if (!deleted) {
+                        LOGGER.warn("Could not delete existing CSV file, will try to append at the end of the file");
+                    }
                 }
-                output = new PrintWriter(new BufferedWriter(new FileWriter(file)), true); //NOSONAR
+                output = new PrintWriter(new BufferedWriter(new FileWriter(file, true)), true); //NOSONAR
                 Runtime.getRuntime().addShutdownHook(new Thread(() -> output.close()));
             } else {
                 output = null;
@@ -288,7 +291,7 @@ public class PerfTest {
             usage(options);
         } catch (Exception e) {
             System.err.println("Main thread caught exception: " + e);
-            e.printStackTrace();
+            LOGGER.error("Main thread caught exception", e);
             systemExiter.exit(1);
         } finally {
             if (metrics != null) {
@@ -803,10 +806,10 @@ public class PerfTest {
 
     }
 
-    public static Function<String, String> LONG_OPTION_TO_ENVIRONMENT_VARIABLE = option ->
+    static final Function<String, String> LONG_OPTION_TO_ENVIRONMENT_VARIABLE = option ->
         option.replace('-', '_').toUpperCase(Locale.ENGLISH);
 
-    public static Function<String, String> ENVIRONMENT_VARIABLE_PREFIX = name -> {
+    private static final Function<String, String> ENVIRONMENT_VARIABLE_PREFIX = name -> {
         String prefix = System.getenv("RABBITMQ_PERF_TEST_ENV_PREFIX");
         if (prefix == null || prefix.trim().isEmpty()) {
             return name;
@@ -818,6 +821,6 @@ public class PerfTest {
         }
     };
 
-    static Function<String, String> ENVIRONMENT_VARIABLE_LOOKUP = name -> System.getenv(name);
+    private static final Function<String, String> ENVIRONMENT_VARIABLE_LOOKUP = name -> System.getenv(name);
 
 }

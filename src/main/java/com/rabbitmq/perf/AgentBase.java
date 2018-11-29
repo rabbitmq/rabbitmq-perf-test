@@ -17,6 +17,7 @@ package com.rabbitmq.perf;
 
 import com.rabbitmq.client.MissedHeartbeatException;
 import com.rabbitmq.client.ShutdownSignalException;
+import com.rabbitmq.client.impl.recovery.AutorecoveringConnection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,11 +31,6 @@ import java.util.function.Predicate;
 public abstract class AgentBase {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AgentBase.class);
-
-    // FIXME this is the condition to start connection recovery
-    // ensure it's the appropriate condition and get it from the Java client code
-    static final Predicate<ShutdownSignalException> CONNECTION_RECOVERY_TRIGGERED =
-        e -> !e.isInitiatedByApplication() || (e.getCause() instanceof MissedHeartbeatException);
 
     protected void delay(long now, AgentState state) {
 
@@ -56,7 +52,7 @@ public abstract class AgentBase {
     }
 
     protected boolean isConnectionRecoveryTriggered(ShutdownSignalException e) {
-        return CONNECTION_RECOVERY_TRIGGERED.test(e);
+        return AutorecoveringConnection.DEFAULT_CONNECTION_RECOVERY_TRIGGERING_CONDITION.test(e);
     }
 
     protected void handleShutdownSignalExceptionOnWrite(Recovery.RecoveryProcess recoveryProcess, ShutdownSignalException e) {

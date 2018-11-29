@@ -88,7 +88,7 @@ public class Recovery {
                 }
             });
             connection.addShutdownListener(cause -> {
-                if (AgentBase.CONNECTION_RECOVERY_TRIGGERED.test(cause)) {
+                if (AutorecoveringConnection.DEFAULT_CONNECTION_RECOVERY_TRIGGERING_CONDITION.test(cause)) {
                     LOGGER.debug("Setting recovery in progress flag for connection {}", connection.getClientProvidedName());
                     recoveryInProgress.set(true);
                 }
