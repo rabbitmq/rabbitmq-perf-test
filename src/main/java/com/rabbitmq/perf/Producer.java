@@ -267,8 +267,9 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
         if (randomStartDelay > 0) {
             int delay = new Random().nextInt(randomStartDelay) + 1;
             try {
-                Thread.sleep(delay * 1000);
+                Thread.sleep((long) delay * 1000);
             } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
                 throw new RuntimeException(e);
             }
         }
@@ -366,6 +367,7 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
             } catch (IOException e) {
                 throw new RuntimeException(e);
             } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
                 throw new RuntimeException (e);
             }
         } else {
@@ -375,7 +377,9 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
             try {
                 LOGGER.debug("Recovery in progress, sleeping for a sec");
                 Thread.sleep(1000L);
-            } catch (InterruptedException e) { }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
         }
     }
 

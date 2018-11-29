@@ -61,7 +61,9 @@ public class Host {
             try {
                 pr.waitFor();
                 break;
-            } catch (InterruptedException ignored) {}
+            } catch (InterruptedException ignored) {
+                Thread.currentThread().interrupt();
+            }
         }
         return pr.exitValue();
     }
@@ -165,7 +167,9 @@ public class Host {
 
     public static void closeConnection(NetworkConnection c) throws IOException {
         Host.ConnectionInfo ci = findConnectionInfoFor(Host.listConnections(), c);
-        closeConnection(ci.getPid());
+        if (ci != null) {
+            closeConnection(ci.getPid());
+        }
     }
 
     public static class ConnectionInfo {

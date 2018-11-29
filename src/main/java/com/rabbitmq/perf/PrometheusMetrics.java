@@ -65,7 +65,7 @@ public class PrometheusMetrics implements Metrics {
             threadPool.setMinThreads(2);
             threadPool.setMaxThreads(12);
             server = new Server(threadPool);
-            ServerConnector connector = new ServerConnector(server);
+            ServerConnector connector = new ServerConnector(server); //NOSONAR
             connector.setPort(prometheusHttpEndpointPort);
             server.setConnectors(new Connector[] { connector });
 

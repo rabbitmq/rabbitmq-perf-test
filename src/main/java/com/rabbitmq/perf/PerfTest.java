@@ -160,13 +160,13 @@ public class PerfTest {
 
             metrics.configure(cmd, registry, factory);
 
-            final PrintWriter output;
+            PrintWriter output;
             if (outputFile != null) {
                 File file = new File(outputFile);
                 if (file.exists()) {
                     file.delete();
                 }
-                output = new PrintWriter(new BufferedWriter(new FileWriter(file)), true);
+                output = new PrintWriter(new BufferedWriter(new FileWriter(file)), true); //NOSONAR
                 Runtime.getRuntime().addShutdownHook(new Thread(() -> output.close()));
             } else {
                 output = null;

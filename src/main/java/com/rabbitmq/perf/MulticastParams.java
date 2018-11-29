@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeoutException;
 
 import static com.rabbitmq.perf.Recovery.setupRecoveryProcess;
 
@@ -318,7 +319,7 @@ public class MulticastParams {
     }
 
     public Producer createProducer(Connection connection, Stats stats, MulticastSet.CompletionHandler completionHandler) throws IOException {
-        Channel channel = connection.createChannel();
+        Channel channel = connection.createChannel(); //NOSONAR
         if (producerTxSize > 0) channel.txSelect();
         if (confirm >= 0) channel.confirmSelect();
         TopologyRecording topologyRecording = new TopologyRecording();
@@ -362,7 +363,7 @@ public class MulticastParams {
     public Consumer createConsumer(Connection connection, Stats stats, MulticastSet.CompletionHandler completionHandler) throws IOException {
         TopologyHandlerResult topologyHandlerResult = this.topologyHandler.configureQueuesForClient(connection);
         connection = topologyHandlerResult.connection;
-        Channel channel = connection.createChannel();
+        Channel channel = connection.createChannel(); //NOSONAR
         if (consumerTxSize > 0) channel.txSelect();
         if (consumerPrefetch > 0) channel.basicQos(consumerPrefetch);
         if (channelPrefetch > 0) channel.basicQos(channelPrefetch, true);
@@ -571,48 +572,50 @@ public class MulticastParams {
         }
 
         protected List<String> configureQueues(Connection connection, List<String> queues, TopologyRecording topologyRecording, Runnable afterQueueConfigurationCallback) throws IOException {
-            Channel channel = connection.createChannel();
-            if (!params.predeclared || !exchangeExists(connection, params.exchangeName)) {
-                channel.exchangeDeclare(params.exchangeName, params.exchangeType);
-                topologyRecording.recordExchange(params.exchangeName, params.exchangeType);
-            }
-
-            // To ensure we get at-least 1 default queue:
-            // (don't declare any queues when --predeclared is passed,
-            // otherwise unwanted server-named queues without consumers will pile up.
-            // see https://github.com/rabbitmq/rabbitmq-perf-test/issues/25 and
-            // https://github.com/rabbitmq/rabbitmq-perf-test/issues/43)
-            if (!params.predeclared && queues.isEmpty()) {
-                queues = Collections.singletonList("");
-            }
-
-            List<String> generatedQueueNames = new ArrayList<>();
-            for (String qName : queues) {
-                if (!params.predeclared || !queueExists(connection, qName)) {
-                    boolean serverNamed = qName == null || "".equals(qName);
-                    qName = channel.queueDeclare(qName,
-                        params.flags.contains("persistent"),
-                        params.isExclusive(),
-                        params.autoDelete,
-                        params.queueArguments).getQueue();
-                    topologyRecording.recordQueue(
-                        qName, params.flags.contains("persistent"),
-                        params.isExclusive(), params.autoDelete,
-                        params.queueArguments, serverNamed
-                    );
+            try (Channel channel = connection.createChannel()) {
+                if (!params.predeclared || !exchangeExists(connection, params.exchangeName)) {
+                    channel.exchangeDeclare(params.exchangeName, params.exchangeType);
+                    topologyRecording.recordExchange(params.exchangeName, params.exchangeType);
                 }
-                generatedQueueNames.add(qName);
-                // skipping binding to default exchange,
-                // as it's not possible to explicitly bind to it.
-                if (!"".equals(params.exchangeName) && !"amq.default".equals(params.exchangeName) && !params.skipBindingQueues) {
-                    String routingKey = params.topologyHandler.getRoutingKey();
-                    channel.queueBind(qName, params.exchangeName, routingKey);
-                    topologyRecording.recordBinding(qName, params.exchangeName, routingKey);
+
+                // To ensure we get at-least 1 default queue:
+                // (don't declare any queues when --predeclared is passed,
+                // otherwise unwanted server-named queues without consumers will pile up.
+                // see https://github.com/rabbitmq/rabbitmq-perf-test/issues/25 and
+                // https://github.com/rabbitmq/rabbitmq-perf-test/issues/43)
+                if (!params.predeclared && queues.isEmpty()) {
+                    queues = Collections.singletonList("");
                 }
-                afterQueueConfigurationCallback.run();
+
+                List<String> generatedQueueNames = new ArrayList<>();
+                for (String qName : queues) {
+                    if (!params.predeclared || !queueExists(connection, qName)) {
+                        boolean serverNamed = qName == null || "".equals(qName);
+                        qName = channel.queueDeclare(qName,
+                                params.flags.contains("persistent"),
+                                params.isExclusive(),
+                                params.autoDelete,
+                                params.queueArguments).getQueue();
+                        topologyRecording.recordQueue(
+                                qName, params.flags.contains("persistent"),
+                                params.isExclusive(), params.autoDelete,
+                                params.queueArguments, serverNamed
+                        );
+                    }
+                    generatedQueueNames.add(qName);
+                    // skipping binding to default exchange,
+                    // as it's not possible to explicitly bind to it.
+                    if (!"".equals(params.exchangeName) && !"amq.default".equals(params.exchangeName) && !params.skipBindingQueues) {
+                        String routingKey = params.topologyHandler.getRoutingKey();
+                        channel.queueBind(qName, params.exchangeName, routingKey);
+                        topologyRecording.recordBinding(qName, params.exchangeName, routingKey);
+                    }
+                    afterQueueConfigurationCallback.run();
+                }
+                return generatedQueueNames;
+            } catch (TimeoutException e) {
+                throw new IOException(e);
             }
-            channel.abort();
-            return generatedQueueNames;
         }
 
     }

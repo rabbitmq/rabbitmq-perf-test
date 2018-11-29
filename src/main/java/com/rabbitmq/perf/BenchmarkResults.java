@@ -21,6 +21,8 @@ import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.util.resource.Resource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -79,6 +81,8 @@ public class BenchmarkResults {
 
     public static class JsonServlet extends HttpServlet {
 
+        private static final Logger LOGGER = LoggerFactory.getLogger(JsonServlet.class);
+
         private final String content;
 
         public JsonServlet(String content) {
@@ -87,8 +91,12 @@ public class BenchmarkResults {
 
         @Override
         protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-            resp.getWriter().append(content);
-            resp.getWriter().flush();
+            try {
+                resp.getWriter().append(content);
+                resp.getWriter().flush();
+            } catch (IOException e) {
+                LOGGER.warn("Error during content writing", e);
+            }
         }
     }
 }

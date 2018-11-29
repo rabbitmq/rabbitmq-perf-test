@@ -275,6 +275,7 @@ public class Consumer extends AgentBase implements Runnable {
             try {
                 Thread.sleep(waitTime);
             } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
                 throw new RuntimeException("Exception while simulating latency", e);
             }
         }

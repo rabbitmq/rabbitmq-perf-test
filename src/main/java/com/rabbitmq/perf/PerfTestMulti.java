@@ -80,10 +80,10 @@ public class PerfTestMulti {
     }
 
     private static void writeJSON(String outJSON) throws IOException {
-        FileWriter outFile = new FileWriter(outJSON);
-        PrintWriter out = new PrintWriter(outFile);
-        out.println(new JSONWriter(true).write(results));
-        outFile.close();
+        try (FileWriter outFile = new FileWriter(outJSON);
+             PrintWriter out = new PrintWriter(outFile)) {
+            out.println(new JSONWriter(true).write(results));
+        }
     }
 
     private static void runStaticBrokerTests(Scenario[] scenarios) throws Exception {

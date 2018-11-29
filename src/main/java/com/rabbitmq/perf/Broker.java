@@ -78,10 +78,9 @@ public class Broker {
 
     private void writeConfig() throws IOException {
         new File(BASE).mkdirs();
-        FileWriter outFile = new FileWriter(BASE + "rabbitmq.config");
-        PrintWriter out = new PrintWriter(outFile);
-        out.println(config);
-        outFile.close();
+        try (PrintWriter out = new PrintWriter(new FileWriter(BASE + "rabbitmq.config"))) {
+            out.println(config);
+        }
     }
 
     public void stop() {

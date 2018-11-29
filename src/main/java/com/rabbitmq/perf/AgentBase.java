@@ -49,6 +49,7 @@ public abstract class AgentBase {
             try {
                 Thread.sleep(pause);
             } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
                 throw new RuntimeException(e);
             }
         }
