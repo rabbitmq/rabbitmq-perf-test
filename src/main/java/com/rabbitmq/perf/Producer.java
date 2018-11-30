@@ -31,9 +31,9 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
-import java.util.SortedSet;
-import java.util.TreeSet;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentNavigableMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -65,8 +65,7 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
     private final Function<AMQP.BasicProperties.Builder, AMQP.BasicProperties.Builder> propertiesBuilderProcessor;
     private Semaphore confirmPool;
     private int confirmTimeout;
-    private final SortedSet<Long> unconfirmedSet =
-        Collections.synchronizedSortedSet(new TreeSet<>());
+    private final ConcurrentNavigableMap<Long, Long> unconfirmed = new ConcurrentSkipListMap<>();
 
     private final MulticastSet.CompletionHandler completionHandler;
     private final AtomicBoolean completed = new AtomicBoolean(false);
@@ -79,6 +78,10 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
 
     private final Recovery.RecoveryProcess recoveryProcess;
 
+    private final boolean shouldTrackPublishConfirms;
+
+    private final TimestampProvider timestampProvider;
+
     public Producer(ProducerParameters parameters) {
         this.channel           = parameters.getChannel();
         this.exchangeName      = parameters.getExchangeName();
@@ -90,12 +93,16 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
         this.txSize            = parameters.getTxSize();
         this.msgLimit          = parameters.getMsgLimit();
         this.messageBodySource = parameters.getMessageBodySource();
-        if (parameters.getTsp().isTimestampInHeader()) {
+        this.timestampProvider = parameters.getTsp();
+        if (this.timestampProvider.isTimestampInHeader()) {
             builderProcessor = builderProcessor.andThen(builder -> builder.headers(Collections.singletonMap(TIMESTAMP_HEADER, parameters.getTsp().getCurrentTime())));
         }
         if (parameters.getMessageProperties() != null && !parameters.getMessageProperties().isEmpty()) {
             builderProcessor = builderProcessorWithMessageProperties(parameters.getMessageProperties(), builderProcessor);
         }
+
+        this.shouldTrackPublishConfirms = shouldTrackPublishConfirm(parameters);
+
         if (parameters.getConfirm() > 0) {
             this.confirmPool  = new Semaphore((int)parameters.getConfirm());
             this.confirmTimeout = parameters.getConfirmTimeout();
@@ -117,6 +124,7 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
         this.rateLimit = parameters.getRateLimit();
         this.recoveryProcess = parameters.getRecoveryProcess();
         this.recoveryProcess.init(this);
+
     }
 
     private Function<AMQP.BasicProperties.Builder, AMQP.BasicProperties.Builder> builderProcessorWithMessageProperties(
@@ -221,6 +229,10 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
         return MESSAGE_PROPERTIES_KEYS.contains(key);
     }
 
+    private boolean shouldTrackPublishConfirm(ProducerParameters parameters) {
+        return parameters.getConfirm() > 0;
+    }
+
     public void handleReturn(int replyCode,
                              String replyText,
                              String exchange,
@@ -240,19 +252,41 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
 
     private void handleAckNack(long seqNo, boolean multiple,
                                boolean nack) {
-        int numConfirms = 0;
-        if (multiple) {
-            SortedSet<Long> confirmed = unconfirmedSet.headSet(seqNo + 1);
-            numConfirms += confirmed.size();
-            confirmed.clear();
-        } else {
-            unconfirmedSet.remove(seqNo);
-            numConfirms = 1;
-        }
+        int numConfirms;
+
         if (nack) {
+            if (multiple) {
+                ConcurrentNavigableMap<Long, Long> confirmed = unconfirmed.headMap(seqNo, true);
+                numConfirms = confirmed.size();
+                confirmed.clear();
+            } else {
+                unconfirmed.remove(seqNo);
+                numConfirms = 1;
+            }
             stats.handleNack(numConfirms);
         } else {
-            stats.handleConfirm(numConfirms);
+            long currentTime = this.timestampProvider.getCurrentTime();
+            long[] latencies;
+            if (multiple) {
+                ConcurrentNavigableMap<Long, Long> confirmed = unconfirmed.headMap(seqNo, true);
+                numConfirms = confirmed.size();
+                latencies = new long[numConfirms];
+                int index = 0;
+                for (Map.Entry<Long, Long> entry : confirmed.entrySet()) {
+                    latencies[index] = this.timestampProvider.getDifference(currentTime, entry.getValue());
+                    index++;
+                }
+                confirmed.clear();
+            } else {
+                Long messageTimestamp = unconfirmed.remove(seqNo);
+                if (messageTimestamp != null) {
+                    latencies = new long[] {this.timestampProvider.getDifference(currentTime, messageTimestamp)};
+                } else {
+                    latencies = new long[0];
+                }
+                numConfirms = 1;
+            }
+            stats.handleConfirm(numConfirms, latencies);
         }
 
         if (confirmPool != null) {
@@ -383,7 +417,7 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
         }
     }
 
-    private void publish(MessageBodySource.MessageBodyAndContentType messageBodyAndContentType)
+    private void publish(MessageBodySource.MessageEnvelope messageEnvelope)
         throws IOException {
 
         AMQP.BasicProperties.Builder propertiesBuilder = new AMQP.BasicProperties.Builder();
@@ -391,17 +425,26 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
             propertiesBuilder.deliveryMode(2);
         }
 
-        if (messageBodyAndContentType.getContentType() != null) {
-            propertiesBuilder.contentType(messageBodyAndContentType.getContentType());
+        if (messageEnvelope.getContentType() != null) {
+            propertiesBuilder.contentType(messageEnvelope.getContentType());
         }
 
         propertiesBuilder = this.propertiesBuilderProcessor.apply(propertiesBuilder);
 
-        unconfirmedSet.add(channel.getNextPublishSeqNo());
+        AMQP.BasicProperties messageProperties = propertiesBuilder.build();
+
+        if (shouldTrackPublishConfirms) {
+            if (this.timestampProvider.isTimestampInHeader()) {
+                Long timestamp = (Long) messageProperties.getHeaders().get(TIMESTAMP_HEADER);
+                unconfirmed.put(channel.getNextPublishSeqNo(), timestamp);
+            } else {
+                unconfirmed.put(channel.getNextPublishSeqNo(), messageEnvelope.getTime());
+            }
+        }
         channel.basicPublish(exchangeName, routingKeyGenerator.get(),
                              mandatory, false,
-                             propertiesBuilder.build(),
-                             messageBodyAndContentType.getBody());
+                             messageProperties,
+                             messageEnvelope.getBody());
     }
 
     private void countDown() {

@@ -33,7 +33,7 @@ public class TimeSequenceMessageBodySource implements MessageBodySource {
     }
 
     @Override
-    public MessageBodyAndContentType create(int sequenceNumber) throws IOException {
+    public MessageEnvelope create(int sequenceNumber) throws IOException {
         ByteArrayOutputStream acc = new ByteArrayOutputStream();
         DataOutputStream d = new DataOutputStream(acc);
         long time = tsp.getCurrentTime();
@@ -44,9 +44,9 @@ public class TimeSequenceMessageBodySource implements MessageBodySource {
         byte[] m = acc.toByteArray();
         if (m.length <= message.length) {
             System.arraycopy(m, 0, message, 0, m.length);
-            return new MessageBodyAndContentType(message, null);
+            return new MessageEnvelope(message, null, time);
         } else {
-            return new MessageBodyAndContentType(m, null);
+            return new MessageEnvelope(m, null, time);
         }
     }
 }

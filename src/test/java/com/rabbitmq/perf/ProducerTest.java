@@ -211,7 +211,7 @@ public class ProducerTest {
                 .setFlags(asList("persistent"))
                 .setTxSize(0).setRateLimit(0.0f).setMsgLimit(1)
                 .setConfirm(-1).setConfirmTimeout(30)
-                .setMessageBodySource((sequence) -> new MessageBodySource.MessageBodyAndContentType("".getBytes(), "application/json"))
+                .setMessageBodySource((sequence) -> new MessageBodySource.MessageEnvelope("".getBytes(), "application/json", 0L))
                 .setTsp(new TimestampProvider(true, true))
                 .setStats(stats())
                 .setMessageProperties(messageProperties).setCompletionHandler(completionHandler()).setRoutingKeyCacheSize(0)
