@@ -42,18 +42,12 @@ public class BenchmarkResults {
             System.out.println("Usage: BenchmarkResults result-json-file");
             System.exit(1);
         }
-        BufferedReader reader = null;
         StringBuilder builder = new StringBuilder();
-        try {
-            File resultsFile = new File(args[0]);
-            reader = new BufferedReader(new FileReader(resultsFile));
+        File resultsFile = new File(args[0]);
+        try (BufferedReader reader = new BufferedReader(new FileReader(resultsFile))){
             String line;
             while ((line = reader.readLine()) != null) {
                 builder.append(line);
-            }
-        } finally {
-            if(reader != null) {
-                reader.close();
             }
         }
 

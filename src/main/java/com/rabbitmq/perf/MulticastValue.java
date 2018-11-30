@@ -29,6 +29,7 @@ class MulticastValue implements VariableValue {
     }
 
     public void teardown(MulticastParams params) {
+        // nothing to close here
     }
 
     public String getName() {

@@ -62,6 +62,7 @@ public class MulticastSet {
      * There's a command line argument to override this anyway.
      */
     private static final int PUBLISHING_INTERVAL_NB_PRODUCERS_PER_THREAD = 50;
+    private static final String PRODUCER_THREAD_PREFIX = "perf-test-producer-";
     private final Stats stats;
     private final ConnectionFactory factory;
     private final MulticastParams params;
@@ -125,6 +126,32 @@ public class MulticastSet {
         Runnable[] consumerRunnables = new Runnable[params.getConsumerThreadCount()];
         Connection[] consumerConnections = new Connection[params.getConsumerCount()];
         Function<Integer, ExecutorService> consumersExecutorsFactory;
+        consumersExecutorsFactory = createConsumersExecutorsFactory();
+
+        createConsumers(announceStartup, consumerRunnables, consumerConnections, consumersExecutorsFactory);
+
+        this.params.resetTopologyHandler();
+
+        AgentState[] producerStates = new AgentState[params.getProducerThreadCount()];
+        Connection[] producerConnections = new Connection[params.getProducerCount()];
+        // producers don't need an executor service, as they don't have any consumers
+        // this consumer should never be asked to create any threads
+        ExecutorService executorServiceForProducersConsumers = this.threadingHandler.executorService(
+            "perf-test-producers-worker-", 0
+        );
+        factory.setSharedExecutor(executorServiceForProducersConsumers);
+        createProducers(announceStartup, producerStates, producerConnections);
+
+        startConsumers(consumerRunnables);
+        startProducers(producerStates);
+
+        this.completionHandler.waitForCompletion();
+
+        shutdown(configurationConnection, consumerConnections, producerStates, producerConnections);
+    }
+
+    private Function<Integer, ExecutorService> createConsumersExecutorsFactory() {
+        Function<Integer, ExecutorService> consumersExecutorsFactory;
         if (params.getConsumersThreadPools() > 0) {
             consumersExecutorsFactory = new CacheConsumersExecutorsFactory(
                 this.threadingHandler, this.params, params.getConsumersThreadPools()
@@ -134,6 +161,10 @@ public class MulticastSet {
                 this.threadingHandler, this.params
             );
         }
+        return consumersExecutorsFactory;
+    }
+
+    private void createConsumers(boolean announceStartup, Runnable[] consumerRunnables, Connection[] consumerConnections, Function<Integer, ExecutorService> consumersExecutorsFactory) throws URISyntaxException, NoSuchAlgorithmException, KeyManagementException, IOException, TimeoutException {
         for (int i = 0; i < consumerConnections.length; i++) {
             if (announceStartup) {
                 System.out.println("id: " + testID + ", starting consumer #" + i);
@@ -151,23 +182,15 @@ public class MulticastSet {
                 consumerRunnables[(i * params.getConsumerChannelCount()) + j] = params.createConsumer(consumerConnection, stats, this.completionHandler);
             }
         }
+    }
 
-        this.params.resetTopologyHandler();
-
-        AgentState[] producerStates = new AgentState[params.getProducerThreadCount()];
-        Connection[] producerConnections = new Connection[params.getProducerCount()];
-        // producers don't need an executor service, as they don't have any consumers
-        // this consumer should never be asked to create any threads
-        ExecutorService executorServiceForProducersConsumers = this.threadingHandler.executorService(
-            "perf-test-producers-worker-", 0
-        );
-        factory.setSharedExecutor(executorServiceForProducersConsumers);
+    private void createProducers(boolean announceStartup, AgentState[] producerStates, Connection[] producerConnections) throws URISyntaxException, NoSuchAlgorithmException, KeyManagementException, IOException, TimeoutException {
         for (int i = 0; i < producerConnections.length; i++) {
             if (announceStartup) {
                 System.out.println("id: " + testID + ", starting producer #" + i);
             }
             setUri();
-            Connection producerConnection = factory.newConnection("perf-test-producer-" + i);
+            Connection producerConnection = factory.newConnection(PRODUCER_THREAD_PREFIX + i);
             producerConnections[i] = producerConnection;
             for (int j = 0; j < params.getProducerChannelCount(); j++) {
                 if (announceStartup) {
@@ -178,7 +201,9 @@ public class MulticastSet {
                 producerStates[(i * params.getProducerChannelCount()) + j] = agentState;
             }
         }
+    }
 
+    private void startConsumers(Runnable[] consumerRunnables) throws InterruptedException {
         for (Runnable runnable : consumerRunnables) {
             runnable.run();
             if (params.getConsumerSlowStart()) {
@@ -186,10 +211,12 @@ public class MulticastSet {
                 Thread.sleep(1000);
             }
         }
+    }
 
+    private void startProducers(AgentState[] producerStates) {
         if (params.getPublishingInterval() > 0) {
             ScheduledExecutorService producersExecutorService = this.threadingHandler.scheduledExecutorService(
-                "perf-test-producer-", nbThreadsForConsumer(params)
+                    PRODUCER_THREAD_PREFIX, nbThreadsForConsumer(params)
             );
             Supplier<Integer> startDelaySupplier;
             if (params.getProducerRandomStartDelayInSeconds() > 0) {
@@ -203,21 +230,21 @@ public class MulticastSet {
                 AgentState producerState = producerStates[i];
                 int delay = startDelaySupplier.get();
                 producerState.task = producersExecutorService.scheduleAtFixedRate(
-                    producerState.runnable.createRunnableForScheduling(),
-                    delay, publishingInterval, TimeUnit.SECONDS
+                        producerState.runnable.createRunnableForScheduling(),
+                        delay, publishingInterval, TimeUnit.SECONDS
                 );
             }
         } else {
             ExecutorService producersExecutorService = this.threadingHandler.executorService(
-                "perf-test-producer-", producerStates.length
+                    PRODUCER_THREAD_PREFIX, producerStates.length
             );
             for (AgentState producerState : producerStates) {
                 producerState.task = producersExecutorService.submit(producerState.runnable);
             }
         }
+    }
 
-        this.completionHandler.waitForCompletion();
-
+    private void shutdown(Connection configurationConnection, Connection[] consumerConnections, AgentState[] producerStates, Connection[] producerConnections) {
         try {
             LOGGER.debug("Starting test shutdown");
             for (AgentState producerState : producerStates) {

@@ -137,19 +137,8 @@ public class Consumer extends AgentBase implements Runnable {
                 long messageTimestamp = timestampExtractor.apply(properties, body);
                 long nowTimestamp = timestampProvider.getCurrentTime();
 
-                if (!autoAck) {
-                    dealWithWriteOperation(() -> {
-                        if (multiAckEvery == 0) {
-                            channel.basicAck(envelope.getDeliveryTag(), false);
-                        } else if (currentMessageCount % multiAckEvery == 0) {
-                            channel.basicAck(envelope.getDeliveryTag(), true);
-                        }
-                    }, recoveryProcess);
-                }
-
-                if (txSize != 0 && currentMessageCount % txSize == 0) {
-                    dealWithWriteOperation(() -> channel.txCommit(), recoveryProcess);
-                }
+                ackIfNecessary(envelope, currentMessageCount);
+                commitTransactionIfNecessary(currentMessageCount);
 
                 long diff_time = timestampProvider.getDifference(nowTimestamp, messageTimestamp);
                 stats.handleRecv(id.equals(envelope.getRoutingKey()) ? diff_time : 0L);
@@ -162,6 +151,24 @@ public class Consumer extends AgentBase implements Runnable {
             }
             if (msgLimit != 0 && currentMessageCount >= msgLimit) { // NB: not quite the inverse of above
                 countDown();
+            }
+        }
+
+        private void ackIfNecessary(Envelope envelope, int currentMessageCount) throws IOException {
+            if (!autoAck) {
+                dealWithWriteOperation(() -> {
+                    if (multiAckEvery == 0) {
+                        channel.basicAck(envelope.getDeliveryTag(), false);
+                    } else if (currentMessageCount % multiAckEvery == 0) {
+                        channel.basicAck(envelope.getDeliveryTag(), true);
+                    }
+                }, recoveryProcess);
+            }
+        }
+
+        private void commitTransactionIfNecessary(int currentMessageCount) throws IOException {
+            if (txSize != 0 && currentMessageCount % txSize == 0) {
+                dealWithWriteOperation(() -> channel.txCommit(), recoveryProcess);
             }
         }
 

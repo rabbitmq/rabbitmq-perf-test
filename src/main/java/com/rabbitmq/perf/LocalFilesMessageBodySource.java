@@ -37,18 +37,11 @@ public class LocalFilesMessageBodySource implements MessageBodySource {
             if (!file.exists() || file.isDirectory()) {
                 throw new IllegalArgumentException(fileName + " isn't a valid body file.");
             }
-            BufferedInputStream inputStream = null;
-            try {
-                inputStream = new BufferedInputStream(new FileInputStream(file));
+            try (BufferedInputStream inputStream = new BufferedInputStream(new FileInputStream(file))) {
                 byte [] body = new byte[(int) file.length()];
                 inputStream.read(body, 0, body.length);
                 bodies.add(body);
-            } finally {
-                if (inputStream != null) {
-                    inputStream.close();
-                }
             }
-
         }
         this.contentType = contentType;
     }
