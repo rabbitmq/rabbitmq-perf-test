@@ -49,7 +49,20 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Producer.class);
 
-    public static final String TIMESTAMP_HEADER = "timestamp";
+    public static final String TIMESTAMP_PROPERTY = "timestamp";
+    public static final String CONTENT_TYPE_PROPERTY = "contentType";
+    public static final String CONTENT_ENCODING_PROPERTY = "contentEncoding";
+    public static final String DELIVERY_MODE_PROPERTY = "deliveryMode";
+    public static final String PRIORITY_PROPERTY = "priority";
+    public static final String CORRELATION_ID_PROPERTY = "correlationId";
+    public static final String REPLY_TO_PROPERTY = "replyTo";
+    public static final String EXPIRATION_PROPERTY = "expiration";
+    public static final String MESSAGE_ID_PROPERTY = "messageId";
+    public static final String TYPE_PROPERTY = "type";
+    public static final String USER_ID_PROPERTY = "userId";
+    public static final String APP_ID_PROPERTY = "appId";
+    public static final String CLUSTER_ID_PROPERTY = "clusterId";
+    public static final String TIMESTAMP_HEADER = TIMESTAMP_PROPERTY;
     private final Channel channel;
     private final String  exchangeName;
     private final String  id;
@@ -130,57 +143,57 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
     private Function<AMQP.BasicProperties.Builder, AMQP.BasicProperties.Builder> builderProcessorWithMessageProperties(
             Map<String, Object> messageProperties,
             Function<AMQP.BasicProperties.Builder, AMQP.BasicProperties.Builder> builderProcessor) {
-        if (messageProperties.containsKey("contentType")) {
-            String value = messageProperties.get("contentType").toString();
+        if (messageProperties.containsKey(CONTENT_TYPE_PROPERTY)) {
+            String value = messageProperties.get(CONTENT_TYPE_PROPERTY).toString();
             builderProcessor = builderProcessor.andThen(builder -> builder.contentType(value));
         }
-        if (messageProperties.containsKey("contentEncoding")) {
-            String value = messageProperties.get("contentEncoding").toString();
+        if (messageProperties.containsKey(CONTENT_ENCODING_PROPERTY)) {
+            String value = messageProperties.get(CONTENT_ENCODING_PROPERTY).toString();
             builderProcessor = builderProcessor.andThen(builder -> builder.contentEncoding(value));
         }
-        if (messageProperties.containsKey("deliveryMode")) {
-            Integer value = ((Number) messageProperties.get("deliveryMode")).intValue();
+        if (messageProperties.containsKey(DELIVERY_MODE_PROPERTY)) {
+            Integer value = ((Number) messageProperties.get(DELIVERY_MODE_PROPERTY)).intValue();
             builderProcessor = builderProcessor.andThen(builder -> builder.deliveryMode(value));
         }
-        if (messageProperties.containsKey("priority")) {
-            Integer value = ((Number) messageProperties.get("priority")).intValue();
+        if (messageProperties.containsKey(PRIORITY_PROPERTY)) {
+            Integer value = ((Number) messageProperties.get(PRIORITY_PROPERTY)).intValue();
             builderProcessor = builderProcessor.andThen(builder -> builder.priority(value));
         }
-        if (messageProperties.containsKey("correlationId")) {
-            String value = messageProperties.get("correlationId").toString();
+        if (messageProperties.containsKey(CORRELATION_ID_PROPERTY)) {
+            String value = messageProperties.get(CORRELATION_ID_PROPERTY).toString();
             builderProcessor = builderProcessor.andThen(builder -> builder.correlationId(value));
         }
-        if (messageProperties.containsKey("replyTo")) {
-            String value = messageProperties.get("replyTo").toString();
+        if (messageProperties.containsKey(REPLY_TO_PROPERTY)) {
+            String value = messageProperties.get(REPLY_TO_PROPERTY).toString();
             builderProcessor = builderProcessor.andThen(builder -> builder.replyTo(value));
         }
-        if (messageProperties.containsKey("expiration")) {
-            String value = messageProperties.get("expiration").toString();
+        if (messageProperties.containsKey(EXPIRATION_PROPERTY)) {
+            String value = messageProperties.get(EXPIRATION_PROPERTY).toString();
             builderProcessor = builderProcessor.andThen(builder -> builder.expiration(value));
         }
-        if (messageProperties.containsKey("messageId")) {
-            String value = messageProperties.get("messageId").toString();
+        if (messageProperties.containsKey(MESSAGE_ID_PROPERTY)) {
+            String value = messageProperties.get(MESSAGE_ID_PROPERTY).toString();
             builderProcessor = builderProcessor.andThen(builder -> builder.messageId(value));
         }
-        if (messageProperties.containsKey("timestamp")) {
-            String value = messageProperties.get("timestamp").toString();
+        if (messageProperties.containsKey(TIMESTAMP_PROPERTY)) {
+            String value = messageProperties.get(TIMESTAMP_PROPERTY).toString();
             Date timestamp = Date.from(OffsetDateTime.parse(value).toInstant());
             builderProcessor = builderProcessor.andThen(builder -> builder.timestamp(timestamp));
         }
-        if (messageProperties.containsKey("type")) {
-            String value = messageProperties.get("type").toString();
+        if (messageProperties.containsKey(TYPE_PROPERTY)) {
+            String value = messageProperties.get(TYPE_PROPERTY).toString();
             builderProcessor = builderProcessor.andThen(builder -> builder.type(value));
         }
-        if (messageProperties.containsKey("userId")) {
-            String value = messageProperties.get("userId").toString();
+        if (messageProperties.containsKey(USER_ID_PROPERTY)) {
+            String value = messageProperties.get(USER_ID_PROPERTY).toString();
             builderProcessor = builderProcessor.andThen(builder -> builder.userId(value));
         }
-        if (messageProperties.containsKey("appId")) {
-            String value = messageProperties.get("appId").toString();
+        if (messageProperties.containsKey(APP_ID_PROPERTY)) {
+            String value = messageProperties.get(APP_ID_PROPERTY).toString();
             builderProcessor = builderProcessor.andThen(builder -> builder.appId(value));
         }
-        if (messageProperties.containsKey("clusterId")) {
-            String value = messageProperties.get("clusterId").toString();
+        if (messageProperties.containsKey(CLUSTER_ID_PROPERTY)) {
+            String value = messageProperties.get(CLUSTER_ID_PROPERTY).toString();
             builderProcessor = builderProcessor.andThen(builder -> builder.clusterId(value));
         }
 
@@ -209,20 +222,20 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
     }
 
     private static final Collection<String> MESSAGE_PROPERTIES_KEYS = Arrays.asList(
-        "contentType",
-        "contentEncoding",
-        "headers",
-        "deliveryMode",
-        "priority",
-        "correlationId",
-        "replyTo",
-        "expiration",
-        "messageId",
-        "timestamp",
-        "type",
-        "userId",
-        "appId",
-        "clusterId"
+            CONTENT_TYPE_PROPERTY,
+            CONTENT_ENCODING_PROPERTY,
+            "headers",
+            DELIVERY_MODE_PROPERTY,
+            PRIORITY_PROPERTY,
+            CORRELATION_ID_PROPERTY,
+            REPLY_TO_PROPERTY,
+            EXPIRATION_PROPERTY,
+            MESSAGE_ID_PROPERTY,
+            TIMESTAMP_HEADER,
+            TYPE_PROPERTY,
+            USER_ID_PROPERTY,
+            APP_ID_PROPERTY,
+            CLUSTER_ID_PROPERTY
     );
 
     private boolean isPropertyKey(String key) {
@@ -255,46 +268,55 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
         int numConfirms;
 
         if (nack) {
-            if (multiple) {
-                ConcurrentNavigableMap<Long, Long> confirmed = unconfirmed.headMap(seqNo, true);
-                numConfirms = confirmed.size();
-                confirmed.clear();
-            } else {
-                unconfirmed.remove(seqNo);
-                numConfirms = 1;
-            }
-            stats.handleNack(numConfirms);
+            numConfirms = processNack(seqNo, multiple);
         } else {
-            long currentTime = this.timestampProvider.getCurrentTime();
-            long[] latencies;
-            if (multiple) {
-                ConcurrentNavigableMap<Long, Long> confirmed = unconfirmed.headMap(seqNo, true);
-                numConfirms = confirmed.size();
-                latencies = new long[numConfirms];
-                int index = 0;
-                for (Map.Entry<Long, Long> entry : confirmed.entrySet()) {
-                    latencies[index] = this.timestampProvider.getDifference(currentTime, entry.getValue());
-                    index++;
-                }
-                confirmed.clear();
+            numConfirms = processAck(seqNo, multiple);
+        }
+
+        if (confirmPool != null && numConfirms > 0) {
+            confirmPool.release(numConfirms);
+        }
+    }
+
+    private int processAck(long seqNo, boolean multiple) {
+        int numConfirms;
+        long currentTime = this.timestampProvider.getCurrentTime();
+        long[] latencies;
+        if (multiple) {
+            ConcurrentNavigableMap<Long, Long> confirmed = unconfirmed.headMap(seqNo, true);
+            numConfirms = confirmed.size();
+            latencies = new long[numConfirms];
+            int index = 0;
+            for (Map.Entry<Long, Long> entry : confirmed.entrySet()) {
+                latencies[index] = this.timestampProvider.getDifference(currentTime, entry.getValue());
+                index++;
+            }
+            confirmed.clear();
+        } else {
+            Long messageTimestamp = unconfirmed.remove(seqNo);
+            if (messageTimestamp != null) {
+                latencies = new long[] {this.timestampProvider.getDifference(currentTime, messageTimestamp)};
             } else {
-                Long messageTimestamp = unconfirmed.remove(seqNo);
-                if (messageTimestamp != null) {
-                    latencies = new long[] {this.timestampProvider.getDifference(currentTime, messageTimestamp)};
-                } else {
-                    latencies = new long[0];
-                }
-                numConfirms = 1;
+                latencies = new long[0];
             }
-            stats.handleConfirm(numConfirms, latencies);
+            numConfirms = 1;
         }
+        stats.handleConfirm(numConfirms, latencies);
+        return numConfirms;
+    }
 
-        if (confirmPool != null) {
-            for (int i = 0; i < numConfirms; ++i) {
-                confirmPool.release();
-            }
+    private int processNack(long seqNo, boolean multiple) {
+        int numConfirms;
+        if (multiple) {
+            ConcurrentNavigableMap<Long, Long> confirmed = unconfirmed.headMap(seqNo, true);
+            numConfirms = confirmed.size();
+            confirmed.clear();
+        } else {
+            unconfirmed.remove(seqNo);
+            numConfirms = 1;
         }
-
+        stats.handleNack(numConfirms);
+        return numConfirms;
     }
 
     public void run() {
@@ -379,24 +401,13 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
     public void handlePublish(AgentState currentState) {
         if (!this.recoveryProcess.isRecoverying()) {
             try {
-                if (confirmPool != null) {
-                    if (confirmTimeout < 0) {
-                        confirmPool.acquire();
-                    } else {
-                        boolean acquired = confirmPool.tryAcquire(confirmTimeout, TimeUnit.SECONDS);
-                        if (!acquired) {
-                            // waiting for too long, broker may be gone, stopping thread
-                            throw new RuntimeException("Waiting for publisher confirms for too long");
-                        }
-                    }
-                }
+                maybeWaitIfTooManyOutstandingPublishConfirms();
+
                 dealWithWriteOperation(() -> publish(messageBodySource.create(currentState.getMsgCount())), this.recoveryProcess);
 
                 int messageCount = currentState.incrementMessageCount();
 
-                if (txSize != 0 && messageCount % txSize == 0) {
-                    dealWithWriteOperation(() -> channel.txCommit(), this.recoveryProcess);
-                }
+                commitTransactionIfNecessary(messageCount);
                 stats.handleSend();
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -414,6 +425,26 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
+        }
+    }
+
+    private void maybeWaitIfTooManyOutstandingPublishConfirms() throws InterruptedException {
+        if (confirmPool != null) {
+            if (confirmTimeout < 0) {
+                confirmPool.acquire();
+            } else {
+                boolean acquired = confirmPool.tryAcquire(confirmTimeout, TimeUnit.SECONDS);
+                if (!acquired) {
+                    // waiting for too long, broker may be gone, stopping thread
+                    throw new RuntimeException("Waiting for publisher confirms for too long");
+                }
+            }
+        }
+    }
+
+    private void commitTransactionIfNecessary(int messageCount) throws IOException {
+        if (txSize != 0 && messageCount % txSize == 0) {
+            dealWithWriteOperation(() -> channel.txCommit(), this.recoveryProcess);
         }
     }
 
@@ -454,7 +485,9 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
     }
 
     @Override
-    public void recover(TopologyRecording topologyRecording) { }
+    public void recover(TopologyRecording topologyRecording) {
+        // nothing to recover for a producer
+    }
 
     /**
      * Not thread-safe (OK for non-scheduled Producer, as it runs inside the same thread).

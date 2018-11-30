@@ -27,6 +27,7 @@ import static java.lang.String.format;
  * Class to output stats on the console and in a CSV file.
  */
 class PrintlnStats extends Stats {
+    public static final String MESSAGE_RATE_LABEL = "msg/s";
     private final boolean sendStatsEnabled;
     private final boolean recvStatsEnabled;
     private final boolean returnStatsEnabled;
@@ -139,10 +140,7 @@ class PrintlnStats extends Stats {
         long[] consumerLatencyStats = null;
         long[] confirmLatencyStats = null;
         if (legacyMetrics && latencyCountInterval > 0) {
-            output += ", min/avg/max latency: " +
-                    minLatency / 1000L + "/" +
-                    cumulativeLatencyInterval / (1000L * latencyCountInterval) + "/" +
-                    maxLatency / 1000L + " µs ";
+            output += legacyMetrics();
         } else {
             if (shouldDisplayConsumerLatency() || shouldDisplayConfirmLatency()) {
                 output += ", min/median/75th/95th/99th ";
@@ -172,6 +170,17 @@ class PrintlnStats extends Stats {
         }
 
         this.out.println(output);
+        writeToCsvIfNecessary(now, ratePublished, rateReturned, rateConfirmed, rateNacked, rateConsumed, consumerLatencyStats, confirmLatencyStats);
+    }
+
+    private String legacyMetrics() {
+        return ", min/avg/max latency: " +
+                minLatency / 1000L + "/" +
+                cumulativeLatencyInterval / (1000L * latencyCountInterval) + "/" +
+                maxLatency / 1000L + " µs ";
+    }
+
+    private void writeToCsvIfNecessary(long now, double ratePublished, double rateReturned, double rateConfirmed, double rateNacked, double rateConsumed, long[] consumerLatencyStats, long[] confirmLatencyStats) {
         if (this.csvOut != null) {
             if (consumerLatencyStats == null) {
                 consumerLatencyStats = getStats(latency);
@@ -202,7 +211,6 @@ class PrintlnStats extends Stats {
 
             );
         }
-
     }
 
     boolean shouldDisplayConsumerLatency() {
@@ -233,7 +241,7 @@ class PrintlnStats extends Stats {
 
     private String getRate(String descr, double rate, boolean display) {
         if (display) {
-            return ", " + descr + ": " + formatRate(rate) + " msg/s";
+            return ", " + descr + ": " + formatRate(rate) + " " + MESSAGE_RATE_LABEL;
         } else {
             return "";
         }
@@ -244,13 +252,13 @@ class PrintlnStats extends Stats {
 
         System.out.println("id: " + testID + ", sending rate avg: " +
                 formatRate(sendCountTotal * 1000.0 / (now - startTime)) +
-                " msg/s");
+                " " + MESSAGE_RATE_LABEL);
 
         long elapsed = now - startTime;
         if (elapsed > 0) {
             System.out.println("id: " + testID + ", receiving rate avg: " +
                     formatRate(recvCountTotal * 1000.0 / elapsed) +
-                    " msg/s");
+                    " " + MESSAGE_RATE_LABEL);
         }
     }
 }

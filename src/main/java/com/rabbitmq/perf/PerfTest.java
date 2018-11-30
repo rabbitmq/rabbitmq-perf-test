@@ -148,15 +148,7 @@ public class PerfTest {
 
             PrintWriter output;
             if (outputFile != null) {
-                File file = new File(outputFile);
-                if (file.exists()) {
-                    boolean deleted = file.delete();
-                    if (!deleted) {
-                        LOGGER.warn("Could not delete existing CSV file, will try to append at the end of the file");
-                    }
-                }
-                output = new PrintWriter(new BufferedWriter(new FileWriter(file, true)), true); //NOSONAR
-                Runtime.getRuntime().addShutdownHook(new Thread(() -> output.close()));
+                output = openCsvFileForWriting(outputFile);
             } else {
                 output = null;
             }
@@ -284,6 +276,20 @@ public class PerfTest {
                 metrics.close();
             }
         }
+    }
+
+    private static PrintWriter openCsvFileForWriting(String outputFile) throws IOException {
+        PrintWriter output;
+        File file = new File(outputFile);
+        if (file.exists()) {
+            boolean deleted = file.delete();
+            if (!deleted) {
+                LOGGER.warn("Could not delete existing CSV file, will try to append at the end of the file");
+            }
+        }
+        output = new PrintWriter(new BufferedWriter(new FileWriter(file, true)), true); //NOSONAR
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> output.close()));
+        return output;
     }
 
     private static ConnectionFactory configureNioIfRequested(CommandLineProxy cmd, ConnectionFactory factory) {
@@ -507,7 +513,7 @@ public class PerfTest {
         return Boolean.parseBoolean(cmd.getOptionValue(opt, Boolean.toString(def)));
     }
 
-    static List<?> lstArg(CommandLineProxy cmd, char opt) {
+    static List<Object> lstArg(CommandLineProxy cmd, char opt) {
         String[] vals = cmd.getOptionValues(opt);
         if (vals == null) {
             vals = new String[] {};
