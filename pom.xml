@@ -54,14 +54,14 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
-    <rabbitmq.version>5.5.0</rabbitmq.version>
+    <rabbitmq.version>5.5.1</rabbitmq.version>
     <commons-cli.version>1.1</commons-cli.version>
     <metrics.version>4.0.3</metrics.version>
-    <micrometer.version>1.1.0</micrometer.version>
+    <micrometer.version>1.1.1</micrometer.version>
     <logback.version>1.2.3</logback.version>
-    <jetty.version>9.4.12.v20180830</jetty.version>
-    <junit.jupiter.version>5.3.0</junit.jupiter.version>
-    <mockito.version>2.23.0</mockito.version>
+    <jetty.version>9.4.14.v20181114</jetty.version>
+    <junit.jupiter.version>5.3.2</junit.jupiter.version>
+    <mockito.version>2.23.4</mockito.version>
     <hamcrest.version>2.0.0.0</hamcrest.version>
     <commons-lang3.version>3.8.1</commons-lang3.version>
     <jmh.version>1.20</jmh.version>
@@ -79,8 +79,8 @@
     <maven.install.plugin.version>2.5.2</maven.install.plugin.version>
     <maven.jar.plugin.version>3.0.2</maven.jar.plugin.version>
     <buildnumber.plugin.version>1.4</buildnumber.plugin.version>
-    <maven.surefire.plugin.version>2.22.0</maven.surefire.plugin.version>
-    <maven.failsafe.plugin.version>2.22.0</maven.failsafe.plugin.version>
+    <maven.surefire.plugin.version>2.22.1</maven.surefire.plugin.version>
+    <maven.failsafe.plugin.version>2.22.1</maven.failsafe.plugin.version>
     <maven.packagecloud.wagon.version>0.0.6</maven.packagecloud.wagon.version>
     <checksum.maven.plugin.version>1.8</checksum.maven.plugin.version>
 
@@ -90,9 +90,9 @@
 
     <finalName>rabbitmq-${project.build.finalName}</finalName>
 
-    <asciidoctor.maven.plugin.version>1.5.6</asciidoctor.maven.plugin.version>
-    <asciidoctorj.version>1.5.6</asciidoctorj.version>
-    <jruby.version>1.7.26</jruby.version>
+    <asciidoctor.maven.plugin.version>1.5.7.1</asciidoctor.maven.plugin.version>
+    <asciidoctorj.version>1.5.7</asciidoctorj.version>
+    <jruby.version>9.1.17.0</jruby.version>
     <!-- For GraalVM native image -->
     <maven-assembly-plugin.version>3.1.0</maven-assembly-plugin.version>
     <maven-jar-plugin.version>3.1.0</maven-jar-plugin.version>
@@ -206,14 +206,12 @@
       <scope>test</scope>
     </dependency>
 
-    <!-- https://mvnrepository.com/artifact/org.apache.commons/commons-lang3 -->
     <dependency>
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-lang3</artifactId>
       <version>${commons-lang3.version}</version>
       <scope>test</scope>
     </dependency>
-
 
     <dependency>
       <groupId>org.openjdk.jmh</groupId>
