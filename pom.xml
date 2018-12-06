@@ -829,7 +829,7 @@
               </fileSets>
               <algorithms>
                 <algorithm>MD5</algorithm>
-                <algorithm>SHA-1</algorithm>
+                <algorithm>SHA-256</algorithm>
               </algorithms>
             </configuration>
           </plugin>
@@ -842,7 +842,7 @@
               <excludes>
                   <exclude>*.jar</exclude>
                   <exclude>*.md5</exclude>
-                  <exclude>*.sha1</exclude>
+                  <exclude>*.sha256</exclude>
                   <exclude>*.asc</exclude>
               </excludes>
             </configuration>
