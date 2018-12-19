@@ -417,7 +417,7 @@ public class MulticastParams {
     }
 
     public boolean hasLimit() {
-        return this.timeLimit > 0 || this.consumerMsgCount > 0 || this.producerCount > 0;
+        return this.timeLimit > 0 || this.consumerMsgCount > 0 || this.producerMsgCount > 0;
     }
 
     public void setExclusive(boolean exclusive) {
