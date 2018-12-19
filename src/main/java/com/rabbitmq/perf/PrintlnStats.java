@@ -20,6 +20,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 
 import java.io.PrintStream;
 import java.io.PrintWriter;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static java.lang.String.format;
 
@@ -39,6 +40,8 @@ class PrintlnStats extends Stats {
     private final String testID;
     private final PrintWriter csvOut;
     private final PrintStream out;
+
+    private final AtomicBoolean printFinalOnGoingOrDone = new AtomicBoolean(false);
 
     public PrintlnStats(String testID, long interval,
                         boolean sendStatsEnabled, boolean recvStatsEnabled,
@@ -100,6 +103,12 @@ class PrintlnStats extends Stats {
 
     @Override
     protected void report(long now) {
+        if (!printFinalOnGoingOrDone.get()) {
+            doReport(now);
+        }
+    }
+
+    private void doReport(long now) {
         String output = "id: " + testID + ", ";
 
         double ratePublished = 0.0;
@@ -169,7 +178,10 @@ class PrintlnStats extends Stats {
             }
         }
 
-        this.out.println(output);
+        if (!printFinalOnGoingOrDone.get()) {
+            this.out.println(output);
+        }
+
         writeToCsvIfNecessary(now, ratePublished, rateReturned, rateConfirmed, rateNacked, rateConsumed, consumerLatencyStats, confirmLatencyStats);
     }
 
@@ -181,7 +193,7 @@ class PrintlnStats extends Stats {
     }
 
     private void writeToCsvIfNecessary(long now, double ratePublished, double rateReturned, double rateConfirmed, double rateNacked, double rateConsumed, long[] consumerLatencyStats, long[] confirmLatencyStats) {
-        if (this.csvOut != null) {
+        if (this.csvOut != null && !printFinalOnGoingOrDone.get()) {
             if (consumerLatencyStats == null) {
                 consumerLatencyStats = getStats(latency);
             }
@@ -248,17 +260,19 @@ class PrintlnStats extends Stats {
     }
 
     public void printFinal() {
-        long now = System.currentTimeMillis();
+        if (printFinalOnGoingOrDone.compareAndSet(false, true)) {
+            long now = System.currentTimeMillis();
 
-        System.out.println("id: " + testID + ", sending rate avg: " +
-                formatRate(sendCountTotal * 1000.0 / (now - startTime)) +
-                " " + MESSAGE_RATE_LABEL);
-
-        long elapsed = now - startTime;
-        if (elapsed > 0) {
-            System.out.println("id: " + testID + ", receiving rate avg: " +
-                    formatRate(recvCountTotal * 1000.0 / elapsed) +
+            System.out.println("id: " + testID + ", sending rate avg: " +
+                    formatRate(sendCountTotal * 1000.0 / (now - startTime)) +
                     " " + MESSAGE_RATE_LABEL);
+
+            long elapsed = now - startTime;
+            if (elapsed > 0) {
+                System.out.println("id: " + testID + ", receiving rate avg: " +
+                        formatRate(recvCountTotal * 1000.0 / elapsed) +
+                        " " + MESSAGE_RATE_LABEL);
+            }
         }
     }
 }

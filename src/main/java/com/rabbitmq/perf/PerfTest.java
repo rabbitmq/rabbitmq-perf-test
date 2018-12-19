@@ -17,7 +17,9 @@ package com.rabbitmq.perf;
 
 import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.DefaultSaslConfig;
+import com.rabbitmq.client.ExceptionHandler;
 import com.rabbitmq.client.impl.ClientVersion;
+import com.rabbitmq.client.impl.DefaultExceptionHandler;
 import com.rabbitmq.client.impl.nio.NioParams;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
 import org.apache.commons.cli.*;
@@ -30,6 +32,7 @@ import java.nio.charset.Charset;
 import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -46,9 +49,11 @@ public class PerfTest {
 
     public static void main(String [] args, PerfTestOptions perfTestOptions) {
         SystemExiter systemExiter = perfTestOptions.systemExiter;
+        ShutdownService shutdownService = perfTestOptions.shutdownService;
         Options options = getOptions();
         CommandLineParser parser = new GnuParser();
         CompositeMetrics metrics = new CompositeMetrics();
+        shutdownService.wrap(() -> metrics.close());
         Options metricsOptions = metrics.options();
         forEach(metricsOptions, option -> options.addOption(option));
         try {
@@ -143,12 +148,13 @@ public class PerfTest {
             factory.setTopologyRecoveryEnabled(false);
 
             CompositeMeterRegistry registry = new CompositeMeterRegistry();
+            shutdownService.wrap(() -> registry.close());
 
             metrics.configure(cmd, registry, factory);
 
             PrintWriter output;
             if (outputFile != null) {
-                output = openCsvFileForWriting(outputFile);
+                output = openCsvFileForWriting(outputFile, shutdownService);
             } else {
                 output = null;
             }
@@ -204,6 +210,10 @@ public class PerfTest {
             }
 
             factory = configureNioIfRequested(cmd, factory);
+            if (factory.getNioParams().getNioExecutor() != null) {
+                ExecutorService nioExecutor = factory.getNioParams().getNioExecutor();
+                shutdownService.wrap(() -> nioExecutor.shutdownNow());
+            }
 
             MulticastParams p = new MulticastParams();
             p.setAutoAck(               autoAck);
@@ -253,16 +263,12 @@ public class PerfTest {
 
             MulticastSet.CompletionHandler completionHandler = getCompletionHandler(p);
 
-            MulticastSet set = new MulticastSet(stats, factory, p, testID, uris, completionHandler);
+            factory.setExceptionHandler(perfTestOptions.exceptionHandler);
+
+            MulticastSet set = new MulticastSet(stats, factory, p, testID, uris, completionHandler, shutdownService);
             set.run(true);
 
             stats.printFinal();
-
-            if (factory.getNioParams().getNioExecutor() != null) {
-                factory.getNioParams().getNioExecutor().shutdownNow();
-            }
-
-            registry.close();
         }
         catch (ParseException exp) {
             System.err.println("Parsing failed. Reason: " + exp.getMessage());
@@ -272,13 +278,11 @@ public class PerfTest {
             LOGGER.error("Main thread caught exception", e);
             systemExiter.exit(1);
         } finally {
-            if (metrics != null) {
-                metrics.close();
-            }
+            shutdownService.close();
         }
     }
 
-    private static PrintWriter openCsvFileForWriting(String outputFile) throws IOException {
+    private static PrintWriter openCsvFileForWriting(String outputFile, ShutdownService shutdownService) throws IOException {
         PrintWriter output;
         File file = new File(outputFile);
         if (file.exists()) {
@@ -288,7 +292,7 @@ public class PerfTest {
             }
         }
         output = new PrintWriter(new BufferedWriter(new FileWriter(file, true)), true); //NOSONAR
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> output.close()));
+        shutdownService.wrap(() -> output.close());
         return output;
     }
 
@@ -358,7 +362,13 @@ public class PerfTest {
 
     public static void main(String[] args) throws IOException {
         Log.configureLog();
-        main(args, new PerfTestOptions().setSystemExiter(new JvmSystemExiter()).setSkipSslContextConfiguration(false));
+        PerfTestOptions perfTestOptions = new PerfTestOptions();
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> perfTestOptions.shutdownService.close()));
+        main(args, perfTestOptions
+                .setSystemExiter(new JvmSystemExiter())
+                .setSkipSslContextConfiguration(false)
+                .setExceptionHandler(new RelaxedExceptionHandler())
+                );
     }
 
     private static SSLContext getSslContextIfNecessary(CommandLineProxy cmd, Properties systemProperties) throws NoSuchAlgorithmException {
@@ -585,6 +595,10 @@ public class PerfTest {
 
         private boolean skipSslContextConfiguration = false;
 
+        private ShutdownService shutdownService = new ShutdownService();
+
+        private ExceptionHandler exceptionHandler = new DefaultExceptionHandler();
+
         private Function<String, String> argumentLookup = LONG_OPTION_TO_ENVIRONMENT_VARIABLE
             .andThen(ENVIRONMENT_VARIABLE_PREFIX)
             .andThen(ENVIRONMENT_VARIABLE_LOOKUP);
@@ -601,6 +615,16 @@ public class PerfTest {
 
         public PerfTestOptions setArgumentLookup(Function<String, String> argumentLookup) {
             this.argumentLookup = argumentLookup;
+            return this;
+        }
+
+        public PerfTestOptions setShutdownService(ShutdownService shutdownService) {
+            this.shutdownService = shutdownService;
+            return this;
+        }
+
+        public PerfTestOptions setExceptionHandler(ExceptionHandler exceptionHandler) {
+            this.exceptionHandler = exceptionHandler;
             return this;
         }
     }

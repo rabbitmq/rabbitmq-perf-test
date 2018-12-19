@@ -15,11 +15,8 @@
 
 package com.rabbitmq.perf;
 
-import com.rabbitmq.client.AlreadyClosedException;
-import com.rabbitmq.client.Connection;
-import com.rabbitmq.client.ConnectionFactory;
-import com.rabbitmq.client.Recoverable;
-import com.rabbitmq.client.RecoveryListener;
+import com.rabbitmq.client.*;
+import com.rabbitmq.client.impl.DefaultExceptionHandler;
 import com.rabbitmq.client.impl.recovery.AutorecoveringConnection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,14 +29,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Random;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -70,21 +60,27 @@ public class MulticastSet {
     private final List<String> uris;
     private final Random random = new Random();
     private final CompletionHandler completionHandler;
+    private final ShutdownService shutdownService;
     private ThreadingHandler threadingHandler = new DefaultThreadingHandler();
 
     public MulticastSet(Stats stats, ConnectionFactory factory,
         MulticastParams params, List<String> uris, CompletionHandler completionHandler) {
-        this(stats, factory, params, "perftest", uris, completionHandler);
+        this(stats, factory, params, "perftest", uris, completionHandler, new ShutdownService());
     }
 
     public MulticastSet(Stats stats, ConnectionFactory factory,
-        MulticastParams params, String testID, List<String> uris, CompletionHandler completionHandler) {
+                        MulticastParams params, String testID, List<String> uris, CompletionHandler completionHandler) {
+        this(stats, factory, params, testID, uris, completionHandler, new ShutdownService());
+    }
+    public MulticastSet(Stats stats, ConnectionFactory factory,
+        MulticastParams params, String testID, List<String> uris, CompletionHandler completionHandler, ShutdownService shutdownService) {
         this.stats = stats;
         this.factory = factory;
         this.params = params;
         this.testID = testID;
         this.uris = uris;
         this.completionHandler = completionHandler;
+        this.shutdownService = shutdownService;
         this.params.init();
     }
 
@@ -145,9 +141,16 @@ public class MulticastSet {
         startConsumers(consumerRunnables);
         startProducers(producerStates);
 
-        this.completionHandler.waitForCompletion();
+        AutoCloseable shutdownSequence = this.shutdownService.wrap(
+                () -> shutdown(configurationConnection, consumerConnections, producerStates, producerConnections)
+        );
 
-        shutdown(configurationConnection, consumerConnections, producerStates, producerConnections);
+        this.completionHandler.waitForCompletion();
+        try {
+            shutdownSequence.close();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private Function<Integer, ExecutorService> createConsumersExecutorsFactory() {
@@ -248,38 +251,29 @@ public class MulticastSet {
         try {
             LOGGER.debug("Starting test shutdown");
             for (AgentState producerState : producerStates) {
-                producerState.task.cancel(true);
+                boolean cancelled = producerState.task.cancel(true);
+                LOGGER.debug("Producer has been correctly cancelled: {}", cancelled);
             }
 
-            try {
-                LOGGER.debug("Closing configuration connection");
-                configurationConnection.close();
-                LOGGER.debug("Configuration connection closed");
-            } catch (AlreadyClosedException e) {
-                LOGGER.debug("Configuration connection was already closed");
-            } catch (Exception e) {
-                LOGGER.debug("Error while closing configuration connection: {}", e.getMessage());
+            // we do our best to stop producers before closing their connections
+            for (AgentState producerState : producerStates) {
+                if (!producerState.task.isDone()) {
+                    try {
+                        producerState.task.get(10, TimeUnit.SECONDS);
+                    } catch (Exception e) {
+                        LOGGER.debug("Error while waiting for producer to stop: {}. Moving on.", e.getMessage());
+                    }
+                }
             }
+
+            dispose(configurationConnection);
 
             for (Connection producerConnection : producerConnections) {
-                try {
-                    producerConnection.close();
-                } catch (Exception e) {
-                    // don't do anything, we need to close the other connections
-                }
+                dispose(producerConnection);
             }
 
             for (Connection consumerConnection : consumerConnections) {
-                try {
-                    LOGGER.debug("Closing consumer connection {}", consumerConnection.getClientProvidedName());
-                    consumerConnection.close();
-                    LOGGER.debug("Consumer connection {} has been closed", consumerConnection.getClientProvidedName());
-                } catch (AlreadyClosedException e) {
-                    LOGGER.debug("Consumer connection {} already closed", consumerConnection.getClientProvidedName());
-                } catch (Exception e) {
-                    // don't do anything, we need to close the other connections
-                    LOGGER.debug("Error while closing consumer connection {}: {}", consumerConnection.getClientProvidedName(), e.getMessage());
-                }
+                dispose(consumerConnection);
             }
 
             LOGGER.debug("Shutting down threading handler");
@@ -311,6 +305,21 @@ public class MulticastSet {
             });
         } else {
             configurationConnection.close();
+        }
+    }
+
+    private static void dispose(Connection connection) {
+        try {
+            LOGGER.debug("Closing connection {}", connection.getClientProvidedName());
+            // we need to shutdown, it should not take forever, so we pick a reasonably
+            // small timeout (3 seconds)
+            connection.close(AMQP.REPLY_SUCCESS, "Closed by PerfTest", 3000);
+            LOGGER.debug("Connection {} has been closed", connection.getClientProvidedName());
+        } catch (AlreadyClosedException e) {
+            LOGGER.debug("Connection {} already closed", connection.getClientProvidedName());
+        } catch (Exception e) {
+            // don't do anything, we need to close the other connections
+            LOGGER.debug("Error while closing connection {}: {}", connection.getClientProvidedName(), e.getMessage());
         }
     }
 
