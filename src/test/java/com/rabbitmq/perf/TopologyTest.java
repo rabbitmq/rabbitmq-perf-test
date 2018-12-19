@@ -392,7 +392,10 @@ public class TopologyTest {
                     // they can be un-used because some connections are re-used when there are more
                     // consumers than queues and queues are exclusive
                     if (args != null && args.length == 3) {
-                        unusedConnections.incrementAndGet();
+                        String reason = args[1].toString();
+                        if ("Connection not used".equals(reason)) {
+                            unusedConnections.incrementAndGet();
+                        }
                     }
                     return null;
                 })
