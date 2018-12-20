@@ -144,3 +144,36 @@ messages from only one queue.
 Note it is possible to link:#customising-queues-and-messages[customise]
 the queue and to work against link:#working-with-many-queues[several queues] as well.
 
+== Stopping PerfTest
+
+There are 2 reasons for a PerfTest run to stop:
+
+ * one of the limits has been reached (time limit, producer or consumer message count)
+ * the process is stopped by the user, e.g. by using Ctrl-C in the terminal
+
+In both cases, PerfTest tries to exit as cleanly as possible, in a reasonable amount of time.
+Nevertheless, when PerfTest AMQP connections are throttled by the broker, because they're
+publishing too fast or because broker http://www.rabbitmq.com/alarms.html[alarms]
+have kicked in, it can take time to close them (several seconds or more for one connection).
+
+If closing connections in the gentle way takes too long (5 seconds by default), PerfTest
+will move on to the most important resources to free and terminates. This can result
+in `client unexpectedly closed TCP connection` messages in the broker logs. Note this
+means the AMQP connection hasn't been closed with the right sequence of AMQP frames,
+but the socket has been closed properly. There's no resource leakage here.
+
+The connection closing timeout can be set up with the `--shutdown-timeout` argument (or `-st`).
+The default timeout can be increased to let more time to close connections, e.g. the
+command below uses a shutdown timeout of 20 seconds:
+
+ bin/runjava com.rabbitmq.perf.PerfTest --shutdown-timeout 20
+
+The connection closing sequence can also be skipped by setting the timeout to 0 or any negative
+value:
+
+ bin/runjava com.rabbitmq.perf.PerfTest --shutdown-timeout -1
+
+With the previous command, PerfTest won't even try to close AMQP connections, it will exit
+as fast as possible, freeing only the most important resources. This is perfectly
+acceptable when performing runs on a test environment.
+

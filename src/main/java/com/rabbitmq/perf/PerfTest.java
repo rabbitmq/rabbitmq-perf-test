@@ -135,6 +135,7 @@ public class PerfTest {
 
             boolean disableConnectionRecovery = hasOption(cmd, "dcr");
             int consumersThreadPools = intArg(cmd, "ctp", -1);
+            int shutdownTimeout = intArg(cmd, "st", 5);
 
             String uri               = strArg(cmd, 'h', "amqp://localhost");
             String urisParameter     = strArg(cmd, 'H', null);
@@ -260,6 +261,7 @@ public class PerfTest {
             p.setProducerRandomStartDelayInSeconds(producerRandomStartDelayInSeconds);
             p.setProducerSchedulerThreadCount(producerSchedulingThreads);
             p.setConsumersThreadPools(consumersThreadPools);
+            p.setShutdownTimeout(shutdownTimeout);
 
             MulticastSet.CompletionHandler completionHandler = getCompletionHandler(p);
 
@@ -496,6 +498,9 @@ public class PerfTest {
 
         options.addOption(new Option("ctp", "consumers-thread-pools",true, "number of thread pools to use for all consumers, "
             + "default is to use a thread pool for each consumer"));
+
+        options.addOption(new Option("st", "shutdown-timeout",true, "shutdown timeout, default is 5 seconds"));
+
         return options;
     }
 
