@@ -16,7 +16,6 @@
 package com.rabbitmq.perf;
 
 import com.rabbitmq.client.*;
-import com.rabbitmq.client.impl.DefaultExceptionHandler;
 import com.rabbitmq.client.impl.recovery.AutorecoveringConnection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -141,11 +140,35 @@ public class MulticastSet {
         startConsumers(consumerRunnables);
         startProducers(producerStates);
 
-        AutoCloseable shutdownSequence = this.shutdownService.wrap(
-                () -> shutdown(configurationConnection, consumerConnections, producerStates, producerConnections)
-        );
+
+        AutoCloseable shutdownSequence;
+        int shutdownTimeout = this.params.getShutdownTimeout();
+        if (shutdownTimeout > 0) {
+            shutdownSequence = this.shutdownService.wrap(
+                    () -> {
+                        CountDownLatch latch = new CountDownLatch(1);
+                        Thread shutdownThread = new Thread(() -> {
+                            try {
+                                shutdown(configurationConnection, consumerConnections, producerStates, producerConnections);
+                            } finally {
+                                latch.countDown();
+                            }
+                        });
+                        shutdownThread.start();
+                        boolean done = latch.await(shutdownTimeout, TimeUnit.SECONDS);
+                        if (!done) {
+                            LOGGER.debug("Shutdown not completed in {} second(s), aborting.", shutdownTimeout);
+                            shutdownThread.interrupt();
+                        }
+                    }
+            );
+        } else {
+            // no closing timeout, we don't do anything
+            shutdownSequence = () -> { };
+        }
 
         this.completionHandler.waitForCompletion();
+
         try {
             shutdownSequence.close();
         } catch (Exception e) {
@@ -251,6 +274,9 @@ public class MulticastSet {
         try {
             LOGGER.debug("Starting test shutdown");
             for (AgentState producerState : producerStates) {
+                if (Thread.interrupted()) {
+                    return;
+                }
                 boolean cancelled = producerState.task.cancel(true);
                 LOGGER.debug("Producer has been correctly cancelled: {}", cancelled);
             }
@@ -259,6 +285,9 @@ public class MulticastSet {
             for (AgentState producerState : producerStates) {
                 if (!producerState.task.isDone()) {
                     try {
+                        if (Thread.interrupted()) {
+                            return;
+                        }
                         producerState.task.get(10, TimeUnit.SECONDS);
                     } catch (Exception e) {
                         LOGGER.debug("Error while waiting for producer to stop: {}. Moving on.", e.getMessage());
@@ -266,16 +295,28 @@ public class MulticastSet {
                 }
             }
 
+            if (Thread.interrupted()) {
+                return;
+            }
             dispose(configurationConnection);
 
             for (Connection producerConnection : producerConnections) {
+                if (Thread.interrupted()) {
+                    return;
+                }
                 dispose(producerConnection);
             }
 
             for (Connection consumerConnection : consumerConnections) {
+                if (Thread.interrupted()) {
+                    return;
+                }
                 dispose(consumerConnection);
             }
 
+            if (Thread.interrupted()) {
+                return;
+            }
             LOGGER.debug("Shutting down threading handler");
             this.threadingHandler.shutdown();
             LOGGER.debug("Threading handler shut down");
@@ -318,7 +359,7 @@ public class MulticastSet {
         } catch (AlreadyClosedException e) {
             LOGGER.debug("Connection {} already closed", connection.getClientProvidedName());
         } catch (Exception e) {
-            // don't do anything, we need to close the other connections
+            // just log, we don't want to stop here
             LOGGER.debug("Error while closing connection {}: {}", connection.getClientProvidedName(), e.getMessage());
         }
     }

@@ -92,6 +92,7 @@ public class MulticastParams {
     private int producerRandomStartDelayInSeconds;
     private int producerSchedulerThreadCount = -1;
     private int consumersThreadPools = -1;
+    private int shutdownTimeout = 5;
 
     public void setExchangeType(String exchangeType) {
         this.exchangeType = exchangeType;
@@ -234,6 +235,10 @@ public class MulticastParams {
         this.consumersThreadPools = consumersThreadPools;
     }
 
+    public void setShutdownTimeout(int shutdownTimeout) {
+        this.shutdownTimeout = shutdownTimeout;
+    }
+
     public int getConsumerCount() {
         return consumerCount;
     }
@@ -316,6 +321,10 @@ public class MulticastParams {
 
     public int getConsumersThreadPools() {
         return consumersThreadPools;
+    }
+
+    public int getShutdownTimeout() {
+        return shutdownTimeout;
     }
 
     public Producer createProducer(Connection connection, Stats stats, MulticastSet.CompletionHandler completionHandler) throws IOException {

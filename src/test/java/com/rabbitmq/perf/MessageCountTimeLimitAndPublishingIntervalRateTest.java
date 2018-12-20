@@ -189,8 +189,10 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
             callback("getNextPublishSeqNo", (proxy, method, args) -> 0L)
         );
 
+        AtomicInteger closeCount = new AtomicInteger(0);
         Connection connection = proxy(Connection.class,
-            callback("createChannel", (proxy, method, args) -> channel)
+            callback("createChannel", (proxy, method, args) -> channel),
+            callback("close", (proxy, method, args) -> closeCount.incrementAndGet())
         );
 
         MulticastSet multicastSet = getMulticastSet(connectionFactoryThatReturns(connection));
@@ -202,6 +204,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         waitAtMost(15, () -> testIsDone.get());
 
         assertThat(testDurationInMs, greaterThanOrEqualTo(3000L));
+        assertThat(closeCount.get(), is(4)); // the configuration connection is actually closed twice
     }
 
     // -y 1 --pmessages 10 -x n -X m
@@ -493,6 +496,99 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         assertThat(testDurationInMs, greaterThan(5000L));
     }
 
+    @Test
+    public void shutdownCalledIfShutdownTimeoutIsGreatherThanZero() throws Exception {
+        countsAndTimeLimit(0, 0, 0);
+
+        Channel channel = proxy(Channel.class,
+                callback("basicPublish", (proxy, method, args) -> null),
+                callback("getNextPublishSeqNo", (proxy, method, args) -> 0L)
+        );
+
+        AtomicInteger connectionCloseCalls = new AtomicInteger(0);
+        Connection connection = proxy(Connection.class,
+                callback("createChannel", (proxy, method, args) -> channel),
+                callback("close", (proxy, method, args) -> connectionCloseCalls.incrementAndGet())
+        );
+
+        MulticastSet multicastSet = getMulticastSet(connectionFactoryThatReturns(connection));
+
+        run(multicastSet);
+
+        waitForRunToStart();
+
+        completionHandler.countDown();
+        waitAtMost(10, () -> testIsDone.get());
+        assertThat(connectionCloseCalls.get(), is(4)); // configuration connection is closed twice
+    }
+
+    @Test
+    public void shutdownNotCalledIfShutdownTimeoutIsZeroOrLess() throws Exception {
+        countsAndTimeLimit(0, 0, 0);
+        params.setShutdownTimeout(-1);
+
+        Channel channel = proxy(Channel.class,
+                callback("basicPublish", (proxy, method, args) -> null),
+                callback("getNextPublishSeqNo", (proxy, method, args) -> 0L)
+        );
+
+        AtomicInteger connectionCloseCalls = new AtomicInteger(0);
+        Connection connection = proxy(Connection.class,
+                callback("createChannel", (proxy, method, args) -> channel),
+                callback("close", (proxy, method, args) -> connectionCloseCalls.incrementAndGet())
+        );
+
+        MulticastSet multicastSet = getMulticastSet(connectionFactoryThatReturns(connection));
+
+        run(multicastSet);
+
+        waitForRunToStart();
+
+        completionHandler.countDown();
+        waitAtMost(10, () -> testIsDone.get());
+        assertThat(connectionCloseCalls.get(), is(1)); // configuration connection is closed after configuration is done
+    }
+
+    @Test
+    public void shutdownNotCompletedIfTimeoutIsReached() throws Exception {
+        countsAndTimeLimit(0, 0, 0);
+        params.setShutdownTimeout(1);
+
+        Channel channel = proxy(Channel.class,
+                callback("basicPublish", (proxy, method, args) -> null),
+                callback("getNextPublishSeqNo", (proxy, method, args) -> 0L)
+        );
+
+        AtomicInteger connectionCloseCalls = new AtomicInteger(0);
+        Connection connection = proxy(Connection.class,
+                callback("createChannel", (proxy, method, args) -> channel),
+                callback("close", (proxy, method, args) -> {
+                    connectionCloseCalls.incrementAndGet();
+                    // the first call is to close the configuration connection at the beginning of the run,
+                    // so we simulate a timeout when closing a connection during the final shutdown
+                    if (connectionCloseCalls.get() == 2) {
+                        try {
+                            Thread.sleep(5000);
+                        } catch (InterruptedException e) {
+                            // the interrupt flag is cleared after an InterruptedException
+                            Thread.currentThread().interrupt();
+                        }
+                    }
+                    return null;
+                })
+        );
+
+        MulticastSet multicastSet = getMulticastSet(connectionFactoryThatReturns(connection));
+
+        run(multicastSet);
+
+        waitForRunToStart();
+
+        completionHandler.countDown();
+        waitAtMost(10, () -> testIsDone.get());
+        assertThat(connectionCloseCalls.get(), is(2));
+    }
+
     private Collection<Future<?>> sendMessagesToConsumer(int messagesCount, Consumer consumer) {
         final Collection<Future<?>> tasks = new ArrayList<>(messagesCount);
         IntStream.range(0, messagesCount).forEach(i -> {
@@ -561,7 +657,11 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
                 // one of the tests stops the execution, no need to be noisy
                 LOGGER.warn("Run has been interrupted");
             } catch (Exception e) {
-                LOGGER.warn("Error during run", e);
+                if (e.getCause() instanceof InterruptedException) {
+                    LOGGER.warn("Run has been interrupted");
+                } else {
+                    LOGGER.warn("Error during run", e);
+                }
             }
         });
     }
