@@ -527,7 +527,7 @@ table.CodeRay td.code>pre{padding:0}
 <div id="header">
 <h1>RabbitMQ PerfTest</h1>
 <div class="details">
-<span id="revnumber">version 2.4.0.RC2</span>
+<span id="revnumber">version 2.5.0.RC1</span>
 </div>
 <div id="toc" class="toc2">
 <div id="toctitle">Table of Contents</div>
@@ -543,6 +543,7 @@ table.CodeRay td.code>pre{padding:0}
 </li>
 <li><a href="#basic-usage">Basic Usage</a></li>
 <li><a href="#how-it-works">How It Works</a></li>
+<li><a href="#stopping-perftest">Stopping PerfTest</a></li>
 <li><a href="#customising-queues-and-messages">Customising queues and messages</a></li>
 <li><a href="#working-with-many-queues">Working With Many Queues</a></li>
 <li><a href="#simulating-high-loads">Simulating High Loads</a></li>
@@ -889,6 +890,61 @@ messages from only one queue.</p>
 <div class="paragraph">
 <p>Note it is possible to <a href="#customising-queues-and-messages">customise</a>
 the queue and to work against <a href="#working-with-many-queues">several queues</a> as well.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="stopping-perftest"><a class="anchor" href="#stopping-perftest"></a>Stopping PerfTest</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>There are 2 reasons for a PerfTest run to stop:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>one of the limits has been reached (time limit, producer or consumer message count)</p>
+</li>
+<li>
+<p>the process is stopped by the user, e.g. by using Ctrl-C in the terminal</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>In both cases, PerfTest tries to exit as cleanly as possible, in a reasonable amount of time.
+Nevertheless, when PerfTest AMQP connections are throttled by the broker, because they&#8217;re
+publishing too fast or because broker <a href="http://www.rabbitmq.com/alarms.html">alarms</a>
+have kicked in, it can take time to close them (several seconds or more for one connection).</p>
+</div>
+<div class="paragraph">
+<p>If closing connections in the gentle way takes too long (5 seconds by default), PerfTest
+will move on to the most important resources to free and terminates. This can result
+in <code>client unexpectedly closed TCP connection</code> messages in the broker logs. Note this
+means the AMQP connection hasn&#8217;t been closed with the right sequence of AMQP frames,
+but the socket has been closed properly. There&#8217;s no resource leakage here.</p>
+</div>
+<div class="paragraph">
+<p>The connection closing timeout can be set up with the <code>--shutdown-timeout</code> argument (or <code>-st</code>).
+The default timeout can be increased to let more time to close connections, e.g. the
+command below uses a shutdown timeout of 20 seconds:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>bin/runjava com.rabbitmq.perf.PerfTest --shutdown-timeout 20</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The connection closing sequence can also be skipped by setting the timeout to 0 or any negative
+value:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>bin/runjava com.rabbitmq.perf.PerfTest --shutdown-timeout -1</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>With the previous command, PerfTest won&#8217;t even try to close AMQP connections, it will exit
+as fast as possible, freeing only the most important resources. This is perfectly
+acceptable when performing runs on a test environment.</p>
 </div>
 </div>
 </div>
@@ -1506,8 +1562,8 @@ can be changed:</p>
 </div>
 <div id="footer">
 <div id="footer-text">
-Version 2.4.0.RC2<br>
-Last updated 2018-12-06 11:40:16 CET
+Version 2.5.0.RC1<br>
+Last updated 2018-12-21 10:17:37 CET
 </div>
 </div>
 </body>
