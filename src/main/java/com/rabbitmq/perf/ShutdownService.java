@@ -31,7 +31,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * individually, and/or call all of them (in LIFO order) with
  * the {@link #close()} method.
  *
- * @since 2.4.1
+ * @since 2.5.0
  */
 public class ShutdownService implements AutoCloseable {
 

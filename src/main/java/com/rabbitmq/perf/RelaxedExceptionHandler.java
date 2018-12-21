@@ -31,7 +31,7 @@ import java.io.IOException;
  * which are not useful here, so this exception handler is a bit more
  * relaxed for those logs.
  *
- * @since 2.4.1
+ * @since 2.5.0
  */
 public class RelaxedExceptionHandler extends DefaultExceptionHandler {
 
