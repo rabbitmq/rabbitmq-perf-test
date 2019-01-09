@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Pivotal Software, Inc.  All rights reserved.
+// Copyright (c) 2018-2019 Pivotal Software, Inc.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 1.1 ("MPL"), the GNU General Public License version 2
@@ -17,10 +17,7 @@ package com.rabbitmq.perf;
 
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.GnuParser;
-import org.apache.commons.cli.Options;
+import org.apache.commons.cli.*;
 import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
@@ -80,7 +77,7 @@ public class DatadogMetricsTest {
         metrics = new DatadogMetrics();
         Options options = metrics.options();
 
-        CommandLineParser parser = new GnuParser();
+        CommandLineParser parser = new DefaultParser();
         CommandLine rawCmd = parser.parse(
             options,
             ("--metrics-datadog-uri http://localhost:" + port + "/datadog "

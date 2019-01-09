@@ -1,4 +1,4 @@
-// Copyright (c) 2018-Present Pivotal Software, Inc.  All rights reserved.
+// Copyright (c) 2018-2019 Pivotal Software, Inc.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 1.1 ("MPL"), the GNU General Public License version 2
@@ -15,11 +15,7 @@
 
 package com.rabbitmq.perf;
 
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.GnuParser;
-import org.apache.commons.cli.Options;
-import org.apache.commons.cli.ParseException;
+import org.apache.commons.cli.*;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
@@ -135,7 +131,7 @@ public class CommandLineProxyTest {
     private CommandLineProxy getCommandLineProxy(Map<String, String> env, String line) throws ParseException {
         Function<String, String> envLookup = variable -> env.get(variable);
         Options options = PerfTest.getOptions();
-        CommandLineParser parser = new GnuParser();
+        CommandLineParser parser = new DefaultParser();
         CommandLine rawCmd = parser.parse(
             options,
             line.split(" ")

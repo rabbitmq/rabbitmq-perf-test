@@ -90,7 +90,7 @@ public class CliTest {
             delimiter = ';')
     public void lstArg(String commandLine, String expectedAsString) throws ParseException {
         CommandLineProxy cmd = cmd(commandLine);
-        List<Object> value = PerfTest.lstArg(cmd, 'f');
+        List<String> value = PerfTest.lstArg(cmd, 'f');
         String[] expectedValues = expectedAsString.split(" ");
         if (expectedValues.length > 0 && !expectedValues[0].isEmpty()) {
             for (String expectedValue : expectedValues) {

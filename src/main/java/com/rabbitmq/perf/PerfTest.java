@@ -113,7 +113,7 @@ public class PerfTest {
             int timeLimit            = intArg(cmd, 'z', 0);
             int producerMsgCount     = intArg(cmd, 'C', 0);
             int consumerMsgCount     = intArg(cmd, 'D', 0);
-            List<?> flags            = lstArg(cmd, 'f');
+            List<String> flags       = lstArg(cmd, 'f');
             int frameMax             = intArg(cmd, 'M', 0);
             int heartbeat            = intArg(cmd, 'b', 0);
             String bodyFiles         = strArg(cmd, 'B', null);
@@ -414,7 +414,7 @@ public class PerfTest {
     }
 
     static CommandLineParser getParser() {
-        return new GnuParser();
+        return new DefaultParser();
     }
 
     public static Options getOptions() {
@@ -533,7 +533,7 @@ public class PerfTest {
         return Boolean.parseBoolean(cmd.getOptionValue(opt, Boolean.toString(def)));
     }
 
-    static List<Object> lstArg(CommandLineProxy cmd, char opt) {
+    static List<String> lstArg(CommandLineProxy cmd, char opt) {
         String[] vals = cmd.getOptionValues(opt);
         if (vals == null) {
             vals = new String[] {};

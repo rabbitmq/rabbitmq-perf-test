@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Pivotal Software, Inc.  All rights reserved.
+// Copyright (c) 2018-2019 Pivotal Software, Inc.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 1.1 ("MPL"), the GNU General Public License version 2
@@ -16,10 +16,7 @@
 package com.rabbitmq.perf;
 
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.GnuParser;
-import org.apache.commons.cli.Options;
+import org.apache.commons.cli.*;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -48,7 +45,7 @@ public class JmxMetricsTest {
     public void metricsShouldBeExposedAsMbeans() throws Exception {
         Options options = metrics.options();
 
-        CommandLineParser parser = new GnuParser();
+        CommandLineParser parser = new DefaultParser();
         CommandLine rawCmd = parser.parse(
             options,
             ("--metrics-jmx").split(" ")
