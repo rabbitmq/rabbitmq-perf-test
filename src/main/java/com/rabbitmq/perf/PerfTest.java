@@ -1,4 +1,4 @@
-// Copyright (c) 2007-Present Pivotal Software, Inc.  All rights reserved.
+// Copyright (c) 2007-2019 Pivotal Software, Inc.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 1.1 ("MPL"), the GNU General Public License version 2
@@ -51,7 +51,7 @@ public class PerfTest {
         SystemExiter systemExiter = perfTestOptions.systemExiter;
         ShutdownService shutdownService = perfTestOptions.shutdownService;
         Options options = getOptions();
-        CommandLineParser parser = new GnuParser();
+        CommandLineParser parser = getParser();
         CompositeMetrics metrics = new CompositeMetrics();
         shutdownService.wrap(() -> metrics.close());
         Options metricsOptions = metrics.options();
@@ -413,6 +413,10 @@ public class PerfTest {
         formatter.printHelp("<program>", envOptions);
     }
 
+    static CommandLineParser getParser() {
+        return new GnuParser();
+    }
+
     public static Options getOptions() {
         Options options = new Options();
         options.addOption(new Option("?", "help",                   false,"show usage"));
@@ -451,8 +455,9 @@ public class PerfTest {
         options.addOption(new Option("z", "time",                   true, "run duration in seconds (unlimited by default)"));
         options.addOption(new Option("C", "pmessages",              true, "producer message count"));
         options.addOption(new Option("D", "cmessages",              true, "consumer message count"));
-        Option flag =     new Option("f", "flag",                   true, "message flag(s) separated by commas. "
-                                                                                                    + "Supported values: persistent and mandatory");
+        Option flag =     new Option("f", "flag",                   true, "message flag(s), supported values: " +
+                                                                                                      "persistent and mandatory. Use the option several times " +
+                                                                                                      "to specify several values.");
         flag.setArgs(Option.UNLIMITED_VALUES);
         options.addOption(flag);
         options.addOption(new Option("M", "framemax",               true, "frame max"));
