@@ -1,4 +1,4 @@
-FROM openjdk:8u181-jre-alpine3.8
+FROM openjdk:8u191-jre-alpine3.8
 
 ARG perf_test_version
 ENV URL=https://github.com/rabbitmq/rabbitmq-perf-test/releases/download/v$perf_test_version/rabbitmq-perf-test-$perf_test_version-bin.tar.gz
