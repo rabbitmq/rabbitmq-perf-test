@@ -288,6 +288,7 @@ PerfTest native executable has also some limitations:
 
  * link:#supported-metrics[JVM metrics] are not supported
  * it is not possible to configure logging
+ * TLS is not supported
 
 [WARNING]
 ====
