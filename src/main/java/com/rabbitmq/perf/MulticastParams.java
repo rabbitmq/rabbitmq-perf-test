@@ -279,8 +279,16 @@ public class MulticastParams {
         }
     }
 
+    List<String> getBodyFiles() {
+        return Collections.unmodifiableList(this.bodyFiles);
+    }
+
     public void setBodyContentType(String bodyContentType) {
         this.bodyContentType = bodyContentType;
+    }
+
+    String getBodyContentType() {
+        return bodyContentType;
     }
 
     public void setQueuePattern(String queuePattern) {

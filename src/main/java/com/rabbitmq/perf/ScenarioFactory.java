@@ -17,6 +17,7 @@ package com.rabbitmq.perf;
 
 import com.rabbitmq.client.ConnectionFactory;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -89,13 +90,27 @@ public class ScenarioFactory {
         }
     }
 
-    private static MulticastParams paramsFromJSON(Map json) {
+    static MulticastParams paramsFromJSON(Map json) {
         MulticastParams params = new MulticastParams();
         params.setAutoDelete(true);
         for (Object key : json.keySet()) {
-            PerfUtil.setValue(params, hyphensToCamel((String)key), json.get(key));
+            PerfUtil.setValue(params, mapJsonFieldToPropertyName((String) key), json.get(key));
         }
         return params;
+    }
+
+    private static final Map<String, String> JSON_FIELDS_TO_PROPERTY_NAMES = new HashMap<String, String>() {{
+        put("body", "bodyFiles");
+        put("rate", "producerRateLimit");
+        put("consumer-rate", "consumerRateLimit");
+    }};
+
+    static String mapJsonFieldToPropertyName(String jsonField) {
+        if (JSON_FIELDS_TO_PROPERTY_NAMES.containsKey(jsonField)) {
+            return JSON_FIELDS_TO_PROPERTY_NAMES.get(jsonField);
+        } else {
+            return hyphensToCamel(jsonField);
+        }
     }
 
     private static Variable variableFromJSON(Map json) {
