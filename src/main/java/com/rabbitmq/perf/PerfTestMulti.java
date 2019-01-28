@@ -43,6 +43,7 @@ public class PerfTestMulti {
             System.out.println("Usage: PerfTestMulti input-json-file output-json-file");
             System.exit(1);
         }
+        Log.configureLog();
         String inJSON = args[0];
         String outJSON = args[1];
         List<Map> scenariosJSON = null;
