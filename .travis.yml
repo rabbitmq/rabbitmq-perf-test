@@ -15,12 +15,6 @@ addons:
         key_url: https://packages.erlang-solutions.com/ubuntu/erlang_solutions.asc
     packages:
       - esl-erlang=1:21.2.4-1
-# because of https://github.com/travis-ci/travis-ci/issues/8906
-before_install:
-  - curl -s https://packagecloud.io/install/repositories/rabbitmq/rabbitmq-server/script.deb.sh | sudo bash
-  - sudo mv /opt/jdk_switcher/jdk_switcher.sh /tmp
-  - sudo apt-get install rabbitmq-server=3.7.10-1
-  - sudo mv /tmp/jdk_switcher.sh /opt/jdk_switcher/
 branches:
   only:
     - master
