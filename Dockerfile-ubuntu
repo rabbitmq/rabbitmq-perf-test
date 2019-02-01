@@ -1,0 +1,71 @@
+FROM ubuntu:18.04 as builder
+
+ARG perf_test_version
+
+RUN set -eux; \
+	\
+	apt-get update; \
+	apt-get install --yes --no-install-recommends \
+		ca-certificates \
+		wget \
+		gnupg
+
+# change the JAVA_URL variable below as well
+ENV JAVA_VERSION="11.0.2"
+# https://github.com/AdoptOpenJDK/openjdk11-binaries/releases/download/jdk-11.0.2%2B9/OpenJDK11U-jdk_x64_linux_hotspot_11.0.2_9.tar.gz.sha256.txt
+ENV JAVA_SHA256="d02089d834f7702ac1a9776d8d0d13ee174d0656cf036c6b68b9ffb71a6f610e"
+
+RUN set -eux; \
+    \
+    JAVA_URL="https://github.com/AdoptOpenJDK/openjdk11-binaries/releases/download/jdk-11.0.2%2B9/OpenJDK11U-jdk_x64_linux_hotspot_11.0.2_9.tar.gz"; \
+    JAVA_PATH="/usr/lib/jdk-$JAVA_VERSION"; \
+	\
+    wget --progress dot:giga --output-document "$JAVA_PATH.tar.gz" "$JAVA_URL"; \
+	echo "$JAVA_SHA256 *$JAVA_PATH.tar.gz" | sha256sum --check --strict -; \
+	mkdir -p "$JAVA_PATH"; \
+	tar --extract --file "$JAVA_PATH.tar.gz" --directory "$JAVA_PATH" --strip-components 1; \
+	$JAVA_PATH/bin/jlink --compress=2 --output /jre --add-modules java.base,java.management,java.xml,java.naming,java.sql; \
+	/jre/bin/java -version
+
+# Default to a PGP keyserver that pgp-happy-eyeballs recognizes, but allow for substitutions locally
+ARG PGP_KEYSERVER=ha.pool.sks-keyservers.net
+# If you are building this image locally and are getting `gpg: keyserver receive failed: No data` errors,
+# run the build with a different PGP_KEYSERVER, e.g. docker build --tag rabbitmq:3.7 --build-arg PGP_KEYSERVER=pgpkeys.eu 3.7/ubuntu
+# For context, see https://github.com/docker-library/official-images/issues/4252
+
+# https://www.rabbitmq.com/signatures.html#importing-gpg
+ENV RABBITMQ_PGP_KEY_ID="0x0A9AF2115F4687BD29803A206B73A36E6026DFCA"
+ENV PERF_TEST_HOME="/perf_test"
+
+RUN set -eux; \
+    \
+    PERF_TEST_URL=https://github.com/rabbitmq/rabbitmq-perf-test/releases/download/v$perf_test_version/rabbitmq-perf-test-$perf_test_version-bin.tar.gz; \
+    PERF_TEST_PATH="/usr/local/src/perf-test-$perf_test_version"; \
+    \
+    wget --progress dot:giga --output-document "$PERF_TEST_PATH.tar.gz.asc" "$PERF_TEST_URL.asc"; \
+    wget --progress dot:giga --output-document "$PERF_TEST_PATH.tar.gz" "$PERF_TEST_URL"; \
+    PERF_TEST_SHA256="$(wget -qO- $PERF_TEST_URL.sha256)"; \
+    echo "$PERF_TEST_SHA256 *$PERF_TEST_PATH.tar.gz" | sha256sum --check --strict -; \
+    \
+    export GNUPGHOME="$(mktemp -d)"; \
+    gpg --batch --keyserver "$PGP_KEYSERVER" --recv-keys "$RABBITMQ_PGP_KEY_ID"; \
+    gpg --batch --verify "$PERF_TEST_PATH.tar.gz.asc" "$PERF_TEST_PATH.tar.gz"; \
+    gpgconf --kill all; \
+    rm -rf "$GNUPGHOME"; \
+    \
+    mkdir -p "$PERF_TEST_HOME"; \
+    tar --extract --file "$PERF_TEST_PATH.tar.gz" --directory "$PERF_TEST_HOME" --strip-components 1
+
+FROM ubuntu:18.04
+
+ENV JAVA_HOME=/usr/lib/jvm/java-1.11-openjdk/jre
+RUN mkdir -p $JAVA_HOME
+COPY --from=builder /jre $JAVA_HOME/
+RUN ln -svT $JAVA_HOME/bin/java /usr/local/bin/java
+
+RUN mkdir -p /perf_test
+WORKDIR /perf_test
+COPY --from=builder /perf_test ./
+RUN bin/runjava com.rabbitmq.perf.PerfTest --help
+
+ENTRYPOINT ["bin/runjava", "com.rabbitmq.perf.PerfTest"]
