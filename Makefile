@@ -11,7 +11,8 @@ HARDWARE := $$(uname -m | tr '[:upper:]' '[:lower:]')
 
 GPG_KEYNAME := $$(awk -F'[<>]' '/<gpg.keyname>/ { print $$3 }' pom.xml)
 
-RELEASE_VERSION ?= 2.3.0
+RELEASE_VERSION ?= 2.5.0
+PGP_KEYSERVER ?= pgpkeys.uk
 
 ### TARGETS ###
 #
@@ -25,12 +26,53 @@ native-image: clean ## Build the native image
 	@mvnw -q package -DskipTests -P native-image -P '!java-packaging'
 	native-image -jar target/perf-test.jar -H:Features="com.rabbitmq.perf.NativeImageFeature"
 
-.PHONY: docker-image
-docker-image: ## Build Docker image
+.PHONY: docker-image-alpine
+docker-image-alpine: ## Build Alpine-based Docker image
 	@docker build \
+	  --file Dockerfile-alpine \
+	  --tag pivotalrabbitmq/perf-test:$(RELEASE_VERSION)-alpine \
 	  --tag pivotalrabbitmq/perf-test:$(RELEASE_VERSION) \
 	  --tag pivotalrabbitmq/perf-test:latest \
-	  --build-arg perf_test_version=$(RELEASE_VERSION) .
+	  --build-arg perf_test_version=$(RELEASE_VERSION) \
+	  --build-arg PGP_KEYSERVER=$(PGP_KEYSERVER) \
+	  .
+
+.PHONY: test-docker-image-alpine
+test-docker-image-alpine: ## Test the Alpine-based Docker image
+	@docker run -it --rm pivotalrabbitmq/perf-test:$(RELEASE_VERSION)-alpine --version
+
+.PHONY: docker-image-ubuntu
+docker-image-ubuntu: ## Build Ubuntu-based Docker image
+	@docker build \
+	  --file Dockerfile-ubuntu \
+	  --tag pivotalrabbitmq/perf-test:$(RELEASE_VERSION)-ubuntu \
+	  --build-arg perf_test_version=$(RELEASE_VERSION) \
+	  --build-arg PGP_KEYSERVER=$(PGP_KEYSERVER) \
+	  .
+
+.PHONY: test-docker-image-ubuntu
+test-docker-image-ubuntu: ## Test the Ubuntu-based Docker image
+	@docker run -it --rm pivotalrabbitmq/perf-test:$(RELEASE_VERSION)-ubuntu --version
+
+.PHONY: docker-images
+docker-images: docker-image-alpine docker-image-ubuntu ## Build Docker images
+
+.PHONY: test-docker-images
+test-docker-images: test-docker-image-alpine test-docker-image-ubuntu ## Test the Docker images
+
+.PHONY: push-docker-images
+push-docker-images: ## Push docker images to Docker Hub
+	@docker push pivotalrabbitmq/perf-test:$(RELEASE_VERSION)-alpine
+    @docker push pivotalrabbitmq/perf-test:$(RELEASE_VERSION)
+    @docker push pivotalrabbitmq/perf-test:latest
+    @docker push pivotalrabbitmq/perf-test:$(RELEASE_VERSION)-ubuntu
+
+.PHONY: delete-docker-images
+delete-docker-images: ## Delete the created Docker images from the local machine
+	@docker rmi pivotalrabbitmq/perf-test:$(RELEASE_VERSION)-alpine
+	@docker rmi pivotalrabbitmq/perf-test:$(RELEASE_VERSION)
+	@docker rmi pivotalrabbitmq/perf-test:latest
+	@docker rmi pivotalrabbitmq/perf-test:$(RELEASE_VERSION)-ubuntu
 
 .PHONY: package-native-image
 package-native-image: native-image ## Package the native image
