@@ -97,7 +97,7 @@
     <maven-assembly-plugin.version>3.1.0</maven-assembly-plugin.version>
     <maven-jar-plugin.version>3.1.0</maven-jar-plugin.version>
     <slf4j.version>1.7.25</slf4j.version>
-    <graal-sdk.version>1.0.0-rc11</graal-sdk.version>
+    <graal-sdk.version>1.0.0-rc12</graal-sdk.version>
     <build-helper-maven-plugin.version>3.0.0</build-helper-maven-plugin.version>
   </properties>
 
