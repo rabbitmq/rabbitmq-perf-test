@@ -1,6 +1,6 @@
 FROM ubuntu:18.04 as builder
 
-ARG perf_test_version
+ARG perf_test_version="2.5.0"
 
 RUN set -eux; \
 	\
@@ -27,8 +27,8 @@ RUN set -eux; \
 	$JAVA_PATH/bin/jlink --compress=2 --output /jre --add-modules java.base,java.management,java.xml,java.naming,java.sql; \
 	/jre/bin/java -version
 
-# Default to a PGP keyserver that pgp-happy-eyeballs recognizes, but allow for substitutions locally
-ARG PGP_KEYSERVER=ha.pool.sks-keyservers.net
+# pgpkeys.uk is quite reliable, but allow for substitutions locally
+ARG PGP_KEYSERVER=pgpkeys.uk
 # If you are building this image locally and are getting `gpg: keyserver receive failed: No data` errors,
 # run the build with a different PGP_KEYSERVER, e.g. docker build --tag rabbitmq:3.7 --build-arg PGP_KEYSERVER=pgpkeys.eu 3.7/ubuntu
 # For context, see https://github.com/docker-library/official-images/issues/4252
