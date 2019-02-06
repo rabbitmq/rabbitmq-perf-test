@@ -63,9 +63,9 @@ test-docker-images: test-docker-image-alpine test-docker-image-ubuntu ## Test th
 .PHONY: push-docker-images
 push-docker-images: ## Push docker images to Docker Hub
 	@docker push pivotalrabbitmq/perf-test:$(RELEASE_VERSION)-alpine
-    @docker push pivotalrabbitmq/perf-test:$(RELEASE_VERSION)
-    @docker push pivotalrabbitmq/perf-test:latest
-    @docker push pivotalrabbitmq/perf-test:$(RELEASE_VERSION)-ubuntu
+	@docker push pivotalrabbitmq/perf-test:$(RELEASE_VERSION)
+	@docker push pivotalrabbitmq/perf-test:latest
+	@docker push pivotalrabbitmq/perf-test:$(RELEASE_VERSION)-ubuntu
 
 .PHONY: delete-docker-images
 delete-docker-images: ## Delete the created Docker images from the local machine
