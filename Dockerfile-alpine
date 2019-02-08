@@ -1,4 +1,4 @@
-FROM alpine:3.8 as builder
+FROM alpine:3.9 as builder
 
 ARG perf_test_version="2.5.0"
 
