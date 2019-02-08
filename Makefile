@@ -11,7 +11,7 @@ HARDWARE := $$(uname -m | tr '[:upper:]' '[:lower:]')
 
 GPG_KEYNAME := $$(awk -F'[<>]' '/<gpg.keyname>/ { print $$3 }' pom.xml)
 
-RELEASE_VERSION ?= 2.5.0
+RELEASE_VERSION ?= 2.6.0
 PGP_KEYSERVER ?= pgpkeys.uk
 
 ### TARGETS ###

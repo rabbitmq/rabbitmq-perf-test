@@ -1,6 +1,6 @@
 FROM alpine:3.9 as builder
 
-ARG perf_test_version="2.5.0"
+ARG perf_test_version="2.6.0"
 
 RUN set -eux; \
 	\
