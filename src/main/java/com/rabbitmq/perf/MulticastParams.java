@@ -271,6 +271,10 @@ public class MulticastParams {
         return minMsgSize;
     }
 
+    public float getProducerRateLimit() {
+        return producerRateLimit;
+    }
+
     public void setBodyFiles(List<String> bodyFiles) {
         if (bodyFiles == null) {
             this.bodyFiles = new ArrayList<>();
