@@ -30,6 +30,7 @@ public class ScenarioFactoryTest {
     public void paramsFromJSON() {
         String spec = "[{'name': 'consume', 'type': 'simple', 'params':\n" +
                 "[{'time-limit': 30, 'producer-count': 4, 'consumer-count': 2, " +
+                "  'rate': 10, 'exclusive': true, " +
                 "  'body': ['file1.json','file2.json'], 'body-content-type' : 'application/json'}]}]";
         List<Map> scenariosJson = (List<Map>) new JSONReader().read(spec);
         Map scenario = scenariosJson.get(0);
@@ -37,6 +38,8 @@ public class ScenarioFactoryTest {
         assertThat(params.getTimeLimit(), is(30));
         assertThat(params.getProducerCount(), is(4));
         assertThat(params.getConsumerCount(), is(2));
+        assertThat(params.getProducerRateLimit(), is(10.0f));
+        assertThat(params.isExclusive(), is(true));
         assertThat(params.getBodyFiles(), hasSize(2));
         assertThat(params.getBodyFiles(), contains("file1.json", "file2.json"));
         assertThat(params.getBodyContentType(), is("application/json"));

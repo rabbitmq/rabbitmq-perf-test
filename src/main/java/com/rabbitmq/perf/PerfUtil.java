@@ -1,4 +1,4 @@
-// Copyright (c) 2007-Present Pivotal Software, Inc.  All rights reserved.
+// Copyright (c) 2007-2019 Pivotal Software, Inc.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 1.1 ("MPL"), the GNU General Public License version 2
@@ -15,24 +15,30 @@
 
 package com.rabbitmq.perf;
 
-import java.beans.IntrospectionException;
-import java.beans.Introspector;
-import java.beans.PropertyDescriptor;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 
 public class PerfUtil {
     public static void setValue(Object obj, Object name, Object value) {
+        if (name == null || name.toString().isEmpty()) {
+            throw new IllegalArgumentException("Property name must be specified");
+        }
         try {
-            PropertyDescriptor[] props = Introspector.getBeanInfo(obj.getClass()).getPropertyDescriptors();
-            for (PropertyDescriptor prop : props) {
-                if (prop.getName().equals(name)) {
-                    prop.getWriteMethod().invoke(obj, value);
+            String setterName;
+            if (name.toString().length() > 1) {
+                setterName = "set" + name.toString().substring(0, 1).toUpperCase()
+                        + name.toString().substring(1);
+            } else {
+                setterName = "set" + name.toString().toUpperCase();
+            }
+
+            for (Method method : obj.getClass().getDeclaredMethods()) {
+                if (method.getName().equals(setterName)) {
+                    method.invoke(obj, value);
                     return;
                 }
             }
             throw new RuntimeException("Could not find property " + name + " in " + obj.getClass());
-        } catch (IntrospectionException e) {
-            throw new RuntimeException(e);
         } catch (InvocationTargetException e) {
             throw new RuntimeException(e);
         } catch (IllegalAccessException e) {

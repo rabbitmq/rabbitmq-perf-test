@@ -16,8 +16,6 @@
 package com.rabbitmq.perf;
 
 import com.rabbitmq.client.ConnectionFactory;
-import com.rabbitmq.perf.Scenario;
-import com.rabbitmq.perf.ScenarioFactory;
 import com.rabbitmq.tools.json.JSONReader;
 import com.rabbitmq.tools.json.JSONWriter;
 
