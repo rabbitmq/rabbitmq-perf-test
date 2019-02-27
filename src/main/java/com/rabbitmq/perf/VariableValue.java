@@ -16,9 +16,9 @@
 package com.rabbitmq.perf;
 
 public interface VariableValue {
-    public void setup(MulticastParams params) throws Exception;
-    public void teardown(MulticastParams params);
+    void setup(MulticastParams params) throws Exception;
+    void teardown(MulticastParams params);
 
-    public String getName();
-    public Object getValue();
+    String getName();
+    Object getValue();
 }

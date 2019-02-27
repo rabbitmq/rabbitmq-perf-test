@@ -85,4 +85,8 @@ public class VaryingScenario implements Scenario {
     public String getName() {
         return name;
     }
+
+    Variable[] getVariables() {
+        return variables;
+    }
 }
