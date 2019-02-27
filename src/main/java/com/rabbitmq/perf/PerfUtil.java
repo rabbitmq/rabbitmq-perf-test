@@ -31,10 +31,9 @@ public class PerfUtil {
             } else {
                 setterName = "set" + name.toString().toUpperCase();
             }
-
             for (Method method : obj.getClass().getDeclaredMethods()) {
                 if (method.getName().equals(setterName)) {
-                    method.invoke(obj, value);
+                    method.invoke(obj, convert(method.getParameterTypes()[0], value));
                     return;
                 }
             }
@@ -44,5 +43,34 @@ public class PerfUtil {
         } catch (IllegalAccessException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private static Object convert(Class<?> targetType, Object value) {
+        if (targetType.equals(value) || targetType.isAssignableFrom(value.getClass())) {
+            return value;
+        } else {
+            if (isInt(targetType)) {
+                if (value instanceof Number) {
+                    return ((Number) value).intValue();
+                } else {
+                    return Integer.valueOf(value.toString());
+                }
+            } else if (isFloat(targetType)) {
+                if (value instanceof Number) {
+                    return ((Number) value).floatValue();
+                } else {
+                    return Float.valueOf(value.toString());
+                }
+            }
+        }
+        return value;
+    }
+
+    private static boolean isInt(Class<?> targetType) {
+        return (targetType.equals(Integer.class) || "int".equals(targetType.getSimpleName()));
+    }
+
+    private static boolean isFloat(Class<?> targetType) {
+        return (targetType.equals(Float.class) || "float".equals(targetType.getSimpleName()));
     }
 }

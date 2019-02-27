@@ -15,9 +15,9 @@
 
 package com.rabbitmq.perf;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.rabbitmq.client.ConnectionFactory;
-import com.rabbitmq.tools.json.JSONReader;
-import com.rabbitmq.tools.json.JSONWriter;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -33,7 +33,7 @@ import java.util.Map;
 public class PerfTestMulti {
     private static final ConnectionFactory factory = new ConnectionFactory();
 
-    private static final Map<String, Object> results = new HashMap<String, Object>();
+    private static final Map<String, Object> results = new HashMap<>();
 
     @SuppressWarnings("unchecked")
     public static void main(String[] args) throws Exception {
@@ -44,23 +44,32 @@ public class PerfTestMulti {
         Log.configureLog();
         String inJSON = args[0];
         String outJSON = args[1];
-        List<Map> scenariosJSON = null;
+
+        String json = null;
         try {
-            scenariosJSON = (List<Map>) new JSONReader().read(readFile(inJSON));
+            json = readFile(inJSON);
         } catch (FileNotFoundException e) {
             System.out.println("Input json file " + inJSON + " could not be found");
             System.exit(1);
         }
+        Scenario[] scenarios = scenarios(json, status -> System.exit(status));
+        runStaticBrokerTests(scenarios);
+        writeJSON(outJSON);
+    }
+
+    @SuppressWarnings("unchecked")
+    static Scenario[] scenarios(String json, PerfTest.SystemExiter systemExiter) {
+        Gson gson = new Gson();
+        List<Map> scenariosJSON = gson.fromJson(json, List.class);
         if (scenariosJSON == null) {
-            System.out.println("Input json file " + inJSON + " could not be parsed");
-            System.exit(1);
+            System.out.println("Input json file could not be parsed");
+            systemExiter.exit(1);
         }
         Scenario[] scenarios = new Scenario[scenariosJSON.size()];
         for (int i = 0; i < scenariosJSON.size(); i++) {
             scenarios[i] = ScenarioFactory.fromJSON(scenariosJSON.get(i), factory);
         }
-        runStaticBrokerTests(scenarios);
-        writeJSON(outJSON);
+        return scenarios;
     }
 
     private static String readFile(String path) throws IOException {
@@ -81,8 +90,13 @@ public class PerfTestMulti {
     private static void writeJSON(String outJSON) throws IOException {
         try (FileWriter outFile = new FileWriter(outJSON);
              PrintWriter out = new PrintWriter(outFile)) {
-            out.println(new JSONWriter(true).write(results));
+            out.println(toJson(results));
         }
+    }
+
+    static String toJson(Object object) {
+        Gson gson = new GsonBuilder().setPrettyPrinting().create();
+        return gson.toJson(object);
     }
 
     private static void runStaticBrokerTests(Scenario[] scenarios) throws Exception {

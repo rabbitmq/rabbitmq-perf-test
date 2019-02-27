@@ -26,7 +26,7 @@ public class ScenarioFactory {
         String uri = "amqp://localhost";
         String type = read("type", json, String.class);
         String name = read("name", json, String.class);
-        Integer interval = read("interval", json, Integer.class, 1000);
+        Integer interval = read("interval", json, Double.class, 1000.0).intValue();
         List paramsJSON = read("params", json, List.class);
 
         try {
@@ -119,7 +119,7 @@ public class ScenarioFactory {
         Object[] values = read("values", json, List.class).toArray();
 
         if (type.equals("multicast")) {
-            return new MulticastVariable(hyphensToCamel(name), values);
+            return new MulticastVariable(mapJsonFieldToPropertyName(name), values);
         }
 
         throw new RuntimeException("Type " + type + " was not multicast");
