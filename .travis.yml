@@ -14,7 +14,7 @@ addons:
       - sourceline: deb https://packages.erlang-solutions.com/ubuntu trusty contrib
         key_url: https://packages.erlang-solutions.com/ubuntu/erlang_solutions.asc
     packages:
-      - esl-erlang=1:21.2.4-1
+      - esl-erlang=1:21.2.6-1
 branches:
   only:
     - master
