@@ -38,7 +38,7 @@ public class Version {
         BUILD_TIMESTAMP = getBuildTimestamp();
     }
 
-    private static final String getVersion() {
+    private static String getVersion() {
         String version;
         try {
             version = getValueFromPropertyFile("com.rabbitmq.perf.version");
@@ -54,7 +54,7 @@ public class Version {
         return version;
     }
 
-    private static final String getBuild() {
+    private static String getBuild() {
         String build;
         try {
             build = getValueFromPropertyFile("com.rabbitmq.perf.build");
@@ -65,7 +65,7 @@ public class Version {
         return build;
     }
 
-    private static final String getBuildTimestamp() {
+    private static String getBuildTimestamp() {
         String build;
         try {
             build = getValueFromPropertyFile("com.rabbitmq.perf.build.timestamp");
@@ -76,7 +76,7 @@ public class Version {
         return build;
     }
 
-    private static final String getValueFromPropertyFile(String key) throws Exception {
+    private static String getValueFromPropertyFile(String key) throws Exception {
         InputStream inputStream = Version.class.getClassLoader().getResourceAsStream("rabbitmq-perf-test.properties");
         Properties version = new Properties();
         try {
@@ -92,22 +92,22 @@ public class Version {
         return version.getProperty(key);
     }
 
-    private static final String getVersionFromPackage() {
+    private static String getVersionFromPackage() {
         if (Version.class.getPackage().getImplementationVersion() == null) {
             throw new IllegalStateException("Couldn't get version with Package#getImplementationVersion");
         }
         return Version.class.getPackage().getImplementationVersion();
     }
 
-    private static final String getDefaultVersion() {
+    private static String getDefaultVersion() {
         return "0.0.0";
     }
 
-    private static final String getDefaultBuild() {
+    private static String getDefaultBuild() {
         return "unknown";
     }
 
-    private static final String getDefaultBuildTimestamp() {
+    private static String getDefaultBuildTimestamp() {
         return "unknown";
     }
 }
