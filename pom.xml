@@ -61,11 +61,11 @@
     <gson.version>2.8.5</gson.version>
     <logback.version>1.2.3</logback.version>
     <jetty.version>9.4.15.v20190215</jetty.version>
-    <junit.jupiter.version>5.3.2</junit.jupiter.version>
-    <mockito.version>2.23.4</mockito.version>
+    <junit.jupiter.version>5.4.0</junit.jupiter.version>
+    <mockito.version>2.25.0</mockito.version>
     <hamcrest.version>2.0.0.0</hamcrest.version>
     <commons-lang3.version>3.8.1</commons-lang3.version>
-    <jmh.version>1.20</jmh.version>
+    <jmh.version>1.21</jmh.version>
 
     <!-- to sign artifacts when releasing -->
     <gpg.keyname>6026DFCA</gpg.keyname>
