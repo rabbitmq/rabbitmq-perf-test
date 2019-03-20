@@ -3,7 +3,7 @@
 [![Travis CI](https://travis-ci.org/rabbitmq/rabbitmq-jms-client.svg?branch=master)](https://travis-ci.org/rabbitmq/rabbitmq-perf-test)
 
 This repository contains source code of the RabbitMQ Performance Testing Tool.
-The client is maintained by the [RabbitMQ team at Pivotal](http://github.com/rabbitmq/).
+The client is maintained by the [RabbitMQ team at Pivotal](https://github.com/rabbitmq/).
 
 ## Installation
 
@@ -73,7 +73,7 @@ Files are then in the `target` directory.
 
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.rabbitmq/perf-test/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.rabbitmq/perf-test)
 
-[perf-test search.maven.org](http://search.maven.org/#search%7Cga%7C1%7Ca%3A%22perf-test%22)
+[perf-test search.maven.org](https://search.maven.org/#search%7Cga%7C1%7Ca%3A%22perf-test%22)
 
 ## Logging
 

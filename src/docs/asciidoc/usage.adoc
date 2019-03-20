@@ -153,7 +153,7 @@ There are 2 reasons for a PerfTest run to stop:
 
 In both cases, PerfTest tries to exit as cleanly as possible, in a reasonable amount of time.
 Nevertheless, when PerfTest AMQP connections are throttled by the broker, because they're
-publishing too fast or because broker http://www.rabbitmq.com/alarms.html[alarms]
+publishing too fast or because broker https://www.rabbitmq.com/alarms.html[alarms]
 have kicked in, it can take time to close them (several seconds or more for one connection).
 
 If closing connections in the gentle way takes too long (5 seconds by default), PerfTest
