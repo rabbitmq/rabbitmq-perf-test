@@ -10,9 +10,9 @@ The following blog posts show some examples of what can be done with
 this library:
 
 [RabbitMQ Performance Measurements, part
-1](http://www.rabbitmq.com/blog/2012/04/17/rabbitmq-performance-measurements-part-1/).
+1](https://www.rabbitmq.com/blog/2012/04/17/rabbitmq-performance-measurements-part-1/).
 [RabbitMQ Performance Measurements, part
-2](http://www.rabbitmq.com/blog/2012/04/25/rabbitmq-performance-measurements-part-2/).
+2](https://www.rabbitmq.com/blog/2012/04/25/rabbitmq-performance-measurements-part-2/).
 
 ## Running benchmarks ##
 
