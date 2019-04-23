@@ -94,6 +94,10 @@ public class MulticastParams {
     private int consumersThreadPools = -1;
     private int shutdownTimeout = 5;
 
+    private int startTimeout = -1;
+    private int brokersUpLimit = -1;
+
+
     public void setExchangeType(String exchangeType) {
         this.exchangeType = exchangeType;
     }
@@ -239,6 +243,14 @@ public class MulticastParams {
         this.shutdownTimeout = shutdownTimeout;
     }
 
+    public void setStartTimeout(int startTimeout) {
+        this.startTimeout = startTimeout;
+    }
+
+    public void setBrokersUpLimit(int brokersUpLimit) {
+        this.brokersUpLimit = brokersUpLimit;
+    }
+
     public int getConsumerCount() {
         return consumerCount;
     }
@@ -337,6 +349,14 @@ public class MulticastParams {
 
     public int getShutdownTimeout() {
         return shutdownTimeout;
+    }
+
+    public int getStartTimeout() {
+        return startTimeout;
+    }
+
+    public int getBrokersUpLimit() {
+        return brokersUpLimit;
     }
 
     public Producer createProducer(Connection connection, Stats stats, MulticastSet.CompletionHandler completionHandler) throws IOException {

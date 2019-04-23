@@ -137,6 +137,9 @@ public class PerfTest {
             int consumersThreadPools = intArg(cmd, "ctp", -1);
             int shutdownTimeout = intArg(cmd, "st", 5);
 
+            int startUpTimeout = intArg(cmd, "stt", -1);
+            int brokersUpLimit = intArg(cmd, "bul", -1);
+
             String uri               = strArg(cmd, 'h', "amqp://localhost");
             String urisParameter     = strArg(cmd, 'H', null);
             String outputFile        = strArg(cmd, 'o', null);
@@ -262,6 +265,8 @@ public class PerfTest {
             p.setProducerSchedulerThreadCount(producerSchedulingThreads);
             p.setConsumersThreadPools(consumersThreadPools);
             p.setShutdownTimeout(shutdownTimeout);
+            p.setStartTimeout(startUpTimeout);
+            p.setBrokersUpLimit(brokersUpLimit);
 
             MulticastSet.CompletionHandler completionHandler = getCompletionHandler(p);
 
@@ -506,6 +511,12 @@ public class PerfTest {
 
         options.addOption(new Option("st", "shutdown-timeout",true, "shutdown timeout, default is 5 seconds"));
 
+        options.addOption(new Option("stt", "start-timeout",true,
+                "start timeout in seconds (in case the broker is not available when the run starts). " +
+                          "Default is to fail immediately if the broker is not available."));
+        options.addOption(new Option("bul", "brokers-up-limit",true,
+                "number of available brokers needed before starting the run. Used " +
+                          "in conjunction with --start-timeout. Default is deduced from --uri or --uris."));
         return options;
     }
 
