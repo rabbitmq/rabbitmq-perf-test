@@ -11,6 +11,8 @@ HARDWARE := $$(uname -m | tr '[:upper:]' '[:lower:]')
 
 GPG_KEYNAME := $$(awk -F'[<>]' '/<gpg.keyname>/ { print $$3 }' pom.xml)
 
+TODAY := $(shell date -u +'%Y.%m.%d')
+
 RELEASE_VERSION ?= 2.6.0
 PGP_KEYSERVER ?= pgpkeys.uk
 
@@ -25,6 +27,21 @@ binary: clean ## Build the binary distribution
 native-image: clean ## Build the native image
 	@mvnw -q package -DskipTests -P native-image -P '!java-packaging'
 	native-image -jar target/perf-test.jar -H:Features="com.rabbitmq.perf.NativeImageFeature"
+
+.PHONY: docker-image-dev
+docker-image-dev: ## Build Docker image with the local PerfTest version
+	@docker build \
+	  --file Dockerfile.dev \
+	  --tag pivotalrabbitmq/perf-test:dev-$(TODAY) \
+	  .
+
+.PHONY: test-docker-image-dev
+test-docker-image-dev: ## Test the Docker image with the local PerfTest version
+	@docker run -it --rm pivotalrabbitmq/perf-test:dev-$(TODAY) --version
+
+.PHONY: push-docker-image-dev
+push-docker-image-dev: ## Test the Docker image with the local PerfTest version
+	@docker push pivotalrabbitmq/perf-test:dev-$(TODAY)
 
 .PHONY: docker-image-alpine
 docker-image-alpine: ## Build Alpine-based Docker image
