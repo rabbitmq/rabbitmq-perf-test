@@ -24,10 +24,7 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
@@ -77,7 +74,7 @@ public class MulticastSet {
         this.factory = factory;
         this.params = params;
         this.testID = testID;
-        this.uris = uris;
+        this.uris = new CopyOnWriteArrayList<>(uris);
         this.completionHandler = completionHandler;
         this.shutdownService = shutdownService;
         this.params.init();
@@ -105,74 +102,113 @@ public class MulticastSet {
     }
 
     public void run(boolean announceStartup)
-        throws IOException, InterruptedException, TimeoutException, NoSuchAlgorithmException, KeyManagementException, URISyntaxException, ExecutionException {
-        ScheduledExecutorService heartbeatSenderExecutorService = this.threadingHandler.scheduledExecutorService(
-            "perf-test-heartbeat-sender-",
-            this.params.getHeartbeatSenderThreads()
-        );
-        factory.setHeartbeatExecutor(heartbeatSenderExecutorService);
-        setUri();
-        Connection configurationConnection = factory.newConnection("perf-test-configuration");
-        MulticastParams.TopologyHandlerResult topologyHandlerResult = params.configureAllQueues(configurationConnection);
-        enableTopologyRecoveryIfNecessary(configurationConnection, topologyHandlerResult);
-
-        this.params.resetTopologyHandler();
-
-        Runnable[] consumerRunnables = new Runnable[params.getConsumerThreadCount()];
-        Connection[] consumerConnections = new Connection[params.getConsumerCount()];
-        Function<Integer, ExecutorService> consumersExecutorsFactory;
-        consumersExecutorsFactory = createConsumersExecutorsFactory();
-
-        createConsumers(announceStartup, consumerRunnables, consumerConnections, consumersExecutorsFactory);
-
-        this.params.resetTopologyHandler();
-
-        AgentState[] producerStates = new AgentState[params.getProducerThreadCount()];
-        Connection[] producerConnections = new Connection[params.getProducerCount()];
-        // producers don't need an executor service, as they don't have any consumers
-        // this consumer should never be asked to create any threads
-        ExecutorService executorServiceForProducersConsumers = this.threadingHandler.executorService(
-            "perf-test-producers-worker-", 0
-        );
-        factory.setSharedExecutor(executorServiceForProducersConsumers);
-        createProducers(announceStartup, producerStates, producerConnections);
-
-        startConsumers(consumerRunnables);
-        startProducers(producerStates);
-
-
-        AutoCloseable shutdownSequence;
-        int shutdownTimeout = this.params.getShutdownTimeout();
-        if (shutdownTimeout > 0) {
-            shutdownSequence = this.shutdownService.wrap(
-                    () -> {
-                        CountDownLatch latch = new CountDownLatch(1);
-                        Thread shutdownThread = new Thread(() -> {
-                            try {
-                                shutdown(configurationConnection, consumerConnections, producerStates, producerConnections);
-                            } finally {
-                                latch.countDown();
-                            }
-                        });
-                        shutdownThread.start();
-                        boolean done = latch.await(shutdownTimeout, TimeUnit.SECONDS);
-                        if (!done) {
-                            LOGGER.debug("Shutdown not completed in {} second(s), aborting.", shutdownTimeout);
-                            shutdownThread.interrupt();
-                        }
-                    }
+        throws IOException, InterruptedException, TimeoutException, NoSuchAlgorithmException, KeyManagementException, URISyntaxException {
+        if (waitUntilBrokerAvailableIfNecessary(params.getStartTimeout(),
+                                                params.getBrokersUpLimit() == -1 ? uris.size() : params.getBrokersUpLimit(),
+                                                uris, factory)) {
+            ScheduledExecutorService heartbeatSenderExecutorService = this.threadingHandler.scheduledExecutorService(
+                    "perf-test-heartbeat-sender-",
+                    this.params.getHeartbeatSenderThreads()
             );
+            factory.setHeartbeatExecutor(heartbeatSenderExecutorService);
+            setUri();
+            Connection configurationConnection = factory.newConnection("perf-test-configuration");
+            MulticastParams.TopologyHandlerResult topologyHandlerResult = params.configureAllQueues(configurationConnection);
+            enableTopologyRecoveryIfNecessary(configurationConnection, topologyHandlerResult);
+
+            this.params.resetTopologyHandler();
+
+            Runnable[] consumerRunnables = new Runnable[params.getConsumerThreadCount()];
+            Connection[] consumerConnections = new Connection[params.getConsumerCount()];
+            Function<Integer, ExecutorService> consumersExecutorsFactory;
+            consumersExecutorsFactory = createConsumersExecutorsFactory();
+
+            createConsumers(announceStartup, consumerRunnables, consumerConnections, consumersExecutorsFactory);
+
+            this.params.resetTopologyHandler();
+
+            AgentState[] producerStates = new AgentState[params.getProducerThreadCount()];
+            Connection[] producerConnections = new Connection[params.getProducerCount()];
+            // producers don't need an executor service, as they don't have any consumers
+            // this consumer should never be asked to create any threads
+            ExecutorService executorServiceForProducersConsumers = this.threadingHandler.executorService(
+                    "perf-test-producers-worker-", 0
+            );
+            factory.setSharedExecutor(executorServiceForProducersConsumers);
+            createProducers(announceStartup, producerStates, producerConnections);
+
+            startConsumers(consumerRunnables);
+            startProducers(producerStates);
+
+
+            AutoCloseable shutdownSequence;
+            int shutdownTimeout = this.params.getShutdownTimeout();
+            if (shutdownTimeout > 0) {
+                shutdownSequence = this.shutdownService.wrap(
+                        () -> {
+                            CountDownLatch latch = new CountDownLatch(1);
+                            Thread shutdownThread = new Thread(() -> {
+                                try {
+                                    shutdown(configurationConnection, consumerConnections, producerStates, producerConnections);
+                                } finally {
+                                    latch.countDown();
+                                }
+                            });
+                            shutdownThread.start();
+                            boolean done = latch.await(shutdownTimeout, TimeUnit.SECONDS);
+                            if (!done) {
+                                LOGGER.debug("Shutdown not completed in {} second(s), aborting.", shutdownTimeout);
+                                shutdownThread.interrupt();
+                            }
+                        }
+                );
+            } else {
+                // no closing timeout, we don't do anything
+                shutdownSequence = () -> { };
+            }
+
+            this.completionHandler.waitForCompletion();
+
+            try {
+                shutdownSequence.close();
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
         } else {
-            // no closing timeout, we don't do anything
-            shutdownSequence = () -> { };
+            System.out.println("Could not connect to broker(s) in " + params.getStartTimeout() + " second(s), exiting.");
         }
+    }
 
-        this.completionHandler.waitForCompletion();
-
-        try {
-            shutdownSequence.close();
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+    static boolean waitUntilBrokerAvailableIfNecessary(int startTimeoutInSeconds, int brokersUpLimit,
+                                                       Collection<String> uris, ConnectionFactory factory)
+            throws NoSuchAlgorithmException, KeyManagementException, URISyntaxException, InterruptedException {
+        if (startTimeoutInSeconds <= 0) {
+            // we don't test the connection to the broker
+            return true;
+        } else {
+            Collection<String> tested = new ArrayList<>(uris);
+            Collection<String> connected = new ArrayList<>();
+            long started = System.nanoTime();
+            while ((System.nanoTime() - started) / 1_000_000_000 < startTimeoutInSeconds) {
+                Iterator<String> iterator = tested.iterator();
+                while (iterator.hasNext()) {
+                    String uri = iterator.next();
+                    factory.setUri(uri);
+                    try (Connection ignored = factory.newConnection("perf-test-test")) {
+                        connected.add(uri);
+                        if (connected.size() == brokersUpLimit) {
+                            uris.clear();
+                            uris.addAll(connected);
+                            return true;
+                        }
+                        iterator.remove();
+                    } catch (Exception e) {
+                        LOGGER.info("Could not connect to broker " + factory.getHost()+ ":" + factory.getPort());
+                    }
+                }
+                Thread.sleep(1000L);
+            }
+            return false;
         }
     }
 
