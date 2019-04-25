@@ -33,6 +33,27 @@ the content-type can be specified:
   bin/runjava com.rabbitmq.perf.PerfTest --consumers 0 \
     --body content1.json,content2.json --body-content-type application/json
 
+== Limiting and varying publishing rate
+
+The publishing rate per producer can be limited with the `--rate` option (`-r`). E.g. to
+publishing at most 100 messages per second for the whole run:
+
+  bin/runjava com.rabbitmq.perf.PerfTest --rate 100
+
+The `--variable-rate` (`-vr`) can be used several times to specify a publishing rate
+for a duration, e.g.:
+
+  bin/runjava com.rabbitmq.perf.PerfTest \
+    --variable-rate 100:60 --variable-rate 1000:10 --variable-rate 500:15
+
+The variable rate option uses the `[RATE]:[DURATION]` syntax, where `RATE` is in messages per second
+and `DURATION` is in seconds. In the previous example, the publishing rate
+will be 100 messages per second for 60 seconds, then 1000 messages per second
+for 10 seconds, then 500 messages per second for 15 seconds, then back to 100 messages per second
+for 60 seconds, and so on.
+
+The `--variable-rate` option is useful to simulate steady rates and burst of messages for short periods.
+
 == Working With Many Queues
    
 PertTest supports balancing the publishing and the consumption
