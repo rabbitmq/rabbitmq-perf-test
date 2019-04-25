@@ -428,7 +428,8 @@ public class PerfTest {
             }
 
         });
-        formatter.printHelp("<program>", envOptions);
+        formatter.printHelp("<program>. For multi-value options, separate values " +
+                "with commas, e.g. VARIABLE_RATE='100:60,1000:10,500:15'", envOptions);
     }
 
     static CommandLineParser getParser() {
