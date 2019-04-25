@@ -1,4 +1,4 @@
-// Copyright (c) 2007-Present Pivotal Software, Inc.  All rights reserved.
+// Copyright (c) 2007-2019 Pivotal Software, Inc.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 1.1 ("MPL"), the GNU General Public License version 2
@@ -15,7 +15,6 @@
 
 package com.rabbitmq.perf;
 
-import com.rabbitmq.client.MissedHeartbeatException;
 import com.rabbitmq.client.ShutdownSignalException;
 import com.rabbitmq.client.impl.recovery.AutorecoveringConnection;
 import org.slf4j.Logger;
@@ -23,7 +22,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.SocketException;
-import java.util.function.Predicate;
 
 /**
  *
@@ -39,8 +37,9 @@ public abstract class AgentBase {
         //10 ms have elapsed, we have published 200 messages
         //the 200 msgs we have actually published should have taken us
         //200 * 1000 / 5000 = 40 ms. So we pause for 40ms - 10ms
-        long pause = (long) (state.getRateLimit() == 0.0f ?
-            0.0f : (state.getMsgCount() * 1000.0 / state.getRateLimit() - elapsed));
+        float rateLimit = state.getRateLimit();
+        long pause = (long) (rateLimit == 0.0f ?
+            0.0f : (state.getMsgCount() * 1000.0 / rateLimit - elapsed));
         if (pause > 0) {
             try {
                 Thread.sleep(pause);

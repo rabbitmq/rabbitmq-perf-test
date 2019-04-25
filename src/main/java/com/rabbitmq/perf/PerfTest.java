@@ -140,6 +140,18 @@ public class PerfTest {
             int startUpTimeout = intArg(cmd, "stt", -1);
             int brokersUpLimit = intArg(cmd, "bul", -1);
 
+            List<String> variableRates       = lstArg(cmd, "vr");
+            if (variableRates != null && !variableRates.isEmpty()) {
+                for (String variableRate : variableRates) {
+                    try {
+                        VariableRateIndicator.validate(variableRate);
+                    } catch (IllegalArgumentException e) {
+                        System.out.println(e.getMessage());
+                        systemExiter.exit(1);
+                    }
+                }
+            }
+
             String uri               = strArg(cmd, 'h', "amqp://localhost");
             String urisParameter     = strArg(cmd, 'H', null);
             String outputFile        = strArg(cmd, 'o', null);
@@ -267,6 +279,7 @@ public class PerfTest {
             p.setShutdownTimeout(shutdownTimeout);
             p.setStartTimeout(startUpTimeout);
             p.setBrokersUpLimit(brokersUpLimit);
+            p.setPublishingRates(variableRates);
 
             MulticastSet.CompletionHandler completionHandler = getCompletionHandler(p);
 
@@ -517,6 +530,13 @@ public class PerfTest {
         options.addOption(new Option("bul", "brokers-up-limit",true,
                 "number of available brokers needed before starting the run. Used " +
                           "in conjunction with --start-timeout. Default is deduced from --uri or --uris."));
+
+        Option variableRate = new Option("vr", "variable-rate",true,
+                "variable publishing rate with [RATE]:[DURATION] syntax, " +
+                          "where [RATE] and [DURATION] are positive integers. Use the option several times " +
+                          "to specify several values.");
+        variableRate.setArgs(Option.UNLIMITED_VALUES);
+        options.addOption(variableRate);
         return options;
     }
 
@@ -545,6 +565,10 @@ public class PerfTest {
     }
 
     static List<String> lstArg(CommandLineProxy cmd, char opt) {
+        return lstArg(cmd, String.valueOf(opt));
+    }
+
+    static List<String> lstArg(CommandLineProxy cmd, String opt) {
         String[] vals = cmd.getOptionValues(opt);
         if (vals == null) {
             vals = new String[] {};

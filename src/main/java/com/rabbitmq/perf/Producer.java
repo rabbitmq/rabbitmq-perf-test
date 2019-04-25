@@ -1,4 +1,4 @@
-// Copyright (c) 2007-Present Pivotal Software, Inc.  All rights reserved.
+// Copyright (c) 2007-2019 Pivotal Software, Inc.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 1.1 ("MPL"), the GNU General Public License version 2
@@ -87,13 +87,13 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
 
     private final int randomStartDelay;
 
-    private final float rateLimit;
-
     private final Recovery.RecoveryProcess recoveryProcess;
 
     private final boolean shouldTrackPublishConfirms;
 
     private final TimestampProvider timestampProvider;
+
+    private final RateIndicator rateIndicator;
 
     public Producer(ProducerParameters parameters) {
         this.channel           = parameters.getChannel();
@@ -134,7 +134,7 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
         }
         this.randomStartDelay = parameters.getRandomStartDelayInSeconds();
 
-        this.rateLimit = parameters.getRateLimit();
+        this.rateIndicator = parameters.getRateIndicator();
         this.recoveryProcess = parameters.getRecoveryProcess();
         this.recoveryProcess.init(this);
 
@@ -332,14 +332,22 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
         long now;
         final long startTime;
         startTime = now = System.currentTimeMillis();
-        ProducerState state = new ProducerState(this.rateLimit);
+        ProducerState state = new ProducerState(this.rateIndicator);
         state.setLastStatsTime(startTime);
         state.setMsgCount(0);
+        final boolean variableRate = this.rateIndicator.isVariable();
         try {
             while (keepGoing(state)) {
                 delay(now, state);
                 handlePublish(state);
                 now = System.currentTimeMillis();
+                // if rate is variable, we need to reset producer stats every second
+                // otherwise pausing to throttle rate will be based on the whole history
+                // which is broken when rate varies
+                if (variableRate && now - state.getLastStatsTime() > 1000) {
+                    state.setLastStatsTime(now);
+                    state.setMsgCount(0);
+                }
             }
         } catch (RuntimeException e) {
             LOGGER.debug("Error in publisher", e);
@@ -359,7 +367,7 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
     public Runnable createRunnableForScheduling() {
         final AtomicBoolean initialized = new AtomicBoolean(false);
         // make the producer state thread-safe for what we use in this case
-        final ProducerState state = new ProducerState(this.rateLimit) {
+        final ProducerState state = new ProducerState(this.rateIndicator) {
             final AtomicInteger messageCount = new AtomicInteger(0);
             @Override
             protected void setMsgCount(int msgCount) {
@@ -494,16 +502,16 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
      */
     private static class ProducerState implements AgentState {
 
-        private final float rateLimit;
+        private final RateIndicator rateIndicator;
         private long  lastStatsTime;
         private int msgCount = 0;
 
-        protected ProducerState(float rateLimit) {
-            this.rateLimit = rateLimit;
+        protected ProducerState(RateIndicator rateIndicator) {
+            this.rateIndicator = rateIndicator;
         }
 
         public float getRateLimit() {
-            return rateLimit;
+            return rateIndicator.getRate();
         }
 
         public long getLastStatsTime() {

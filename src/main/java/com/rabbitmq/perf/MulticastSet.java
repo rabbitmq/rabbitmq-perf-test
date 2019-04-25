@@ -1,4 +1,4 @@
-// Copyright (c) 2007-Present Pivotal Software, Inc.  All rights reserved.
+// Copyright (c) 2007-2019 Pivotal Software, Inc.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 1.1 ("MPL"), the GNU General Public License version 2
@@ -58,6 +58,7 @@ public class MulticastSet {
     private final CompletionHandler completionHandler;
     private final ShutdownService shutdownService;
     private ThreadingHandler threadingHandler = new DefaultThreadingHandler();
+    private final RateIndicator rateIndicator;
 
     public MulticastSet(Stats stats, ConnectionFactory factory,
         MulticastParams params, List<String> uris, CompletionHandler completionHandler) {
@@ -78,6 +79,14 @@ public class MulticastSet {
         this.completionHandler = completionHandler;
         this.shutdownService = shutdownService;
         this.params.init();
+        if (this.params.getPublishingRates() == null || this.params.getPublishingRates().isEmpty()) {
+            this.rateIndicator = new FixedRateIndicator(params.getProducerRateLimit());
+        } else {
+            ScheduledExecutorService scheduledExecutorService = this.threadingHandler.scheduledExecutorService(
+                    "perf-test-variable-rate-scheduler", 1
+            );
+            this.rateIndicator = new VariableRateIndicator(params.getPublishingRates(), scheduledExecutorService);
+        }
     }
 
     protected static int nbThreadsForConsumer(MulticastParams params) {
@@ -135,6 +144,7 @@ public class MulticastSet {
                     "perf-test-producers-worker-", 0
             );
             factory.setSharedExecutor(executorServiceForProducersConsumers);
+
             createProducers(announceStartup, producerStates, producerConnections);
 
             startConsumers(consumerRunnables);
@@ -259,7 +269,10 @@ public class MulticastSet {
                     System.out.println("id: " + testID + ", starting producer #" + i + ", channel #" + j);
                 }
                 AgentState agentState = new AgentState();
-                agentState.runnable = params.createProducer(producerConnection, stats, this.completionHandler);
+                agentState.runnable = params.createProducer(
+                        producerConnection, stats,
+                        this.completionHandler, this.rateIndicator
+                );
                 producerStates[(i * params.getProducerChannelCount()) + j] = agentState;
             }
         }
@@ -297,6 +310,7 @@ public class MulticastSet {
                 );
             }
         } else {
+            this.rateIndicator.start();
             ExecutorService producersExecutorService = this.threadingHandler.executorService(
                     PRODUCER_THREAD_PREFIX, producerStates.length
             );
@@ -478,7 +492,7 @@ public class MulticastSet {
                         boolean terminated = executorService.awaitTermination(10, TimeUnit.SECONDS);
                         if (!terminated) {
                             LoggerFactory.getLogger(DefaultThreadingHandler.class).warn(
-                                "Some producer and/or consumer tasks didn't finish"
+                                "Some PerfTest tasks (producer, consumer, rate scheduler) didn't finish"
                             );
                         }
                     } catch (InterruptedException e) {
