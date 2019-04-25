@@ -1,4 +1,4 @@
-// Copyright (c) 2007-Present Pivotal Software, Inc.  All rights reserved.
+// Copyright (c) 2007-2019 Pivotal Software, Inc.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 1.1 ("MPL"), the GNU General Public License version 2
@@ -97,6 +97,7 @@ public class MulticastParams {
     private int startTimeout = -1;
     private int brokersUpLimit = -1;
 
+    private List<String> publishingRates = new ArrayList<>();
 
     public void setExchangeType(String exchangeType) {
         this.exchangeType = exchangeType;
@@ -251,6 +252,10 @@ public class MulticastParams {
         this.brokersUpLimit = brokersUpLimit;
     }
 
+    public void setPublishingRates(List<String> publishingRates) {
+        this.publishingRates = publishingRates;
+    }
+
     public int getConsumerCount() {
         return consumerCount;
     }
@@ -359,7 +364,12 @@ public class MulticastParams {
         return brokersUpLimit;
     }
 
-    public Producer createProducer(Connection connection, Stats stats, MulticastSet.CompletionHandler completionHandler) throws IOException {
+    public List<String> getPublishingRates() {
+        return publishingRates;
+    }
+
+    public Producer createProducer(Connection connection, Stats stats, MulticastSet.CompletionHandler completionHandler,
+                                   RateIndicator rateIndicator) throws IOException {
         Channel channel = connection.createChannel(); //NOSONAR
         if (producerTxSize > 0) channel.txSelect();
         if (confirm >= 0) channel.confirmSelect();
@@ -394,6 +404,7 @@ public class MulticastParams {
             .setRoutingKeyCacheSize(this.routingKeyCacheSize)
             .setRandomStartDelayInSeconds(this.producerRandomStartDelayInSeconds)
             .setRecoveryProcess(recoveryProcess)
+            .setRateIndicator(rateIndicator)
         );
         channel.addReturnListener(producer);
         channel.addConfirmListener(producer);

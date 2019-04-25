@@ -144,6 +144,7 @@ public class ProducerTest {
             .setMessageProperties(null).setCompletionHandler(completionHandler()).setRoutingKeyCacheSize(0)
             .setRandomStartDelayInSeconds(-1)
             .setRecoveryProcess(Recovery.NO_OP_RECOVERY_PROCESS)
+            .setRateIndicator(new FixedRateIndicator(0.0f))
         );
 
         producer.run();
@@ -217,6 +218,7 @@ public class ProducerTest {
                 .setMessageProperties(messageProperties).setCompletionHandler(completionHandler()).setRoutingKeyCacheSize(0)
                 .setRandomStartDelayInSeconds(-1)
                 .setRecoveryProcess(Recovery.NO_OP_RECOVERY_PROCESS)
+                .setRateIndicator(new FixedRateIndicator(0.0f))
         );
 
         producer.run();
@@ -277,6 +279,7 @@ public class ProducerTest {
                 .setMessageProperties(messageProperties).setCompletionHandler(completionHandler()).setRoutingKeyCacheSize(0)
                 .setRandomStartDelayInSeconds(-1)
                 .setRecoveryProcess(Recovery.NO_OP_RECOVERY_PROCESS)
+                .setRateIndicator(new FixedRateIndicator(0.0f))
         );
 
         producer.run();
@@ -312,6 +315,7 @@ public class ProducerTest {
                 .setMessageProperties(messageProperties).setCompletionHandler(completionHandler()).setRoutingKeyCacheSize(0)
                 .setRandomStartDelayInSeconds(-1)
                 .setRecoveryProcess(Recovery.NO_OP_RECOVERY_PROCESS)
+                .setRateIndicator(new FixedRateIndicator(0.0f))
         );
     }
 
