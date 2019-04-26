@@ -94,8 +94,8 @@ public class PerfTest {
             boolean randomRoutingKey = hasOption(cmd, "K");
             boolean skipBindingQueues= hasOption(cmd,"sb");
             int samplingInterval     = intArg(cmd, 'i', 1);
-            float producerRateLimit  = floatArg(cmd, 'r', 0.0f);
-            float consumerRateLimit  = floatArg(cmd, 'R', 0.0f);
+            float producerRateLimit  = floatArg(cmd, 'r', -1.0f);
+            float consumerRateLimit  = floatArg(cmd, 'R', -1.0f);
             int producerCount        = intArg(cmd, 'x', 1);
             int consumerCount        = intArg(cmd, 'y', 1);
             int producerChannelCount = intArg(cmd, 'X', 1);
@@ -534,7 +534,7 @@ public class PerfTest {
 
         Option variableRate = new Option("vr", "variable-rate",true,
                 "variable publishing rate with [RATE]:[DURATION] syntax, " +
-                          "where [RATE] and [DURATION] are positive integers. Use the option several times " +
+                          "where [RATE] integer >= 0 and [DURATION] integer > 0. Use the option several times " +
                           "to specify several values.");
         variableRate.setArgs(Option.UNLIMITED_VALUES);
         options.addOption(variableRate);

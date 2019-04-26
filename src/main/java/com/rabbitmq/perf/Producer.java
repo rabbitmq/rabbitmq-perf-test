@@ -339,7 +339,12 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
         try {
             while (keepGoing(state)) {
                 delay(now, state);
-                handlePublish(state);
+                if (variableRate && this.rateIndicator.getRate() == 0.0f) {
+                    // instructed not to publish, so waiting
+                    waitForOneSecond();
+                } else {
+                    handlePublish(state);
+                }
                 now = System.currentTimeMillis();
                 // if rate is variable, we need to reset producer stats every second
                 // otherwise pausing to throttle rate will be based on the whole history
@@ -357,6 +362,15 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
         }
         if (state.getMsgCount() >= msgLimit) {
             countDown();
+        }
+    }
+
+    private void waitForOneSecond() {
+        try {
+            Thread.sleep(1000L);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException(e);
         }
     }
 

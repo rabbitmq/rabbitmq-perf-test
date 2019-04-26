@@ -22,7 +22,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Predicate;
+
+import static java.util.Arrays.asList;
 
 /**
  * {@link RateIndicator} that periodically changes rate hints based on variable rate definitions.
@@ -75,35 +79,41 @@ class VariableRateIndicator implements RateIndicator {
         }
     }
 
+    @SuppressWarnings("unchecked")
     static void validate(String rateDefinition) throws IllegalArgumentException {
-        boolean valid = true;
+        final AtomicBoolean valid = new AtomicBoolean(true);
         if (rateDefinition == null || rateDefinition.isEmpty() || !rateDefinition.contains(":")) {
-            valid = false;
+            valid.set(false);
         }
         String[] rateAndDuration = null;
-        if (valid) {
+        if (valid.get()) {
             rateAndDuration = rateDefinition.split(":");
             if (rateAndDuration.length != 2) {
-                valid = false;
+                valid.set(false);
             }
         }
-        if (valid) {
-            for (String input : rateAndDuration) {
+        if (valid.get()) {
+            asList(new Object[][]{
+                    {rateAndDuration[0], (Predicate<Integer>) value -> value >= 0},
+                    {rateAndDuration[1], (Predicate<Integer>) value -> value > 0}
+            }).forEach(parameters -> {
+                String input = parameters[0].toString();
+                Predicate<Integer> validation = (Predicate<Integer>) parameters[1];
                 try {
                     int value = Integer.valueOf(input);
-                    if (value <= 0) {
-                        valid = false;
+                    if (!validation.test(value)) {
+                        valid.set(false);
                     }
                 } catch (NumberFormatException e) {
-                    valid = false;
+                    valid.set(false);
                 }
-            }
+            });
         }
 
-        if (!valid) {
+        if (!valid.get()) {
             throw new IllegalArgumentException(
                     "Invalid variable rate definition: " + rateDefinition + ". " +
-                            "Should be [RATE]:[DURATION] with RATE and DURATION integers > 0"
+                            "Should be [RATE]:[DURATION] with RATE integer >= 0 and DURATION integer > 0"
             );
         }
 

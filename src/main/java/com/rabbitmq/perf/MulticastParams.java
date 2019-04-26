@@ -47,8 +47,8 @@ public class MulticastParams {
     private int minMsgSize = 0;
 
     private int timeLimit = 0;
-    private float producerRateLimit = 0.0f;
-    private float consumerRateLimit = 0.0f;
+    private float producerRateLimit = -1.0f;
+    private float consumerRateLimit = -1.0f;
     private int producerMsgCount = 0;
     private int consumerMsgCount = 0;
     private boolean consumerSlowStart = false;

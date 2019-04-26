@@ -38,7 +38,7 @@ public abstract class AgentBase {
         //the 200 msgs we have actually published should have taken us
         //200 * 1000 / 5000 = 40 ms. So we pause for 40ms - 10ms
         float rateLimit = state.getRateLimit();
-        long pause = (long) (rateLimit == 0.0f ?
+        long pause = (long) (rateLimit <= 0.0f ?
             0.0f : (state.getMsgCount() * 1000.0 / rateLimit - elapsed));
         if (pause > 0) {
             try {

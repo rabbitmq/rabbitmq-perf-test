@@ -40,7 +40,8 @@ public class VariableRateIndicatorTest {
     public void validation() {
         validate("10:20");
         validate("1:1");
-        asList("1-1", ":", "0:20", "20:0", "-1:20", "20:-1", "a:20", "20:a")
+        validate("0:20");
+        asList("1-1", ":", "20:0", "-1:20", "20:-1", "a:20", "20:a")
                 .forEach(input -> assertThatThrownBy(
                         () -> validate(input)).isInstanceOf(IllegalArgumentException.class)
                         .hasMessageContaining(input));
