@@ -140,11 +140,23 @@ public class PerfTest {
             int serversStartUpTimeout = intArg(cmd, "sst", -1);
             int serversUpLimit = intArg(cmd, "sul", -1);
 
-            List<String> variableRates       = lstArg(cmd, "vr");
+            List<String> variableRates = lstArg(cmd, "vr");
             if (variableRates != null && !variableRates.isEmpty()) {
                 for (String variableRate : variableRates) {
                     try {
-                        VariableRateIndicator.validate(variableRate);
+                        VariableValueIndicator.validate(variableRate);
+                    } catch (IllegalArgumentException e) {
+                        System.out.println(e.getMessage());
+                        systemExiter.exit(1);
+                    }
+                }
+            }
+
+            List<String> variableSizes = lstArg(cmd, "vs");
+            if (variableSizes != null && !variableSizes.isEmpty()) {
+                for (String variableSize : variableSizes) {
+                    try {
+                        VariableValueIndicator.validate(variableSize);
                     } catch (IllegalArgumentException e) {
                         System.out.println(e.getMessage());
                         systemExiter.exit(1);
@@ -280,6 +292,7 @@ public class PerfTest {
             p.setServersStartUpTimeout(serversStartUpTimeout);
             p.setServersUpLimit(serversUpLimit);
             p.setPublishingRates(variableRates);
+            p.setMessageSizes(variableSizes);
 
             MulticastSet.CompletionHandler completionHandler = getCompletionHandler(p);
 
@@ -538,6 +551,13 @@ public class PerfTest {
                           "to specify several values.");
         variableRate.setArgs(Option.UNLIMITED_VALUES);
         options.addOption(variableRate);
+
+        Option variableSize = new Option("vs", "variable-size",true,
+                "variable message size with [SIZE]:[DURATION] syntax, " +
+                          "where [SIZE] integer > 0 and [DURATION] integer > 0. Use the option several times " +
+                          "to specify several values.");
+        variableSize.setArgs(Option.UNLIMITED_VALUES);
+        options.addOption(variableSize);
         return options;
     }
 

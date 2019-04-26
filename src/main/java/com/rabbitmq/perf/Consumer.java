@@ -1,4 +1,4 @@
-// Copyright (c) 2007-Present Pivotal Software, Inc.  All rights reserved.
+// Copyright (c) 2007-2019 Pivotal Software, Inc.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 1.1 ("MPL"), the GNU General Public License version 2
@@ -94,7 +94,7 @@ public class Consumer extends AgentBase implements Runnable {
             this.timestampExtractor = (properties, body) -> {
                 DataInputStream d = new DataInputStream(new ByteArrayInputStream(body));
                 try {
-                    d.readInt();
+                    d.readInt(); // read sequence number
                     return d.readLong();
                 } catch (IOException e) {
                     throw new RuntimeException("Error while extracting timestamp from body");

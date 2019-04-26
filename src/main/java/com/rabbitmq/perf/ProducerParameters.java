@@ -21,7 +21,6 @@ import java.util.List;
 import java.util.Map;
 
 /**
- *
  * @since 2.1.0
  */
 public class ProducerParameters {
@@ -32,7 +31,6 @@ public class ProducerParameters {
     private boolean randomRoutingKey;
     private List<?> flags;
     private int txSize;
-    private float rateLimit;
     private int msgLimit;
     private long confirm;
     private int confirmTimeout;
@@ -44,7 +42,7 @@ public class ProducerParameters {
     private int routingKeyCacheSize;
     private int randomStartDelayInSeconds;
     private Recovery.RecoveryProcess recoveryProcess;
-    private RateIndicator rateIndicator;
+    private ValueIndicator<Float> rateIndicator;
 
     public Channel getChannel() {
         return channel;
@@ -97,15 +95,6 @@ public class ProducerParameters {
 
     public ProducerParameters setTxSize(int txSize) {
         this.txSize = txSize;
-        return this;
-    }
-
-    public float getRateLimit() {
-        return rateLimit;
-    }
-
-    public ProducerParameters setRateLimit(float rateLimit) {
-        this.rateLimit = rateLimit;
         return this;
     }
 
@@ -199,21 +188,21 @@ public class ProducerParameters {
         return this;
     }
 
+    public Recovery.RecoveryProcess getRecoveryProcess() {
+        return recoveryProcess;
+    }
+
     public ProducerParameters setRecoveryProcess(Recovery.RecoveryProcess recoveryProcess) {
         this.recoveryProcess = recoveryProcess;
         return this;
     }
 
-    public Recovery.RecoveryProcess getRecoveryProcess() {
-        return recoveryProcess;
+    public ValueIndicator<Float> getRateIndicator() {
+        return rateIndicator;
     }
 
-    public ProducerParameters setRateIndicator(RateIndicator rateIndicator) {
+    public ProducerParameters setRateIndicator(ValueIndicator<Float> rateIndicator) {
         this.rateIndicator = rateIndicator;
         return this;
-    }
-
-    public RateIndicator getRateIndicator() {
-        return rateIndicator;
     }
 }

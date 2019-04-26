@@ -15,30 +15,39 @@
 
 package com.rabbitmq.perf;
 
+import java.util.Arrays;
+import java.util.List;
+
 /**
- * Contract to give hints about a rate to maintain.
+ * {@link ValueIndicator} implementation with a constant value.
  *
  * @since 2.8.0
  */
-interface RateIndicator {
+class FixedValueIndicator<T> implements ValueIndicator<T> {
 
-    /**
-     * Returns the current requested rate.
-     *
-     * @return
-     */
-    float getRate();
+    private final T value;
 
-    /**
-     * Start method for internal initialization before requesting rate hints.
-     */
-    void start();
+    public FixedValueIndicator(T value) {
+        this.value = value;
+    }
 
-    /**
-     * Indicates whether the rate is supposed to change or not.
-     *
-     * @return
-     */
-    boolean isVariable();
+    @Override
+    public T getValue() {
+        return value;
+    }
 
+    @Override
+    public void start() {
+
+    }
+
+    @Override
+    public boolean isVariable() {
+        return false;
+    }
+
+    @Override
+    public List<T> values() {
+        return Arrays.asList(value);
+    }
 }

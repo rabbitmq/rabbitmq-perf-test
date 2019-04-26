@@ -15,31 +15,42 @@
 
 package com.rabbitmq.perf;
 
+import java.util.List;
+
 /**
- * {@link RateIndicator} implementation with a constant rate.
+ * Contract to give hints about the value of a variable.
+ * <p>
+ * Can be used to roll over a given set of values for messages rate
+ * or size.
  *
  * @since 2.8.0
  */
-class FixedRateIndicator implements RateIndicator {
+interface ValueIndicator<T> {
 
-    private final float rate;
+    /**
+     * Returns the current value of the variable.
+     *
+     * @return
+     */
+    T getValue();
 
-    public FixedRateIndicator(float rate) {
-        this.rate = rate;
-    }
+    /**
+     * Start method for internal initialization before requesting the value of the variable.
+     */
+    void start();
 
-    @Override
-    public float getRate() {
-        return rate;
-    }
+    /**
+     * Indicates whether the value is supposed to change or not.
+     *
+     * @return
+     */
+    boolean isVariable();
 
-    @Override
-    public void start() {
+    /**
+     * Returns all the possible values for the variable.
+     *
+     * @return
+     */
+    List<T> values();
 
-    }
-
-    @Override
-    public boolean isVariable() {
-        return false;
-    }
 }
