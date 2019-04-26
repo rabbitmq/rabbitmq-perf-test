@@ -137,8 +137,8 @@ public class PerfTest {
             int consumersThreadPools = intArg(cmd, "ctp", -1);
             int shutdownTimeout = intArg(cmd, "st", 5);
 
-            int startUpTimeout = intArg(cmd, "stt", -1);
-            int brokersUpLimit = intArg(cmd, "bul", -1);
+            int serversStartUpTimeout = intArg(cmd, "sst", -1);
+            int serversUpLimit = intArg(cmd, "sul", -1);
 
             List<String> variableRates       = lstArg(cmd, "vr");
             if (variableRates != null && !variableRates.isEmpty()) {
@@ -277,8 +277,8 @@ public class PerfTest {
             p.setProducerSchedulerThreadCount(producerSchedulingThreads);
             p.setConsumersThreadPools(consumersThreadPools);
             p.setShutdownTimeout(shutdownTimeout);
-            p.setStartTimeout(startUpTimeout);
-            p.setBrokersUpLimit(brokersUpLimit);
+            p.setServersStartUpTimeout(serversStartUpTimeout);
+            p.setServersUpLimit(serversUpLimit);
             p.setPublishingRates(variableRates);
 
             MulticastSet.CompletionHandler completionHandler = getCompletionHandler(p);
@@ -525,12 +525,12 @@ public class PerfTest {
 
         options.addOption(new Option("st", "shutdown-timeout",true, "shutdown timeout, default is 5 seconds"));
 
-        options.addOption(new Option("stt", "start-timeout",true,
-                "start timeout in seconds (in case the broker is not available when the run starts). " +
-                          "Default is to fail immediately if the broker is not available."));
-        options.addOption(new Option("bul", "brokers-up-limit",true,
-                "number of available brokers needed before starting the run. Used " +
-                          "in conjunction with --start-timeout. Default is deduced from --uri or --uris."));
+        options.addOption(new Option("sst", "servers-startup-timeout",true,
+                "start timeout in seconds (in case the servers(s) is (are) not available when the run starts). " +
+                          "Default is to fail immediately if the servers(s) is (are) not available."));
+        options.addOption(new Option("sul", "servers-up-limit",true,
+                "number of available servers needed before starting the run. Used " +
+                          "in conjunction with --servers-start-timeout. Default is deduced from --uri or --uris."));
 
         Option variableRate = new Option("vr", "variable-rate",true,
                 "variable publishing rate with [RATE]:[DURATION] syntax, " +

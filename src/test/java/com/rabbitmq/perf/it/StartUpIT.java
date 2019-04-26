@@ -126,7 +126,7 @@ public class StartUpIT {
                 }
             }
         };
-        params.setStartTimeout(10);
+        params.setServersStartUpTimeout(10);
         MulticastSet.CompletionHandler completionHandler = latchCompletionHandler(1, info);
         MulticastSet set = new MulticastSet(stats, factory, params, "", URIS, completionHandler);
         run(set);
@@ -138,7 +138,7 @@ public class StartUpIT {
     @Test
     public void shouldStopGracefullyIfStartUpRetryTimesout(TestInfo info) throws Exception {
         Host.stopBrokerApp();
-        params.setStartTimeout(3);
+        params.setServersStartUpTimeout(3);
         MulticastSet set = new MulticastSet(stats, cf, params, "", URIS, latchCompletionHandler(1, info));
         run(set);
         waitAtMost(10, () -> testIsDone.get());

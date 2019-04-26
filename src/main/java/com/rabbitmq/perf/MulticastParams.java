@@ -94,8 +94,8 @@ public class MulticastParams {
     private int consumersThreadPools = -1;
     private int shutdownTimeout = 5;
 
-    private int startTimeout = -1;
-    private int brokersUpLimit = -1;
+    private int serversStartUpTimeout = -1;
+    private int serversUpLimit = -1;
 
     private List<String> publishingRates = new ArrayList<>();
 
@@ -244,12 +244,12 @@ public class MulticastParams {
         this.shutdownTimeout = shutdownTimeout;
     }
 
-    public void setStartTimeout(int startTimeout) {
-        this.startTimeout = startTimeout;
+    public void setServersStartUpTimeout(int serversStartUpTimeout) {
+        this.serversStartUpTimeout = serversStartUpTimeout;
     }
 
-    public void setBrokersUpLimit(int brokersUpLimit) {
-        this.brokersUpLimit = brokersUpLimit;
+    public void setServersUpLimit(int serversUpLimit) {
+        this.serversUpLimit = serversUpLimit;
     }
 
     public void setPublishingRates(List<String> publishingRates) {
@@ -356,12 +356,12 @@ public class MulticastParams {
         return shutdownTimeout;
     }
 
-    public int getStartTimeout() {
-        return startTimeout;
+    public int getServersStartUpTimeout() {
+        return serversStartUpTimeout;
     }
 
-    public int getBrokersUpLimit() {
-        return brokersUpLimit;
+    public int getServersUpLimit() {
+        return serversUpLimit;
     }
 
     public List<String> getPublishingRates() {

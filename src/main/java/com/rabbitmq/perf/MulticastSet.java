@@ -112,8 +112,8 @@ public class MulticastSet {
 
     public void run(boolean announceStartup)
         throws IOException, InterruptedException, TimeoutException, NoSuchAlgorithmException, KeyManagementException, URISyntaxException {
-        if (waitUntilBrokerAvailableIfNecessary(params.getStartTimeout(),
-                                                params.getBrokersUpLimit() == -1 ? uris.size() : params.getBrokersUpLimit(),
+        if (waitUntilBrokerAvailableIfNecessary(params.getServersStartUpTimeout(),
+                                                params.getServersUpLimit() == -1 ? uris.size() : params.getServersUpLimit(),
                                                 uris, factory)) {
             ScheduledExecutorService heartbeatSenderExecutorService = this.threadingHandler.scheduledExecutorService(
                     "perf-test-heartbeat-sender-",
@@ -185,28 +185,28 @@ public class MulticastSet {
                 throw new RuntimeException(e);
             }
         } else {
-            System.out.println("Could not connect to broker(s) in " + params.getStartTimeout() + " second(s), exiting.");
+            System.out.println("Could not connect to broker(s) in " + params.getServersStartUpTimeout() + " second(s), exiting.");
         }
     }
 
-    static boolean waitUntilBrokerAvailableIfNecessary(int startTimeoutInSeconds, int brokersUpLimit,
+    static boolean waitUntilBrokerAvailableIfNecessary(int startUpTimeoutInSeconds, int serversUpLimit,
                                                        Collection<String> uris, ConnectionFactory factory)
             throws NoSuchAlgorithmException, KeyManagementException, URISyntaxException, InterruptedException {
-        if (startTimeoutInSeconds <= 0) {
+        if (startUpTimeoutInSeconds <= 0) {
             // we don't test the connection to the broker
             return true;
         } else {
             Collection<String> tested = new ArrayList<>(uris);
             Collection<String> connected = new ArrayList<>();
             long started = System.nanoTime();
-            while ((System.nanoTime() - started) / 1_000_000_000 < startTimeoutInSeconds) {
+            while ((System.nanoTime() - started) / 1_000_000_000 < startUpTimeoutInSeconds) {
                 Iterator<String> iterator = tested.iterator();
                 while (iterator.hasNext()) {
                     String uri = iterator.next();
                     factory.setUri(uri);
                     try (Connection ignored = factory.newConnection("perf-test-test")) {
                         connected.add(uri);
-                        if (connected.size() == brokersUpLimit) {
+                        if (connected.size() == serversUpLimit) {
                             uris.clear();
                             uris.addAll(connected);
                             return true;
