@@ -24,55 +24,62 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 import static java.util.Arrays.asList;
 
 /**
- * {@link RateIndicator} that periodically changes rate hints based on variable rate definitions.
+ * {@link ValueIndicator} that periodically changes the variable value based on variable value definitions.
  * <p>
- * Rate definitions use the <code>[RATE]:[DURATION]</code> syntax, where <code>RATE</code>
- * and <code>DURATION</code>  are positive integers. Rate is in messages per second, duration
+ * Definitions use the <code>[VALUE]:[DURATION]</code> syntax, where <code>VALUE</code>
+ * is an integer >= 0 and <code>DURATION</code> is a positive integer. Duration
  * is in seconds.
  * <p>
- * So with rate definitions such as <code>200:60</code>, <code>1000:20</code>, and
- * <code>500:15</code>, the rate will be 200 messages per second for 60 seconds, then
- * 1000 messages per second for 20 seconds, then 500 messages per second for 15 seconds, then
- * back to 200 messages per second for 60 seconds, and so on.
+ * So with value definitions such as <code>200:60</code>, <code>1000:20</code>, and
+ * <code>500:15</code>, the value will be 200 for 60 seconds, then
+ * 1000 for 20 seconds, then 500 for 15 seconds, then back to 200 for 60 seconds,
+ * and so on.
  * <p>
- * The {@link VariableRateIndicator} periodically updates the rate according to rate definitions.
+ * The {@link VariableValueIndicator} periodically updates the value according to value definitions.
  * It uses a provided {@link ScheduledExecutorService} for this. The period is the
  * greatest common divisor of the durations.
  *
  * @since 2.8.0
  */
-class VariableRateIndicator implements RateIndicator {
+class VariableValueIndicator<T> implements ValueIndicator<T> {
 
     public static final int NANO_TO_SECOND = 1_000_000_000;
-    private static final Logger LOGGER = LoggerFactory.getLogger(VariableRateIndicator.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(VariableValueIndicator.class);
     private final ScheduledExecutorService scheduledExecutorService;
 
-    private final List<String> rates;
+    private final List<Interval<T>> intervals;
 
-    private final AtomicReference<Float> rate = new AtomicReference<>();
+    private final AtomicReference<T> value = new AtomicReference<>();
 
-    public VariableRateIndicator(List<String> rates, ScheduledExecutorService scheduledExecutorService) {
-        if (rates == null || rates.isEmpty()) {
+    private final List<String> definitions;
+
+    public VariableValueIndicator(List<String> values, ScheduledExecutorService scheduledExecutorService,
+                                  Function<String, T> conversion) {
+        if (values == null || values.isEmpty()) {
             throw new IllegalArgumentException();
         }
-        for (String rate : rates) {
-            validate(rate);
+        for (String value : values) {
+            validate(value);
         }
         this.scheduledExecutorService = scheduledExecutorService;
-        this.rates = new ArrayList<>(rates);
+        this.definitions = new ArrayList<>(values);
+        this.intervals = intervals(values, conversion);
+        this.value.set(intervals.get(0).value);
     }
 
-    static void updateRateIfNecessary(List<Interval> intervals, long startTime, long now, int cycleDuration, AtomicReference<Float> rate) {
+    static <T> void updateValueIfNecessary(List<Interval<T>> intervals, long startTime, long now, int cycleDuration, AtomicReference<T> value) {
         long elapsed = ((now - startTime) / NANO_TO_SECOND) % cycleDuration;
-        for (Interval interval : intervals) {
+        for (Interval<T> interval : intervals) {
             if (interval.isIn(elapsed)) {
-                if (!rate.get().equals(interval.rate)) {
-                    rate.set(interval.rate);
+                if (!value.get().equals(interval.value)) {
+                    value.set(interval.value);
                 }
                 break;
             }
@@ -80,22 +87,22 @@ class VariableRateIndicator implements RateIndicator {
     }
 
     @SuppressWarnings("unchecked")
-    static void validate(String rateDefinition) throws IllegalArgumentException {
+    static void validate(String definition) throws IllegalArgumentException {
         final AtomicBoolean valid = new AtomicBoolean(true);
-        if (rateDefinition == null || rateDefinition.isEmpty() || !rateDefinition.contains(":")) {
+        if (definition == null || definition.isEmpty() || !definition.contains(":")) {
             valid.set(false);
         }
-        String[] rateAndDuration = null;
+        String[] valueAndDuration = null;
         if (valid.get()) {
-            rateAndDuration = rateDefinition.split(":");
-            if (rateAndDuration.length != 2) {
+            valueAndDuration = definition.split(":");
+            if (valueAndDuration.length != 2) {
                 valid.set(false);
             }
         }
         if (valid.get()) {
             asList(new Object[][]{
-                    {rateAndDuration[0], (Predicate<Integer>) value -> value >= 0},
-                    {rateAndDuration[1], (Predicate<Integer>) value -> value > 0}
+                    {valueAndDuration[0], (Predicate<Integer>) value -> value >= 0},
+                    {valueAndDuration[1], (Predicate<Integer>) value -> value > 0}
             }).forEach(parameters -> {
                 String input = parameters[0].toString();
                 Predicate<Integer> validation = (Predicate<Integer>) parameters[1];
@@ -112,8 +119,8 @@ class VariableRateIndicator implements RateIndicator {
 
         if (!valid.get()) {
             throw new IllegalArgumentException(
-                    "Invalid variable rate definition: " + rateDefinition + ". " +
-                            "Should be [RATE]:[DURATION] with RATE integer >= 0 and DURATION integer > 0"
+                    "Invalid variable value definition: " + definition + ". " +
+                            "Should be [VALUE]:[DURATION] with VALUE integer >= 0 and DURATION integer > 0"
             );
         }
 
@@ -134,15 +141,15 @@ class VariableRateIndicator implements RateIndicator {
         return result;
     }
 
-    static List<Interval> intervals(List<String> rates) {
-        final List<Interval> intervals = new ArrayList<>(rates.size());
+    static <T> List<Interval<T>> intervals(List<String> values, Function<String, T> conversion) {
+        final List<Interval<T>> intervals = new ArrayList<>(values.size());
         int start = 0;
-        for (String rate : rates) {
-            validate(rate);
-            String[] rateAndDuration = rate.split(":");
-            int duration = Integer.valueOf(rateAndDuration[1]);
+        for (String value : values) {
+            validate(value);
+            String[] valueAndDuration = value.split(":");
+            int duration = Integer.valueOf(valueAndDuration[1]);
             int end = start + duration;
-            Interval interval = new Interval(start, end, Float.valueOf(rateAndDuration[0]));
+            Interval<T> interval = new Interval<>(start, end, conversion.apply(valueAndDuration[0]));
             intervals.add(interval);
             start = end;
         }
@@ -150,18 +157,16 @@ class VariableRateIndicator implements RateIndicator {
     }
 
     @Override
-    public float getRate() {
-        return rate.get();
+    public T getValue() {
+        return value.get();
     }
 
     @Override
     public void start() {
-        final List<Interval> intervals = intervals(this.rates);
-
-        int[] durations = new int[this.rates.size()];
-        for (int i = 0; i < this.rates.size(); i++) {
-            String[] rateAndDuration = rates.get(i).split(":");
-            durations[i] = Integer.valueOf(rateAndDuration[1]);
+        int[] durations = new int[this.definitions.size()];
+        for (int i = 0; i < this.definitions.size(); i++) {
+            String[] valueAndDuration = definitions.get(i).split(":");
+            durations[i] = Integer.valueOf(valueAndDuration[1]);
         }
 
         int cycleDuration = intervals.get(intervals.size() - 1).end;
@@ -174,9 +179,8 @@ class VariableRateIndicator implements RateIndicator {
         }
 
         long startTime = System.nanoTime();
-        this.rate.set(intervals.get(0).rate);
         scheduledExecutorService.scheduleAtFixedRate(() -> {
-            updateRateIfNecessary(intervals, startTime, System.nanoTime(), cycleDuration, this.rate);
+            updateValueIfNecessary(intervals, startTime, System.nanoTime(), cycleDuration, this.value);
         }, 0, gcdSchedulingPeriod, TimeUnit.SECONDS);
     }
 
@@ -185,16 +189,21 @@ class VariableRateIndicator implements RateIndicator {
         return true;
     }
 
-    static class Interval {
+    @Override
+    public List<T> values() {
+        return this.intervals.stream().map(interval -> interval.value).collect(Collectors.toList());
+    }
+
+    static class Interval<T> {
 
         final int start;
         final int end;
-        final float rate;
+        final T value;
 
-        Interval(int start, int end, float rate) {
+        Interval(int start, int end, T value) {
             this.start = start;
             this.end = end;
-            this.rate = rate;
+            this.value = value;
         }
 
         boolean isIn(long value) {
@@ -206,7 +215,7 @@ class VariableRateIndicator implements RateIndicator {
             return "Interval{" +
                     "start=" + start +
                     ", end=" + end +
-                    ", rate=" + rate +
+                    ", value=" + value +
                     '}';
         }
     }

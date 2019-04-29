@@ -35,12 +35,13 @@ the content-type can be specified:
 
 == Limiting and varying publishing rate
 
+By default, PerfTest publishes as fast as possible.
 The publishing rate per producer can be limited with the `--rate` option (`-r`). E.g. to
 publishing at most 100 messages per second for the whole run:
 
   bin/runjava com.rabbitmq.perf.PerfTest --rate 100
 
-The `--variable-rate` (`-vr`) can be used several times to specify a publishing rate
+The `--variable-rate` (`-vr`) option can be used several times to specify a publishing rate
 for a duration, e.g.:
 
   bin/runjava com.rabbitmq.perf.PerfTest \
@@ -53,6 +54,28 @@ for 10 seconds, then 500 messages per second for 15 seconds, then back to 100 me
 for 60 seconds, and so on.
 
 The `--variable-rate` option is useful to simulate steady rates and burst of messages for short periods.
+
+== Setting and varying the message size
+
+The default size of the messages that PerfTest publishes is 12 bytes (PerfTest stores
+some data in the message to calculate latency on the consumer side).
+
+It is possible to make messages bigger with the `--size` (`-s`) option, e.g. to publish
+4 kB messages:
+
+  bin/runjava com.rabbitmq.perf.PerfTest --size 4000
+
+The `--variable-size` (`-vs`) option allows to specify different message sizes
+for periods of time, e.g.:
+
+  bin/runjava com.rabbitmq.perf.PerfTest \
+    --variable-size 1000:30 --variable-size 10000:20 --variable-size 5000:45
+
+The variable rate option uses the `[SIZE]:[DURATION]` syntax, where `SIZE` is in bytes
+and `DURATION` is in seconds. In the previous example, the size of published messages
+will be 1 kB for 30 seconds, then 10 kB for 20 seconds, then 5 kB for 45 seconds,
+then back to 1 kB for 30 seconds, and so on.
+
 
 == Working With Many Queues
    

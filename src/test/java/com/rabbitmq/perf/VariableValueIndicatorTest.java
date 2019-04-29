@@ -25,7 +25,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static com.rabbitmq.perf.VariableRateIndicator.*;
+import static com.rabbitmq.perf.VariableValueIndicator.*;
 import static java.util.Arrays.asList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -34,7 +34,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
-public class VariableRateIndicatorTest {
+public class VariableValueIndicatorTest {
 
     @Test
     public void validation() {
@@ -48,29 +48,29 @@ public class VariableRateIndicatorTest {
     }
 
     @Test
-    public void updateRate() {
+    public void updateValue() {
         // 5:10 20:5 15:15
-        List<VariableRateIndicator.Interval> intervals = asList(
-                new VariableRateIndicator.Interval(0, 10, 5),
-                new VariableRateIndicator.Interval(10, 15, 20),
-                new VariableRateIndicator.Interval(15, 30, 15)
+        List<VariableValueIndicator.Interval<Integer>> intervals = asList(
+                new VariableValueIndicator.Interval<>(0, 10, 5),
+                new VariableValueIndicator.Interval<>(10, 15, 20),
+                new VariableValueIndicator.Interval<>(15, 30, 15)
         );
         int cycleDuration = intervals.get(2).end;
         long startTime = System.nanoTime();
-        AtomicReference<Float> rate = new AtomicReference<>(10.0f);
+        AtomicReference<Integer> value = new AtomicReference<>(10);
         Object[][] parameters = new Object[][]{
-                {intervals.get(0).start + 1, intervals.get(0).rate},
-                {intervals.get(1).start + 1, intervals.get(1).rate},
-                {intervals.get(2).start + 1, intervals.get(2).rate},
-                {cycleDuration + intervals.get(0).start + 1, intervals.get(0).rate},
-                {cycleDuration + intervals.get(1).start + 1, intervals.get(1).rate},
-                {cycleDuration + intervals.get(2).start + 1, intervals.get(2).rate},
+                {intervals.get(0).start + 1, intervals.get(0).value},
+                {intervals.get(1).start + 1, intervals.get(1).value},
+                {intervals.get(2).start + 1, intervals.get(2).value},
+                {cycleDuration + intervals.get(0).start + 1, intervals.get(0).value},
+                {cycleDuration + intervals.get(1).start + 1, intervals.get(1).value},
+                {cycleDuration + intervals.get(2).start + 1, intervals.get(2).value},
         };
         asList(parameters).forEach(parameter -> {
             int secondsToAdd = (int) parameter[0];
-            float expectedRate = (float) parameter[1];
-            updateRateIfNecessary(intervals, startTime, addSecondsToNano(startTime, secondsToAdd), cycleDuration, rate);
-            assertThat(rate).hasValue(expectedRate);
+            int expectedValue = (int) parameter[1];
+            updateValueIfNecessary(intervals, startTime, addSecondsToNano(startTime, secondsToAdd), cycleDuration, value);
+            assertThat(value).hasValue(expectedValue);
         });
     }
 
@@ -80,11 +80,12 @@ public class VariableRateIndicatorTest {
             "10:5 15:14, 1",
             "10:5 15:15, 5",
     })
-    public void scheduleAtGreatestCommonDivisor(String rate, long expectedPeriod) {
+    public void scheduleAtGreatestCommonDivisor(String input, long expectedPeriod) {
         ScheduledExecutorService scheduledExecutorService = mock(ScheduledExecutorService.class);
-        RateIndicator rateIndicator = new VariableRateIndicator(
-                Arrays.asList(rate.split(" ")),
-                scheduledExecutorService
+        ValueIndicator<Integer> rateIndicator = new VariableValueIndicator<>(
+                Arrays.asList(input.split(" ")),
+                scheduledExecutorService,
+                value -> Integer.valueOf(value)
         );
         rateIndicator.start();
         verify(scheduledExecutorService).scheduleAtFixedRate(

@@ -99,6 +99,8 @@ public class MulticastParams {
 
     private List<String> publishingRates = new ArrayList<>();
 
+    private List<String> messageSizes = new ArrayList<>();
+
     public void setExchangeType(String exchangeType) {
         this.exchangeType = exchangeType;
     }
@@ -328,6 +330,10 @@ public class MulticastParams {
         this.heartbeatSenderThreads = heartbeatSenderThreads;
     }
 
+    public void setMessageSizes(List<String> messageSizes) {
+        this.messageSizes = messageSizes;
+    }
+
     public int getHeartbeatSenderThreads() {
         return heartbeatSenderThreads <= 0 ? producerCount + consumerCount : this.heartbeatSenderThreads;
     }
@@ -368,8 +374,12 @@ public class MulticastParams {
         return publishingRates;
     }
 
+    public List<String> getMessageSizes() {
+        return messageSizes;
+    }
+
     public Producer createProducer(Connection connection, Stats stats, MulticastSet.CompletionHandler completionHandler,
-                                   RateIndicator rateIndicator) throws IOException {
+                                   ValueIndicator<Float> rateIndicator, ValueIndicator<Integer> messageSizeIndicator) throws IOException {
         Channel channel = connection.createChannel(); //NOSONAR
         if (producerTxSize > 0) channel.txSelect();
         if (confirm >= 0) channel.confirmSelect();
@@ -385,12 +395,7 @@ public class MulticastParams {
             messageBodySource = new LocalFilesMessageBodySource(bodyFiles, bodyContentType);
         } else {
             tsp = new TimestampProvider(useMillis, false);
-            messageBodySource = new TimeSequenceMessageBodySource(tsp, minMsgSize);
-        }
-
-        float calculatedProducerRateLimit = this.producerRateLimit;
-        if (this.publishingInterval > 0) {
-            calculatedProducerRateLimit = 1.0f / (float) this.publishingInterval;
+            messageBodySource = new TimeSequenceMessageBodySource(tsp, messageSizeIndicator);
         }
 
         Recovery.RecoveryProcess recoveryProcess = setupRecoveryProcess(connection, topologyRecording);
@@ -398,7 +403,7 @@ public class MulticastParams {
         final Producer producer = new Producer(new ProducerParameters()
             .setChannel(channel).setExchangeName(exchangeName).setId(this.topologyHandler.getRoutingKey())
             .setRandomRoutingKey(randomRoutingKey).setFlags(flags).setTxSize(producerTxSize)
-            .setRateLimit(calculatedProducerRateLimit).setMsgLimit(producerMsgCount).setConfirm(confirm)
+            .setMsgLimit(producerMsgCount).setConfirm(confirm)
             .setConfirmTimeout(confirmTimeout).setMessageBodySource(messageBodySource).setTsp(tsp)
             .setStats(stats).setMessageProperties(messageProperties).setCompletionHandler(completionHandler)
             .setRoutingKeyCacheSize(this.routingKeyCacheSize)

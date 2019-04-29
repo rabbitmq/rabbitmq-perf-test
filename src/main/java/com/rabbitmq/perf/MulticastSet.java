@@ -58,7 +58,8 @@ public class MulticastSet {
     private final CompletionHandler completionHandler;
     private final ShutdownService shutdownService;
     private ThreadingHandler threadingHandler = new DefaultThreadingHandler();
-    private final RateIndicator rateIndicator;
+    private final ValueIndicator<Float> rateIndicator;
+    private final ValueIndicator<Integer> messageSizeIndicator;
 
     public MulticastSet(Stats stats, ConnectionFactory factory,
         MulticastParams params, List<String> uris, CompletionHandler completionHandler) {
@@ -80,12 +81,24 @@ public class MulticastSet {
         this.shutdownService = shutdownService;
         this.params.init();
         if (this.params.getPublishingRates() == null || this.params.getPublishingRates().isEmpty()) {
-            this.rateIndicator = new FixedRateIndicator(params.getProducerRateLimit());
+            this.rateIndicator = new FixedValueIndicator<>(params.getProducerRateLimit());
         } else {
             ScheduledExecutorService scheduledExecutorService = this.threadingHandler.scheduledExecutorService(
                     "perf-test-variable-rate-scheduler", 1
             );
-            this.rateIndicator = new VariableRateIndicator(params.getPublishingRates(), scheduledExecutorService);
+            this.rateIndicator = new VariableValueIndicator<>(
+                    params.getPublishingRates(), scheduledExecutorService, input -> Float.valueOf(input)
+            );
+        }
+        if (this.params.getMessageSizes() == null || this.params.getMessageSizes().isEmpty()) {
+            this.messageSizeIndicator = new FixedValueIndicator<>(params.getMinMsgSize());
+        } else {
+            ScheduledExecutorService scheduledExecutorService = this.threadingHandler.scheduledExecutorService(
+                    "perf-test-variable-message-size-scheduler", 1
+            );
+            this.messageSizeIndicator = new VariableValueIndicator<>(
+                    params.getMessageSizes(), scheduledExecutorService, input -> Integer.valueOf(input)
+            );
         }
     }
 
@@ -271,7 +284,7 @@ public class MulticastSet {
                 AgentState agentState = new AgentState();
                 agentState.runnable = params.createProducer(
                         producerConnection, stats,
-                        this.completionHandler, this.rateIndicator
+                        this.completionHandler, this.rateIndicator, this.messageSizeIndicator
                 );
                 producerStates[(i * params.getProducerChannelCount()) + j] = agentState;
             }
@@ -289,6 +302,7 @@ public class MulticastSet {
     }
 
     private void startProducers(AgentState[] producerStates) {
+        this.messageSizeIndicator.start();
         if (params.getPublishingInterval() > 0) {
             ScheduledExecutorService producersExecutorService = this.threadingHandler.scheduledExecutorService(
                     PRODUCER_THREAD_PREFIX, nbThreadsForConsumer(params)

@@ -93,7 +93,7 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
 
     private final TimestampProvider timestampProvider;
 
-    private final RateIndicator rateIndicator;
+    private final ValueIndicator<Float> rateIndicator;
 
     public Producer(ProducerParameters parameters) {
         this.channel           = parameters.getChannel();
@@ -339,7 +339,7 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
         try {
             while (keepGoing(state)) {
                 delay(now, state);
-                if (variableRate && this.rateIndicator.getRate() == 0.0f) {
+                if (variableRate && this.rateIndicator.getValue() == 0.0f) {
                     // instructed not to publish, so waiting
                     waitForOneSecond();
                 } else {
@@ -516,16 +516,16 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
      */
     private static class ProducerState implements AgentState {
 
-        private final RateIndicator rateIndicator;
+        private final ValueIndicator<Float> rateIndicator;
         private long  lastStatsTime;
         private int msgCount = 0;
 
-        protected ProducerState(RateIndicator rateIndicator) {
+        protected ProducerState(ValueIndicator<Float> rateIndicator) {
             this.rateIndicator = rateIndicator;
         }
 
         public float getRateLimit() {
-            return rateIndicator.getRate();
+            return rateIndicator.getValue();
         }
 
         public long getLastStatsTime() {
