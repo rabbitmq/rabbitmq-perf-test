@@ -136,18 +136,19 @@ public class Consumer extends AgentBase implements Runnable {
             if (msgLimit == 0 || currentMessageCount <= msgLimit) {
                 long messageTimestamp = timestampExtractor.apply(properties, body);
                 long nowTimestamp = timestampProvider.getCurrentTime();
+                long diff_time = timestampProvider.getDifference(nowTimestamp, messageTimestamp);
+
+                stats.handleRecv(id.equals(envelope.getRoutingKey()) ? diff_time : 0L);
+
+                consumerLatency.simulateLatency();
 
                 ackIfNecessary(envelope, currentMessageCount);
                 commitTransactionIfNecessary(currentMessageCount);
-
-                long diff_time = timestampProvider.getDifference(nowTimestamp, messageTimestamp);
-                stats.handleRecv(id.equals(envelope.getRoutingKey()) ? diff_time : 0L);
 
                 long now = System.currentTimeMillis();
                 if (state.getRateLimit() > 0.0f) {
                     delay(now, state);
                 }
-                consumerLatency.simulateLatency();
             }
             if (msgLimit != 0 && currentMessageCount >= msgLimit) { // NB: not quite the inverse of above
                 countDown();
