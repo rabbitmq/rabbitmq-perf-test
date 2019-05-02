@@ -124,10 +124,13 @@ public class Consumer extends AgentBase implements Runnable {
 
     private class ConsumerImpl extends DefaultConsumer {
 
+        private final boolean rateLimitation;
+
         private ConsumerImpl(Channel channel) {
             super(channel);
             state.setLastStatsTime(System.currentTimeMillis());
             state.setMsgCount(0);
+            this.rateLimitation = state.getRateLimit() > 0.0f;
         }
 
         @Override
@@ -146,7 +149,17 @@ public class Consumer extends AgentBase implements Runnable {
                 commitTransactionIfNecessary(currentMessageCount);
 
                 long now = System.currentTimeMillis();
-                if (state.getRateLimit() > 0.0f) {
+                if (this.rateLimitation) {
+                    // if rate is limited, we need to reset stats every second
+                    // otherwise pausing to throttle rate will be based on the whole history
+                    // which is broken when rate varies
+                    // as consumer does not choose the rate at which messages arrive,
+                    // we can consider the rate is always subject to change,
+                    // so we'd better off always resetting the stats
+                    if (now - state.getLastStatsTime() > 1000) {
+                        state.setLastStatsTime(now);
+                        state.setMsgCount(0);
+                    }
                     delay(now, state);
                 }
             }
