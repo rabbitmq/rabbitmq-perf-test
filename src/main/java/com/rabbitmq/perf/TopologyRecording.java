@@ -1,4 +1,4 @@
-// Copyright (c) 2007-Present Pivotal Software, Inc.  All rights reserved.
+// Copyright (c) 2007-2019 Pivotal Software, Inc.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 1.1 ("MPL"), the GNU General Public License version 2
@@ -21,6 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -38,6 +39,22 @@ public class TopologyRecording {
     private final ConcurrentMap<String, RecordedExchange> exchanges = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, RecordedQueue> queues = new ConcurrentHashMap<>();
     private final Collection<RecordedBinding> bindings = new CopyOnWriteArrayList<>();
+    private final Collection<TopologyRecording> children = new CopyOnWriteArrayList<>();
+
+    private final boolean polling;
+
+    /**
+     * Create  a {@link TopologyRecording} with or without polling option.
+     * <p>
+     * The polling option is set to true when <code>basic.get</code> is used to
+     * consume messages. This way, auto-delete queues with server-generated
+     * names are cleaned on recovery (because they don't go away by themselves).
+     *
+     * @param polling
+     */
+    public TopologyRecording(boolean polling) {
+        this.polling = polling;
+    }
 
     private static Channel reliableWrite(Connection connection, Channel channel, WriteOperation operation) throws IOException {
         try {
@@ -47,6 +64,29 @@ public class TopologyRecording {
             LOGGER.warn("Error during topology recovery: {}", e.getMessage());
             return connection.createChannel();
         }
+    }
+
+    /**
+     * Create a child {@link TopologyRecording} of this instance.
+     * <p>
+     * A {@link TopologyRecording} keeps a reference of its children, it makes
+     * easier to track the all resources created by a {@link TopologyRecording}
+     * and its children.
+     *
+     * @return
+     */
+    TopologyRecording child() {
+        TopologyRecording child = new TopologyRecording(this.polling);
+        this.children.add(child);
+        return child;
+    }
+
+    Collection<RecordedQueue> queues() {
+        Collection<RecordedQueue> queues = new ArrayList<>(this.queues.values());
+        for (TopologyRecording child : children) {
+            queues.addAll(child.queues());
+        }
+        return queues;
     }
 
     public RecordedExchange recordExchange(String name, String type) {
@@ -78,7 +118,7 @@ public class TopologyRecording {
     }
 
     public TopologyRecording subRecording(Collection<String> queues) {
-        TopologyRecording clientTopologyRecording = new TopologyRecording();
+        TopologyRecording clientTopologyRecording = this.child();
         for (String queue : queues) {
             clientTopologyRecording.queues.putIfAbsent(queue, this.queues.get(queue));
             for (TopologyRecording.RecordedBinding binding : this.getBindingsFor(queue)) {
@@ -95,30 +135,39 @@ public class TopologyRecording {
             for (Map.Entry<String, RecordedQueue> entry : queues.entrySet()) {
                 RecordedQueue queue = entry.getValue();
                 synchronized (queue) {
-                    LOGGER.debug("Connection {}, recovering {}", connection.getClientProvidedName(), queue);
+                    String originalName = queue.name;
+                    LOGGER.debug("Connection {}, recovering queue {}", connection.getClientProvidedName(), queue);
                     channel = reliableWrite(connection, channel, ch -> {
                         String newName = ch.queueDeclare(
-                            queue.serverNamed ? "" : queue.name, queue.durable, queue.exclusive,
-                            queue.autoDelete, queue.arguments
+                                queue.serverNamed ? "" : queue.name, queue.durable, queue.exclusive,
+                                queue.autoDelete, queue.arguments
                         ).getQueue();
                         queue.name = newName;
                     });
-                    LOGGER.debug("Connection {}, recovered {}", connection.getClientProvidedName(), queue);
+                    LOGGER.debug("Connection {}, recovered queue {}", connection.getClientProvidedName(), queue);
+
+                    // Recovering an auto-delete, server-named queue create a brand new queue, with a new name.
+                    // This is not fine with polling, as the former server-named queue is still around: no consumer
+                    // registered to it.
+                    // so we delete this former queue explicitly when polling.
+                    if (this.polling && queue.autoDelete && queue.serverNamed && !queue.exclusive) {
+                        channel = reliableWrite(connection, channel, ch -> ch.queueDelete(originalName));
+                    }
                 }
             }
             for (RecordedExchange exchange : exchanges.values()) {
-                LOGGER.debug("Connection {}, recovering {}", connection.getClientProvidedName(), exchange);
+                LOGGER.debug("Connection {}, recovering exchange {}", connection.getClientProvidedName(), exchange);
                 channel = reliableWrite(connection, channel, ch -> ch.exchangeDeclare(exchange.name, exchange.type));
-                LOGGER.debug("Connection {}, recovered {}", connection.getClientProvidedName(), exchange);
+                LOGGER.debug("Connection {}, recovered exchange {}", connection.getClientProvidedName(), exchange);
             }
             for (RecordedBinding binding : bindings) {
-                LOGGER.debug("Connection {}, recovering {}", connection.getClientProvidedName(), binding);
+                LOGGER.debug("Connection {}, recovering binding {}", connection.getClientProvidedName(), binding);
                 RecordedQueue queue = queues.get(binding.queue);
                 synchronized (queue) {
                     channel = reliableWrite(connection, channel,
-                        ch -> ch.queueBind(queue.name, binding.exchange, binding.routingKeyIsQueue() ? queue.name : binding.routingKey));
+                            ch -> ch.queueBind(queue.name, binding.exchange, binding.routingKeyIsQueue() ? queue.name : binding.routingKey));
                 }
-                LOGGER.debug("Connection {}, recovered {}", connection.getClientProvidedName(), binding);
+                LOGGER.debug("Connection {}, recovered binding {}", connection.getClientProvidedName(), binding);
             }
             channel.close();
         } catch (Exception e) {
@@ -144,9 +193,9 @@ public class TopologyRecording {
         @Override
         public String toString() {
             return "RecordedExchange{" +
-                "name='" + name + '\'' +
-                ", type='" + type + '\'' +
-                '}';
+                    "name='" + name + '\'' +
+                    ", type='" + type + '\'' +
+                    '}';
         }
     }
 
@@ -172,16 +221,28 @@ public class TopologyRecording {
             return this.name;
         }
 
+        public boolean isAutoDelete() {
+            return autoDelete;
+        }
+
+        public boolean isServerNamed() {
+            return serverNamed;
+        }
+
+        public boolean isExclusive() {
+            return exclusive;
+        }
+
         @Override
         public String toString() {
             return "RecordedQueue{" +
-                "name='" + name + '\'' +
-                ", durable=" + durable +
-                ", exclusive=" + exclusive +
-                ", autoDelete=" + autoDelete +
-                ", arguments=" + arguments +
-                ", serverNamed=" + serverNamed +
-                '}';
+                    "name='" + name + '\'' +
+                    ", durable=" + durable +
+                    ", exclusive=" + exclusive +
+                    ", autoDelete=" + autoDelete +
+                    ", arguments=" + arguments +
+                    ", serverNamed=" + serverNamed +
+                    '}';
         }
     }
 
@@ -206,10 +267,10 @@ public class TopologyRecording {
         @Override
         public String toString() {
             return "RecordedBinding{" +
-                "queue='" + queue + '\'' +
-                ", exchange='" + exchange + '\'' +
-                ", routingKey='" + routingKey + '\'' +
-                '}';
+                    "queue='" + queue + '\'' +
+                    ", exchange='" + exchange + '\'' +
+                    ", routingKey='" + routingKey + '\'' +
+                    '}';
         }
     }
 }
