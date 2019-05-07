@@ -167,6 +167,8 @@ public class PerfTest {
             boolean polling = hasOption(cmd, "po");
             int pollingInterval = intArg(cmd, "pi", -1);
 
+            boolean nack = hasOption(cmd, "na");
+
             String uri               = strArg(cmd, 'h', "amqp://localhost");
             String urisParameter     = strArg(cmd, 'H', null);
             String outputFile        = strArg(cmd, 'o', null);
@@ -298,6 +300,7 @@ public class PerfTest {
             p.setMessageSizes(variableSizes);
             p.setPolling(polling);
             p.setPollingInterval(pollingInterval);
+            p.setNack(nack);
 
             MulticastSet.CompletionHandler completionHandler = getCompletionHandler(p);
 
@@ -567,6 +570,8 @@ public class PerfTest {
         options.addOption(new Option("po", "polling",false,"use basic.get to consume messages"));
         options.addOption(new Option("pi", "polling-interval",true, "time to wait before polling with basic.get, " +
                 "in millisecond, default is 0."));
+
+        options.addOption(new Option("na", "nack",false,"nack and requeue messages"));
         return options;
     }
 
