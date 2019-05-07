@@ -41,6 +41,7 @@ public class ConsumerParameters {
     private Recovery.RecoveryProcess recoveryProcess;
     private ExecutorService executorService;
     private boolean polling;
+    private boolean nack = false;
 
     private int pollingInterval;
 
@@ -185,6 +186,15 @@ public class ConsumerParameters {
 
     public ConsumerParameters setPollingInterval(int pollingInterval) {
         this.pollingInterval = pollingInterval;
+        return this;
+    }
+
+    public boolean isNack() {
+        return nack;
+    }
+
+    public ConsumerParameters setNack(boolean nack) {
+        this.nack = nack;
         return this;
     }
 }

@@ -107,6 +107,8 @@ public class MulticastParams {
 
     private int pollingInterval = -1;
 
+    private boolean nack = false;
+
     public void setExchangeType(String exchangeType) {
         this.exchangeType = exchangeType;
     }
@@ -396,6 +398,10 @@ public class MulticastParams {
         this.pollingInterval = pollingInterval;
     }
 
+    public void setNack(boolean nack) {
+        this.nack = nack;
+    }
+
     public Producer createProducer(Connection connection, Stats stats, MulticastSet.CompletionHandler completionHandler,
                                    ValueIndicator<Float> rateIndicator, ValueIndicator<Integer> messageSizeIndicator) throws IOException {
         Channel channel = connection.createChannel(); //NOSONAR
@@ -471,6 +477,7 @@ public class MulticastParams {
                 .setExecutorService(executorService)
                 .setPolling(this.polling)
                 .setPollingInterval(this.pollingInterval)
+                .setNack(this.nack)
         );
         this.topologyHandler.next();
         return consumer;

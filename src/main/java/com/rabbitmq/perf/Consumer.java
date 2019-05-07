@@ -35,6 +35,12 @@ public class Consumer extends AgentBase implements Runnable {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Consumer.class);
 
+    private static final AckNackOperation ACK_OPERATION =
+            (ch, envelope, multiple) -> ch.basicAck(envelope.getDeliveryTag(), multiple);
+
+    private static final AckNackOperation NACK_OPERATION =
+            (ch, envelope, multiple) -> ch.basicNack(envelope.getDeliveryTag(), multiple, true);
+
     private volatile ConsumerImpl       q;
     private final Channel               channel;
     private final String                id;
@@ -63,6 +69,8 @@ public class Consumer extends AgentBase implements Runnable {
     private final boolean polling;
 
     private final int pollingInterval;
+
+    private final AckNackOperation ackNackOperation;
 
     public Consumer(ConsumerParameters parameters) {
         this.channel           = parameters.getChannel();
@@ -107,6 +115,13 @@ public class Consumer extends AgentBase implements Runnable {
 
             };
         }
+
+        if (parameters.isNack()) {
+            this.ackNackOperation = NACK_OPERATION;
+        } else {
+            this.ackNackOperation = ACK_OPERATION;
+        }
+
 
         this.state = new ConsumerState(parameters.getRateLimit());
         this.recoveryProcess = parameters.getRecoveryProcess();
@@ -243,9 +258,9 @@ public class Consumer extends AgentBase implements Runnable {
             if (!autoAck) {
                 dealWithWriteOperation(() -> {
                     if (multiAckEvery == 0) {
-                        ch.basicAck(envelope.getDeliveryTag(), false);
+                        ackNackOperation.apply(ch, envelope, false);
                     } else if (currentMessageCount % multiAckEvery == 0) {
-                        ch.basicAck(envelope.getDeliveryTag(), true);
+                        ackNackOperation.apply(ch, envelope, true);
                     }
                 }, recoveryProcess);
             }
@@ -397,6 +412,13 @@ public class Consumer extends AgentBase implements Runnable {
             long start = System.nanoTime();
             while(System.nanoTime() - start < delay);
         }
+    }
+
+    @FunctionalInterface
+    private interface AckNackOperation {
+
+        void apply(Channel channel, Envelope envelope, boolean multiple) throws IOException;
+
     }
 
 }

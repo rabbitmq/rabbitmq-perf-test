@@ -24,7 +24,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.ArgumentsSource;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -664,6 +666,75 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         assertThat(closeCount.get(), is(1));
         completionHandler.countDown();
         waitAtMost(20, () -> testIsDone.get());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"false", "true"})
+    public void ackNack(String nackParameter) throws Exception {
+        boolean nack = Boolean.valueOf(nackParameter);
+        int messagesCount = 100;
+        countsAndTimeLimit(0, messagesCount, 0);
+        params.setConsumerCount(1);
+        params.setProducerCount(0);
+        params.setQueueNames(asList("queue"));
+        params.setNack(nack);
+
+        CountDownLatch consumersLatch = new CountDownLatch(1);
+        AtomicInteger consumerTagCounter = new AtomicInteger(0);
+        List<Consumer> consumers = new CopyOnWriteArrayList<>();
+        AtomicInteger acks = new AtomicInteger(0);
+        AtomicInteger nacks = new AtomicInteger(0);
+        Channel channel = proxy(Channel.class,
+                callback("basicConsume", (proxy, method, args) -> {
+                    consumers.add((Consumer) args[2]);
+                    consumersLatch.countDown();
+                    return consumerTagCounter.getAndIncrement() + "";
+                }),
+                callback("basicAck", (proxy, method, args) -> {
+                    acks.incrementAndGet();
+                    return null;
+                }),
+                callback("basicNack", (proxy, method, args) -> {
+                    nacks.incrementAndGet();
+                    return null;
+                })
+        );
+
+        Connection connection = proxy(Connection.class,
+                callback("createChannel", (proxy, method, args) -> channel)
+        );
+
+        MulticastSet multicastSet = getMulticastSet(connectionFactoryThatReturns(connection));
+        run(multicastSet);
+
+        waitForRunToStart();
+
+        assertThat("consumer should have been registered by now",
+                consumersLatch.await(5, TimeUnit.SECONDS), is(true));
+
+        waitAtMost(20, () -> consumers.size() == 1);
+
+        Collection<Future<?>> sendTasks = new ArrayList<>(consumers.size());
+        for (Consumer consumer : consumers) {
+            Collection<Future<?>> tasks = sendMessagesToConsumer(messagesCount, consumer);
+            sendTasks.addAll(tasks);
+        }
+
+        for (Future<?> latch : sendTasks) {
+            latch.get(10, TimeUnit.SECONDS);
+        }
+
+        waitAtMost(20, () -> testIsDone.get());
+
+        if (nack) {
+            Assertions.assertThat(acks).hasValue(0);
+            Assertions.assertThat(nacks).hasValue(messagesCount);
+        } else {
+            Assertions.assertThat(acks).hasValue(messagesCount);
+            Assertions.assertThat(nacks).hasValue(0);
+        }
+
+
     }
 
     private Collection<Future<?>> sendMessagesToConsumer(int messagesCount, Consumer consumer) {
