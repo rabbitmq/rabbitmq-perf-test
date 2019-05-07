@@ -164,6 +164,9 @@ public class PerfTest {
                 }
             }
 
+            boolean polling = hasOption(cmd, "po");
+            int pollingInterval = intArg(cmd, "pi", -1);
+
             String uri               = strArg(cmd, 'h', "amqp://localhost");
             String urisParameter     = strArg(cmd, 'H', null);
             String outputFile        = strArg(cmd, 'o', null);
@@ -293,6 +296,8 @@ public class PerfTest {
             p.setServersUpLimit(serversUpLimit);
             p.setPublishingRates(variableRates);
             p.setMessageSizes(variableSizes);
+            p.setPolling(polling);
+            p.setPollingInterval(pollingInterval);
 
             MulticastSet.CompletionHandler completionHandler = getCompletionHandler(p);
 
@@ -558,6 +563,10 @@ public class PerfTest {
                           "to specify several values.");
         variableSize.setArgs(Option.UNLIMITED_VALUES);
         options.addOption(variableSize);
+
+        options.addOption(new Option("po", "polling",false,"use basic.get to consume messages"));
+        options.addOption(new Option("pi", "polling-interval",true, "time to wait before polling with basic.get, " +
+                "in millisecond, default is 0."));
         return options;
     }
 

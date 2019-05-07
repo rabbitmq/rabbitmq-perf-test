@@ -1,4 +1,4 @@
-// Copyright (c) 2018-Present Pivotal Software, Inc.  All rights reserved.
+// Copyright (c) 2018-2019 Pivotal Software, Inc.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 1.1 ("MPL"), the GNU General Public License version 2
@@ -17,7 +17,10 @@ package com.rabbitmq.perf.it;
 
 import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.impl.nio.NioParams;
-import com.rabbitmq.perf.*;
+import com.rabbitmq.perf.MulticastParams;
+import com.rabbitmq.perf.MulticastSet;
+import com.rabbitmq.perf.NamedThreadFactory;
+import com.rabbitmq.perf.Stats;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,12 +37,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.SynchronousQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
@@ -94,21 +92,32 @@ public class ConnectionRecoveryIT {
         for (Consumer<MulticastParams> configurer : multicastParamsConfigurers) {
             arguments.add(Arguments.of(configurer, namedConsumer("blocking IO", (Consumer<ConnectionFactory>) cf -> {
             })));
-            arguments.add(Arguments.of(configurer, namedConsumer("NIO", (Consumer<ConnectionFactory>) cf -> {
-                cf.useNio();
-            })));
+            arguments.add(Arguments.of(configurer, namedConsumer("NIO", (Consumer<ConnectionFactory>) cf -> cf.useNio())));
         }
 
         return arguments.toArray(new Arguments[0]);
     }
 
     static List<Consumer<MulticastParams>> multicastParamsConfigurers() {
+        List<Consumer<MulticastParams>> parameters = new ArrayList<>();
+        for (Consumer<MulticastParams> queuesVariation : queuesVariations()) {
+            parameters.add(queuesVariation);
+            parameters.add(namedConsumer("polling - " + queuesVariation, params -> {
+                queuesVariation.accept(params);
+                params.setPolling(true);
+                params.setPollingInterval(10);
+            }));
+        }
+        return parameters;
+    }
+
+    static List<Consumer<MulticastParams>> queuesVariations() {
         return asList(
-            namedConsumer("one server-named queue", empty()),
-            namedConsumer("several queues", severalQueues()),
-            namedConsumer("queue sequence", queueSequence()),
-            namedConsumer("one server-named queue, exclusive", exclusive()),
-            namedConsumer("queue sequence, exclusive", queueSequence().andThen(exclusive()))
+                namedConsumer("one server-named queue", empty()),
+                namedConsumer("several queues", severalQueues()),
+                namedConsumer("queue sequence", queueSequence()),
+                namedConsumer("one server-named queue, exclusive", exclusive()),
+                namedConsumer("queue sequence, exclusive", queueSequence().andThen(exclusive()))
         );
     }
 
@@ -181,7 +190,7 @@ public class ConnectionRecoveryIT {
     @ParameterizedTest
     @MethodSource("configurationArguments")
     public void shouldStopWhenConnectionRecoveryIsOffAndConnectionsAreKilled(Consumer<MulticastParams> configurer, Consumer<ConnectionFactory> cfConfigurer,
-        TestInfo info) throws Exception {
+                                                                             TestInfo info) throws Exception {
         cf.setAutomaticRecoveryEnabled(false);
         configurer.accept(params);
         cfConfigurer.accept(cf);
@@ -195,9 +204,9 @@ public class ConnectionRecoveryIT {
 
     @ParameterizedTest
     @MethodSource("configurationArguments")
-    public void shouldStopWhenConnectionRecoveryIsOffAndConnectionsAreKilledAndUsingPublisingInterval(Consumer<MulticastParams> configurer,
-        Consumer<ConnectionFactory> cfConfigurer, TestInfo info)
-        throws Exception {
+    public void shouldStopWhenConnectionRecoveryIsOffAndConnectionsAreKilledAndUsingPublishingInterval(Consumer<MulticastParams> configurer,
+                                                                                                       Consumer<ConnectionFactory> cfConfigurer, TestInfo info)
+            throws Exception {
         cf.setAutomaticRecoveryEnabled(false);
         configurer.accept(params);
         cfConfigurer.accept(cf);
@@ -214,7 +223,7 @@ public class ConnectionRecoveryIT {
     @ParameterizedTest
     @MethodSource("configurationArguments")
     public void shouldRecoverWhenConnectionsAreKilled(Consumer<MulticastParams> configurer, Consumer<ConnectionFactory> cfConfigurer, TestInfo info)
-        throws Exception {
+            throws Exception {
         configurer.accept(params);
         cfConfigurer.accept(cf);
         int producerConsumerCount = params.getProducerCount();
@@ -229,8 +238,8 @@ public class ConnectionRecoveryIT {
 
     @ParameterizedTest
     @MethodSource("configurationArguments")
-    public void shouldRecoverWhenConnectionsAreKilledAndUsingPublisingInterval(Consumer<MulticastParams> configurer, Consumer<ConnectionFactory> cfConfigurer,
-        TestInfo info) throws Exception {
+    public void shouldRecoverWhenConnectionsAreKilledAndUsingPublishingInterval(Consumer<MulticastParams> configurer, Consumer<ConnectionFactory> cfConfigurer,
+                                                                                TestInfo info) throws Exception {
         params.setPublishingInterval(1);
         configurer.accept(params);
         cfConfigurer.accept(cf);
@@ -251,14 +260,14 @@ public class ConnectionRecoveryIT {
         params.setConsumerCount(10);
         cf.useNio();
         cf.setNioParams(new NioParams()
-            .setNbIoThreads(10)
-            // see PerfTest#configureNioIfRequested
-            .setNioExecutor(new ThreadPoolExecutor(
-                10, params.getProducerCount() + params.getConsumerCount() + 5,
-                30L, TimeUnit.SECONDS,
-                new SynchronousQueue<>(),
-                new NamedThreadFactory("perf-test-nio-")
-            ))
+                .setNbIoThreads(10)
+                // see PerfTest#configureNioIfRequested
+                .setNioExecutor(new ThreadPoolExecutor(
+                        10, params.getProducerCount() + params.getConsumerCount() + 5,
+                        30L, TimeUnit.SECONDS,
+                        new SynchronousQueue<>(),
+                        new NamedThreadFactory("perf-test-nio-")
+                ))
         );
         int producerConsumerCount = params.getProducerCount();
         MulticastSet set = new MulticastSet(stats, cf, params, "", URIS, latchCompletionHandler(1, info));

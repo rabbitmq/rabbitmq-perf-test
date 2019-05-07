@@ -16,22 +16,19 @@
 package com.rabbitmq.perf;
 
 import com.rabbitmq.client.AMQP.BasicProperties;
-import com.rabbitmq.client.Channel;
-import com.rabbitmq.client.DefaultConsumer;
-import com.rabbitmq.client.Envelope;
-import com.rabbitmq.client.ShutdownSignalException;
+import com.rabbitmq.client.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 
 public class Consumer extends AgentBase implements Runnable {
@@ -41,7 +38,6 @@ public class Consumer extends AgentBase implements Runnable {
     private volatile ConsumerImpl       q;
     private final Channel               channel;
     private final String                id;
-    private final List<String>          queueNames;
     private final int                   txSize;
     private final boolean               autoAck;
     private final int                   multiAckEvery;
@@ -54,29 +50,38 @@ public class Consumer extends AgentBase implements Runnable {
     private final MulticastSet.CompletionHandler completionHandler;
     private final AtomicBoolean completed = new AtomicBoolean(false);
 
+    private final AtomicReference<List<String>> queueNames = new AtomicReference<>();
+    private final AtomicLong queueNamesVersion = new AtomicLong(0);
+    private final List<String> initialQueueNames; // to keep original names of server-generated queue names (after recovery)
+
     private final ConsumerState state;
 
     private final Recovery.RecoveryProcess recoveryProcess;
 
-    public Consumer(Channel channel, String id,
-                    List<String> queueNames, int txSize, boolean autoAck,
-                    int multiAckEvery, Stats stats, float rateLimit, int msgLimit,
-                    int consumerLatencyInMicroSeconds,
-                    TimestampProvider timestampProvider,
-                    MulticastSet.CompletionHandler completionHandler,
-                    Recovery.RecoveryProcess recoveryProcess) {
+    private final ExecutorService executorService;
 
-        this.channel           = channel;
-        this.id                = id;
-        this.queueNames        = queueNames;
-        this.txSize            = txSize;
-        this.autoAck           = autoAck;
-        this.multiAckEvery     = multiAckEvery;
-        this.stats             = stats;
-        this.msgLimit          = msgLimit;
-        this.timestampProvider = timestampProvider;
-        this.completionHandler = completionHandler;
+    private final boolean polling;
 
+    private final int pollingInterval;
+
+    public Consumer(ConsumerParameters parameters) {
+        this.channel           = parameters.getChannel();
+        this.id                = parameters.getId();
+        this.txSize            = parameters.getTxSize();
+        this.autoAck           = parameters.isAutoAck();
+        this.multiAckEvery     = parameters.getMultiAckEvery();
+        this.stats             = parameters.getStats();
+        this.msgLimit          = parameters.getMsgLimit();
+        this.timestampProvider = parameters.getTimestampProvider();
+        this.completionHandler = parameters.getCompletionHandler();
+        this.executorService   = parameters.getExecutorService();
+        this.polling           = parameters.isPolling();
+        this.pollingInterval   = parameters.getPollingInterval();
+
+        this.queueNames.set(new ArrayList<>(parameters.getQueueNames()));
+        this.initialQueueNames = new ArrayList<>(parameters.getQueueNames());
+
+        int consumerLatencyInMicroSeconds = parameters.getConsumerLatencyInMicroSeconds();
         if (consumerLatencyInMicroSeconds <= 0) {
             this.consumerLatency = new NoWaitConsumerLatency();
         } else if (consumerLatencyInMicroSeconds >= 1000) {
@@ -103,22 +108,76 @@ public class Consumer extends AgentBase implements Runnable {
             };
         }
 
-        this.state = new ConsumerState(rateLimit);
-        this.recoveryProcess = recoveryProcess;
+        this.state = new ConsumerState(parameters.getRateLimit());
+        this.recoveryProcess = parameters.getRecoveryProcess();
         this.recoveryProcess.init(this);
     }
 
     public void run() {
-        try {
-            q = new ConsumerImpl(channel);
-            for (String qName : queueNames) {
-                String tag = channel.basicConsume(qName, autoAck, q);
-                consumerTagBranchMap.put(tag, qName);
+        if (this.polling) {
+            this.executorService.execute(() -> {
+                ConsumerImpl delegate = new ConsumerImpl(channel);
+                final boolean shouldPause = this.pollingInterval > 0;
+                long queueNamesVersion = this.queueNamesVersion.get();
+                List<String> queues = this.queueNames.get();
+                Channel ch = this.channel;
+                Connection connection = this.channel.getConnection();
+                while (!completed.get() && !Thread.interrupted()) {
+                    // queue name can change between recoveries, we refresh only if necessary
+                    if (queueNamesVersion != this.queueNamesVersion.get()) {
+                        queues = this.queueNames.get();
+                        queueNamesVersion = this.queueNamesVersion.get();
+                    }
+                    for (String queue : queues) {
+                        if (!this.recoveryProcess.isRecoverying()) {
+                            try {
+                                GetResponse response = ch.basicGet(queue, autoAck);
+                                if (response != null) {
+                                    delegate.handleMessage(response.getEnvelope(), response.getProps(), response.getBody(), ch);
+                                }
+                            } catch (IOException e) {
+                                LOGGER.debug("Basic.get error on queue {}: {}", queue, e.getMessage());
+                                try {
+                                    ch = connection.createChannel();
+                                } catch (Exception ex) {
+                                    LOGGER.debug("Error while trying to create a channel: {}", queue, e.getMessage());
+                                }
+                            } catch (AlreadyClosedException e) {
+                                LOGGER.debug("Tried to basic.get from a closed connection");
+                            }
+                            if (shouldPause) {
+                                try {
+                                    Thread.sleep(this.pollingInterval);
+                                } catch (InterruptedException e) {
+                                    Thread.currentThread().interrupt();
+                                }
+                            }
+                        } else {
+                            // The connection is recovering, waiting a bit.
+                            // The duration is arbitrary: don't want to empty loop
+                            // too much and don't want to catch too late with recovery
+                            try {
+                                LOGGER.debug("Recovery in progress, sleeping for a sec");
+                                Thread.sleep(1000L);
+                            } catch (InterruptedException e) {
+                                Thread.currentThread().interrupt();
+                            }
+                        }
+                    }
+                }
+            });
+        } else {
+            try {
+                q = new ConsumerImpl(channel);
+                for (String qName : queueNames.get()) {
+                    String tag = channel.basicConsume(qName, autoAck, q);
+                    consumerTagBranchMap.put(tag, qName);
+                }
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            } catch (ShutdownSignalException e) {
+                throw new RuntimeException(e);
             }
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        } catch (ShutdownSignalException e) {
-            throw new RuntimeException(e);
         }
     }
 
@@ -135,6 +194,10 @@ public class Consumer extends AgentBase implements Runnable {
 
         @Override
         public void handleDelivery(String consumerTag, Envelope envelope, BasicProperties properties, byte[] body) throws IOException {
+            this.handleMessage(envelope, properties, body, channel);
+        }
+
+        void handleMessage(Envelope envelope, BasicProperties properties, byte[] body, Channel ch) throws IOException {
             int currentMessageCount = state.incrementMessageCount();
             if (msgLimit == 0 || currentMessageCount <= msgLimit) {
                 long messageTimestamp = timestampExtractor.apply(properties, body);
@@ -145,8 +208,8 @@ public class Consumer extends AgentBase implements Runnable {
 
                 consumerLatency.simulateLatency();
 
-                ackIfNecessary(envelope, currentMessageCount);
-                commitTransactionIfNecessary(currentMessageCount);
+                ackIfNecessary(envelope, currentMessageCount, ch);
+                commitTransactionIfNecessary(currentMessageCount, ch);
 
                 long now = System.currentTimeMillis();
                 if (this.rateLimitation) {
@@ -168,21 +231,21 @@ public class Consumer extends AgentBase implements Runnable {
             }
         }
 
-        private void ackIfNecessary(Envelope envelope, int currentMessageCount) throws IOException {
+        private void ackIfNecessary(Envelope envelope, int currentMessageCount, final Channel ch) throws IOException {
             if (!autoAck) {
                 dealWithWriteOperation(() -> {
                     if (multiAckEvery == 0) {
-                        channel.basicAck(envelope.getDeliveryTag(), false);
+                        ch.basicAck(envelope.getDeliveryTag(), false);
                     } else if (currentMessageCount % multiAckEvery == 0) {
-                        channel.basicAck(envelope.getDeliveryTag(), true);
+                        ch.basicAck(envelope.getDeliveryTag(), true);
                     }
                 }, recoveryProcess);
             }
         }
 
-        private void commitTransactionIfNecessary(int currentMessageCount) throws IOException {
+        private void commitTransactionIfNecessary(int currentMessageCount, final Channel ch) throws IOException {
             if (txSize != 0 && currentMessageCount % txSize == 0) {
-                dealWithWriteOperation(() -> channel.txCommit(), recoveryProcess);
+                dealWithWriteOperation(() -> ch.txCommit(), recoveryProcess);
             }
         }
 
@@ -219,15 +282,25 @@ public class Consumer extends AgentBase implements Runnable {
 
     @Override
     public void recover(TopologyRecording topologyRecording) {
-        for (Map.Entry<String, String> entry : consumerTagBranchMap.entrySet()) {
-            TopologyRecording.RecordedQueue queue = topologyRecording.queue(entry.getValue());
-            try {
-                channel.basicConsume(queue.name(), autoAck, entry.getKey(), q);
-            } catch (IOException e) {
-                LOGGER.warn(
-                    "Error while recovering consumer {} on queue {} on connection {}",
-                    entry.getKey(), queue.name(), channel.getConnection().getClientProvidedName(), e
-                );
+        if (this.polling) {
+            // we get the "latest" names of the queue (useful only when there are server-generated name for recovered queues)
+            List<String> queues = new ArrayList<>(this.initialQueueNames.size());
+            for (String queue : initialQueueNames) {
+                queues.add(topologyRecording.queue(queue).name());
+            }
+            this.queueNames.set(queues);
+            this.queueNamesVersion.incrementAndGet();
+        } else {
+            for (Map.Entry<String, String> entry : consumerTagBranchMap.entrySet()) {
+                TopologyRecording.RecordedQueue queue = topologyRecording.queue(entry.getValue());
+                try {
+                    channel.basicConsume(queue.name(), autoAck, entry.getKey(), q);
+                } catch (IOException e) {
+                    LOGGER.warn(
+                            "Error while recovering consumer {} on queue {} on connection {}",
+                            entry.getKey(), queue.name(), channel.getConnection().getClientProvidedName(), e
+                    );
+                }
             }
         }
     }

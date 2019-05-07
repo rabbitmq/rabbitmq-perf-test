@@ -171,6 +171,22 @@ public class MulticastSet {
                         () -> {
                             CountDownLatch latch = new CountDownLatch(1);
                             Thread shutdownThread = new Thread(() -> {
+                                if (this.params.isPolling()) {
+                                    Connection connection = null;
+                                    try {
+                                        connection = factory.newConnection("perf-test-queue-deletion");
+                                        this.params.deleteAutoDeleteQueuesIfNecessary(connection);
+                                    } catch (Exception e) {
+                                        LOGGER.warn("Error while trying to delete auto-delete queues");
+                                    } finally {
+                                        if (connection != null) {
+                                            dispose(connection);
+                                        }
+                                    }
+                                }
+                                if (Thread.interrupted()) {
+                                    return;
+                                }
                                 try {
                                     shutdown(configurationConnection, consumerConnections, producerStates, producerConnections);
                                 } finally {
@@ -237,15 +253,27 @@ public class MulticastSet {
 
     private Function<Integer, ExecutorService> createConsumersExecutorsFactory() {
         Function<Integer, ExecutorService> consumersExecutorsFactory;
-        if (params.getConsumersThreadPools() > 0) {
-            consumersExecutorsFactory = new CacheConsumersExecutorsFactory(
-                this.threadingHandler, this.params, params.getConsumersThreadPools()
+        if (params.isPolling()) {
+            // polling, i.e. using basic.get in a loop, we need a dedicated thread for each channel for each consumer
+            // FIXME we keep also an extra thread for the connection factory consumer dispatcher, which sometimes
+            // does not close properly without some room and makes the channel manager complain
+            consumersExecutorsFactory = consumerNumber -> this.threadingHandler.executorService(
+                format("perf-test-synchronous-consumer-%d-worker-", consumerNumber),
+                this.params.getConsumerChannelCount() + 1
             );
         } else {
-            consumersExecutorsFactory = new NoCacheConsumersExecutorsFactory(
-                this.threadingHandler, this.params
-            );
+            // asynchronous consumers
+            if (params.getConsumersThreadPools() > 0) {
+                consumersExecutorsFactory = new CacheConsumersExecutorsFactory(
+                        this.threadingHandler, this.params, params.getConsumersThreadPools()
+                );
+            } else {
+                consumersExecutorsFactory = new NoCacheConsumersExecutorsFactory(
+                        this.threadingHandler, this.params
+                );
+            }
         }
+
         return consumersExecutorsFactory;
     }
 
@@ -258,13 +286,14 @@ public class MulticastSet {
             ExecutorService executorService = consumersExecutorsFactory.apply(i);
             factory.setSharedExecutor(executorService);
 
+
             Connection consumerConnection = factory.newConnection("perf-test-consumer-" + i);
             consumerConnections[i] = consumerConnection;
             for (int j = 0; j < params.getConsumerChannelCount(); j++) {
                 if (announceStartup) {
                     System.out.println("id: " + testID + ", starting consumer #" + i + ", channel #" + j);
                 }
-                consumerRunnables[(i * params.getConsumerChannelCount()) + j] = params.createConsumer(consumerConnection, stats, this.completionHandler);
+                consumerRunnables[(i * params.getConsumerChannelCount()) + j] = params.createConsumer(consumerConnection, stats, this.completionHandler, executorService);
             }
         }
     }
