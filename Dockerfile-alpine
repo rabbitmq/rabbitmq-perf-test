@@ -1,4 +1,4 @@
-FROM alpine:3.9 as builder
+FROM alpine:3.9.4 as builder
 
 ARG perf_test_version="2.6.0"
 
@@ -59,7 +59,7 @@ RUN set -eux; \
     mkdir -p "$PERF_TEST_HOME"; \
     tar --extract --file "$PERF_TEST_PATH.tar.gz" --directory "$PERF_TEST_HOME" --strip-components 1
 
-FROM alpine:3.8
+FROM alpine:3.9.4
 
 RUN apk add --no-cache bash
 
