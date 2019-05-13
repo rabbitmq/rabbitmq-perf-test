@@ -13,7 +13,7 @@ GPG_KEYNAME := $$(awk -F'[<>]' '/<gpg.keyname>/ { print $$3 }' pom.xml)
 
 TODAY := $(shell date -u +'%Y.%m.%d')
 
-RELEASE_VERSION ?= 2.6.0
+RELEASE_VERSION ?= 2.7.0
 PGP_KEYSERVER ?= pgpkeys.uk
 
 ### TARGETS ###

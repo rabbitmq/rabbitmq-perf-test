@@ -1,6 +1,6 @@
 FROM alpine:3.9.4 as builder
 
-ARG perf_test_version="2.6.0"
+ARG perf_test_version="2.7.0"
 
 RUN set -eux; \
 	\
@@ -11,13 +11,13 @@ RUN set -eux; \
 
 
 # change the JAVA_URL variable below as well
-ENV JAVA_VERSION="11.0.2"
+ENV JAVA_VERSION="11.0.3"
 # not to be found on Azul website, computed manually
-ENV JAVA_SHA256="eba6b1ee7302a7e509a9f28ed4fa2359e29431aed8dcc43b1145a8c8a3847791"
+ENV JAVA_SHA256="b80079a77e3be7bedaab67cb4005b51da429fc779cbbdd369a36ae1356d73273"
 
 RUN set -eux; \
     \
-    JAVA_URL="https://cdn.azul.com/zulu/bin/zulu11.29.3-ca-jdk$JAVA_VERSION-linux_musl_x64.tar.gz"; \
+    JAVA_URL="https://cdn.azul.com/zulu/bin/zulu11.31.11-ca-jdk$JAVA_VERSION-linux_musl_x64.tar.gz"; \
     JAVA_PATH="/usr/lib/jdk-$JAVA_VERSION"; \
 	\
     wget --progress dot:giga --output-document "$JAVA_PATH.tar.gz" "$JAVA_URL"; \
