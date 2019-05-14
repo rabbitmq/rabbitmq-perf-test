@@ -18,8 +18,8 @@ package com.rabbitmq.perf;
 import org.HdrHistogram.ConcurrentHistogram;
 import org.HdrHistogram.DoubleRecorder;
 import org.HdrHistogram.Histogram;
-import org.graalvm.nativeimage.Feature;
-import org.graalvm.nativeimage.RuntimeReflection;
+import org.graalvm.nativeimage.hosted.Feature;
+import org.graalvm.nativeimage.hosted.RuntimeReflection;
 import org.slf4j.impl.StaticLoggerBinder;
 
 /**
