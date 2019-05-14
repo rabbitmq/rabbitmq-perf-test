@@ -24,7 +24,13 @@ binary: clean ## Build the binary distribution
 .PHONY: native-image
 native-image: clean ## Build the native image
 	@mvnw -q package -DskipTests -P native-image -P '!java-packaging'
-	native-image -jar target/perf-test.jar -H:Features="com.rabbitmq.perf.NativeImageFeature"
+	native-image -jar target/perf-test.jar -H:Features="com.rabbitmq.perf.NativeImageFeature" \
+	    --initialize-at-build-time=io.micrometer \
+	    --initialize-at-build-time=com.rabbitmq.client \
+	    --initialize-at-build-time=org.eclipse.jetty \
+	    --initialize-at-build-time=javax.servlet \
+	    --initialize-at-build-time=org.slf4j \
+	    --no-fallback
 
 .PHONY: docker-image-alpine
 docker-image-alpine: ## Build Alpine-based Docker image
