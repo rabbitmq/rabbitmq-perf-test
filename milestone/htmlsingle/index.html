@@ -527,7 +527,7 @@ table.CodeRay td.code>pre{padding:0}
 <div id="header">
 <h1>RabbitMQ PerfTest</h1>
 <div class="details">
-<span id="revnumber">version 2.7.0.RC1</span>
+<span id="revnumber">version 2.8.0.RC1</span>
 </div>
 <div id="toc" class="toc2">
 <div id="toctitle">Table of Contents</div>
@@ -545,11 +545,15 @@ table.CodeRay td.code>pre{padding:0}
 <li><a href="#how-it-works">How It Works</a></li>
 <li><a href="#stopping-perftest">Stopping PerfTest</a></li>
 <li><a href="#customising-queues-and-messages">Customising queues and messages</a></li>
+<li><a href="#limiting-and-varying-publishing-rate">Limiting and varying publishing rate</a></li>
+<li><a href="#setting-and-varying-the-message-size">Setting and varying the message size</a></li>
 <li><a href="#working-with-many-queues">Working With Many Queues</a></li>
 <li><a href="#simulating-high-loads">Simulating High Loads</a></li>
 <li><a href="#workloads-with-a-large-number-of-clients">Workloads With a Large Number of Clients</a></li>
 <li><a href="#running-producers-and-consumers-on-different-machines">Running Producers and Consumers on Different Machines</a></li>
+<li><a href="#asynchronous-consumers-vs-synchronous-consumers">Asynchronous Consumers vs Synchronous Consumers</a></li>
 <li><a href="#tls-support">TLS Support</a></li>
+<li><a href="#using-environment-variables-as-options">Using Environment Variables as Options</a></li>
 <li><a href="#native-executable">Native Executable</a></li>
 <li><a href="#result-reporting-in-html">Result Reporting in HTML</a></li>
 <li><a href="#monitoring">Monitoring</a>
@@ -566,7 +570,7 @@ table.CodeRay td.code>pre{padding:0}
 <div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
-<p>PerfTest is a throughput testing tool for <a href="http://www.rabbitmq.com/">RabbitMQ</a></p>
+<p>PerfTest is a throughput testing tool for <a href="https://www.rabbitmq.com/">RabbitMQ</a></p>
 </div>
 </div>
 </div>
@@ -574,7 +578,7 @@ table.CodeRay td.code>pre{padding:0}
 <h2 id="introduction"><a class="anchor" href="#introduction"></a>Introduction</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p><a href="http://www.rabbitmq.com/">RabbitMQ</a> has a throughput testing tool,
+<p><a href="https://www.rabbitmq.com/">RabbitMQ</a> has a throughput testing tool,
 PerfTest, that is based on
 the Java client and can be configured to simulate basic
 workloads and <a href="#workloads-with-a-large-number-of-clients">more advanced workloads</a> as well.
@@ -912,7 +916,7 @@ the queue and to work against <a href="#working-with-many-queues">several queues
 <div class="paragraph">
 <p>In both cases, PerfTest tries to exit as cleanly as possible, in a reasonable amount of time.
 Nevertheless, when PerfTest AMQP connections are throttled by the broker, because they&#8217;re
-publishing too fast or because broker <a href="http://www.rabbitmq.com/alarms.html">alarms</a>
+publishing too fast or because broker <a href="https://www.rabbitmq.com/alarms.html">alarms</a>
 have kicked in, it can take time to close them (several seconds or more for one connection).</p>
 </div>
 <div class="paragraph">
@@ -1003,6 +1007,75 @@ the content-type can be specified:</p>
 <pre>bin/runjava com.rabbitmq.perf.PerfTest --consumers 0 \
   --body content1.json,content2.json --body-content-type application/json</pre>
 </div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="limiting-and-varying-publishing-rate"><a class="anchor" href="#limiting-and-varying-publishing-rate"></a>Limiting and varying publishing rate</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>By default, PerfTest publishes as fast as possible.
+The publishing rate per producer can be limited with the <code>--rate</code> option (<code>-r</code>). E.g. to
+publishing at most 100 messages per second for the whole run:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>bin/runjava com.rabbitmq.perf.PerfTest --rate 100</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The <code>--variable-rate</code> (<code>-vr</code>) option can be used several times to specify a publishing rate
+for a duration, e.g.:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>bin/runjava com.rabbitmq.perf.PerfTest \
+  --variable-rate 100:60 --variable-rate 1000:10 --variable-rate 500:15</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The variable rate option uses the <code>[RATE]:[DURATION]</code> syntax, where <code>RATE</code> is in messages per second
+and <code>DURATION</code> is in seconds. In the previous example, the publishing rate
+will be 100 messages per second for 60 seconds, then 1000 messages per second
+for 10 seconds, then 500 messages per second for 15 seconds, then back to 100 messages per second
+for 60 seconds, and so on.</p>
+</div>
+<div class="paragraph">
+<p>The <code>--variable-rate</code> option is useful to simulate steady rates and burst of messages for short periods.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="setting-and-varying-the-message-size"><a class="anchor" href="#setting-and-varying-the-message-size"></a>Setting and varying the message size</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The default size of the messages that PerfTest publishes is 12 bytes (PerfTest stores
+some data in the message to calculate latency on the consumer side).</p>
+</div>
+<div class="paragraph">
+<p>It is possible to make messages bigger with the <code>--size</code> (<code>-s</code>) option, e.g. to publish
+4 kB messages:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>bin/runjava com.rabbitmq.perf.PerfTest --size 4000</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The <code>--variable-size</code> (<code>-vs</code>) option allows to specify different message sizes
+for periods of time, e.g.:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>bin/runjava com.rabbitmq.perf.PerfTest \
+  --variable-size 1000:30 --variable-size 10000:20 --variable-size 5000:45</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The variable rate option uses the <code>[SIZE]:[DURATION]</code> syntax, where <code>SIZE</code> is in bytes
+and <code>DURATION</code> is in seconds. In the previous example, the size of published messages
+will be 1 kB for 30 seconds, then 10 kB for 20 seconds, then 5 kB for 45 seconds,
+then back to 1 kB for 30 seconds, and so on.</p>
 </div>
 </div>
 </div>
@@ -1298,6 +1371,20 @@ as long as their clocks are synchronised.</p>
 </div>
 </div>
 <div class="sect1">
+<h2 id="asynchronous-consumers-vs-synchronous-consumers"><a class="anchor" href="#asynchronous-consumers-vs-synchronous-consumers"></a>Asynchronous Consumers vs Synchronous Consumers</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Consumers are asynchronous by default in PerfTest. This means they are registered with the AMQP <code>basic.consume</code>
+method and the broker pushes messages to them. This is the optimal way to consume messages. PerfTest
+also provides the <code>--polling</code> and <code>--polling-interval</code> options to consume messages by polling the broker
+with the AMQP <code>basic.get</code> method. These options are available to evaluate the performance and the effects
+of <code>basic.get</code>, but real applications should avoid using <code>basic.get</code> as much as possible because
+it has several drawbacks compared to asynchronous consumers: it needs a network round trip for each message,
+it typically keeps a thread busy for polling in the application, and it intrinsically increases latency.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
 <h2 id="tls-support"><a class="anchor" href="#tls-support"></a>TLS Support</h2>
 <div class="sectionbody">
 <div class="paragraph">
@@ -1339,6 +1426,61 @@ a certificate/key pair generated by the aforementioned profile:</p>
 <pre>JAVA_OPTS="-Djavax.net.ssl.trustStore=/path/to/server_key.p12 -Djavax.net.ssl.trustStorePassword=bunnies -Djavax.net.ssl.trustStoreType=PKCS12 -Djavax.net.ssl.keyStore=/path/to/client_key.p12 -Djavax.net.ssl.keyStorePassword=bunnies -Djavax.net.ssl.keyStoreType=PKCS12" \
   bin/runjava com.rabbitmq.perf.PerfTest -h amqps://localhost:5671</pre>
 </div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="using-environment-variables-as-options"><a class="anchor" href="#using-environment-variables-as-options"></a>Using Environment Variables as Options</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Environment variables can sometimes be easier to work with than command line options, for example
+when using a manifest file to configure PerfTest (with Docker Compose or Cloud Foundry), especially when
+the number of options used grows.</p>
+</div>
+<div class="paragraph">
+<p>PerfTest will automatically use environment variables that match the snake case version of the long version of its options
+(e.g. PerfTest will automatically pick up the value of the <code>CONFIRM_TIMEOUT</code> environment variable
+for the <code>--confirm-timeout</code> option, but only if the environment variable is defined).</p>
+</div>
+<div class="paragraph">
+<p>You can list the environment variables that PerfTest will pick up with the following command:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>bin/runjava com.rabbitmq.perf.PerfTest --env</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Note that some options can be used several times to define several values, e.g.:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>bin/runjava com.rabbitmq.perf.PerfTest \
+  --variable-rate 100:60 --variable-rate 1000:10 --variable-rate 500:15</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Declaring an environment variable several times just overrides the previous value, so to
+define several values for an environment variable, just separate the values with a comma:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>VARIABLE_RATE="100:60,1000:10,500:15"</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>To avoid collisions with environment variables that already exist, it is possible to specify
+a prefix for the environment variables that PerfTest will look up. This prefix is defined
+with the <code>RABBITMQ_PERF_TEST_ENV_PREFIX</code> environment variable, e.g.:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>RABBITMQ_PERF_TEST_ENV_PREFIX="PERF_TEST_"</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>With <code>RABBITMQ_PERF_TEST_ENV_PREFIX="PERF_TEST_"</code> defined, PerfTest will for example look for
+the <code>PERF_TEST_CONFIRM_TIMEOUT</code> environment variable, not only <code>CONFIRM_TIMEOUT</code>.</p>
 </div>
 </div>
 </div>
@@ -1565,8 +1707,8 @@ can be changed:</p>
 </div>
 <div id="footer">
 <div id="footer-text">
-Version 2.7.0.RC1<br>
-Last updated 2019-03-08 14:43:47 CET
+Version 2.8.0.RC1<br>
+Last updated 2019-05-15 16:47:55 CEST
 </div>
 </div>
 </body>
