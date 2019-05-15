@@ -567,7 +567,9 @@ public class PerfTest {
         variableSize.setArgs(Option.UNLIMITED_VALUES);
         options.addOption(variableSize);
 
-        options.addOption(new Option("po", "polling",false,"use basic.get to consume messages"));
+        options.addOption(new Option("po", "polling",false,
+                "use basic.get to consume messages. " +
+                "Do not use this in real applications."));
         options.addOption(new Option("pi", "polling-interval",true, "time to wait before polling with basic.get, " +
                 "in millisecond, default is 0."));
 

@@ -290,6 +290,16 @@ but must be used only in the same Java process. So PerfTest can fall back to `Sy
 which provides only milliseconds precision, but is reliable between different machines
 as long as their clocks are synchronised.
 
+== Asynchronous Consumers vs Synchronous Consumers
+
+Consumers are asynchronous by default in PerfTest. This means they are registered with the AMQP `basic.consume`
+method and the broker pushes messages to them. This is the optimal way to consume messages. PerfTest
+also provides the `--polling` and `--polling-interval` options to consume messages by polling the broker
+with the AMQP `basic.get` method. These options are available to evaluate the performance and the effects
+of `basic.get`, but real applications should avoid using `basic.get` as much as possible because
+it has several drawbacks compared to asynchronous consumers: it needs a network round trip for each message,
+it typically keeps a thread busy for polling in the application, and it intrinsically increases latency.
+
 == TLS Support
 
 PerfTest can use TLS to connect to a node that is
