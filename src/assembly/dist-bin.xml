@@ -9,12 +9,19 @@
     <dependencySets>
         <dependencySet>
             <outputDirectory>/lib</outputDirectory>
-            <useProjectArtifact>true</useProjectArtifact>
+            <useProjectArtifact>false</useProjectArtifact>
             <unpack>false</unpack>
             <scope>runtime</scope>
         </dependencySet>
     </dependencySets>
     <fileSets>
+        <fileSet>
+            <directory>${project.basedir}/target</directory>
+            <outputDirectory>lib</outputDirectory>
+            <includes>
+                <include>perf-test-${project.version}.jar</include>
+            </includes>
+        </fileSet>
         <fileSet>
             <directory>${project.basedir}</directory>
             <outputDirectory></outputDirectory>
