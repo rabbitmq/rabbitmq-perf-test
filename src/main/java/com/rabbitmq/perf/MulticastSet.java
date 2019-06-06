@@ -76,7 +76,8 @@ public class MulticastSet {
         this.factory = factory;
         this.params = params;
         this.testID = testID;
-        this.uris = new CopyOnWriteArrayList<>(uris);
+        this.uris = uris == null || uris.isEmpty() ?
+                null : new CopyOnWriteArrayList<>(uris);
         this.completionHandler = completionHandler;
         this.shutdownService = shutdownService;
         this.params.init();
@@ -126,7 +127,8 @@ public class MulticastSet {
     public void run(boolean announceStartup)
         throws IOException, InterruptedException, TimeoutException, NoSuchAlgorithmException, KeyManagementException, URISyntaxException {
         if (waitUntilBrokerAvailableIfNecessary(params.getServersStartUpTimeout(),
-                                                params.getServersUpLimit() == -1 ? uris.size() : params.getServersUpLimit(),
+                                                params.getServersUpLimit() == -1 ? (uris == null ? 0 : uris.size())
+                                                        : params.getServersUpLimit(),
                                                 uris, factory)) {
             ScheduledExecutorService heartbeatSenderExecutorService = this.threadingHandler.scheduledExecutorService(
                     "perf-test-heartbeat-sender-",
@@ -221,7 +223,7 @@ public class MulticastSet {
     static boolean waitUntilBrokerAvailableIfNecessary(int startUpTimeoutInSeconds, int serversUpLimit,
                                                        Collection<String> uris, ConnectionFactory factory)
             throws NoSuchAlgorithmException, KeyManagementException, URISyntaxException, InterruptedException {
-        if (startUpTimeoutInSeconds <= 0) {
+        if (startUpTimeoutInSeconds <= 0 || uris == null || uris.isEmpty()) {
             // we don't test the connection to the broker
             return true;
         } else {
@@ -458,7 +460,7 @@ public class MulticastSet {
     }
 
     private void setUri() throws URISyntaxException, NoSuchAlgorithmException, KeyManagementException {
-        if (uris != null) {
+        if (uris != null && !uris.isEmpty()) {
             factory.setUri(uri());
         }
     }
