@@ -18,6 +18,8 @@ package com.rabbitmq.perf;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.rabbitmq.client.ConnectionFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -31,6 +33,9 @@ import java.util.List;
 import java.util.Map;
 
 public class PerfTestMulti {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(PerfTestMulti.class);
+
     private static final ConnectionFactory factory = new ConnectionFactory();
 
     private static final Map<String, Object> results = new HashMap<>();
@@ -53,8 +58,15 @@ public class PerfTestMulti {
             System.exit(1);
         }
         Scenario[] scenarios = scenarios(json, status -> System.exit(status));
-        runStaticBrokerTests(scenarios);
-        writeJSON(outJSON);
+        try {
+            runStaticBrokerTests(scenarios);
+            writeJSON(outJSON);
+            System.exit(0);
+        } catch (Exception e) {
+            LOGGER.error("Error during test execution", e);
+            System.exit(1);
+        }
+
     }
 
     @SuppressWarnings("unchecked")

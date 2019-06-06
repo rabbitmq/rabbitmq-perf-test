@@ -41,7 +41,7 @@ public class VaryingScenario implements Scenario {
     }
 
     public void run() throws Exception {
-        run(variables, new ArrayList<VariableValue>());
+        run(variables, new ArrayList<>());
     }
 
     private void run(Variable[] variables, List<VariableValue> values) throws Exception {
