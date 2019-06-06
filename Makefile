@@ -21,7 +21,8 @@ PGP_KEYSERVER ?= pgpkeys.uk
 
 .PHONY: binary
 binary: clean ## Build the binary distribution
-	@mvnw package -P assemblies -Dgpg.skip=true -Dmaven.test.skip
+	@mvnw package -Dmaven.test.skip -Dgpg.skip=true
+	@mvnw assembly:single -P assemblies -Dmaven.test.skip
 
 .PHONY: native-image
 native-image: clean ## Build the native image
