@@ -229,24 +229,24 @@ public class Consumer extends AgentBase implements Runnable {
 
                 stats.handleRecv(id.equals(envelope.getRoutingKey()) ? diff_time : 0L);
 
-                consumerLatency.simulateLatency();
+                if (consumerLatency.simulateLatency()) {
+                    ackIfNecessary(envelope, currentMessageCount, ch);
+                    commitTransactionIfNecessary(currentMessageCount, ch);
 
-                ackIfNecessary(envelope, currentMessageCount, ch);
-                commitTransactionIfNecessary(currentMessageCount, ch);
-
-                long now = System.currentTimeMillis();
-                if (this.rateLimitation) {
-                    // if rate is limited, we need to reset stats every second
-                    // otherwise pausing to throttle rate will be based on the whole history
-                    // which is broken when rate varies
-                    // as consumer does not choose the rate at which messages arrive,
-                    // we can consider the rate is always subject to change,
-                    // so we'd better off always resetting the stats
-                    if (now - state.getLastStatsTime() > 1000) {
-                        state.setLastStatsTime(now);
-                        state.setMsgCount(0);
+                    long now = System.currentTimeMillis();
+                    if (this.rateLimitation) {
+                        // if rate is limited, we need to reset stats every second
+                        // otherwise pausing to throttle rate will be based on the whole history
+                        // which is broken when rate varies
+                        // as consumer does not choose the rate at which messages arrive,
+                        // we can consider the rate is always subject to change,
+                        // so we'd better off always resetting the stats
+                        if (now - state.getLastStatsTime() > 1000) {
+                            state.setLastStatsTime(now);
+                            state.setMsgCount(0);
+                        }
+                        delay(now, state);
                     }
-                    delay(now, state);
                 }
             }
             if (msgLimit != 0 && currentMessageCount >= msgLimit) { // NB: not quite the inverse of above
@@ -366,15 +366,19 @@ public class Consumer extends AgentBase implements Runnable {
 
     private interface ConsumerLatency {
 
-        void simulateLatency();
+        /**
+         *
+         * @return true if normal completion, false if not
+         */
+        boolean simulateLatency();
 
     }
 
     private static class NoWaitConsumerLatency implements ConsumerLatency {
 
         @Override
-        public void simulateLatency() {
-            // NO OP
+        public boolean simulateLatency() {
+            return true;
         }
 
     }
@@ -388,12 +392,13 @@ public class Consumer extends AgentBase implements Runnable {
         }
 
         @Override
-        public void simulateLatency() {
+        public boolean simulateLatency() {
             try {
                 Thread.sleep(waitTime);
+                return true;
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-                throw new RuntimeException("Exception while simulating latency", e);
+                return false;
             }
         }
     }
@@ -408,9 +413,10 @@ public class Consumer extends AgentBase implements Runnable {
         }
 
         @Override
-        public void simulateLatency() {
+        public boolean simulateLatency() {
             long start = System.nanoTime();
             while(System.nanoTime() - start < delay);
+            return true;
         }
     }
 
