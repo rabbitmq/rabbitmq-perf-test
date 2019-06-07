@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Pivotal Software, Inc.  All rights reserved.
+// Copyright (c) 2018-2019 Pivotal Software, Inc.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 1.1 ("MPL"), the GNU General Public License version 2
@@ -15,6 +15,7 @@
 
 package com.rabbitmq.perf;
 
+import com.rabbitmq.client.AlreadyClosedException;
 import com.rabbitmq.client.impl.DefaultExceptionHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,6 +31,9 @@ import java.io.IOException;
  * closes the connection with a timeout. This can result in noisy logs,
  * which are not useful here, so this exception handler is a bit more
  * relaxed for those logs.
+ * <p>
+ * This exception handler is also less noisy with {@link AlreadyClosedException},
+ * which can typically happen on shutdown or during connection recovery.
  *
  * @since 2.5.0
  */
@@ -38,9 +42,13 @@ public class RelaxedExceptionHandler extends DefaultExceptionHandler {
     private static final Logger LOGGER = LoggerFactory.getLogger(RelaxedExceptionHandler.class);
 
     private static boolean isSocketClosedOrConnectionReset(Throwable e) {
-        return e instanceof IOException &&
+        return (e instanceof IOException &&
                 ("Connection reset".equals(e.getMessage()) || "Socket closed".equals(e.getMessage()) ||
                         "Connection reset by peer".equals(e.getMessage())
+                )) ||
+                (e instanceof AlreadyClosedException &&
+                        e.getMessage() != null &&
+                        e.getMessage().contains("connection is already closed due to clean connection shutdown")
                 );
     }
 
