@@ -54,12 +54,12 @@ public class MulticastSet {
     private final MulticastParams params;
     private final String testID;
     private final List<String> uris;
-    private final Random random = new Random();
     private final CompletionHandler completionHandler;
     private final ShutdownService shutdownService;
     private ThreadingHandler threadingHandler = new DefaultThreadingHandler();
     private final ValueIndicator<Float> rateIndicator;
     private final ValueIndicator<Integer> messageSizeIndicator;
+    private final ConnectionCreationFunction connectionCreationFunction;
 
     public MulticastSet(Stats stats, ConnectionFactory factory,
         MulticastParams params, List<String> uris, CompletionHandler completionHandler) {
@@ -101,6 +101,32 @@ public class MulticastSet {
                     params.getMessageSizes(), scheduledExecutorService, input -> Integer.valueOf(input)
             );
         }
+        if (uris == null || uris.isEmpty()) {
+            // URI already set on the connection factory, nothing special to do
+            this.connectionCreationFunction = name -> this.factory.newConnection(name);
+        } else {
+            ConnectionFactory cf = new ConnectionFactory(); // just to extract host and port from URI
+            List<Address> addresses = new ArrayList<>(uris.size());
+            for (String uri : uris) {
+                try {
+                    cf.setUri(uri);
+                    addresses.add(new Address(cf.getHost(), cf.getPort()));
+                } catch (Exception e) {
+                    throw new IllegalArgumentException("Could not parse URI: " + uri);
+                }
+            }
+            this.connectionCreationFunction = name -> {
+                List<Address> addrs = new ArrayList<>(addresses);
+                if (addresses.size() > 1) {
+                    Collections.shuffle(addrs);
+                }
+                return this.factory.newConnection(addrs, name);
+            };
+        }
+    }
+
+    Connection createConnection(String name) throws IOException, TimeoutException {
+        return this.connectionCreationFunction.create(name);
     }
 
     protected static int nbThreadsForConsumer(MulticastParams params) {
@@ -135,8 +161,7 @@ public class MulticastSet {
                     this.params.getHeartbeatSenderThreads()
             );
             factory.setHeartbeatExecutor(heartbeatSenderExecutorService);
-            setUri();
-            Connection configurationConnection = factory.newConnection("perf-test-configuration");
+            Connection configurationConnection = createConnection("perf-test-configuration");
             MulticastParams.TopologyHandlerResult topologyHandlerResult = params.configureAllQueues(configurationConnection);
             enableTopologyRecoveryIfNecessary(configurationConnection, topologyHandlerResult);
 
@@ -176,7 +201,7 @@ public class MulticastSet {
                                 if (this.params.isPolling()) {
                                     Connection connection = null;
                                     try {
-                                        connection = factory.newConnection("perf-test-queue-deletion");
+                                        connection = createConnection("perf-test-queue-deletion");
                                         this.params.deleteAutoDeleteQueuesIfNecessary(connection);
                                     } catch (Exception e) {
                                         LOGGER.warn("Error while trying to delete auto-delete queues");
@@ -284,12 +309,10 @@ public class MulticastSet {
             if (announceStartup) {
                 System.out.println("id: " + testID + ", starting consumer #" + i);
             }
-            setUri();
             ExecutorService executorService = consumersExecutorsFactory.apply(i);
             factory.setSharedExecutor(executorService);
 
-
-            Connection consumerConnection = factory.newConnection("perf-test-consumer-" + i);
+            Connection consumerConnection = createConnection("perf-test-consumer-" + i);
             consumerConnections[i] = consumerConnection;
             for (int j = 0; j < params.getConsumerChannelCount(); j++) {
                 if (announceStartup) {
@@ -305,8 +328,7 @@ public class MulticastSet {
             if (announceStartup) {
                 System.out.println("id: " + testID + ", starting producer #" + i);
             }
-            setUri();
-            Connection producerConnection = factory.newConnection(PRODUCER_THREAD_PREFIX + i);
+            Connection producerConnection = createConnection(PRODUCER_THREAD_PREFIX + i);
             producerConnections[i] = producerConnection;
             for (int j = 0; j < params.getProducerChannelCount(); j++) {
                 if (announceStartup) {
@@ -457,17 +479,6 @@ public class MulticastSet {
             // just log, we don't want to stop here
             LOGGER.debug("Error while closing connection {}: {}", connection.getClientProvidedName(), e.getMessage());
         }
-    }
-
-    private void setUri() throws URISyntaxException, NoSuchAlgorithmException, KeyManagementException {
-        if (uris != null && !uris.isEmpty()) {
-            factory.setUri(uri());
-        }
-    }
-
-    private String uri() {
-        String uri = uris.get(random.nextInt(uris.size()));
-        return uri;
     }
 
     public void setThreadingHandler(ThreadingHandler threadingHandler) {
@@ -655,5 +666,12 @@ public class MulticastSet {
             }
             return executorService;
         }
+    }
+
+    @FunctionalInterface
+    private interface ConnectionCreationFunction {
+
+        Connection create(String name) throws IOException, TimeoutException;
+
     }
 }

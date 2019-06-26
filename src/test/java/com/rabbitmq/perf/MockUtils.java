@@ -1,4 +1,4 @@
-// Copyright (c) 2018-Present Pivotal Software, Inc.  All rights reserved.
+// Copyright (c) 2018-2019 Pivotal Software, Inc.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 1.1 ("MPL"), the GNU General Public License version 2
@@ -15,12 +15,14 @@
 
 package com.rabbitmq.perf;
 
+import com.rabbitmq.client.Address;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Proxy;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
@@ -37,7 +39,7 @@ public class MockUtils {
         ProxyCallback toString = new ProxyCallback("toString", (proxy, method, args) -> clazz.getSimpleName() + " " + id);
         ProxyCallback[] proxyCallbacks = Arrays.copyOf(callbacks, callbacks.length + 1);
         proxyCallbacks[callbacks.length] = toString;
-        return (T) Proxy.newProxyInstance(clazz.getClassLoader(), new Class[] { clazz }, (proxy, method, args) -> {
+        return (T) Proxy.newProxyInstance(clazz.getClassLoader(), new Class[]{clazz}, (proxy, method, args) -> {
             for (ProxyCallback callback : proxyCallbacks) {
                 if (method.getName().equals(callback.method)) {
                     return callback.handler.invoke(proxy, method, args);
@@ -66,6 +68,11 @@ public class MockUtils {
             public Connection newConnection(String name) {
                 return c;
             }
+
+            @Override
+            public Connection newConnection(List<Address> addrs, String name) {
+                return c;
+            }
         };
     }
 
@@ -73,6 +80,11 @@ public class MockUtils {
         return new ConnectionFactory() {
             @Override
             public Connection newConnection(String name) {
+                return supplier.get();
+            }
+
+            @Override
+            public Connection newConnection(List<Address> addrs, String name) {
                 return supplier.get();
             }
         };

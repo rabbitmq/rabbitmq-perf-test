@@ -15,19 +15,27 @@
 
 package com.rabbitmq.perf;
 
+import com.rabbitmq.client.Address;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 import org.apache.commons.lang3.time.StopWatch;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import java.io.IOException;
+import java.net.URI;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static com.rabbitmq.perf.MulticastSet.*;
 import static java.util.Arrays.asList;
@@ -46,12 +54,14 @@ public class MulticastSetTest {
     ConnectionFactory factory;
     @Mock
     Connection connection;
+    @Mock
+    Stats stats;
 
-    static Collection<String> oneUri() {
+    static List<String> oneUri() {
         return new ArrayList<>(asList("amqp://host1"));
     }
 
-    static Collection<String> threeUris() {
+    static List<String> threeUris() {
         return new ArrayList<>(asList("amqp://host1", "amqp://host2", "amqp://host3"));
     }
 
@@ -203,6 +213,67 @@ public class MulticastSetTest {
         } finally {
             watch.stop();
         }
+    }
+
+    @Test
+    public void createConnectionAddressesNotUsedWhenNoUriList() throws Exception {
+        MulticastSet multicastSet = getMulticastSet(new ArrayList<>());
+        multicastSet.createConnection("connection-1");
+        verify(factory, times(1)).newConnection("connection-1");
+    }
+
+    @Test
+    public void createConnectionFromOneUri() throws Exception {
+        MulticastSet multicastSet = getMulticastSet(Arrays.asList("amqp://host1:5673"));
+        multicastSet.createConnection("connection-1");
+        ArgumentCaptor<List<Address>> addresses = addressesArgumentCaptor();
+        verify(factory, times(1)).newConnection(addresses.capture(), ArgumentMatchers.eq("connection-1"));
+        assertThat(addresses.getValue()).hasSize(1)
+                .element(0)
+                .hasFieldOrPropertyWithValue("host", "host1")
+                .hasFieldOrPropertyWithValue("port", 5673);
+    }
+
+    @Test
+    public void createConnectionFromSeveralUrisShufflingShouldHappen() throws Exception {
+        List<String> uris = IntStream.range(0, 100).mapToObj(i -> "amqp://host" + i).collect(Collectors.toList());
+        MulticastSet multicastSet = getMulticastSet(uris);
+        multicastSet.createConnection("connection-1");
+        ArgumentCaptor<List<Address>> addressesArgument = addressesArgumentCaptor();
+        verify(factory, times(1)).newConnection(addressesArgument.capture(), ArgumentMatchers.eq("connection-1"));
+        List<Address> addresses = addressesArgument.getValue();
+        assertThat(addresses).hasSameSizeAs(uris);
+
+        boolean someDifference = false;
+        for (int i = 0; i < uris.size(); i++) {
+            URI uri = new URI(uris.get(i));
+            if (!uri.getHost().equals(addresses.get(i).getHost())) {
+                someDifference = true;
+            }
+        }
+        assertThat(someDifference).as("Addresses should have been shuffled").isTrue();
+    }
+
+    @SuppressWarnings("unchecked")
+    ArgumentCaptor<List<Address>> addressesArgumentCaptor() {
+        return ArgumentCaptor.forClass(List.class);
+    }
+
+    private MulticastSet getMulticastSet(List<String> uris) {
+        MulticastSet set = new MulticastSet(
+                stats, factory, params, uris, new MulticastSet.CompletionHandler() {
+
+            @Override
+            public void waitForCompletion() {
+            }
+
+            @Override
+            public void countDown() {
+            }
+        }
+        );
+
+        return set;
     }
 
 }
