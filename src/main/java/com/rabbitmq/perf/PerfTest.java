@@ -169,6 +169,18 @@ public class PerfTest {
 
             boolean nack = hasOption(cmd, "na");
 
+            boolean jsonBody = hasOption(cmd, "jb");
+            int bodyFieldCount = intArg(cmd, "bfc", 1000);
+            if (bodyFieldCount < 0) {
+                System.out.println("Body field count should greater than 0.");
+                systemExiter.exit(1);
+            }
+            int bodyCount = intArg(cmd, "bc", 100);
+            if (bodyCount < 0) {
+                System.out.println("Number of pre-generated message bodies should be greater than 0.");
+                systemExiter.exit(1);
+            }
+
             String uri               = strArg(cmd, 'h', "amqp://localhost");
             String urisParameter     = strArg(cmd, 'H', null);
             String outputFile        = strArg(cmd, 'o', null);
@@ -301,6 +313,9 @@ public class PerfTest {
             p.setPolling(polling);
             p.setPollingInterval(pollingInterval);
             p.setNack(nack);
+            p.setJsonBody(jsonBody);
+            p.setBodyFieldCount(bodyFieldCount);
+            p.setBodyCount(bodyCount);
 
             MulticastSet.CompletionHandler completionHandler = getCompletionHandler(p);
 
@@ -574,6 +589,14 @@ public class PerfTest {
                 "in millisecond, default is 0."));
 
         options.addOption(new Option("na", "nack",false,"nack and requeue messages"));
+
+        options.addOption(new Option("jb", "json-body", false, "generate a random JSON document for message body. " +
+                "Use with --size."));
+        options.addOption(new Option("bfc", "body-field-count", true, "number of pre-generated fields and values for body. " +
+                "Use with --json-body. Default is 1000."));
+        options.addOption(new Option("bc", "body-count", true, "number of pre-generated message bodies. " +
+                "Use with --json-body. Default is 100."));
+
         return options;
     }
 
