@@ -16,16 +16,21 @@
 package com.rabbitmq.perf;
 
 
+import com.google.gson.Gson;
+import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.impl.AMQImpl;
+import org.assertj.core.api.Condition;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -35,11 +40,10 @@ import java.util.stream.Stream;
 import static com.rabbitmq.perf.MockUtils.callback;
 import static com.rabbitmq.perf.MockUtils.proxy;
 import static java.util.Collections.singletonList;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.greaterThanOrEqualTo;
-import static org.hamcrest.Matchers.is;
+import static org.assertj.core.api.Assertions.assertThat;
 
-public class MessageSizeTest {
+
+public class MessageCustomizationTest {
 
     MulticastParams params;
 
@@ -85,8 +89,56 @@ public class MessageSizeTest {
 
         set.run();
 
-        assertThat(publishCount.get(), greaterThanOrEqualTo(1));
-        assertThat(body.get().length, is(actualSize));
+        assertThat(publishCount).hasValueGreaterThanOrEqualTo(1);
+        assertThat(body.get()).hasSize(actualSize);
+    }
+
+    @Test
+    public void randomJsonBodyIsEnforced(TestInfo testInfo)
+            throws Exception {
+        CountDownLatch latch = new CountDownLatch(1);
+        AtomicInteger publishCount = new AtomicInteger(0);
+        AtomicReference<AMQP.BasicProperties> messageProperties = new AtomicReference<>();
+        AtomicReference<byte[]> body = new AtomicReference<>();
+        Channel channel = proxy(Channel.class,
+                callback("queueDeclare", (proxy, method, args) -> new AMQImpl.Queue.DeclareOk("", 0, 0)),
+                callback("basicPublish", (proxy, method, args) -> {
+                    messageProperties.set((AMQP.BasicProperties) args[4]);
+                    body.set((byte[]) args[5]);
+                    publishCount.incrementAndGet();
+                    latch.countDown();
+                    return null;
+                })
+        );
+
+        Connection connection = proxy(Connection.class,
+                callback("createChannel", (proxy, method, args) -> channel),
+                callback("close", (proxy, method, args) -> null)
+        );
+
+        params.setJsonBody(true);
+        params.setBodyFieldCount(10000);
+        params.setBodyCount(10);
+        params.setMinMsgSize(10_000);
+        params.setConsumerCount(0);
+        params.setProducerCount(1);
+        MulticastSet set = getMulticastSet(MockUtils.connectionFactoryThatReturns(connection), latch, testInfo);
+
+        set.run();
+
+        assertThat(publishCount).hasValueGreaterThanOrEqualTo(1);
+        assertThat(body.get()).hasSizeBetween(9_000, 11_000);
+        Gson gson = new Gson();
+        gson.fromJson(new String(body.get()), Map.class);
+        assertThat(messageProperties.get().getContentType()).isEqualTo("application/json");
+        // the timestamp (to calculate latency) is in the header, not in the body
+        assertThat(messageProperties.get().getHeaders()).containsKey(Producer.TIMESTAMP_HEADER)
+                .hasEntrySatisfying(Producer.TIMESTAMP_HEADER, new Condition<Object>("is long") {
+                    @Override
+                    public boolean matches(Object value) {
+                        return value instanceof Long;
+                    }
+                });
     }
 
     private MulticastSet getMulticastSet(ConnectionFactory cf, CountDownLatch completionLatch, TestInfo info) {

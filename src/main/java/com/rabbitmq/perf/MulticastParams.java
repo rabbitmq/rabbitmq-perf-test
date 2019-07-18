@@ -30,6 +30,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static com.rabbitmq.perf.Recovery.setupRecoveryProcess;
 
@@ -108,6 +109,13 @@ public class MulticastParams {
     private int pollingInterval = -1;
 
     private boolean nack = false;
+
+    private boolean jsonBody = false;
+    private int bodyFieldCount = 1000;
+    private int bodyCount = 100;
+
+    // for random JSON body generation
+    private AtomicReference<MessageBodySource> messageBodySourceReference = new AtomicReference<>();
 
     public void setExchangeType(String exchangeType) {
         this.exchangeType = exchangeType;
@@ -402,6 +410,18 @@ public class MulticastParams {
         this.nack = nack;
     }
 
+    public void setJsonBody(boolean jsonBody) {
+        this.jsonBody = jsonBody;
+    }
+
+    public void setBodyFieldCount(int bodyFieldCount) {
+        this.bodyFieldCount = bodyFieldCount;
+    }
+
+    public void setBodyCount(int bodyCount) {
+        this.bodyCount = bodyCount;
+    }
+
     public Producer createProducer(Connection connection, Stats stats, MulticastSet.CompletionHandler completionHandler,
                                    ValueIndicator<Float> rateIndicator, ValueIndicator<Integer> messageSizeIndicator) throws IOException {
         Channel channel = connection.createChannel(); //NOSONAR
@@ -417,6 +437,12 @@ public class MulticastParams {
         if (bodyFiles.size() > 0) {
             tsp = new TimestampProvider(useMillis, true);
             messageBodySource = new LocalFilesMessageBodySource(bodyFiles, bodyContentType);
+        } else if (jsonBody) {
+            tsp = new TimestampProvider(useMillis, true);
+            if (messageBodySourceReference.get() == null) {
+                messageBodySourceReference.set(new RandomJsonMessageBodySource(minMsgSize, bodyFieldCount, bodyCount));
+            }
+            messageBodySource = messageBodySourceReference.get();
         } else {
             tsp = new TimestampProvider(useMillis, false);
             messageBodySource = new TimeSequenceMessageBodySource(tsp, messageSizeIndicator);
@@ -450,7 +476,7 @@ public class MulticastParams {
         if (channelPrefetch > 0) channel.basicQos(channelPrefetch, true);
 
         boolean timestampInHeader;
-        if (bodyFiles.size() > 0) {
+        if (bodyFiles.size() > 0 || jsonBody) {
             timestampInHeader = true;
         } else {
             timestampInHeader = false;
