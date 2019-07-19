@@ -1,4 +1,4 @@
-== Customising queues and messages
+== Customising queues
 
 PerfTest can create queues using provided queue arguments:
 
@@ -11,7 +11,15 @@ key/value pairs with commas:
  bin/runjava com.rabbitmq.perf.PerfTest \
    --queue-arguments x-max-length=10,x-dead-letter-exchange=some.exchange.name
 
-You can also specify message properties with key/value pairs separated by commas:
+== Customising messages
+
+It is possible to customise messages that PerfTest publishes. This allows
+getting as close as possible to the target traffic or to populate queues
+with messages that real consumers will process.
+
+=== Message Properties
+
+You can specify message properties with key/value pairs separated by commas:
 
  bin/runjava com.rabbitmq.perf.PerfTest \
    --message-properties priority=5,timestamp=2007-12-03T10:15:30+01:00
@@ -25,6 +33,8 @@ as headers (arbitrary key/value pairs):
  bin/runjava com.rabbitmq.perf.PerfTest \
    --message-properties priority=10,header1=value1,header2=value2
 
+=== Message Payload from Files
+
 You can mimic real messages by specifying their content and
 content type. This can be useful when plugging real application
 consumers downstream. The content can come from one or several files and
@@ -32,6 +42,40 @@ the content-type can be specified:
 
   bin/runjava com.rabbitmq.perf.PerfTest --consumers 0 \
     --body content1.json,content2.json --body-content-type application/json
+
+=== Random JSON Payload
+
+PerfTest can generate random JSON payload for messages. This is useful to
+experiment with traffic that (almost) always changes. To generate random JSON
+payloads, use the `--json-body` flag and the `--size` argument to specify
+the size in bytes:
+
+ bin/runjava com.rabbitmq.perf.PerfTest --json-body --size 16000
+
+Generate random values is costly, so PerfTest generates a pool of payloads upfront
+and uses them randomly in published messages. This way the generation of payloads
+does not impede publishing rate. There are 2 options to change the pre-generation of
+random JSON payload:
+
+ * `--body-count`: the size of the pool of payloads PerfTest will generate and use in
+ published messages. The default size is 100. Increase this value if you want more
+ randomness in published messages.
+ * `--body-field-count`: the size of the pool of random strings used for field names and
+ values in the JSON document. Before generating JSON payloads, PerfTest generates random
+ strings and will use them randomly for field names and values in the JSON documents.
+ The default value is 1,000. Increasing this value can be useful for "large"
+ payloads (a few hundreds of kilobytes or more), which can "exhaust" the pool of random strings
+ and then end up with duplicated field names. Duplicated field names are fine if
+ the random JSON payloads are used to simulate traffic, but can be problematic if real
+ consumers are plugged in and try to parse the JSON documents
+ (JSON parsers do not always tolerate duplicated fields).
+
+The defaults for `--body-count` and `--body-field-count` are usually fine, but can be increased
+for more randomness, at the cost of slower startup time and higher memory consumption.
+
+Bear in mind that a large cache of generated payloads combined with a moderately large size
+can easily take up a significant amount of memory. As an example, `--json-body --body-count 50000 --size 100000`
+(50,000 payloads of 100 kB) will use about 5 GB of memory.
 
 == Limiting and varying publishing rate
 
