@@ -102,7 +102,7 @@ public class PerfTest {
             int consumerChannelCount = intArg(cmd, 'Y', 1);
             int producerTxSize       = intArg(cmd, 'm', 0);
             int consumerTxSize       = intArg(cmd, 'n', 0);
-            int confirm             = intArg(cmd, 'c', -1);
+            long confirm             = intArg(cmd, 'c', -1);
             int confirmTimeout       = intArg(cmd, "ct", 30);
             boolean autoAck          = hasOption(cmd,"a");
             int multiAckEvery        = intArg(cmd, 'A', 0);

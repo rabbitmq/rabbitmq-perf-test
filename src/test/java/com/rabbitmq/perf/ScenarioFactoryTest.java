@@ -32,6 +32,7 @@ public class ScenarioFactoryTest {
         String spec = "[{'name': 'consume', 'type': 'simple', 'params':" +
                 "[{'time-limit': 30, 'producer-count': 4, 'consumer-count': 2, " +
                 "  'rate': 10, 'exclusive': true, " +
+                "  'confirm': 10, " +
                 "  'body': ['file1.json','file2.json'], 'body-content-type' : 'application/json'}]}]";
         List<Map> scenariosJson = new Gson().fromJson(spec, List.class);
         Map scenario = scenariosJson.get(0);
@@ -41,6 +42,7 @@ public class ScenarioFactoryTest {
         assertThat(params.getConsumerCount(), is(2));
         assertThat(params.getProducerRateLimit(), is(10.0f));
         assertThat(params.isExclusive(), is(true));
+        assertThat(params.getConfirm(), is(10L));
         assertThat(params.getBodyFiles(), hasSize(2));
         assertThat(params.getBodyFiles(), contains("file1.json", "file2.json"));
         assertThat(params.getBodyContentType(), is("application/json"));

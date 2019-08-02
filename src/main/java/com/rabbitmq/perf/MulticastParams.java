@@ -36,7 +36,7 @@ import static com.rabbitmq.perf.Recovery.setupRecoveryProcess;
 
 public class MulticastParams {
 
-    private int confirm = -1;
+    private long confirm = -1;
     private int confirmTimeout = 30;
     private int consumerCount = 1;
     private int producerCount = 1;
@@ -181,8 +181,13 @@ public class MulticastParams {
         this.consumerTxSize = consumerTxSize;
     }
 
-    public void setConfirm(int confirm) {
+    public void setConfirm(long confirm) {
         this.confirm = confirm;
+    }
+
+    // package protected for testing
+    long getConfirm() {
+        return this.confirm;
     }
 
     public void setConfirmTimeout(int confirmTimeout) {

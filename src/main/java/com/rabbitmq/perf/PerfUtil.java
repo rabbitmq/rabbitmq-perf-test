@@ -61,6 +61,12 @@ public class PerfUtil {
                 } else {
                     return Float.valueOf(value.toString());
                 }
+            } else if (isLong(targetType)) {
+                if (value instanceof Number) {
+                    return ((Number) value).longValue();
+                } else {
+                    return Long.valueOf(value.toString());
+                }
             }
         }
         return value;
@@ -72,5 +78,9 @@ public class PerfUtil {
 
     private static boolean isFloat(Class<?> targetType) {
         return (targetType.equals(Float.class) || "float".equals(targetType.getSimpleName()));
+    }
+
+    private static boolean isLong(Class<?> targetType) {
+        return (targetType.equals(Long.class) || "long".equals(targetType.getSimpleName()));
     }
 }
