@@ -56,6 +56,7 @@ public class PerfTest {
         shutdownService.wrap(() -> metrics.close());
         Options metricsOptions = metrics.options();
         forEach(metricsOptions, option -> options.addOption(option));
+        int exitStatus = 0;
         try {
             CommandLine rawCmd = parser.parse(options, args);
             CommandLineProxy cmd = new CommandLineProxy(options, rawCmd, perfTestOptions.argumentLookup);
@@ -325,17 +326,18 @@ public class PerfTest {
             set.run(true);
 
             stats.printFinal();
-        }
-        catch (ParseException exp) {
+        } catch (ParseException exp) {
             System.err.println("Parsing failed. Reason: " + exp.getMessage());
             usage(options);
         } catch (Exception e) {
             System.err.println("Main thread caught exception: " + e);
             LOGGER.error("Main thread caught exception", e);
-            systemExiter.exit(1);
+            exitStatus = 1;
         } finally {
             shutdownService.close();
         }
+        // we need to exit explicitly, without waiting alive threads (e.g. when using --shutdown-timeout 0)
+        systemExiter.exit(exitStatus);
     }
 
     private static PrintWriter openCsvFileForWriting(String outputFile, ShutdownService shutdownService) throws IOException {
