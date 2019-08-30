@@ -50,15 +50,10 @@ import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.IntStream.range;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.isNull;
-import static org.mockito.ArgumentMatchers.startsWith;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.anyList;
 import static org.mockito.Mockito.*;
 import static org.mockito.MockitoAnnotations.initMocks;
 
@@ -359,8 +354,8 @@ public class TopologyTest {
 
         set.run();
 
-        assertThat("Consumer connection shouldn't be closed several times",
-                closedConnections.get(), is((1 + 1) + 1 + 1)); // configuration x 2, consumer, producer
+        assertThat(closedConnections.get()).as("Consumer connection shouldn't be closed several times")
+                .isEqualTo((1 + 1) + 1 + 1); // configuration x 2, consumer, producer
     }
 
     @ParameterizedTest
@@ -407,7 +402,7 @@ public class TopologyTest {
 
         set.run();
 
-        assertThat(message, unusedConnections.get(), is(expectedUnusedConnections));
+        assertThat(unusedConnections.get()).as(message).isEqualTo(expectedUnusedConnections);
     }
 
     // --queue-pattern 'perf-test-%d' --queue-pattern-from 1 --queue-pattern-to 100
@@ -435,14 +430,8 @@ public class TopologyTest {
         verify(ch, times(100))
                 .queueBind(startsWith(queuePrefix), eq("direct"), routingKeyCaptor.capture());
 
-        assertThat(queueNameCaptor.getAllValues(), allOf(
-                iterableWithSize(100),
-                hasItems(queuePrefix + "1", queuePrefix + "2", queuePrefix + "100")
-        ));
-        assertThat(routingKeyCaptor.getAllValues(), allOf(
-                iterableWithSize(100),
-                hasItems(queuePrefix + "1", queuePrefix + "2", queuePrefix + "100")
-        ));
+        assertThat(queueNameCaptor.getAllValues()).hasSize(100).contains(queuePrefix + "1", queuePrefix + "2", queuePrefix + "100");
+        assertThat(routingKeyCaptor.getAllValues()).hasSize(100).contains(queuePrefix + "1", queuePrefix + "2", queuePrefix + "100");
     }
 
     // --queue-pattern 'perf-test-%d' --queue-pattern-from 10 --queue-pattern-to 50
@@ -470,14 +459,8 @@ public class TopologyTest {
         verify(ch, times(41))
                 .queueBind(startsWith(queuePrefix), eq("direct"), routingKeyCaptor.capture());
 
-        assertThat(queueNameCaptor.getAllValues(), allOf(
-                iterableWithSize(41),
-                hasItems(queuePrefix + "10", queuePrefix + "11", queuePrefix + "49", queuePrefix + "50")
-        ));
-        assertThat(routingKeyCaptor.getAllValues(), allOf(
-                iterableWithSize(41),
-                hasItems(queuePrefix + "10", queuePrefix + "11", queuePrefix + "49", queuePrefix + "50")
-        ));
+        assertThat(queueNameCaptor.getAllValues()).hasSize(41).contains(queuePrefix + "10", queuePrefix + "11", queuePrefix + "49", queuePrefix + "50");
+        assertThat(routingKeyCaptor.getAllValues()).hasSize(41).contains(queuePrefix + "10", queuePrefix + "11", queuePrefix + "49", queuePrefix + "50");
     }
 
     //  --queue-pattern 'perf-test-%d' --queue-pattern-from 52 --queue-pattern-to 501
@@ -505,16 +488,14 @@ public class TopologyTest {
         verify(ch, times(450))
                 .queueBind(startsWith(queuePrefix), eq("direct"), routingKeyCaptor.capture());
 
-        assertThat(queueNameCaptor.getAllValues(), allOf(
-                iterableWithSize(450),
-                hasItems(queuePrefix + "52", queuePrefix + "53", queuePrefix + "500", queuePrefix + "501"),
-                not(hasItems(queuePrefix + "51"))
-        ));
-        assertThat(routingKeyCaptor.getAllValues(), allOf(
-                iterableWithSize(450),
-                hasItems(queuePrefix + "52", queuePrefix + "53", queuePrefix + "500", queuePrefix + "501"),
-                not(hasItems(queuePrefix + "51"))
-        ));
+        assertThat(queueNameCaptor.getAllValues())
+                .hasSize(450)
+                .contains(queuePrefix + "52", queuePrefix + "53", queuePrefix + "500", queuePrefix + "501")
+                .doesNotContain(queuePrefix + "51");
+        assertThat(routingKeyCaptor.getAllValues())
+                .hasSize(450)
+                .contains(queuePrefix + "52", queuePrefix + "53", queuePrefix + "500", queuePrefix + "501")
+                .doesNotContain(queuePrefix + "51");
     }
 
     // --queue-pattern 'perf-test-%d' --queue-pattern-from 1 --queue-pattern-to 100 --producers 10 --consumers 0
@@ -557,10 +538,9 @@ public class TopologyTest {
                 .queueBind(startsWith(queuePrefix), eq("direct"), startsWith(queuePrefix));
         verify(ch, never()).basicConsume(anyString(), anyBoolean(), any());
 
-        assertThat(routingKeyCaptor.getAllValues().stream().distinct().toArray(), allOf(
-                arrayWithSize(10),
-                arrayContainingInAnyOrder(range(1, 11).mapToObj(i -> queuePrefix + i).toArray())
-        ));
+        assertThat(routingKeyCaptor.getAllValues().stream().distinct().toArray())
+                .hasSize(10)
+                .contains(range(1, 11).mapToObj(i -> queuePrefix + i).toArray());
     }
 
     // --queue-pattern 'perf-test-%d' --queue-pattern-from 1 --queue-pattern-to 10 --producers 15 --consumers 30
@@ -608,15 +588,12 @@ public class TopologyTest {
                 .queueBind(startsWith(queuePrefix), eq("direct"), startsWith(queuePrefix));
         verify(ch, times(queueCount * 6)).basicConsume(consumerQueue.capture(), anyBoolean(), any());
 
-        assertThat(routingKeyCaptor.getAllValues().stream().distinct().toArray(), allOf(
-                arrayWithSize(queueCount),
-                arrayContainingInAnyOrder(range(1, queueCount + 1).mapToObj(i -> queuePrefix + i).toArray())
-        ));
-
-        assertThat(routingKeyCaptor.getAllValues().stream().distinct().toArray(), allOf(
-                arrayWithSize(queueCount),
-                arrayContainingInAnyOrder(range(1, queueCount + 1).mapToObj(i -> queuePrefix + i).toArray())
-        ));
+        assertThat(queueNameCaptor.getAllValues().stream().distinct().toArray())
+                .hasSize(queueCount)
+                .contains(range(1, queueCount + 1).mapToObj(i -> queuePrefix + i).toArray());
+        assertThat(routingKeyCaptor.getAllValues().stream().distinct().toArray())
+                .hasSize(queueCount)
+                .contains(range(1, queueCount + 1).mapToObj(i -> queuePrefix + i).toArray());
 
         // the captor received all the queues that have at least one consumer
         // let's count the number of consumers per queue
@@ -624,16 +601,14 @@ public class TopologyTest {
                 .collect(toMap(queue -> queue, queue -> 1, (oldValue, newValue) -> ++oldValue));
 
         // there are consumers on all queues
-        assertThat(queueToConsumerNumber.keySet().toArray(), allOf(
-                arrayWithSize(queueCount),
-                arrayContainingInAnyOrder(range(1, queueCount + 1).mapToObj(i -> queuePrefix + i).toArray())
-        ));
+        assertThat(queueToConsumerNumber.keySet().toArray())
+                .hasSize(queueCount)
+                .contains(range(1, queueCount + 1).mapToObj(i -> queuePrefix + i).toArray());
 
         // there are 3 consumers per queue
-        assertThat(queueToConsumerNumber.values().stream().distinct().toArray(), allOf(
-                arrayWithSize(1),
-                arrayContaining(6)
-        ));
+        assertThat(queueToConsumerNumber.values().stream().distinct().toArray())
+                .hasSize(1)
+                .contains(6);
     }
 
     // --queue-pattern 'perf-test-%d' --queue-pattern-from 101 --queue-pattern-to 110 --producers 0 --consumers 110
@@ -675,16 +650,13 @@ public class TopologyTest {
                 .collect(toMap(queue -> queue, queue -> 1, (oldValue, newValue) -> ++oldValue));
 
         // there are consumers on all queues
-        assertThat(queueToConsumerNumber.keySet().toArray(), allOf(
-                arrayWithSize(10),
-                arrayContainingInAnyOrder(range(101, 111).mapToObj(i -> queuePrefix + i).toArray())
-        ));
+        assertThat(queueToConsumerNumber.keySet().toArray())
+                .hasSize(10)
+                .contains(range(101, 111).mapToObj(i -> queuePrefix + i).toArray());
 
         // there are 11 consumers per queue
-        assertThat(queueToConsumerNumber.values().stream().distinct().toArray(), allOf(
-                arrayWithSize(1),
-                arrayContaining(11)
-        ));
+        assertThat(queueToConsumerNumber.values().stream().distinct().toArray())
+                .hasSize(1).contains(11);
         threadHandler.shutdown();
     }
 

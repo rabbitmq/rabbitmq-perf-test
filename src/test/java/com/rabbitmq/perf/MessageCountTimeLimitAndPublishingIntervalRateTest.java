@@ -17,14 +17,12 @@ package com.rabbitmq.perf;
 
 import com.rabbitmq.client.Consumer;
 import com.rabbitmq.client.*;
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.ArgumentsSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.slf4j.Logger;
@@ -44,9 +42,7 @@ import static com.rabbitmq.perf.TestUtils.waitAtMost;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
-import static org.hamcrest.Matchers.*;
-import static org.hamcrest.core.Is.is;
-import static org.hamcrest.junit.MatcherAssert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class MessageCountTimeLimitAndPublishingIntervalRateTest {
@@ -168,10 +164,10 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
                 () -> format("Only %d / %d messages have been published", publishedLatch.getCount(), nbMessages)
         );
 
-        assertThat(testIsDone.get(), is(false));
+        assertThat(testIsDone.get()).isFalse();
         // only the configuration connection has been closed
         // so the test is still running in the background
-        assertThat(connectionCloseCalls.get(), is(1));
+        assertThat(connectionCloseCalls.get()).isEqualTo(1);
         completionHandler.countDown();
     }
 
@@ -199,8 +195,8 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         waitAtMost(15, () -> testIsDone.get());
 
-        assertThat(testDurationInMs, greaterThanOrEqualTo(3000L));
-        assertThat(closeCount.get(), is(4)); // the configuration connection is actually closed twice
+        assertThat(testDurationInMs).isGreaterThanOrEqualTo(3000L);
+        assertThat(closeCount.get()).isEqualTo(4); // the configuration connection is actually closed twice
     }
 
     // -y 1 --pmessages 10 -x n -X m
@@ -269,8 +265,9 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         waitForRunToStart();
 
-        assertThat(consumersCount * channelsCount + " consumer(s) should have been registered by now",
-                consumersLatch.await(5, TimeUnit.SECONDS), is(true));
+        assertThat(consumersLatch.await(5, TimeUnit.SECONDS))
+                .as(consumersCount * channelsCount + " consumer(s) should have been registered by now")
+                .isTrue();
 
         waitAtMost(20, () -> consumers.size() == (consumersCount * channelsCount));
 
@@ -324,9 +321,9 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         waitForRunToStart();
 
-        assertThat("1 consumer should have been registered by now",
-                consumersLatch.await(10, TimeUnit.SECONDS), is(true));
-        assertThat(consumer.get(), notNullValue());
+        assertThat(consumersLatch.await(10, TimeUnit.SECONDS))
+                .as("1 consumer should have been registered by now").isTrue();
+        assertThat(consumer.get()).isNotNull();
         sendMessagesToConsumer(nbMessages / 2, consumer.get());
 
         assertTrue(
@@ -334,10 +331,10 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
                 () -> format("Only %d / %d messages have been published", publishedLatch.getCount(), nbMessages)
         );
 
-        assertThat(testIsDone.get(), is(false));
+        assertThat(testIsDone.get()).isFalse();
 
         waitAtMost(20, () -> testIsDone.get());
-        assertThat(testDurationInMs, greaterThanOrEqualTo(5000L));
+        assertThat(testDurationInMs).isGreaterThanOrEqualTo(5000L);
     }
 
     // -x 0 -y 1
@@ -371,14 +368,14 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         waitForRunToStart();
 
-        assertThat("1 consumer should have been registered by now",
-                consumersLatch.await(20, TimeUnit.SECONDS), is(true));
-        assertThat(consumers, hasSize(1));
+        assertThat(consumersLatch.await(20, TimeUnit.SECONDS))
+                .as("1 consumer should have been registered by now").isTrue();
+        assertThat(consumers).hasSize(1);
 
-        assertThat(testIsDone.get(), is(false));
+        assertThat(testIsDone.get()).isFalse();
         // only the configuration connection has been closed
         // so the test is still running in the background
-        assertThat(closeCount.get(), is(1));
+        assertThat(closeCount.get()).isEqualTo(1);
         completionHandler.countDown();
         waitAtMost(20, () -> testIsDone.get());
     }
@@ -418,10 +415,10 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
                 publishedLatch.await(20, TimeUnit.SECONDS),
                 () -> format("Only %d / %d messages have been published", publishedLatch.getCount(), nbMessages)
         );
-        assertThat(testIsDone.get(), is(false));
+        assertThat(testIsDone.get()).isFalse();
         // only the configuration connection has been closed
         // so the test is still running in the background
-        assertThat(closeCount.get(), is(1));
+        assertThat(closeCount.get()).isEqualTo(1);
         completionHandler.countDown();
         waitAtMost(20, () -> testIsDone.get());
     }
@@ -452,11 +449,8 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         waitForRunToStart();
 
         waitAtMost(30, () -> testIsDone.get());
-        assertThat(publishedMessageCount.get(), allOf(
-                greaterThan(0),
-                lessThan(3 * 100 * 8 * 2) // not too many messages
-        ));
-        assertThat(testDurationInMs, greaterThan(5000L));
+        assertThat(publishedMessageCount.get()).isGreaterThan(0).isLessThan(3 * 100 * 8 * 2); // not too many messages)
+        assertThat(testDurationInMs).isGreaterThan(5000L);
     }
 
     @Test
@@ -485,11 +479,10 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         waitForRunToStart();
 
         waitAtMost(10, () -> testIsDone.get());
-        assertThat(publishedMessageCount.get(), allOf(
-                greaterThanOrEqualTo(3 * 2),  // 3 publishers should publish at least a couple of times
-                lessThan(3 * 2 * 8) //  but they don't publish too much
-        ));
-        assertThat(testDurationInMs, greaterThan(5000L));
+        assertThat(publishedMessageCount.get())
+                .isGreaterThanOrEqualTo(3 * 2)  // 3 publishers should publish at least a couple of times
+                .isLessThan(3 * 2 * 8); //  but they don't publish too much
+        assertThat(testDurationInMs).isGreaterThan(5000L);
     }
 
     @Test
@@ -515,7 +508,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         completionHandler.countDown();
         waitAtMost(10, () -> testIsDone.get());
-        assertThat(connectionCloseCalls.get(), is(4)); // configuration connection is closed twice
+        assertThat(connectionCloseCalls.get()).isEqualTo(4); // configuration connection is closed twice
     }
 
     @Test
@@ -542,7 +535,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         completionHandler.countDown();
         waitAtMost(10, () -> testIsDone.get());
-        assertThat(connectionCloseCalls.get(), is(1)); // configuration connection is closed after configuration is done
+        assertThat(connectionCloseCalls.get()).isEqualTo(1); // configuration connection is closed after configuration is done
     }
 
     @Test
@@ -582,7 +575,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         completionHandler.countDown();
         waitAtMost(10, () -> testIsDone.get());
-        assertThat(connectionCloseCalls.get(), is(2));
+        assertThat(connectionCloseCalls.get()).isEqualTo(2);
     }
 
     @ParameterizedTest
@@ -620,7 +613,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         waitForRunToStart();
 
         waitAtMost(20, () -> testIsDone.get());
-        Assertions.assertThat(countBasicGottenMessages).hasValueGreaterThanOrEqualTo(messagesCount);
+        assertThat(countBasicGottenMessages).hasValueGreaterThanOrEqualTo(messagesCount);
     }
 
     // -x 0 -y 1 --polling --polling-interval 10
@@ -660,10 +653,10 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         waitAtMost(20, () -> countBasicGottenMessages.get() > 10);
 
-        assertThat(testIsDone.get(), is(false));
+        assertThat(testIsDone.get()).isFalse();
         // only the configuration connection has been closed
         // so the test is still running in the background
-        assertThat(closeCount.get(), is(1));
+        assertThat(closeCount.get()).isEqualTo(1);
         completionHandler.countDown();
         waitAtMost(20, () -> testIsDone.get());
     }
@@ -709,8 +702,8 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         waitForRunToStart();
 
-        assertThat("consumer should have been registered by now",
-                consumersLatch.await(5, TimeUnit.SECONDS), is(true));
+        assertThat(consumersLatch.await(5, TimeUnit.SECONDS))
+                .as("consumer should have been registered by now").isTrue();
 
         waitAtMost(20, () -> consumers.size() == 1);
 
@@ -727,11 +720,11 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         waitAtMost(20, () -> testIsDone.get());
 
         if (nack) {
-            Assertions.assertThat(acks).hasValue(0);
-            Assertions.assertThat(nacks).hasValue(messagesCount);
+            assertThat(acks).hasValue(0);
+            assertThat(nacks).hasValue(messagesCount);
         } else {
-            Assertions.assertThat(acks).hasValue(messagesCount);
-            Assertions.assertThat(nacks).hasValue(0);
+            assertThat(acks).hasValue(messagesCount);
+            assertThat(nacks).hasValue(0);
         }
 
 

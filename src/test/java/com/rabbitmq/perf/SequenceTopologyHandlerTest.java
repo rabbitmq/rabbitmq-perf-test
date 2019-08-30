@@ -17,13 +17,8 @@ package com.rabbitmq.perf;
 
 import org.junit.jupiter.api.Test;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.allOf;
-import static org.hamcrest.Matchers.hasItem;
-import static org.hamcrest.Matchers.hasItems;
-import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.iterableWithSize;
+import static org.assertj.core.api.Assertions.assertThat;
+
 
 public class SequenceTopologyHandlerTest {
 
@@ -32,54 +27,54 @@ public class SequenceTopologyHandlerTest {
     @Test
     public void sequence() {
         handler = new MulticastParams.SequenceTopologyHandler(null, 1, 5, "test-%d", new TopologyRecording(false));
-        assertThat(handler.getQueueNames(), allOf(iterableWithSize(5), hasItems("test-1", "test-2", "test-3", "test-4", "test-5")));
+        assertThat(handler.getQueueNames()).hasSize(5).contains("test-1", "test-2", "test-3", "test-4", "test-5");
 
-        assertThat(handler.getRoutingKey(), is("test-1"));
-        assertThat(handler.getQueueNamesForClient(), allOf(iterableWithSize(1), hasItem("test-1")));
-        assertThat(handler.getRoutingKey(), is("test-1"));
+        assertThat(handler.getRoutingKey()).isEqualTo("test-1");
+        assertThat(handler.getQueueNamesForClient()).hasSize(1).contains("test-1");
+        assertThat(handler.getRoutingKey()).isEqualTo("test-1");
         handler.next();
-        assertThat(handler.getQueueNamesForClient(), allOf(iterableWithSize(1), hasItem("test-2")));
-        assertThat(handler.getRoutingKey(), is("test-2"));
+        assertThat(handler.getQueueNamesForClient()).hasSize(1).contains("test-2");
+        assertThat(handler.getRoutingKey()).isEqualTo("test-2");
         handler.next();
-        assertThat(handler.getQueueNamesForClient(), allOf(iterableWithSize(1), hasItem("test-3")));
-        assertThat(handler.getRoutingKey(), is("test-3"));
+        assertThat(handler.getQueueNamesForClient()).hasSize(1).contains("test-3");
+        assertThat(handler.getRoutingKey()).isEqualTo("test-3");
         handler.next();
-        assertThat(handler.getQueueNamesForClient(), allOf(iterableWithSize(1), hasItem("test-4")));
-        assertThat(handler.getRoutingKey(), is("test-4"));
+        assertThat(handler.getQueueNamesForClient()).hasSize(1).contains("test-4");
+        assertThat(handler.getRoutingKey()).isEqualTo("test-4");
         handler.next();
-        assertThat(handler.getQueueNamesForClient(), allOf(iterableWithSize(1), hasItem("test-5")));
-        assertThat(handler.getRoutingKey(), is("test-5"));
+        assertThat(handler.getQueueNamesForClient()).hasSize(1).contains("test-5");
+        assertThat(handler.getRoutingKey()).isEqualTo("test-5");
         handler.next();
-        assertThat(handler.getQueueNamesForClient(), allOf(iterableWithSize(1), hasItem("test-1")));
-        assertThat(handler.getRoutingKey(), is("test-1"));
+        assertThat(handler.getQueueNamesForClient()).hasSize(1).contains("test-1");
+        assertThat(handler.getRoutingKey()).isEqualTo("test-1");
     }
 
     @Test
     public void reset() {
         handler = new MulticastParams.SequenceTopologyHandler(null, 1, 100, "test-%d", new TopologyRecording(false));
-        assertThat(handler.getQueueNames(), hasSize(100));
+        assertThat(handler.getQueueNames()).hasSize(100);
 
-        assertThat(handler.getRoutingKey(), is("test-1"));
-        assertThat(handler.getQueueNamesForClient(), allOf(iterableWithSize(1), hasItem("test-1")));
-        assertThat(handler.getRoutingKey(), is("test-1"));
+        assertThat(handler.getRoutingKey()).isEqualTo("test-1");
+        assertThat(handler.getQueueNamesForClient()).hasSize(1).contains("test-1");
+        assertThat(handler.getRoutingKey()).isEqualTo("test-1");
         handler.next();
-        assertThat(handler.getQueueNamesForClient(), allOf(iterableWithSize(1), hasItem("test-2")));
-        assertThat(handler.getRoutingKey(), is("test-2"));
+        assertThat(handler.getQueueNamesForClient()).hasSize(1).contains("test-2");
+        assertThat(handler.getRoutingKey()).isEqualTo("test-2");
         handler.next();
 
         handler.reset();
 
-        assertThat(handler.getRoutingKey(), is("test-1"));
-        assertThat(handler.getQueueNamesForClient(), allOf(iterableWithSize(1), hasItem("test-1")));
-        assertThat(handler.getRoutingKey(), is("test-1"));
+        assertThat(handler.getRoutingKey()).isEqualTo("test-1");
+        assertThat(handler.getQueueNamesForClient()).hasSize(1).contains("test-1");
+        assertThat(handler.getRoutingKey()).isEqualTo("test-1");
         handler.next();
-        assertThat(handler.getQueueNamesForClient(), allOf(iterableWithSize(1), hasItem("test-2")));
-        assertThat(handler.getRoutingKey(), is("test-2"));
+        assertThat(handler.getQueueNamesForClient()).hasSize(1).contains("test-2");
+        assertThat(handler.getRoutingKey()).isEqualTo("test-2");
     }
 
     @Test
     public void format() {
         handler = new MulticastParams.SequenceTopologyHandler(null, 1, 5, "test-%03d", new TopologyRecording(false));
-        assertThat(handler.getQueueNames(), allOf(iterableWithSize(5), hasItems("test-001", "test-002", "test-003", "test-004", "test-005")));
+        assertThat(handler.getQueueNames()).hasSize(5).contains("test-001", "test-002", "test-003", "test-004", "test-005");
     }
 }

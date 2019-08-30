@@ -27,9 +27,7 @@ import java.util.function.Function;
 
 import static com.rabbitmq.perf.PerfTest.getOptions;
 import static com.rabbitmq.perf.PerfTest.getParser;
-import static org.hamcrest.Matchers.hasItems;
-import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.junit.MatcherAssert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class CliTest {
@@ -94,10 +92,10 @@ public class CliTest {
         String[] expectedValues = expectedAsString.split(" ");
         if (expectedValues.length > 0 && !expectedValues[0].isEmpty()) {
             for (String expectedValue : expectedValues) {
-                assertThat(value, hasItems(expectedValue));
+                assertThat(value).contains(expectedValue);
             }
         } else {
-            assertThat(value, hasSize(0));
+            assertThat(value).hasSize(0);
         }
     }
 

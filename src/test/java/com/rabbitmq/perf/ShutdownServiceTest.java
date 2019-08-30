@@ -15,14 +15,12 @@
 
 package com.rabbitmq.perf;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.hamcrest.Matchers.contains;
-import static org.hamcrest.Matchers.iterableWithSize;
-import static org.hamcrest.junit.MatcherAssert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class ShutdownServiceTest {
 
@@ -36,13 +34,11 @@ public class ShutdownServiceTest {
         closeCallbacks.add(service.wrap(() -> markers.add("2")));
         closeCallbacks.add(service.wrap(() -> markers.add("3")));
         service.close();
-        assertThat(markers, iterableWithSize(closeCallbacks.size()));
-        assertThat(markers, contains("3", "2", "1"));
+        assertThat(markers).hasSize(closeCallbacks.size()).contains("3", "2", "1");
         for (AutoCloseable closeCallback : closeCallbacks) {
             closeCallback.close();
         }
-        assertThat(markers, iterableWithSize(closeCallbacks.size()));
-        assertThat(markers, contains("3", "2", "1"));
+        assertThat(markers).hasSize(closeCallbacks.size()).contains("3", "2", "1");
     }
 
 }

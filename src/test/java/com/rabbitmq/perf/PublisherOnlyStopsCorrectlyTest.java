@@ -26,23 +26,16 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import java.util.concurrent.Callable;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
-import static com.rabbitmq.perf.MockUtils.callback;
-import static com.rabbitmq.perf.MockUtils.connectionFactoryThatReturns;
-import static com.rabbitmq.perf.MockUtils.proxy;
+import static com.rabbitmq.perf.MockUtils.*;
 import static com.rabbitmq.perf.TestUtils.threadFactory;
 import static java.util.Collections.singletonList;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.junit.MatcherAssert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  *
@@ -57,9 +50,10 @@ public class PublisherOnlyStopsCorrectlyTest {
 
     static Stream<Arguments> publisherOnlyStopsWhenBrokerCrashesArguments() {
         return Stream.of(
-            // number of messages before throwing exception, configurator, assertion message
-            Arguments.of(10, (Consumer<MulticastParams>) (params) -> { }, "Sender should have failed and program should stop"),
-            Arguments.of(2, (Consumer<MulticastParams>) (params) -> params.setPublishingInterval(1), "Sender should have failed and program should stop")
+                // number of messages before throwing exception, configurator, assertion message
+                Arguments.of(10, (Consumer<MulticastParams>) (params) -> {
+                }, "Sender should have failed and program should stop"),
+                Arguments.of(2, (Consumer<MulticastParams>) (params) -> params.setPublishingInterval(1), "Sender should have failed and program should stop")
         );
     }
 
@@ -77,25 +71,25 @@ public class PublisherOnlyStopsCorrectlyTest {
     @ParameterizedTest
     @MethodSource("publisherOnlyStopsWhenBrokerCrashesArguments")
     public void publisherOnlyStopsWhenBrokerCrashes(
-        int messageTotal, Consumer<MulticastParams> configurator, String message) throws Exception {
+            int messageTotal, Consumer<MulticastParams> configurator, String message) throws Exception {
         params.setConsumerCount(0);
         params.setProducerCount(1);
         configurator.accept(params);
 
         AtomicInteger publishedMessages = new AtomicInteger(0);
         Channel channel = proxy(Channel.class,
-            callback("queueDeclare", (proxy, method, args) -> new AMQImpl.Queue.DeclareOk(args[0].toString(), 0, 0)),
-            callback("basicPublish", (proxy, method, args) -> {
-                if (publishedMessages.incrementAndGet() > messageTotal) {
-                    throw new RuntimeException("Expected exception, simulating broker crash");
-                }
-                return null;
-            })
+                callback("queueDeclare", (proxy, method, args) -> new AMQImpl.Queue.DeclareOk(args[0].toString(), 0, 0)),
+                callback("basicPublish", (proxy, method, args) -> {
+                    if (publishedMessages.incrementAndGet() > messageTotal) {
+                        throw new RuntimeException("Expected exception, simulating broker crash");
+                    }
+                    return null;
+                })
         );
 
         Supplier<Connection> connectionSupplier = () -> proxy(Connection.class,
-            callback("createChannel", (proxy, method, args) -> channel),
-            callback("isOpen", (proxy, method, args) -> true)
+                callback("createChannel", (proxy, method, args) -> channel),
+                callback("isOpen", (proxy, method, args) -> true)
         );
 
         ConnectionFactory connectionFactory = connectionFactoryThatReturns(connectionSupplier);
@@ -108,13 +102,13 @@ public class PublisherOnlyStopsCorrectlyTest {
             latch.countDown();
             return null;
         });
-        assertThat(message, latch.await(10, TimeUnit.SECONDS), is(true));
+        assertThat(latch.await(10, TimeUnit.SECONDS)).as(message).isTrue();
     }
 
     private MulticastSet getMulticastSet(ConnectionFactory connectionFactory) {
         MulticastSet set = new MulticastSet(
-            stats, connectionFactory, params, singletonList("amqp://localhost"),
-            PerfTest.getCompletionHandler(params)
+                stats, connectionFactory, params, singletonList("amqp://localhost"),
+                PerfTest.getCompletionHandler(params)
         );
         set.setThreadingHandler(new MulticastSet.DefaultThreadingHandler());
         return set;

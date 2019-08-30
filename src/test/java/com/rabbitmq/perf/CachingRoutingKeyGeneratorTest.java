@@ -23,8 +23,7 @@ import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.IntStream;
 
-import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.junit.MatcherAssert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class CachingRoutingKeyGeneratorTest {
@@ -32,16 +31,16 @@ public class CachingRoutingKeyGeneratorTest {
     Supplier<String> generator;
 
     @ParameterizedTest
-    @ValueSource(ints = { 1, 10, 100 })
+    @ValueSource(ints = {1, 10, 100})
     public void cacheValues(int cacheSize) {
         generator = new Producer.CachingRoutingKeyGenerator(cacheSize);
         Set<String> keys = new HashSet<>();
         IntStream.range(0, 1000).forEach(i -> keys.add(generator.get()));
-        assertThat(keys, hasSize(cacheSize));
+        assertThat(keys).hasSize(cacheSize);
     }
 
     @ParameterizedTest
-    @ValueSource(ints = { 0, -1, -10 })
+    @ValueSource(ints = {0, -1, -10})
     public void cacheSizeMustBeGreaterThanZero(int size) {
         assertThrows(IllegalArgumentException.class, () -> new Producer.CachingRoutingKeyGenerator(size));
     }

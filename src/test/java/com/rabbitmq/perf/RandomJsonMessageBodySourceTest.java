@@ -16,7 +16,7 @@
 package com.rabbitmq.perf;
 
 import com.google.gson.Gson;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashSet;
 import java.util.Map;

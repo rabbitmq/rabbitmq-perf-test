@@ -30,8 +30,7 @@ import java.util.stream.Stream;
 
 import static org.apache.commons.lang3.StringUtils.countMatches;
 import static org.apache.commons.lang3.StringUtils.splitByWholeSeparatorPreserveAllTokens;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class PrintlnStatsTest {
 
@@ -138,10 +137,10 @@ public class PrintlnStatsTest {
     public void stats(TestConfiguration testConfiguration) {
         execute(testConfiguration.configurator);
         checkCsv(testConfiguration.unit());
-        assertThat(output.split(","), arrayWithSize(testConfiguration.expectedSubstringInOutput.length));
+        assertThat(output.split(",")).hasSize(testConfiguration.expectedSubstringInOutput.length);
         assertThatOutputContains(testConfiguration.expectedSubstringInOutput);
         assertThatOutputDoesNotContains(testConfiguration.nonExpectedSubstringInOutput);
-        assertThat(countMatches(output, "0/0/0/0/0 " + testConfiguration.unit().name), is(testConfiguration.unitOccurrences));
+        assertThat(countMatches(output, "0/0/0/0/0 " + testConfiguration.unit().name)).isEqualTo(testConfiguration.unitOccurrences);
     }
 
     void execute(Configurator configurator) {
@@ -151,22 +150,22 @@ public class PrintlnStatsTest {
     }
 
     void assertThatOutputContains(String... substrings) {
-        assertThat(output, stringContainsInOrder(substrings));
+        assertThat(output).contains(substrings);
     }
 
     void assertThatOutputDoesNotContains(String... substrings) {
-        for (String substring : substrings) {
-            assertThat(output + " should not contain " + substring, output.contains(substring), is(false));
+        if (substrings != null && substrings.length > 0) {
+            assertThat(output).doesNotContain(substrings);
         }
     }
 
     void checkCsv(Unit unit) {
         String[] lines = csvOut.toString().split(System.getProperty("line.separator"));
-        assertThat(lines, arrayWithSize(2));
+        assertThat(lines).hasSize(2);
         for (String line : lines) {
-            assertThat(splitByWholeSeparatorPreserveAllTokens(line, ","), arrayWithSize(17));
+            assertThat(splitByWholeSeparatorPreserveAllTokens(line, ",")).hasSize(17);
         }
-        assertThat(countMatches(lines[0], "(" + unit.name + ")"), is(5 * 2));
+        assertThat(countMatches(lines[0], "(" + unit.name + ")")).isEqualTo(5 * 2);
     }
 
     PrintlnStats stats(Configurator configurator) {

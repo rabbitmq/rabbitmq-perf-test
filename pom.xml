@@ -63,8 +63,7 @@
     <jetty.version>9.4.19.v20190610</jetty.version>
     <junit.jupiter.version>5.5.1</junit.jupiter.version>
     <mockito.version>3.0.0</mockito.version>
-    <hamcrest.version>2.0.0.0</hamcrest.version>
-    <assertj.version>3.12.2</assertj.version>
+    <assertj.version>3.13.2</assertj.version>
     <commons-lang3.version>3.9</commons-lang3.version>
     <jmh.version>1.21</jmh.version>
 
@@ -169,27 +168,6 @@
       <version>${junit.jupiter.version}</version>
       <scope>test</scope>
     </dependency>
-    <!-- To avoid compiler warnings about @API annotations in JUnit code -->
-    <dependency>
-      <groupId>org.apiguardian</groupId>
-      <artifactId>apiguardian-api</artifactId>
-      <version>1.0.0</version>
-      <scope>test</scope>
-    </dependency>
-
-    <!-- to support JUnit 4 rules -->
-    <dependency>
-      <groupId>org.junit.jupiter</groupId>
-      <artifactId>junit-jupiter-migrationsupport</artifactId>
-      <version>${junit.jupiter.version}</version>
-      <exclusions>
-        <exclusion>
-          <groupId>org.hamcrest</groupId>
-          <artifactId>hamcrest-core</artifactId>
-        </exclusion>
-      </exclusions>
-      <scope>test</scope>
-    </dependency>
 
     <!-- for parameterized tests -->
     <dependency>
@@ -203,13 +181,6 @@
       <groupId>org.mockito</groupId>
       <artifactId>mockito-core</artifactId>
       <version>${mockito.version}</version>
-      <scope>test</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>org.hamcrest</groupId>
-      <artifactId>hamcrest-junit</artifactId>
-      <version>${hamcrest.version}</version>
       <scope>test</scope>
     </dependency>
 

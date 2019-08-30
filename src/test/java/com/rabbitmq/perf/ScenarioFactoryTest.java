@@ -16,13 +16,12 @@
 package com.rabbitmq.perf;
 
 import com.google.gson.Gson;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Map;
 
-import static org.hamcrest.Matchers.*;
-import static org.hamcrest.junit.MatcherAssert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class ScenarioFactoryTest {
 
@@ -37,15 +36,15 @@ public class ScenarioFactoryTest {
         List<Map> scenariosJson = new Gson().fromJson(spec, List.class);
         Map scenario = scenariosJson.get(0);
         MulticastParams params = ScenarioFactory.paramsFromJSON((Map) ((List) scenario.get("params")).get(0));
-        assertThat(params.getTimeLimit(), is(30));
-        assertThat(params.getProducerCount(), is(4));
-        assertThat(params.getConsumerCount(), is(2));
-        assertThat(params.getProducerRateLimit(), is(10.0f));
-        assertThat(params.isExclusive(), is(true));
-        assertThat(params.getConfirm(), is(10L));
-        assertThat(params.getBodyFiles(), hasSize(2));
-        assertThat(params.getBodyFiles(), contains("file1.json", "file2.json"));
-        assertThat(params.getBodyContentType(), is("application/json"));
+        assertThat(params.getTimeLimit()).isEqualTo(30);
+        assertThat(params.getProducerCount()).isEqualTo(4);
+        assertThat(params.getConsumerCount()).isEqualTo(2);
+        assertThat(params.getProducerRateLimit()).isEqualTo(10.0f);
+        assertThat(params.isExclusive()).isTrue();
+        assertThat(params.getConfirm()).isEqualTo(10L);
+        assertThat(params.getBodyFiles()).hasSize(2);
+        assertThat(params.getBodyFiles()).contains("file1.json", "file2.json");
+        assertThat(params.getBodyContentType()).isEqualTo("application/json");
     }
 
 }
