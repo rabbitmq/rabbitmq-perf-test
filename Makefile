@@ -48,7 +48,7 @@ test-docker-image-dev: ## Test the Docker image with the local PerfTest version
 	@docker run -it --rm pivotalrabbitmq/perf-test:dev-$(TODAY) --version
 
 .PHONY: push-docker-image-dev
-push-docker-image-dev: ## Test the Docker image with the local PerfTest version
+push-docker-image-dev: ## Push the Docker image with the local PerfTest version
 	@docker push pivotalrabbitmq/perf-test:dev-$(TODAY)
 
 .PHONY: docker-image-alpine
