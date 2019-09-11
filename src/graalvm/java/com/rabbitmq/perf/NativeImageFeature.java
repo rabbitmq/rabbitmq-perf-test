@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Pivotal Software, Inc.  All rights reserved.
+// Copyright (c) 2018-2019 Pivotal Software, Inc.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 1.1 ("MPL"), the GNU General Public License version 2
@@ -15,6 +15,7 @@
 
 package com.rabbitmq.perf;
 
+import org.HdrHistogram.AbstractHistogram;
 import org.HdrHistogram.ConcurrentHistogram;
 import org.HdrHistogram.DoubleRecorder;
 import org.HdrHistogram.Histogram;
@@ -46,6 +47,7 @@ public class NativeImageFeature implements Feature {
         try {
             RuntimeReflection.register(Histogram.class.getConstructor(long.class, long.class, int.class));
             RuntimeReflection.register(ConcurrentHistogram.class.getConstructor(long.class, long.class, int.class));
+            RuntimeReflection.register(ConcurrentHistogram.class.getConstructor(AbstractHistogram.class));
         } catch (NoSuchMethodException e) {
             throw new IllegalStateException("Error while loading methods for native image build", e);
         }
