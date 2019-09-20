@@ -34,7 +34,8 @@ native-image: clean ## Build the native image
 	    --initialize-at-build-time=javax.servlet \
 	    --initialize-at-build-time=org.slf4j \
 	    --no-fallback \
-	    -H:IncludeResources="rabbitmq-perf-test.properties"
+	    -H:IncludeResources="rabbitmq-perf-test.properties" \
+	    -Djava.net.preferIPv4Stack=true
 
 .PHONY: docker-image-dev
 docker-image-dev: ## Build Docker image with the local PerfTest version
