@@ -21,7 +21,7 @@ branches:
 before_script:
   - ./bin/before_build.sh
 
-script: ./mvnw clean verify -Dtravis=true -Drabbitmqctl.bin='rabbitmq/sbin/rabbitmqctl'
+script: ./mvnw clean verify -Drabbitmqctl.bin='rabbitmq/sbin/rabbitmqctl'
 cache:
   directories:
     - $HOME/.m2
