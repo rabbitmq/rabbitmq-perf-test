@@ -527,7 +527,7 @@ table.CodeRay td.code>pre{padding:0}
 <div id="header">
 <h1>RabbitMQ PerfTest</h1>
 <div class="details">
-<span id="revnumber">version 2.8.1</span>
+<span id="revnumber">version 2.9.0</span>
 </div>
 <div id="toc" class="toc2">
 <div id="toctitle">Table of Contents</div>
@@ -544,7 +544,14 @@ table.CodeRay td.code>pre{padding:0}
 <li><a href="#basic-usage">Basic Usage</a></li>
 <li><a href="#how-it-works">How It Works</a></li>
 <li><a href="#stopping-perftest">Stopping PerfTest</a></li>
-<li><a href="#customising-queues-and-messages">Customising queues and messages</a></li>
+<li><a href="#customising-queues">Customising queues</a></li>
+<li><a href="#customising-messages">Customising messages</a>
+<ul class="sectlevel2">
+<li><a href="#message-properties">Message Properties</a></li>
+<li><a href="#message-payload-from-files">Message Payload from Files</a></li>
+<li><a href="#random-json-payload">Random JSON Payload</a></li>
+</ul>
+</li>
 <li><a href="#limiting-and-varying-publishing-rate">Limiting and varying publishing rate</a></li>
 <li><a href="#setting-and-varying-the-message-size">Setting and varying the message size</a></li>
 <li><a href="#working-with-many-queues">Working With Many Queues</a></li>
@@ -953,7 +960,7 @@ acceptable when performing runs on a test environment.</p>
 </div>
 </div>
 <div class="sect1">
-<h2 id="customising-queues-and-messages"><a class="anchor" href="#customising-queues-and-messages"></a>Customising queues and messages</h2>
+<h2 id="customising-queues"><a class="anchor" href="#customising-queues"></a>Customising queues</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>PerfTest can create queues using provided queue arguments:</p>
@@ -974,8 +981,20 @@ key/value pairs with commas:</p>
   --queue-arguments x-max-length=10,x-dead-letter-exchange=some.exchange.name</pre>
 </div>
 </div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="customising-messages"><a class="anchor" href="#customising-messages"></a>Customising messages</h2>
+<div class="sectionbody">
 <div class="paragraph">
-<p>You can also specify message properties with key/value pairs separated by commas:</p>
+<p>It is possible to customise messages that PerfTest publishes. This allows
+getting as close as possible to the target traffic or to populate queues
+with messages that real consumers will process.</p>
+</div>
+<div class="sect2">
+<h3 id="message-properties"><a class="anchor" href="#message-properties"></a>Message Properties</h3>
+<div class="paragraph">
+<p>You can specify message properties with key/value pairs separated by commas:</p>
 </div>
 <div class="literalblock">
 <div class="content">
@@ -996,6 +1015,9 @@ as headers (arbitrary key/value pairs):</p>
   --message-properties priority=10,header1=value1,header2=value2</pre>
 </div>
 </div>
+</div>
+<div class="sect2">
+<h3 id="message-payload-from-files"><a class="anchor" href="#message-payload-from-files"></a>Message Payload from Files</h3>
 <div class="paragraph">
 <p>You can mimic real messages by specifying their content and
 content type. This can be useful when plugging real application
@@ -1006,6 +1028,56 @@ the content-type can be specified:</p>
 <div class="content">
 <pre>bin/runjava com.rabbitmq.perf.PerfTest --consumers 0 \
   --body content1.json,content2.json --body-content-type application/json</pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="random-json-payload"><a class="anchor" href="#random-json-payload"></a>Random JSON Payload</h3>
+<div class="paragraph">
+<p>PerfTest can generate random JSON payload for messages. This is useful to
+experiment with traffic that (almost) always changes. To generate random JSON
+payloads, use the <code>--json-body</code> flag and the <code>--size</code> argument to specify
+the size in bytes:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>bin/runjava com.rabbitmq.perf.PerfTest --json-body --size 16000</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Generate random values is costly, so PerfTest generates a pool of payloads upfront
+and uses them randomly in published messages. This way the generation of payloads
+does not impede publishing rate. There are 2 options to change the pre-generation of
+random JSON payload:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><code>--body-count</code>: the size of the pool of payloads PerfTest will generate and use in
+published messages. The default size is 100. Increase this value if you want more
+randomness in published messages.</p>
+</li>
+<li>
+<p><code>--body-field-count</code>: the size of the pool of random strings used for field names and
+values in the JSON document. Before generating JSON payloads, PerfTest generates random
+strings and will use them randomly for field names and values in the JSON documents.
+The default value is 1,000. Increasing this value can be useful for "large"
+payloads (a few hundreds of kilobytes or more), which can "exhaust" the pool of random strings
+and then end up with duplicated field names. Duplicated field names are fine if
+the random JSON payloads are used to simulate traffic, but can be problematic if real
+consumers are plugged in and try to parse the JSON documents
+(JSON parsers do not always tolerate duplicated fields).</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>The defaults for <code>--body-count</code> and <code>--body-field-count</code> are usually fine, but can be increased
+for more randomness, at the cost of slower startup time and higher memory consumption.</p>
+</div>
+<div class="paragraph">
+<p>Bear in mind that a large cache of generated payloads combined with a moderately large size
+can easily take up a significant amount of memory. As an example, <code>--json-body --body-count 50000 --size 100000</code>
+(50,000 payloads of 100 kB) will use about 5 GB of memory.</p>
 </div>
 </div>
 </div>
@@ -1505,7 +1577,10 @@ and lower runtime memory overhead compared to a Java VM.</p>
 <p>it is not possible to configure logging</p>
 </li>
 <li>
-<p>TLS is not supported</p>
+<p>TLS is not supported (this is likely to be fixed someday)</p>
+</li>
+<li>
+<p>IPv6 only hosts are not supported (this is likely to be fixed someday)</p>
 </li>
 </ul>
 </div>
@@ -1707,8 +1782,8 @@ can be changed:</p>
 </div>
 <div id="footer">
 <div id="footer-text">
-Version 2.8.1<br>
-Last updated 2019-06-12 10:41:31 CEST
+Version 2.9.0<br>
+Last updated 2019-10-02 15:52:58 CEST
 </div>
 </div>
 </body>
