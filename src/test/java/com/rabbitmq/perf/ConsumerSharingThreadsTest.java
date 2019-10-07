@@ -77,7 +77,7 @@ public class ConsumerSharingThreadsTest {
         MulticastSet set = getMulticastSet();
         params.setConsumerCount(10);
         set.run();
-        verify(threadingHandler, times(10 + 1 + 1)) // for each consumer, for all producers, and one for each producer
+        verify(threadingHandler, times(1 + 10 + 1 + 1)) // for configuration, for each consumer, for all producers, and one for each producer
             .executorService(anyString(), anyInt());
     }
 
@@ -86,7 +86,7 @@ public class ConsumerSharingThreadsTest {
         params.setConsumerCount(10);
         params.setConsumersThreadPools(5);
         set.run();
-        verify(threadingHandler, times(5 + 1 + 1)) // for each consumer, for all producers, and one for each producer
+        verify(threadingHandler, times(1 + 5 + 1 + 1)) // for configuration, for each consumer, for all producers, and one for each producer
             .executorService(anyString(), anyInt());
     }
 
@@ -95,7 +95,7 @@ public class ConsumerSharingThreadsTest {
         params.setConsumerCount(5);
         params.setConsumersThreadPools(10);
         set.run();
-        verify(threadingHandler, times(5 + 1 + 1)) // for each consumer, for all producers, and one for each producer
+        verify(threadingHandler, times(1 + 5 + 1 + 1)) // for configuration, for each consumer, for all producers, and one for each producer
             .executorService(anyString(), anyInt());
     }
 
@@ -104,7 +104,7 @@ public class ConsumerSharingThreadsTest {
         params.setConsumerCount(20);
         params.setConsumersThreadPools(6);
         set.run();
-        verify(threadingHandler, times(6 + 1 + 1)) // for each consumer, for all producers, and one for each producer
+        verify(threadingHandler, times(1 + 6 + 1 + 1)) // for configuration, for each consumer, for all producers, and one for each producer
             .executorService(anyString(), anyInt());
     }
 
