@@ -161,6 +161,15 @@ public class MulticastSet {
                     this.params.getHeartbeatSenderThreads()
             );
             factory.setHeartbeatExecutor(heartbeatSenderExecutorService);
+            // use a single-threaded executor for the configuration connection
+            // this way, a default one is not created and this one will shut down
+            // when the run ends.
+            // this can matter when this instance is used for several runs, e.g. with PerfTestMulti
+            // see https://github.com/rabbitmq/rabbitmq-perf-test/issues/220
+            ExecutorService executorServiceConfigurationConnection = this.threadingHandler.executorService(
+                    "perf-test-configuration-", 1
+            );
+            factory.setSharedExecutor(executorServiceConfigurationConnection);
             Connection configurationConnection = createConnection("perf-test-configuration");
             MulticastParams.TopologyHandlerResult topologyHandlerResult = params.configureAllQueues(configurationConnection);
             enableTopologyRecoveryIfNecessary(configurationConnection, topologyHandlerResult);
