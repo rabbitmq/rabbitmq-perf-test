@@ -146,7 +146,7 @@ will have only 1 producer. Each queue will have 3 consumers.
 
 Note the `--queue-pattern` value is a
 https://docs.oracle.com/javase/7/docs/api/java/util/Formatter.html[Java printf-style format string].
-The queue index is the only argument passed in. The formatting is very closed to C's `printf`.
+The queue index is the only argument passed in. The formatting is very close to C's `printf`.
 `--queue-pattern 'perf-test-%03d' --queue-pattern-from 1 --queue-pattern-to 500` would for
 instance create queues from `perf-test-001` to `perf-test-500`.
 
