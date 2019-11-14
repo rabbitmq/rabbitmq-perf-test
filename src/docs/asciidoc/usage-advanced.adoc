@@ -2,14 +2,14 @@
 
 PerfTest can create queues using provided queue arguments:
 
- bin/runjava com.rabbitmq.perf.PerfTest --queue-arguments x-max-length=10
+ bin/runjava com.rabbitmq.perf.PerfTest --queue-args x-max-length=10
 
 The previous command will create a https://www.rabbitmq.com/maxlength.html[queue with a length limit]
 of 10. You can also provide several queue arguments by separating the
 key/value pairs with commas:
 
  bin/runjava com.rabbitmq.perf.PerfTest \
-   --queue-arguments x-max-length=10,x-dead-letter-exchange=some.exchange.name
+   --queue-args x-max-length=10,x-dead-letter-exchange=some.exchange.name
 
 == Customising messages
 
