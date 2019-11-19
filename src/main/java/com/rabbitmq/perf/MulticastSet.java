@@ -59,7 +59,7 @@ public class MulticastSet {
     private ThreadingHandler threadingHandler = new DefaultThreadingHandler();
     private final ValueIndicator<Float> rateIndicator;
     private final ValueIndicator<Integer> messageSizeIndicator;
-    private final ConnectionCreationFunction connectionCreationFunction;
+    private final ConnectionCreator connectionCreator;
 
     public MulticastSet(Stats stats, ConnectionFactory factory,
         MulticastParams params, List<String> uris, CompletionHandler completionHandler) {
@@ -101,32 +101,7 @@ public class MulticastSet {
                     params.getMessageSizes(), scheduledExecutorService, input -> Integer.valueOf(input)
             );
         }
-        if (uris == null || uris.isEmpty()) {
-            // URI already set on the connection factory, nothing special to do
-            this.connectionCreationFunction = name -> this.factory.newConnection(name);
-        } else {
-            ConnectionFactory cf = new ConnectionFactory(); // just to extract host and port from URI
-            List<Address> addresses = new ArrayList<>(uris.size());
-            for (String uri : uris) {
-                try {
-                    cf.setUri(uri);
-                    addresses.add(new Address(cf.getHost(), cf.getPort()));
-                } catch (Exception e) {
-                    throw new IllegalArgumentException("Could not parse URI: " + uri);
-                }
-            }
-            this.connectionCreationFunction = name -> {
-                List<Address> addrs = new ArrayList<>(addresses);
-                if (addresses.size() > 1) {
-                    Collections.shuffle(addrs);
-                }
-                return this.factory.newConnection(addrs, name);
-            };
-        }
-    }
-
-    Connection createConnection(String name) throws IOException, TimeoutException {
-        return this.connectionCreationFunction.create(name);
+        this.connectionCreator = new ConnectionCreator(this.factory, this.uris);
     }
 
     protected static int nbThreadsForConsumer(MulticastParams params) {
@@ -170,9 +145,9 @@ public class MulticastSet {
                     "perf-test-configuration-", 1
             );
             factory.setSharedExecutor(executorServiceConfigurationConnection);
-            Connection configurationConnection = createConnection("perf-test-configuration");
-            MulticastParams.TopologyHandlerResult topologyHandlerResult = params.configureAllQueues(configurationConnection);
-            enableTopologyRecoveryIfNecessary(configurationConnection, topologyHandlerResult);
+            List<Connection> configurationConnections = createConfigurationConnections();
+            List<MulticastParams.TopologyHandlerResult> topologyHandlerResults = params.configureAllQueues(configurationConnections);
+            enableTopologyRecoveryIfNecessary(topologyHandlerResults);
 
             this.params.resetTopologyHandler();
 
@@ -224,7 +199,7 @@ public class MulticastSet {
                                     return;
                                 }
                                 try {
-                                    shutdown(configurationConnection, consumerConnections, producerStates, producerConnections);
+                                    shutdown(configurationConnections, consumerConnections, producerStates, producerConnections);
                                 } finally {
                                     latch.countDown();
                                 }
@@ -285,6 +260,14 @@ public class MulticastSet {
             }
             return false;
         }
+    }
+
+    Connection createConnection(String name) throws IOException, TimeoutException {
+        return this.connectionCreator.createConnection(name);
+    }
+
+    List<Connection> createConfigurationConnections() throws IOException, TimeoutException {
+        return this.connectionCreator.createConfigurationConnections();
     }
 
     private Function<Integer, ExecutorService> createConsumersExecutorsFactory() {
@@ -396,7 +379,7 @@ public class MulticastSet {
         }
     }
 
-    private void shutdown(Connection configurationConnection, Connection[] consumerConnections, AgentState[] producerStates, Connection[] producerConnections) {
+    private void shutdown(List<Connection> configurationConnections, Connection[] consumerConnections, AgentState[] producerStates, Connection[] producerConnections) {
         try {
             LOGGER.debug("Starting test shutdown");
             for (AgentState producerState : producerStates) {
@@ -424,20 +407,15 @@ public class MulticastSet {
             if (Thread.interrupted()) {
                 return;
             }
-            dispose(configurationConnection);
 
-            for (Connection producerConnection : producerConnections) {
-                if (Thread.interrupted()) {
-                    return;
-                }
-                dispose(producerConnection);
+            if(!closeConnections(configurationConnections.toArray(new Connection[] {}))) {
+                return;
             }
-
-            for (Connection consumerConnection : consumerConnections) {
-                if (Thread.interrupted()) {
-                    return;
-                }
-                dispose(consumerConnection);
+            if(!closeConnections(producerConnections)) {
+                return;
+            }
+            if(!closeConnections(consumerConnections)) {
+                return;
             }
 
             if (Thread.interrupted()) {
@@ -451,27 +429,39 @@ public class MulticastSet {
         }
     }
 
-    private void enableTopologyRecoveryIfNecessary(Connection configurationConnection, MulticastParams.TopologyHandlerResult topologyHandlerResult)
-        throws IOException {
-        if (isRecoverable(topologyHandlerResult.connection)) {
+    private static boolean closeConnections(Connection[] connections) {
+        for (Connection connection : connections) {
+            if (Thread.interrupted()) {
+                return false;
+            }
+            dispose(connection);
+        }
+        return true;
+    }
+
+    private void enableTopologyRecoveryIfNecessary(List<MulticastParams.TopologyHandlerResult> topologyHandlerResults)
+            throws IOException {
+        for (MulticastParams.TopologyHandlerResult topologyHandlerResult : topologyHandlerResults) {
             Connection connection = topologyHandlerResult.connection;
-            String connectionName = connection.getClientProvidedName();
-            ((AutorecoveringConnection) connection).addRecoveryListener(new RecoveryListener() {
+            if (isRecoverable(topologyHandlerResult.connection)) {
+                String connectionName = connection.getClientProvidedName();
+                ((AutorecoveringConnection) connection).addRecoveryListener(new RecoveryListener() {
 
-                @Override
-                public void handleRecoveryStarted(Recoverable recoverable) {
-                    LOGGER.debug("Connection recovery started for connection {}", connectionName);
-                }
+                    @Override
+                    public void handleRecoveryStarted(Recoverable recoverable) {
+                        LOGGER.debug("Connection recovery started for connection {}", connectionName);
+                    }
 
-                @Override
-                public void handleRecovery(Recoverable recoverable) {
-                    LOGGER.debug("Starting topology recovery for connection {}", connectionName);
-                    topologyHandlerResult.topologyRecording.recover(connection);
-                    LOGGER.debug("Topology recovery done for connection {}", connectionName);
-                }
-            });
-        } else {
-            configurationConnection.close();
+                    @Override
+                    public void handleRecovery(Recoverable recoverable) {
+                        LOGGER.debug("Starting topology recovery for connection {}", connectionName);
+                        topologyHandlerResult.topologyRecording.recover(connection);
+                        LOGGER.debug("Topology recovery done for connection {}", connectionName);
+                    }
+                });
+            } else {
+                connection.close();
+            }
         }
     }
 
@@ -677,10 +667,68 @@ public class MulticastSet {
         }
     }
 
-    @FunctionalInterface
-    private interface ConnectionCreationFunction {
+    private static class ConnectionCreator {
 
-        Connection create(String name) throws IOException, TimeoutException;
+        private final ConnectionFactory cf;
+        private final List<Address> addresses;
+
+        private ConnectionCreator(ConnectionFactory cf, List<String> uris) {
+            this.cf = cf;
+            if (uris == null || uris.isEmpty()) {
+                // URI already set on the connection factory, nothing special to do
+                addresses = Collections.emptyList();
+            } else {
+                List<Address> addresses = new ArrayList<>(uris.size());
+                for (String uri : uris) {
+                    try {
+                        addresses.add(Utils.extract(uri));
+                    } catch (Exception e) {
+                        throw new IllegalArgumentException("Could not parse URI: " + uri);
+                    }
+                }
+                this.addresses = Collections.unmodifiableList(addresses);
+            }
+        }
+
+        /**
+         * Create a connection for a consumer or a producer.
+         * @param name
+         * @return
+         * @throws IOException
+         * @throws TimeoutException
+         */
+        Connection createConnection(String name) throws IOException, TimeoutException {
+            if (this.addresses.isEmpty()) {
+                return this.cf.newConnection(name);
+            } else {
+                List<Address> addrs = new ArrayList<>(addresses);
+                if (addresses.size() > 1) {
+                    Collections.shuffle(addrs);
+                }
+                return this.cf.newConnection(addrs, name);
+            }
+        }
+
+        /**
+         * Create connections to create resources across the cluster.
+         * @return
+         * @throws IOException
+         * @throws TimeoutException
+         */
+        List<Connection> createConfigurationConnections() throws IOException, TimeoutException {
+            if (this.addresses.isEmpty()) {
+                return Collections.singletonList(createConnection("perf-test-configuration-0"));
+            } else {
+                List<Connection> connections = new ArrayList<>(this.addresses.size());
+                for (int i = 0; i < addresses.size(); i++) {
+                    connections.add(this.cf.newConnection(
+                            Collections.singletonList(addresses.get(i)),
+                            "perf-test-configuration-" + i
+                    ));
+                }
+                return Collections.unmodifiableList(connections);
+            }
+        }
 
     }
 }

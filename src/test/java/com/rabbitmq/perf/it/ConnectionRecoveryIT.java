@@ -22,10 +22,7 @@ import com.rabbitmq.perf.MulticastSet;
 import com.rabbitmq.perf.NamedThreadFactory;
 import com.rabbitmq.perf.Stats;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.*;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -41,6 +38,7 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static com.rabbitmq.perf.TestUtils.threadFactory;
@@ -59,7 +57,9 @@ public class ConnectionRecoveryIT {
 
     static final Logger LOGGER = LoggerFactory.getLogger(ConnectionRecoveryIT.class);
 
-    static final List<String> URIS = Collections.singletonList("amqp://localhost");
+    static final String URI = "amqp://localhost";
+
+    static final List<String> URIS = Collections.singletonList(URI);
 
     static final int RATE = 10;
 
@@ -119,6 +119,14 @@ public class ConnectionRecoveryIT {
                 namedConsumer("one server-named queue, exclusive", exclusive()),
                 namedConsumer("queue sequence, exclusive", queueSequence().andThen(exclusive()))
         );
+    }
+
+    static Stream<Arguments> configurationArgumentsForSeveralUris() {
+        return Stream.of(
+                namedConsumer("one server-named queue", empty()),
+                namedConsumer("several queues", severalQueues()),
+                namedConsumer("queue sequence", queueSequence()))
+                    .map(configurer -> Arguments.of(configurer));
     }
 
     static Consumer<MulticastParams> empty() {
@@ -271,6 +279,25 @@ public class ConnectionRecoveryIT {
         );
         int producerConsumerCount = params.getProducerCount();
         MulticastSet set = new MulticastSet(stats, cf, params, "", URIS, latchCompletionHandler(1, info));
+        run(set);
+        waitAtMost(10, () -> msgConsumed.get() >= 3 * producerConsumerCount * RATE);
+        int messageCountBeforeClosing = msgConsumed.get();
+        closeAllConnections();
+        waitAtMost(10, () -> msgConsumed.get() >= 2 * messageCountBeforeClosing);
+        assertFalse(testIsDone.get());
+    }
+
+    @ParameterizedTest
+    @MethodSource("configurationArgumentsForSeveralUris")
+    public void shouldRecoverWhenConnectionsAreKilledAndUsingSeveralUris(Consumer<MulticastParams> configurer, TestInfo info)
+            throws Exception {
+        configurer.accept(params);
+        int producerConsumerCount = params.getProducerCount();
+        MulticastSet set = new MulticastSet(
+                stats, cf, params, "",
+                IntStream.range(0, 3).mapToObj(ignored -> URI).collect(toList()),
+                latchCompletionHandler(1, info)
+        );
         run(set);
         waitAtMost(10, () -> msgConsumed.get() >= 3 * producerConsumerCount * RATE);
         int messageCountBeforeClosing = msgConsumed.get();

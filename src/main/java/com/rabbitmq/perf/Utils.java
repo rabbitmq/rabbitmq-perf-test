@@ -1,4 +1,4 @@
-// Copyright (c) 2018-Present Pivotal Software, Inc.  All rights reserved.
+// Copyright (c) 2018-2019 Pivotal Software, Inc.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 1.1 ("MPL"), the GNU General Public License version 2
@@ -15,15 +15,26 @@
 
 package com.rabbitmq.perf;
 
+import com.rabbitmq.client.Address;
 import com.rabbitmq.client.Connection;
+import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.impl.recovery.AutorecoveringConnection;
 
-public abstract class Utils {
+import java.net.URISyntaxException;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
 
-    public static boolean isRecoverable(Connection connection) {
+abstract class Utils {
+
+    private static final ConnectionFactory CF = new ConnectionFactory();
+
+    static boolean isRecoverable(Connection connection) {
         return connection instanceof AutorecoveringConnection;
     }
 
-
+    static synchronized Address extract(String uri) throws NoSuchAlgorithmException, KeyManagementException, URISyntaxException {
+        CF.setUri(uri);
+        return new Address(CF.getHost(), CF.getPort());
+    }
 
 }
