@@ -31,6 +31,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 import static com.rabbitmq.perf.Recovery.setupRecoveryProcess;
 
@@ -514,7 +515,7 @@ public class MulticastParams {
         return consumer;
     }
 
-    public TopologyHandlerResult configureAllQueues(Connection connection) throws IOException {
+    public List<TopologyHandlerResult> configureAllQueues(List<Connection> connection) throws IOException {
         return this.topologyHandler.configureAllQueues(connection);
     }
 
@@ -641,11 +642,11 @@ public class MulticastParams {
 
         /**
          * Configure all the queues for this run
-         * @param connection
+         * @param connections
          * @return the configured queues names (can be server-generated names), connection, and topology recording
          * @throws IOException
          */
-        TopologyHandlerResult configureAllQueues(Connection connection) throws IOException;
+        List<TopologyHandlerResult> configureAllQueues(List<Connection> connections) throws IOException;
 
         /**
          * Move the cursor forward.
@@ -715,53 +716,95 @@ public class MulticastParams {
             return connectionToUse;
         }
 
-        protected List<String> configureQueues(Connection connection, List<String> queues, TopologyRecording topologyRecording, Runnable afterQueueConfigurationCallback) throws IOException {
-            try (Channel channel = connection.createChannel()) {
-                if (!params.predeclared || !exchangeExists(connection, params.exchangeName)) {
-                    channel.exchangeDeclare(params.exchangeName, params.exchangeType);
-                    topologyRecording.recordExchange(params.exchangeName, params.exchangeType);
-                }
-
-                // To ensure we get at-least 1 default queue:
-                // (don't declare any queues when --predeclared is passed,
-                // otherwise unwanted server-named queues without consumers will pile up.
-                // see https://github.com/rabbitmq/rabbitmq-perf-test/issues/25 and
-                // https://github.com/rabbitmq/rabbitmq-perf-test/issues/43)
-                if (!params.predeclared && queues.isEmpty()) {
-                    queues = Collections.singletonList("");
-                }
-
-                List<String> generatedQueueNames = new ArrayList<>();
-                for (String qName : queues) {
-                    if (!params.predeclared || !queueExists(connection, qName)) {
-                        boolean serverNamed = qName == null || "".equals(qName);
-                        qName = channel.queueDeclare(qName,
-                                params.flags.contains("persistent"),
-                                params.isExclusive(),
-                                params.autoDelete,
-                                params.queueArguments).getQueue();
-                        topologyRecording.recordQueue(
-                                qName, params.flags.contains("persistent"),
-                                params.isExclusive(), params.autoDelete,
-                                params.queueArguments, serverNamed
-                        );
-                    }
-                    generatedQueueNames.add(qName);
-                    // skipping binding to default exchange,
-                    // as it's not possible to explicitly bind to it.
-                    if (!"".equals(params.exchangeName) && !"amq.default".equals(params.exchangeName) && !params.skipBindingQueues) {
-                        String routingKey = params.topologyHandler.getRoutingKey();
-                        channel.queueBind(qName, params.exchangeName, routingKey);
-                        topologyRecording.recordBinding(qName, params.exchangeName, routingKey);
-                    }
-                    afterQueueConfigurationCallback.run();
-                }
-                return generatedQueueNames;
-            } catch (TimeoutException e) {
-                throw new IOException(e);
-            }
+        protected TopologyHandlerResult configureQueues(Connection connection, List<String> queues, TopologyRecording topologyRecording,
+                                                        Runnable afterQueueConfigurationCallback) throws IOException {
+            return configureQueues(
+                    Collections.singletonList(connection),
+                    queues, topologyRecording,
+                    afterQueueConfigurationCallback).get(0);
         }
 
+        protected List<TopologyHandlerResult> configureQueues(List<Connection> connections, List<String> queues, TopologyRecording parentTopologyRecording,
+                                                              Runnable afterQueueConfigurationCallback) throws IOException {
+
+            class State {
+                final Connection c;
+                final Channel ch;
+                final TopologyRecording topologyRecording;
+                final List<String> generatedQueueNames = new ArrayList<>();
+
+                State(Connection c, Channel ch, TopologyRecording topologyRecording) {
+                    this.c = c;
+                    this.ch = ch;
+                    this.topologyRecording = topologyRecording;
+                }
+            }
+
+            List<State> states = new ArrayList<>(connections.size());
+            for (Connection connection : connections) {
+                states.add(new State(connection, connection.createChannel(), parentTopologyRecording.child()));
+            }
+
+            State firstState = states.get(0);
+            if (!params.predeclared || !exchangeExists(firstState.c, params.exchangeName)) {
+                firstState.ch.exchangeDeclare(params.exchangeName, params.exchangeType);
+                firstState.topologyRecording.recordExchange(params.exchangeName, params.exchangeType);
+            }
+
+            // To ensure we get at-least 1 default queue:
+            // (don't declare any queues when --predeclared is passed,
+            // otherwise unwanted server-named queues without consumers will pile up.
+            // see https://github.com/rabbitmq/rabbitmq-perf-test/issues/25 and
+            // https://github.com/rabbitmq/rabbitmq-perf-test/issues/43)
+            if (!params.predeclared && queues.isEmpty()) {
+                queues = Collections.singletonList("");
+            }
+
+            for (int i = 0; i < queues.size(); i++) {
+                String qName = queues.get(i);
+                State state = states.get(i % states.size());
+                Connection connection = state.c;
+                List<String> generatedQueueNames = state.generatedQueueNames;
+                Channel channel = state.ch;
+                TopologyRecording topologyRecording = state.topologyRecording;
+
+                if (!params.predeclared || !queueExists(connection, qName)) {
+                    boolean serverNamed = qName == null || "".equals(qName);
+                    qName = channel.queueDeclare(qName,
+                            params.flags.contains("persistent"),
+                            params.isExclusive(),
+                            params.autoDelete,
+                            params.queueArguments).getQueue();
+                    topologyRecording.recordQueue(
+                            qName, params.flags.contains("persistent"),
+                            params.isExclusive(), params.autoDelete,
+                            params.queueArguments, serverNamed
+                    );
+                }
+                generatedQueueNames.add(qName);
+                // skipping binding to default exchange,
+                // as it's not possible to explicitly bind to it.
+                if (!"".equals(params.exchangeName) && !"amq.default".equals(params.exchangeName) && !params.skipBindingQueues) {
+                    String routingKey = params.topologyHandler.getRoutingKey();
+                    channel.queueBind(qName, params.exchangeName, routingKey);
+                    topologyRecording.recordBinding(qName, params.exchangeName, routingKey);
+                }
+                afterQueueConfigurationCallback.run();
+            }
+
+            List<TopologyHandlerResult> topologyHandlerResults = new ArrayList<>(connections.size());
+            for (State state : states) {
+                try {
+                    state.ch.close();
+                    topologyHandlerResults.add(new TopologyHandlerResult(
+                            state.c, state.generatedQueueNames, state.topologyRecording
+                    ));
+                } catch (TimeoutException e) {
+                    throw new IOException(e);
+                }
+            }
+            return topologyHandlerResults;
+        }
     }
 
     /**
@@ -793,24 +836,24 @@ public class MulticastParams {
 
         @Override
         public TopologyHandlerResult configureQueuesForClient(Connection connection) throws IOException {
+            Connection connectionToUse;
             if (this.params.isExclusive()) {
-                Connection connectionToUse = maybeUseCachedConnection(this.queueNames, connection);
-                return new TopologyHandlerResult(
-                    connectionToUse, configureQueues(connectionToUse, this.queueNames, topologyRecording, () -> {}), topologyRecording
-                );
+                connectionToUse = maybeUseCachedConnection(this.queueNames, connection);
             } else {
-                return new TopologyHandlerResult(
-                    connection, configureQueues(connection, this.queueNames, topologyRecording, () -> {}), topologyRecording
-                );
+                connectionToUse = connection;
             }
+            return configureQueues(connectionToUse, this.queueNames, topologyRecording, () -> {});
         }
 
         @Override
-        public TopologyHandlerResult configureAllQueues(Connection connection) throws IOException {
+        public List<TopologyHandlerResult> configureAllQueues(List<Connection> connections) throws IOException {
             if (shouldConfigureQueues() && !this.params.isExclusive()) {
-                return new TopologyHandlerResult(connection, configureQueues(connection, this.queueNames, topologyRecording, () -> {}), topologyRecording);
+                return configureQueues(connections, this.queueNames, topologyRecording, () -> {});
+            } else {
+                return connections.stream()
+                        .map(connection -> new TopologyHandlerResult(connection, new ArrayList<>(), this.topologyRecording.child()))
+                        .collect(Collectors.toList());
             }
-            return new TopologyHandlerResult(connection, new ArrayList<>(), this.topologyRecording.child());
         }
 
         public boolean shouldConfigureQueues() {
@@ -859,18 +902,19 @@ public class MulticastParams {
         public TopologyHandlerResult configureQueuesForClient(Connection connection) throws IOException {
             if (this.params.isExclusive()) {
                 Connection connectionToUse = maybeUseCachedConnection(getQueueNamesForClient(), connection);
-                TopologyRecording clientTopologyRecording = this.topologyRecording.child();
-                return new TopologyHandlerResult(
-                    connectionToUse,
-                    configureQueues(connectionToUse, getQueueNamesForClient(), clientTopologyRecording, () -> {}),
-                    clientTopologyRecording
-                );
+                return configureQueues(connectionToUse, getQueueNamesForClient(), topologyRecording, () -> {});
             } else {
                 List<String> queues = getQueueNamesForClient();
+                // this recording will contain the resources the consumer uses
+                // this way, if its connections closes, it will try to reconnect and
+                // re-create the resources it needs to work with
+                // this is more resilient than counting only on the configuration connections
+                // to recover all resources, as the producer/consumer connections can recover
+                // before the configuration connections, and then don't see their resources
                 TopologyRecording clientTopologyRecording = this.topologyRecording.subRecording(queues);
                 return new TopologyHandlerResult(
                     connection,
-                    getQueueNamesForClient(),
+                    queues,
                     clientTopologyRecording
                 );
             }
@@ -878,12 +922,14 @@ public class MulticastParams {
         }
 
         @Override
-        public TopologyHandlerResult configureAllQueues(Connection connection) throws IOException {
+        public List<TopologyHandlerResult> configureAllQueues(List<Connection> connections) throws IOException {
             // if queues are exclusive, we'll create them for each consumer connection
             if (this.params.isExclusive()) {
-                return new TopologyHandlerResult(connection, new ArrayList<>(), this.topologyRecording.child());
+                return connections.stream()
+                        .map(connection -> new TopologyHandlerResult(connection, new ArrayList<>(), this.topologyRecording.child()))
+                        .collect(Collectors.toList());
             } else {
-                return new TopologyHandlerResult(connection, configureQueues(connection, getQueueNames(), this.topologyRecording, () -> this.next()), this.topologyRecording);
+                return configureQueues(connections, getQueueNames(), this.topologyRecording, () -> this.next());
             }
         }
 

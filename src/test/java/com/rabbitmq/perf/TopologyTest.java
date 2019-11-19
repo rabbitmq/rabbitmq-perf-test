@@ -1,4 +1,4 @@
-// Copyright (c) 2018-Present Pivotal Software, Inc.  All rights reserved.
+// Copyright (c) 2018-2019 Pivotal Software, Inc.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 1.1 ("MPL"), the GNU General Public License version 2
@@ -15,6 +15,7 @@
 
 package com.rabbitmq.perf;
 
+import com.rabbitmq.client.Address;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
@@ -27,19 +28,18 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static com.rabbitmq.perf.MockUtils.*;
@@ -115,6 +115,38 @@ public class TopologyTest {
         set.run();
 
         verify(cf, times(1 + 1 + 1)).newConnection(anyList(), anyString()); // consumers, producers, configuration (not used)
+        verify(c, times(1 + 1 + 1)).createChannel(); // queue configuration, consumer, producer
+        verify(ch, times(1))
+                .queueDeclare(eq(""), anyBoolean(), anyBoolean(), anyBoolean(), isNull());
+        verify(ch, times(1))
+                .queueBind(anyString(), eq("direct"), anyString());
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    public void withSeveralUrisConfigurationConnectionsShouldBeSpread()
+            throws Exception {
+        when(ch.queueDeclare(eq(""), anyBoolean(), anyBoolean(), anyBoolean(), isNull()))
+                .thenReturn(new AMQImpl.Queue.DeclareOk("", 0, 0));
+
+        List<String> uris = Arrays.asList("amqp://host0:5672", "amqp://host1:5673", "amqp://host2:5674");
+        MulticastSet set = getMulticastSet(uris);
+
+        set.run();
+
+        ArgumentCaptor<List<Address>> addresses = ArgumentCaptor.forClass(List.class);
+
+        verify(cf, times(1 + 1 + uris.size())) // consumers, producers, configuration
+                .newConnection(addresses.capture(), ArgumentMatchers.anyString());
+        assertThat(addresses.getAllValues()).hasSize(1 + 1 + uris.size());
+        IntStream.range(0, uris.size()).forEach(i -> {
+            List<Address> oneItemAddressList = addresses.getAllValues().get(i);
+            assertThat(oneItemAddressList).hasSize(1)
+                    .element(0)
+                    .hasFieldOrPropertyWithValue("host", "host" + i)
+                    .hasFieldOrPropertyWithValue("port", 5672 + i);
+        });
+
         verify(c, times(1 + 1 + 1)).createChannel(); // queue configuration, consumer, producer
         verify(ch, times(1))
                 .queueDeclare(eq(""), anyBoolean(), anyBoolean(), anyBoolean(), isNull());
@@ -665,6 +697,11 @@ public class TopologyTest {
         return getMulticastSet(noOpThreadingHandler, cf);
     }
 
+    private MulticastSet getMulticastSet(List<String> uris) {
+        NoOpThreadingHandler noOpThreadingHandler = new NoOpThreadingHandler();
+        return getMulticastSet(noOpThreadingHandler, cf, uris);
+    }
+
     private MulticastSet getMulticastSet(MulticastSet.ThreadingHandler threadingHandler) {
         return getMulticastSet(threadingHandler, cf);
     }
@@ -674,8 +711,12 @@ public class TopologyTest {
     }
 
     private MulticastSet getMulticastSet(MulticastSet.ThreadingHandler threadingHandler, ConnectionFactory connectionFactory) {
+        return getMulticastSet(threadingHandler, connectionFactory, singletonList("amqp://localhost"));
+    }
+
+    private MulticastSet getMulticastSet(MulticastSet.ThreadingHandler threadingHandler, ConnectionFactory connectionFactory, List<String> uris) {
         MulticastSet set = new MulticastSet(
-                stats, connectionFactory, params, singletonList("amqp://localhost"), new MulticastSet.CompletionHandler() {
+                stats, connectionFactory, params, uris, new MulticastSet.CompletionHandler() {
 
             @Override
             public void waitForCompletion() {

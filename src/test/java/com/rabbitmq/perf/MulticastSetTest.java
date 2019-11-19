@@ -219,7 +219,9 @@ public class MulticastSetTest {
     public void createConnectionAddressesNotUsedWhenNoUriList() throws Exception {
         MulticastSet multicastSet = getMulticastSet(new ArrayList<>());
         multicastSet.createConnection("connection-1");
+        assertThat(multicastSet.createConfigurationConnections()).hasSize(1);
         verify(factory, times(1)).newConnection("connection-1");
+        verify(factory, times(1)).newConnection("perf-test-configuration-0");
     }
 
     @Test
@@ -228,6 +230,19 @@ public class MulticastSetTest {
         multicastSet.createConnection("connection-1");
         ArgumentCaptor<List<Address>> addresses = addressesArgumentCaptor();
         verify(factory, times(1)).newConnection(addresses.capture(), ArgumentMatchers.eq("connection-1"));
+        assertThat(addresses.getValue()).hasSize(1)
+                .element(0)
+                .hasFieldOrPropertyWithValue("host", "host1")
+                .hasFieldOrPropertyWithValue("port", 5673);
+    }
+
+    @Test
+    public void createConfigurationConnectionFromOneUri() throws Exception {
+        MulticastSet multicastSet = getMulticastSet(Arrays.asList("amqp://host1:5673"));
+        assertThat(multicastSet.createConfigurationConnections()).hasSize(1);
+        ArgumentCaptor<List<Address>> addresses = addressesArgumentCaptor();
+        verify(factory, times(1)).newConnection(addresses.capture(), ArgumentMatchers.eq("perf-test-configuration-0"));
+        assertThat(addresses.getAllValues()).hasSize(1);
         assertThat(addresses.getValue()).hasSize(1)
                 .element(0)
                 .hasFieldOrPropertyWithValue("host", "host1")
@@ -252,6 +267,25 @@ public class MulticastSetTest {
             }
         }
         assertThat(someDifference).as("Addresses should have been shuffled").isTrue();
+    }
+
+    @Test
+    public void createConfigurationConnectionFromSeveralUrisConnectionShouldBeSpread() throws Exception {
+        int hostCount = 5;
+        List<String> uris = IntStream.range(0, hostCount).mapToObj(i -> "amqp://host" + i + ":" + (5672 + i)).collect(Collectors.toList());
+        MulticastSet multicastSet = getMulticastSet(uris);
+        assertThat(multicastSet.createConfigurationConnections()).hasSize(hostCount);
+        ArgumentCaptor<List<Address>> addresses = addressesArgumentCaptor();
+        verify(factory, times(hostCount)).newConnection(addresses.capture(), ArgumentMatchers.anyString());
+        assertThat(addresses.getAllValues()).hasSize(hostCount);
+        IntStream.range(0, hostCount).forEach(i -> {
+            List<Address> oneItemAddressList = addresses.getAllValues().get(i);
+            assertThat(oneItemAddressList).hasSize(1)
+                    .element(0)
+                    .hasFieldOrPropertyWithValue("host", "host" + i)
+                    .hasFieldOrPropertyWithValue("port", 5672 + i);
+        });
+
     }
 
     @SuppressWarnings("unchecked")

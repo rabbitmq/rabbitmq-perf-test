@@ -70,7 +70,7 @@ public class TopologyRecording {
      * Create a child {@link TopologyRecording} of this instance.
      * <p>
      * A {@link TopologyRecording} keeps a reference of its children, it makes
-     * easier to track the all resources created by a {@link TopologyRecording}
+     * easier to track all the resources created by a {@link TopologyRecording}
      * and its children.
      *
      * @return
@@ -117,16 +117,38 @@ public class TopologyRecording {
         return bindings.stream().filter(b -> b.queue.equals(queue)).collect(Collectors.toList());
     }
 
+    /**
+     * Create a subset of the topology of this recording for the passed-in queues.
+     * @param queues
+     * @return
+     */
     public TopologyRecording subRecording(Collection<String> queues) {
         TopologyRecording clientTopologyRecording = this.child();
         for (String queue : queues) {
-            clientTopologyRecording.queues.putIfAbsent(queue, this.queues.get(queue));
+            RecordedQueue recordedQueue = lookupQueueInHierarchy(queue);
+            if (recordedQueue == null) {
+                throw new IllegalArgumentException("Not able to sub-record queue " + queue + ", it is not in the parent recording");
+            }
+            clientTopologyRecording.queues.putIfAbsent(queue, recordedQueue);
             for (TopologyRecording.RecordedBinding binding : this.getBindingsFor(queue)) {
                 clientTopologyRecording.bindings.add(binding);
                 clientTopologyRecording.exchanges.put(binding.getExchange(), exchanges.get(binding.getExchange()));
             }
         }
         return clientTopologyRecording;
+    }
+
+    private RecordedQueue lookupQueueInHierarchy(String queue) {
+        RecordedQueue recordedQueue = this.queues.get(queue);
+        if (recordedQueue == null) {
+            for (TopologyRecording child : this.children) {
+                recordedQueue = child.lookupQueueInHierarchy(queue);
+                if (recordedQueue != null) {
+                    break;
+                }
+            }
+        }
+        return recordedQueue;
     }
 
     public void recover(Connection connection) {
