@@ -88,6 +88,10 @@ bin/runjava -Dlogback.configurationFile=/path/to/logback.xml com.rabbitmq.perf.P
 If you use `PerfTest` as a standalone JAR in your project, please note it doesn't depend on any SLF4J binding,
 you can use your favorite one.
 
+## Versioning
+
+This tool uses [semantic versioning](https://semver.org/).
+
 ## License
 
 This package, the RabbitMQ Performance Testing Tool library, is triple-licensed under
