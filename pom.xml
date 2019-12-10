@@ -62,8 +62,8 @@
     <logback.version>1.2.3</logback.version>
     <jetty.version>9.4.24.v20191120</jetty.version>
     <junit.jupiter.version>5.5.2</junit.jupiter.version>
-    <mockito.version>3.0.0</mockito.version>
-    <assertj.version>3.13.2</assertj.version>
+    <mockito.version>3.2.0</mockito.version>
+    <assertj.version>3.14.0</assertj.version>
     <commons-lang3.version>3.9</commons-lang3.version>
     <jmh.version>1.21</jmh.version>
 

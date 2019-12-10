@@ -53,7 +53,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 /**
  *
  */
-@Disabled
 public class ConnectionRecoveryIT {
 
     static final Logger LOGGER = LoggerFactory.getLogger(ConnectionRecoveryIT.class);
