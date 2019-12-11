@@ -396,7 +396,7 @@ public class ProducerTest {
             }
 
             @Override
-            public void countDown() {
+            public void countDown(String reason) {
             }
         };
     }

@@ -40,6 +40,7 @@ public class Consumer extends AgentBase implements Runnable {
 
     private static final AckNackOperation NACK_OPERATION =
             (ch, envelope, multiple) -> ch.basicNack(envelope.getDeliveryTag(), multiple, true);
+    static final String STOP_REASON_CONSUMER_REACHED_MESSAGE_LIMIT = "Consumer reached message limit";
 
     private volatile ConsumerImpl       q;
     private final Channel               channel;
@@ -250,7 +251,7 @@ public class Consumer extends AgentBase implements Runnable {
                 }
             }
             if (msgLimit != 0 && currentMessageCount >= msgLimit) { // NB: not quite the inverse of above
-                countDown();
+                countDown(STOP_REASON_CONSUMER_REACHED_MESSAGE_LIMIT);
             }
         }
 
@@ -280,7 +281,7 @@ public class Consumer extends AgentBase implements Runnable {
             );
             if (!recoveryProcess.isEnabled()) {
                 LOGGER.debug("Counting down for consumer");
-                countDown();
+                countDown("Consumer shut down");
             }
         }
 
@@ -297,9 +298,9 @@ public class Consumer extends AgentBase implements Runnable {
         }
     }
 
-    private void countDown() {
+    private void countDown(String reason) {
         if (completed.compareAndSet(false, true)) {
-            completionHandler.countDown();
+            completionHandler.countDown(reason);
         }
     }
 

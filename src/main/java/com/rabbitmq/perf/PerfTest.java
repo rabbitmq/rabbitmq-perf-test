@@ -32,10 +32,7 @@ import java.nio.charset.Charset;
 import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.SynchronousQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.function.Function;
 
 import static com.rabbitmq.perf.OptionsUtils.forEach;
@@ -48,6 +45,7 @@ public class PerfTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(PerfTest.class);
 
     public static void main(String [] args, PerfTestOptions perfTestOptions) {
+        args = "--time 300 --cmessages 100000".split(" ");
         SystemExiter systemExiter = perfTestOptions.systemExiter;
         ShutdownService shutdownService = perfTestOptions.shutdownService;
         Options options = getOptions();
@@ -318,13 +316,16 @@ public class PerfTest {
             p.setBodyFieldCount(bodyFieldCount);
             p.setBodyCount(bodyCount);
 
-            MulticastSet.CompletionHandler completionHandler = getCompletionHandler(p);
+            ConcurrentMap<String, Integer> completionReasons = new ConcurrentHashMap<>();
+
+            MulticastSet.CompletionHandler completionHandler = getCompletionHandler(p, completionReasons);
 
             factory.setExceptionHandler(perfTestOptions.exceptionHandler);
 
             MulticastSet set = new MulticastSet(stats, factory, p, testID, uris, completionHandler, shutdownService);
             set.run(true);
 
+            System.out.println(stopLine(completionReasons));
             stats.printFinal();
         } catch (ParseException exp) {
             System.err.println("Parsing failed. Reason: " + exp.getMessage());
@@ -338,6 +339,26 @@ public class PerfTest {
         }
         // we need to exit explicitly, without waiting alive threads (e.g. when using --shutdown-timeout 0)
         systemExiter.exit(exitStatus);
+    }
+
+    static String stopLine(Map<String, Integer> reasons) {
+        StringBuilder stoppedLine = new StringBuilder("test stopped");
+        if (reasons.size() > 0) {
+            stoppedLine.append(" (");
+            int count = 1;
+            for (Map.Entry<String, Integer> reasonToCount : reasons.entrySet()) {
+                stoppedLine.append(reasonToCount.getKey());
+                if (reasonToCount.getValue() > 1) {
+                    stoppedLine.append(" [").append(reasonToCount.getValue()).append("]");
+                }
+                if (count < reasons.size()) {
+                    stoppedLine.append(", ");
+                }
+                count++;
+            }
+            stoppedLine.append(")");
+        }
+        return stoppedLine.toString();
     }
 
     private static PrintWriter openCsvFileForWriting(String outputFile, ShutdownService shutdownService) throws IOException {
@@ -396,7 +417,7 @@ public class PerfTest {
         };
     }
 
-    static MulticastSet.CompletionHandler getCompletionHandler(MulticastParams p) {
+    static MulticastSet.CompletionHandler getCompletionHandler(MulticastParams p, ConcurrentMap<String, Integer> reasons) {
         MulticastSet.CompletionHandler completionHandler;
         if (p.hasLimit()) {
             int countLimit = 0;
@@ -406,14 +427,14 @@ public class PerfTest {
                 countLimit += p.getProducerThreadCount();
             }
             if (p.getConsumerMsgCount() > 0) {
-                countLimit += p.getProducerThreadCount();
+                countLimit += p.getConsumerThreadCount();
             }
             completionHandler = new MulticastSet.DefaultCompletionHandler(
                 p.getTimeLimit(),
-                countLimit
-            );
+                countLimit,
+                reasons);
         } else {
-            completionHandler = new MulticastSet.NoLimitCompletionHandler();
+            completionHandler = new MulticastSet.NoLimitCompletionHandler(reasons);
         }
         return completionHandler;
     }

@@ -108,7 +108,7 @@ public class PublisherOnlyStopsCorrectlyTest {
     private MulticastSet getMulticastSet(ConnectionFactory connectionFactory) {
         MulticastSet set = new MulticastSet(
                 stats, connectionFactory, params, singletonList("amqp://localhost"),
-                PerfTest.getCompletionHandler(params)
+                PerfTest.getCompletionHandler(params, new ConcurrentHashMap<>())
         );
         set.setThreadingHandler(new MulticastSet.DefaultThreadingHandler());
         return set;

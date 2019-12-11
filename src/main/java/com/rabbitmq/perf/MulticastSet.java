@@ -49,6 +49,7 @@ public class MulticastSet {
      */
     private static final int PUBLISHING_INTERVAL_NB_PRODUCERS_PER_THREAD = 50;
     private static final String PRODUCER_THREAD_PREFIX = "perf-test-producer-";
+    static final String STOP_REASON_REACHED_TIME_LIMIT = "Reached time limit";
     private final Stats stats;
     private final ConnectionFactory factory;
     private final MulticastParams params;
@@ -501,7 +502,7 @@ public class MulticastSet {
 
         void waitForCompletion() throws InterruptedException;
 
-        void countDown();
+        void countDown(String reason);
     }
 
     static class DefaultThreadingHandler implements ThreadingHandler {
@@ -566,34 +567,49 @@ public class MulticastSet {
         private Future<?> task;
     }
 
+    private static void recordReason(Map<String, Integer> reasons, String reason) {
+        reasons.compute(reason, (keyReason, count) -> count == null ? 1 : ++count);
+    }
+
     static class DefaultCompletionHandler implements CompletionHandler {
 
         private final int timeLimit;
         private final CountDownLatch latch;
+        private final ConcurrentMap<String, Integer> reasons;
+        private final AtomicBoolean completed = new AtomicBoolean(false);
 
-        DefaultCompletionHandler(int timeLimit, int countLimit) {
+        DefaultCompletionHandler(int timeLimit, int countLimit, ConcurrentMap<String, Integer> reasons) {
             this.timeLimit = timeLimit;
             this.latch = new CountDownLatch(countLimit <= 0 ? 1 : countLimit);
+            this.reasons = reasons;
         }
 
         @Override
         public void waitForCompletion() throws InterruptedException {
             if (timeLimit <= 0) {
                 this.latch.await();
+                completed.set(true);
             } else {
                 boolean countedDown = this.latch.await(timeLimit, TimeUnit.SECONDS);
+                completed.set(true);
                 if (LOGGER.isDebugEnabled()) {
                     LOGGER.debug("Completed, counted down? {}", countedDown);
+                }
+                if (!countedDown) {
+                    recordReason(reasons, STOP_REASON_REACHED_TIME_LIMIT);
                 }
             }
         }
 
         @Override
-        public void countDown() {
+        public void countDown(String reason) {
             if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("Counting down");
+                LOGGER.debug("Counting down ({})", reason);
             }
-            latch.countDown();
+            if (!completed.get()) {
+                recordReason(reasons, reason);
+                latch.countDown();
+            }
         }
     }
 
@@ -605,6 +621,11 @@ public class MulticastSet {
     static class NoLimitCompletionHandler implements CompletionHandler {
 
         private final CountDownLatch latch = new CountDownLatch(1);
+        private final ConcurrentMap<String, Integer> reasons;
+
+        NoLimitCompletionHandler(ConcurrentMap<String, Integer> reasons) {
+            this.reasons = reasons;
+        }
 
         @Override
         public void waitForCompletion() throws InterruptedException {
@@ -612,7 +633,8 @@ public class MulticastSet {
         }
 
         @Override
-        public void countDown() {
+        public void countDown(String reason) {
+            recordReason(reasons, reason);
             latch.countDown();
         }
     }
