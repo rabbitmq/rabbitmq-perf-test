@@ -45,7 +45,6 @@ public class PerfTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(PerfTest.class);
 
     public static void main(String [] args, PerfTestOptions perfTestOptions) {
-        args = "--time 300 --cmessages 100000".split(" ");
         SystemExiter systemExiter = perfTestOptions.systemExiter;
         ShutdownService shutdownService = perfTestOptions.shutdownService;
         Options options = getOptions();

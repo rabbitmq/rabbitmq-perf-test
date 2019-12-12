@@ -174,7 +174,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         completionHandler.countDown("");
     }
 
-    // --time 5
+    // --time 3
     @Test
     public void timeLimit() throws InterruptedException {
         countsAndTimeLimit(0, 0, 3);
@@ -310,10 +310,8 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         AtomicInteger consumerTagCounter = new AtomicInteger(0);
         AtomicReference<Consumer> consumer = new AtomicReference<>();
 
-        AtomicLong count = new AtomicLong();
         Channel channel = proxy(Channel.class,
                 callback("basicPublish", (proxy, method, args) -> {
-                    count.incrementAndGet();
                     publishedLatch.countDown();
                     return null;
                 }),
@@ -350,6 +348,9 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         waitAtMost(20, () -> testIsDone.get());
         assertThat(testDurationInMs).isGreaterThanOrEqualTo(5000L);
+        assertThat(shutdownReasons)
+                .hasSize(2) // time limit + publisher message limit, but no consumer message limit
+                .containsKeys(MulticastSet.STOP_REASON_REACHED_TIME_LIMIT, Producer.STOP_REASON_PRODUCER_MESSAGE_LIMIT);
     }
 
     // -x 0 -y 1
@@ -466,6 +467,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         waitAtMost(30, () -> testIsDone.get());
         assertThat(publishedMessageCount.get()).isGreaterThan(0).isLessThan(3 * 100 * 8 * 2); // not too many messages)
         assertThat(testDurationInMs).isGreaterThan(5000L);
+        assertThat(shutdownReasons).hasSize(1).containsKey(MulticastSet.STOP_REASON_REACHED_TIME_LIMIT);
     }
 
     @Test
@@ -498,6 +500,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
                 .isGreaterThanOrEqualTo(3 * 2)  // 3 publishers should publish at least a couple of times
                 .isLessThan(3 * 2 * 8); //  but they don't publish too much
         assertThat(testDurationInMs).isGreaterThan(5000L);
+        assertThat(shutdownReasons).hasSize(1).containsKey(MulticastSet.STOP_REASON_REACHED_TIME_LIMIT);
     }
 
     @Test
@@ -629,6 +632,10 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         waitAtMost(20, () -> testIsDone.get());
         assertThat(countBasicGottenMessages).hasValueGreaterThanOrEqualTo(messagesCount);
+        assertThat(shutdownReasons)
+                .hasSize(1)
+                .containsKey(com.rabbitmq.perf.Consumer.STOP_REASON_CONSUMER_REACHED_MESSAGE_LIMIT)
+                .containsValue(consumersCount * channelsCount);
     }
 
     // -x 0 -y 1 --polling --polling-interval 10
@@ -741,8 +748,10 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
             assertThat(acks).hasValue(messagesCount);
             assertThat(nacks).hasValue(0);
         }
-
-
+        assertThat(shutdownReasons)
+                .hasSize(1)
+                .containsKey(com.rabbitmq.perf.Consumer.STOP_REASON_CONSUMER_REACHED_MESSAGE_LIMIT)
+                .containsValue(1);
     }
 
     private Collection<Future<?>> sendMessagesToConsumer(int messagesCount, Consumer consumer) {
