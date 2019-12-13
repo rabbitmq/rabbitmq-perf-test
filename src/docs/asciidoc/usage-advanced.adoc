@@ -407,6 +407,7 @@ with the `RABBITMQ_PERF_TEST_ENV_PREFIX` environment variable, e.g.:
 With `RABBITMQ_PERF_TEST_ENV_PREFIX="PERF_TEST_"` defined, PerfTest will for example look for
 the `PERF_TEST_CONFIRM_TIMEOUT` environment variable, not only `CONFIRM_TIMEOUT`.
 
+[#native-executable]
 == Native Executable
 
 PerfTest is also distributed as a https://www.graalvm.org/docs/reference-manual/aot-compilation/[native executable]

@@ -27,7 +27,7 @@ To verify a PerfTest installation, use:
 === From Native Executable
 
 PerfTest is also distributed as a native executable binary. This is an experimental
-feature, see the link:#native-executable[dedicated section] for more information.
+feature, see the <<native-executable,dedicated section>> for more information.
 
 === From Docker Image
 
