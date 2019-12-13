@@ -128,7 +128,7 @@ public class StartUpIT {
         MulticastSet set = new MulticastSet(stats, factory, params, "", URIS, completionHandler);
         run(set);
         waitAtMost(10, () -> msgConsumed.get() > 10);
-        completionHandler.countDown();
+        completionHandler.countDown("");
         waitAtMost(10, () -> testIsDone.get());
     }
 
@@ -183,7 +183,7 @@ public class StartUpIT {
         }
 
         @Override
-        public void countDown() {
+        public void countDown(String reason) {
             latch.countDown();
         }
     }

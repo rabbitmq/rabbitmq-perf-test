@@ -19,6 +19,7 @@ import com.rabbitmq.client.ConnectionFactory;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class VaryingScenario implements Scenario {
     private final String name;
@@ -60,7 +61,7 @@ public class VaryingScenario implements Scenario {
                 for (VariableValue value : values) {
                     value.setup(p);
                 }
-                MulticastSet set = new MulticastSet(stats0, factory, p, null, PerfTest.getCompletionHandler(p));
+                MulticastSet set = new MulticastSet(stats0, factory, p, null, PerfTest.getCompletionHandler(p, new ConcurrentHashMap<>()));
                 stats0.setup(p);
                 set.run();
                 for (VariableValue value : values) {

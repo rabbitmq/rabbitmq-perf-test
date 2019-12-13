@@ -117,7 +117,7 @@ public class ConsumerSharingThreadsTest {
             }
 
             @Override
-            public void countDown() {
+            public void countDown(String reason) {
             }
         }
         );

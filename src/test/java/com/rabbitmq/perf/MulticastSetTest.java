@@ -302,7 +302,7 @@ public class MulticastSetTest {
             }
 
             @Override
-            public void countDown() {
+            public void countDown(String reason) {
             }
         }
         );

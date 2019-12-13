@@ -63,6 +63,9 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
     public static final String APP_ID_PROPERTY = "appId";
     public static final String CLUSTER_ID_PROPERTY = "clusterId";
     public static final String TIMESTAMP_HEADER = TIMESTAMP_PROPERTY;
+    static final String STOP_REASON_PRODUCER_MESSAGE_LIMIT = "Producer reached message limit";
+    static final String STOP_REASON_PRODUCER_THREAD_INTERRUPTED = "Producer thread interrupted";
+    static final String STOP_REASON_ERROR_IN_PRODUCER = "Error in producer";
     private final Channel channel;
     private final String  exchangeName;
     private final String  id;
@@ -356,12 +359,25 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
             }
         } catch (RuntimeException e) {
             LOGGER.debug("Error in publisher", e);
+            String reason;
+            if (e.getCause() instanceof InterruptedException && this.rateIndicator.getValue() != 0.0f) {
+                // likely to have been interrupted while sleeping to honor rate limit
+                reason = STOP_REASON_PRODUCER_THREAD_INTERRUPTED;
+            } else {
+                reason = STOP_REASON_ERROR_IN_PRODUCER;
+            }
             // failing, we don't want to block the whole process, so counting down
-            countDown();
+            countDown(reason);
             throw e;
         }
         if (state.getMsgCount() >= msgLimit) {
-            countDown();
+            String reason;
+            if (msgLimit == 0) {
+                reason = STOP_REASON_PRODUCER_THREAD_INTERRUPTED;
+            } else {
+                reason = STOP_REASON_PRODUCER_MESSAGE_LIMIT;
+            }
+            countDown(reason);
         }
     }
 
@@ -406,7 +422,7 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
                 maybeHandlePublish(state);
             } catch (RuntimeException e) {
                 // failing, we don't want to block the whole process, so counting down
-                countDown();
+                countDown("Error in scheduled producer");
                 throw e;
             }
         };
@@ -416,7 +432,21 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
         if (keepGoing(state)) {
             handlePublish(state);
         } else {
-            countDown();
+            String reason;
+            if (messageLimitReached(state)) {
+                reason = STOP_REASON_PRODUCER_MESSAGE_LIMIT;
+            } else {
+                reason = STOP_REASON_PRODUCER_THREAD_INTERRUPTED;
+            }
+            countDown(reason);
+        }
+    }
+
+    private boolean messageLimitReached(AgentState state) {
+        if (msgLimit == 0) {
+            return false;
+        } else {
+            return state.getMsgCount() >= msgLimit;
         }
     }
 
@@ -500,9 +530,9 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
                              messageEnvelope.getBody());
     }
 
-    private void countDown() {
+    private void countDown(String reason) {
         if (completed.compareAndSet(false, true)) {
-            completionHandler.countDown();
+            completionHandler.countDown(reason);
         }
     }
 

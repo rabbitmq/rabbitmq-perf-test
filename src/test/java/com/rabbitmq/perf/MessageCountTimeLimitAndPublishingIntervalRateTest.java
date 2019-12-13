@@ -32,6 +32,7 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -57,6 +58,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
     volatile AtomicBoolean testIsDone;
     volatile long testDurationInMs;
     CountDownLatch runStartedLatch;
+    ConcurrentMap<String, Integer> shutdownReasons;
 
     static Stream<Arguments> producerCountArguments() {
         return Stream.of(
@@ -112,6 +114,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         params = new MulticastParams();
         params.setPredeclared(true);
         runStartedLatch = new CountDownLatch(1);
+        shutdownReasons = new ConcurrentHashMap<>();
         LOGGER.info("Done initializing {} {}", info.getTestMethod().get().getName(), info.getDisplayName());
     }
 
@@ -168,13 +171,13 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         // only the configuration connection has been closed
         // so the test is still running in the background
         assertThat(connectionCloseCalls.get()).isEqualTo(1);
-        completionHandler.countDown();
+        completionHandler.countDown("");
     }
 
-    // --time 5
+    // --time 3
     @Test
     public void timeLimit() throws InterruptedException {
-        countsAndTimeLimit(1, 1, 3);
+        countsAndTimeLimit(0, 0, 3);
 
         Channel channel = proxy(Channel.class,
                 callback("basicPublish", (proxy, method, args) -> null),
@@ -197,6 +200,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         assertThat(testDurationInMs).isGreaterThanOrEqualTo(3000L);
         assertThat(closeCount.get()).isEqualTo(4); // the configuration connection is actually closed twice
+        assertThat(shutdownReasons).hasSize(1).containsKey(MulticastSet.STOP_REASON_REACHED_TIME_LIMIT);
     }
 
     // -y 1 --pmessages 10 -x n -X m
@@ -233,6 +237,11 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
                 () -> format("Only %d / %d messages have been published", publishedLatch.getCount(), messagesTotal)
         );
         waitAtMost(20, () -> testIsDone.get());
+        assertThat(shutdownReasons)
+                .hasSize(1)
+                .containsKey(Producer.STOP_REASON_PRODUCER_MESSAGE_LIMIT)
+                .containsValue(producersCount * channelsCount);
+
     }
 
     // --cmessages 10 -y n -Y m
@@ -282,6 +291,10 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         }
 
         waitAtMost(20, () -> testIsDone.get());
+        assertThat(shutdownReasons)
+                .hasSize(1)
+                .containsKey(com.rabbitmq.perf.Consumer.STOP_REASON_CONSUMER_REACHED_MESSAGE_LIMIT)
+                .containsValue(consumersCount * channelsCount);
     }
 
     // --time 5 -x 1 --pmessages 10 -y 1 --cmessages 10
@@ -335,6 +348,9 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         waitAtMost(20, () -> testIsDone.get());
         assertThat(testDurationInMs).isGreaterThanOrEqualTo(5000L);
+        assertThat(shutdownReasons)
+                .hasSize(2) // time limit + publisher message limit, but no consumer message limit
+                .containsKeys(MulticastSet.STOP_REASON_REACHED_TIME_LIMIT, Producer.STOP_REASON_PRODUCER_MESSAGE_LIMIT);
     }
 
     // -x 0 -y 1
@@ -376,7 +392,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         // only the configuration connection has been closed
         // so the test is still running in the background
         assertThat(closeCount.get()).isEqualTo(1);
-        completionHandler.countDown();
+        completionHandler.countDown("");
         waitAtMost(20, () -> testIsDone.get());
     }
 
@@ -419,7 +435,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         // only the configuration connection has been closed
         // so the test is still running in the background
         assertThat(closeCount.get()).isEqualTo(1);
-        completionHandler.countDown();
+        completionHandler.countDown("");
         waitAtMost(20, () -> testIsDone.get());
     }
 
@@ -451,6 +467,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         waitAtMost(30, () -> testIsDone.get());
         assertThat(publishedMessageCount.get()).isGreaterThan(0).isLessThan(3 * 100 * 8 * 2); // not too many messages)
         assertThat(testDurationInMs).isGreaterThan(5000L);
+        assertThat(shutdownReasons).hasSize(1).containsKey(MulticastSet.STOP_REASON_REACHED_TIME_LIMIT);
     }
 
     @Test
@@ -483,6 +500,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
                 .isGreaterThanOrEqualTo(3 * 2)  // 3 publishers should publish at least a couple of times
                 .isLessThan(3 * 2 * 8); //  but they don't publish too much
         assertThat(testDurationInMs).isGreaterThan(5000L);
+        assertThat(shutdownReasons).hasSize(1).containsKey(MulticastSet.STOP_REASON_REACHED_TIME_LIMIT);
     }
 
     @Test
@@ -506,7 +524,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         waitForRunToStart();
 
-        completionHandler.countDown();
+        completionHandler.countDown("");
         waitAtMost(10, () -> testIsDone.get());
         assertThat(connectionCloseCalls.get()).isEqualTo(4); // configuration connection is closed twice
     }
@@ -533,7 +551,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         waitForRunToStart();
 
-        completionHandler.countDown();
+        completionHandler.countDown("");
         waitAtMost(10, () -> testIsDone.get());
         assertThat(connectionCloseCalls.get()).isEqualTo(1); // configuration connection is closed after configuration is done
     }
@@ -573,7 +591,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         waitForRunToStart();
 
-        completionHandler.countDown();
+        completionHandler.countDown("");
         waitAtMost(10, () -> testIsDone.get());
         assertThat(connectionCloseCalls.get()).isEqualTo(2);
     }
@@ -614,6 +632,10 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         waitAtMost(20, () -> testIsDone.get());
         assertThat(countBasicGottenMessages).hasValueGreaterThanOrEqualTo(messagesCount);
+        assertThat(shutdownReasons)
+                .hasSize(1)
+                .containsKey(com.rabbitmq.perf.Consumer.STOP_REASON_CONSUMER_REACHED_MESSAGE_LIMIT)
+                .containsValue(consumersCount * channelsCount);
     }
 
     // -x 0 -y 1 --polling --polling-interval 10
@@ -657,7 +679,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         // only the configuration connection has been closed
         // so the test is still running in the background
         assertThat(closeCount.get()).isEqualTo(1);
-        completionHandler.countDown();
+        completionHandler.countDown("");
         waitAtMost(20, () -> testIsDone.get());
     }
 
@@ -726,8 +748,10 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
             assertThat(acks).hasValue(messagesCount);
             assertThat(nacks).hasValue(0);
         }
-
-
+        assertThat(shutdownReasons)
+                .hasSize(1)
+                .containsKey(com.rabbitmq.perf.Consumer.STOP_REASON_CONSUMER_REACHED_MESSAGE_LIMIT)
+                .containsValue(1);
     }
 
     private Collection<Future<?>> sendMessagesToConsumer(int messagesCount, Consumer consumer) {
@@ -757,7 +781,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
     }
 
     private MulticastSet getMulticastSet(ConnectionFactory connectionFactory) {
-        return getMulticastSet(connectionFactory, PerfTest.getCompletionHandler(params));
+        return getMulticastSet(connectionFactory, PerfTest.getCompletionHandler(params, shutdownReasons));
     }
 
     void waitForRunToStart() throws InterruptedException {
@@ -774,8 +798,8 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
             }
 
             @Override
-            public void countDown() {
-                completionHandler.countDown();
+            public void countDown(String reason) {
+                completionHandler.countDown(reason);
             }
         };
         MulticastSet set = new MulticastSet(

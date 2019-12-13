@@ -723,7 +723,7 @@ public class TopologyTest {
             }
 
             @Override
-            public void countDown() {
+            public void countDown(String reason) {
             }
         }
         );
@@ -742,7 +742,7 @@ public class TopologyTest {
             }
 
             @Override
-            public void countDown() {
+            public void countDown(String reason) {
             }
         }
         );
