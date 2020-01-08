@@ -92,6 +92,11 @@ you can use your favorite one.
 
 This tool uses [semantic versioning](https://semver.org/).
 
+## Support
+
+See the [RabbitMQ Java libraries support page](https://www.rabbitmq.com/java-versions.html)
+for the support timeline of this library.
+
 ## License
 
 This package, the RabbitMQ Performance Testing Tool library, is triple-licensed under
