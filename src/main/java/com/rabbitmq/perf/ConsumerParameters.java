@@ -18,6 +18,7 @@ package com.rabbitmq.perf;
 import com.rabbitmq.client.Channel;
 
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
 /**
@@ -44,6 +45,8 @@ public class ConsumerParameters {
     private boolean nack = false;
 
     private int pollingInterval;
+
+    private Map<String, Object> consumerArguments = null;
 
     public Channel getChannel() {
         return channel;
@@ -196,5 +199,14 @@ public class ConsumerParameters {
     public ConsumerParameters setNack(boolean nack) {
         this.nack = nack;
         return this;
+    }
+
+    public ConsumerParameters setConsumerArguments(Map<String, Object> consumerArguments) {
+        this.consumerArguments = consumerArguments;
+        return this;
+    }
+
+    public Map<String, Object> getConsumerArguments() {
+        return consumerArguments;
     }
 }
