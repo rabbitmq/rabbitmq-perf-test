@@ -634,6 +634,9 @@ public class MulticastSet {
 
         @Override
         public void countDown(String reason) {
+            if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug("Counting down ({})", reason);
+            }
             recordReason(reasons, reason);
             latch.countDown();
         }

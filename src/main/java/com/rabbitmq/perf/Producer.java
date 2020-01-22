@@ -357,14 +357,17 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
                     state.setMsgCount(0);
                 }
             }
-        } catch (RuntimeException e) {
+        } catch (PerfTestException pte) {
+            countDown(pte.getMessage());
+            throw pte;
+        } catch (Exception e) {
             LOGGER.debug("Error in publisher", e);
             String reason;
             if (e.getCause() instanceof InterruptedException && this.rateIndicator.getValue() != 0.0f) {
                 // likely to have been interrupted while sleeping to honor rate limit
                 reason = STOP_REASON_PRODUCER_THREAD_INTERRUPTED;
             } else {
-                reason = STOP_REASON_ERROR_IN_PRODUCER;
+                reason = STOP_REASON_ERROR_IN_PRODUCER + " (" + e.getMessage() + ")";
             }
             // failing, we don't want to block the whole process, so counting down
             countDown(reason);
@@ -420,9 +423,13 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
             }
             try {
                 maybeHandlePublish(state);
-            } catch (RuntimeException e) {
+            } catch(PerfTestException pte) {
                 // failing, we don't want to block the whole process, so counting down
-                countDown("Error in scheduled producer");
+                countDown(pte.getMessage());
+                throw pte;
+            } catch (Exception e) {
+                // failing, we don't want to block the whole process, so counting down
+                countDown("Error in scheduled producer (" + e.getMessage() + ")");
                 throw e;
             }
         };
@@ -488,7 +495,7 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
                 boolean acquired = confirmPool.tryAcquire(confirmTimeout, TimeUnit.SECONDS);
                 if (!acquired) {
                     // waiting for too long, broker may be gone, stopping thread
-                    throw new RuntimeException("Waiting for publisher confirms for too long");
+                    throw new PerfTestException("Waiting for publisher confirms for too long");
                 }
             }
         }
