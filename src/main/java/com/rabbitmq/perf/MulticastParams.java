@@ -912,13 +912,16 @@ public class MulticastParams {
                 return configureQueues(connectionToUse, getQueueNamesForClient(), topologyRecording, () -> {});
             } else {
                 List<String> queues = getQueueNamesForClient();
-                // this recording will contain the resources the consumer uses
+                // this recording will contain the resources the consumer uses.
                 // this way, if its connections closes, it will try to reconnect and
                 // re-create the resources it needs to work with
                 // this is more resilient than counting only on the configuration connections
                 // to recover all resources, as the producer/consumer connections can recover
                 // before the configuration connections, and then don't see their resources
-                TopologyRecording clientTopologyRecording = this.topologyRecording.subRecording(queues);
+                List<String> queuesForSubRecording = this.params.predeclared ?
+                        Collections.EMPTY_LIST : // not supposed to recover queues, so sub-recording will be empty
+                        queues; // the sub-record will contain all the info to re-create the queue on recovery
+                TopologyRecording clientTopologyRecording = this.topologyRecording.subRecording(queuesForSubRecording);
                 return new TopologyHandlerResult(
                     connection,
                     queues,

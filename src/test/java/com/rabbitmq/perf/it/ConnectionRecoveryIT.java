@@ -15,6 +15,8 @@
 
 package com.rabbitmq.perf.it;
 
+import com.rabbitmq.client.Channel;
+import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.impl.nio.NioParams;
 import com.rabbitmq.perf.MulticastParams;
@@ -26,6 +28,7 @@ import org.junit.jupiter.api.*;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -304,6 +307,47 @@ public class ConnectionRecoveryIT {
         closeAllConnections();
         waitAtMost(10, () -> msgConsumed.get() >= 2 * messageCountBeforeClosing);
         assertFalse(testIsDone.get());
+    }
+
+    @ValueSource(booleans = {false, true})
+    @ParameterizedTest
+    public void shouldRecoverWithPreDeclared(boolean polling, TestInfo info) throws Exception {
+        int queueCount = 5;
+        String queuePattern = "perf-test-"+ info.getTestMethod().get().getName() + "-%d";
+        ConnectionFactory connectionFactory = new ConnectionFactory();
+        try (Connection c = connectionFactory.newConnection()) {
+            Channel ch = c.createChannel();
+            for (int i = 1; i <= queueCount; i++) {
+                ch.queueDeclare(String.format(queuePattern, i), false, false, false, null);
+            }
+        }
+
+        params.setQueuePattern(queuePattern);
+        params.setQueueSequenceFrom(1);
+        params.setQueueSequenceTo(queueCount);
+        params.setConsumerCount(queueCount);
+        params.setProducerCount(queueCount);
+        params.setPredeclared(true);
+        params.setPolling(polling);
+
+        try {
+            int producerConsumerCount = params.getProducerCount();
+            MulticastSet set = new MulticastSet(stats, cf, params, "", URIS, latchCompletionHandler(1, info));
+            run(set);
+            waitAtMost(10, () -> msgConsumed.get() >= 3 * producerConsumerCount * RATE);
+            int messageCountBeforeClosing = msgConsumed.get();
+            closeAllConnections();
+            waitAtMost(10, () -> msgConsumed.get() >= 2 * messageCountBeforeClosing);
+            assertFalse(testIsDone.get());
+        } finally {
+            try (Connection c = connectionFactory.newConnection()) {
+                Channel ch = c.createChannel();
+                for (int i = 1; i <= queueCount; i++) {
+                    ch.queueDelete(String.format(queuePattern, i));
+                }
+            }
+        }
+
     }
 
     void closeAllConnections() throws IOException {

@@ -185,9 +185,11 @@ public class TopologyRecording {
             for (RecordedBinding binding : bindings) {
                 LOGGER.debug("Connection {}, recovering binding {}", connection.getClientProvidedName(), binding);
                 RecordedQueue queue = queues.get(binding.queue);
-                synchronized (queue) {
-                    channel = reliableWrite(connection, channel,
-                            ch -> ch.queueBind(queue.name, binding.exchange, binding.routingKeyIsQueue() ? queue.name : binding.routingKey));
+                if (queue != null) { // can be null when using predeclared
+                    synchronized (queue) {
+                        channel = reliableWrite(connection, channel,
+                                ch -> ch.queueBind(queue.name, binding.exchange, binding.routingKeyIsQueue() ? queue.name : binding.routingKey));
+                    }
                 }
                 LOGGER.debug("Connection {}, recovered binding {}", connection.getClientProvidedName(), binding);
             }

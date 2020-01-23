@@ -712,6 +712,35 @@ public class TopologyTest {
         threadHandler.shutdown();
     }
 
+    @Test
+    public void relaxQueueRecordingWhenPredeclared() throws Exception {
+        String queuePrefix = "perf-test-";
+        params.setQueuePattern(queuePrefix + "%d");
+        params.setQueueSequenceFrom(1);
+        params.setQueueSequenceTo(10);
+        params.setConsumerCount(10);
+        params.setProducerCount(1);
+        params.setPredeclared(true);
+
+        when(ch.queueDeclare(queueNameCaptor.capture(), anyBoolean(), anyBoolean(), anyBoolean(), isNull()))
+                .then(invocation -> new AMQImpl.Queue.DeclareOk(invocation.getArgument(0), 0, 0));
+
+        CountDownLatch latchPublishing = new CountDownLatch(100);
+        doAnswer(invocation -> {
+            latchPublishing.countDown();
+            return null;
+        }).when(ch).basicPublish(eq("direct"), anyString(),
+                anyBoolean(), eq(false),
+                any(), any(byte[].class));
+
+        MulticastSet set = getMulticastSet(new MulticastSet.DefaultThreadingHandler(), latchPublishing);
+
+        set.run();
+
+        assertThat(latchPublishing.await(10, TimeUnit.SECONDS)).isTrue()
+                .as("Some messages should have been published by now.");
+    }
+
     private MulticastSet getMulticastSet() {
         NoOpThreadingHandler noOpThreadingHandler = new NoOpThreadingHandler();
         return getMulticastSet(noOpThreadingHandler, cf);

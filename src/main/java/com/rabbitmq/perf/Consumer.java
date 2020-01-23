@@ -50,7 +50,7 @@ public class Consumer extends AgentBase implements Runnable {
     private final int                   multiAckEvery;
     private final Stats                 stats;
     private final int                   msgLimit;
-    private final Map<String, String>   consumerTagBranchMap = Collections.synchronizedMap(new HashMap<String, String>());
+    private final Map<String, String>   consumerTagBranchMap = Collections.synchronizedMap(new HashMap<>());
     private final ConsumerLatency       consumerLatency;
     private final BiFunction<BasicProperties, byte[], Long> timestampExtractor;
     private final TimestampProvider     timestampProvider;
@@ -313,23 +313,32 @@ public class Consumer extends AgentBase implements Runnable {
             // we get the "latest" names of the queue (useful only when there are server-generated name for recovered queues)
             List<String> queues = new ArrayList<>(this.initialQueueNames.size());
             for (String queue : initialQueueNames) {
-                queues.add(topologyRecording.queue(queue).name());
+                queues.add(queueName(topologyRecording, queue));
             }
             this.queueNames.set(queues);
             this.queueNamesVersion.incrementAndGet();
         } else {
             for (Map.Entry<String, String> entry : consumerTagBranchMap.entrySet()) {
-                TopologyRecording.RecordedQueue queue = topologyRecording.queue(entry.getValue());
+                String queueName = queueName(topologyRecording, entry.getValue());
                 try {
-                    channel.basicConsume(queue.name(), autoAck, entry.getKey(), false, false, this.consumerArguments, q);
+                    channel.basicConsume(queueName, autoAck, entry.getKey(), false, false, this.consumerArguments, q);
                 } catch (IOException e) {
                     LOGGER.warn(
                             "Error while recovering consumer {} on queue {} on connection {}",
-                            entry.getKey(), queue.name(), channel.getConnection().getClientProvidedName(), e
+                            entry.getKey(), queueName, channel.getConnection().getClientProvidedName(), e
                     );
                 }
             }
         }
+    }
+
+    private static String queueName(TopologyRecording recording, String queue) {
+        TopologyRecording.RecordedQueue queueRecord = recording.queue(queue);
+        // The recording is missing when using pre-declared, so just using the initial name.
+        // This is a decent fallback as the record is useful only to have the new name
+        // of the queue after recovery (for server-generated queue names).
+        // Queue names are supposed to be stable when using pre-declared.
+        return queueRecord == null ? queue : queueRecord.name();
     }
 
     private static class ConsumerState implements AgentState {
