@@ -78,6 +78,8 @@ public class TopologyTest {
     ArgumentCaptor<String> routingKeyCaptor;
     @Captor
     ArgumentCaptor<String> consumerQueue;
+    @Captor
+    ArgumentCaptor<Map<String, Object>> consumerArgumentsCaptor;
 
     static Stream<Arguments> reuseConnectionForExclusiveQueuesWhenMoreConsumersThanQueuesArguments() {
         return Stream.of(
@@ -120,6 +122,22 @@ public class TopologyTest {
                 .queueDeclare(eq(""), anyBoolean(), anyBoolean(), anyBoolean(), isNull());
         verify(ch, times(1))
                 .queueBind(anyString(), eq("direct"), anyString());
+    }
+
+    @Test
+    public void consumerArguments()
+            throws Exception {
+        when(ch.queueDeclare(eq(""), anyBoolean(), anyBoolean(), anyBoolean(), isNull()))
+                .thenReturn(new AMQImpl.Queue.DeclareOk("", 0, 0));
+
+        params.setConsumerArguments(Collections.singletonMap("x-priority", 10));
+
+        MulticastSet set = getMulticastSet();
+
+        set.run();
+
+        verify(ch, times(1)).basicConsume(anyString(), anyBoolean(), consumerArgumentsCaptor.capture(), any());
+        assertThat(consumerArgumentsCaptor.getValue()).hasSize(1).containsEntry("x-priority", 10);
     }
 
     @Test
@@ -568,7 +586,7 @@ public class TopologyTest {
                 .queueDeclare(startsWith(queuePrefix), anyBoolean(), anyBoolean(), anyBoolean(), isNull());
         verify(ch, times(100))
                 .queueBind(startsWith(queuePrefix), eq("direct"), startsWith(queuePrefix));
-        verify(ch, never()).basicConsume(anyString(), anyBoolean(), any());
+        verify(ch, never()).basicConsume(anyString(), anyBoolean(), anyMap(), any());
 
         assertThat(routingKeyCaptor.getAllValues().stream().distinct().toArray())
                 .hasSize(10)
@@ -577,6 +595,7 @@ public class TopologyTest {
 
     // --queue-pattern 'perf-test-%d' --queue-pattern-from 1 --queue-pattern-to 10 --producers 15 --consumers 30
     @Test
+    @SuppressWarnings("unchecked")
     public void sequenceProducersAndConsumersSpread() throws Exception {
         String queuePrefix = "perf-test-";
         int queueCount = 3;
@@ -618,7 +637,7 @@ public class TopologyTest {
                 .queueDeclare(startsWith(queuePrefix), anyBoolean(), anyBoolean(), anyBoolean(), isNull());
         verify(ch, times(queueCount))
                 .queueBind(startsWith(queuePrefix), eq("direct"), startsWith(queuePrefix));
-        verify(ch, times(queueCount * 6)).basicConsume(consumerQueue.capture(), anyBoolean(), any());
+        verify(ch, times(queueCount * 6)).basicConsume(consumerQueue.capture(), anyBoolean(), (Map) isNull(), any());
 
         assertThat(queueNameCaptor.getAllValues().stream().distinct().toArray())
                 .hasSize(queueCount)
@@ -645,6 +664,7 @@ public class TopologyTest {
 
     // --queue-pattern 'perf-test-%d' --queue-pattern-from 101 --queue-pattern-to 110 --producers 0 --consumers 110
     @Test
+    @SuppressWarnings("unchecked")
     public void sequenceConsumersSpread(TestInfo testInfo) throws Exception {
         String queuePrefix = "perf-test-";
         params.setConsumerCount(110);
@@ -661,7 +681,7 @@ public class TopologyTest {
         doAnswer(invocation -> {
             latch.countDown();
             return UUID.randomUUID().toString();
-        }).when(ch).basicConsume(consumerQueue.capture(), anyBoolean(), any());
+        }).when(ch).basicConsume(consumerQueue.capture(), anyBoolean(), (Map) isNull(), any());
 
         InterruptThreadHandler threadHandler = new InterruptThreadHandler(testInfo, latch);
         MulticastSet set = getMulticastSet(threadHandler);
@@ -674,7 +694,7 @@ public class TopologyTest {
                 .queueDeclare(startsWith(queuePrefix), anyBoolean(), anyBoolean(), anyBoolean(), isNull());
         verify(ch, times(10))
                 .queueBind(startsWith(queuePrefix), eq("direct"), startsWith(queuePrefix));
-        verify(ch, times(110)).basicConsume(anyString(), anyBoolean(), any());
+        verify(ch, times(110)).basicConsume(anyString(), anyBoolean(), (Map) isNull(), any());
 
         // the captor received all the queues that have at least one consumer
         // let's count the number of consumers per queue

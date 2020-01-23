@@ -73,6 +73,8 @@ public class Consumer extends AgentBase implements Runnable {
 
     private final AckNackOperation ackNackOperation;
 
+    private final Map<String, Object> consumerArguments;
+
     public Consumer(ConsumerParameters parameters) {
         this.channel           = parameters.getChannel();
         this.id                = parameters.getId();
@@ -86,6 +88,7 @@ public class Consumer extends AgentBase implements Runnable {
         this.executorService   = parameters.getExecutorService();
         this.polling           = parameters.isPolling();
         this.pollingInterval   = parameters.getPollingInterval();
+        this.consumerArguments = parameters.getConsumerArguments();
 
         this.queueNames.set(new ArrayList<>(parameters.getQueueNames()));
         this.initialQueueNames = new ArrayList<>(parameters.getQueueNames());
@@ -195,7 +198,7 @@ public class Consumer extends AgentBase implements Runnable {
         try {
             q = new ConsumerImpl(channel);
             for (String qName : queueNames.get()) {
-                String tag = channel.basicConsume(qName, autoAck, q);
+                String tag = channel.basicConsume(qName, autoAck, this.consumerArguments, q);
                 consumerTagBranchMap.put(tag, qName);
             }
         } catch (IOException e) {
@@ -291,7 +294,7 @@ public class Consumer extends AgentBase implements Runnable {
             if (consumerTagBranchMap.containsKey(consumerTag)) {
                 String qName = consumerTagBranchMap.get(consumerTag);
                 System.out.printf("Re-consuming. Queue: %s for Tag: %s", qName, consumerTag);
-                channel.basicConsume(qName, autoAck, q);
+                channel.basicConsume(qName, autoAck, consumerArguments, q);
             } else {
                 System.out.printf("Could not find queue for consumer tag: %s", consumerTag);
             }
@@ -318,7 +321,7 @@ public class Consumer extends AgentBase implements Runnable {
             for (Map.Entry<String, String> entry : consumerTagBranchMap.entrySet()) {
                 TopologyRecording.RecordedQueue queue = topologyRecording.queue(entry.getValue());
                 try {
-                    channel.basicConsume(queue.name(), autoAck, entry.getKey(), q);
+                    channel.basicConsume(queue.name(), autoAck, entry.getKey(), false, false, this.consumerArguments, q);
                 } catch (IOException e) {
                     LOGGER.warn(
                             "Error while recovering consumer {} on queue {} on connection {}",

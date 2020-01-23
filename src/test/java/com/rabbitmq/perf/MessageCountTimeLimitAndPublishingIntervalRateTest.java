@@ -259,7 +259,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         List<Consumer> consumers = new CopyOnWriteArrayList<>();
         Channel channel = proxy(Channel.class,
                 callback("basicConsume", (proxy, method, args) -> {
-                    consumers.add((Consumer) args[2]);
+                    consumers.add((Consumer) args[3]);
                     consumersLatch.countDown();
                     return consumerTagCounter.getAndIncrement() + "";
                 })
@@ -317,7 +317,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
                 }),
                 callback("getNextPublishSeqNo", (proxy, method, args) -> 0L),
                 callback("basicConsume", (proxy, method, args) -> {
-                    consumer.set((Consumer) args[2]);
+                    consumer.set((Consumer) args[3]);
                     String ctag = consumerTagCounter.getAndIncrement() + "";
                     consumersLatch.countDown();
                     return ctag;
@@ -367,7 +367,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         List<Consumer> consumers = new CopyOnWriteArrayList<>();
         Channel channel = proxy(Channel.class,
                 callback("basicConsume", (proxy, method, args) -> {
-                    consumers.add((Consumer) args[2]);
+                    consumers.add((Consumer) args[3]);
                     consumersLatch.countDown();
                     return consumerTagCounter.getAndIncrement() + "";
                 })
@@ -701,7 +701,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         AtomicInteger nacks = new AtomicInteger(0);
         Channel channel = proxy(Channel.class,
                 callback("basicConsume", (proxy, method, args) -> {
-                    consumers.add((Consumer) args[2]);
+                    consumers.add((Consumer) args[3]);
                     consumersLatch.countDown();
                     return consumerTagCounter.getAndIncrement() + "";
                 }),

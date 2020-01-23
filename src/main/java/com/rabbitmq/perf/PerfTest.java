@@ -137,6 +137,7 @@ public class PerfTest {
 
             int serversStartUpTimeout = intArg(cmd, "sst", -1);
             int serversUpLimit = intArg(cmd, "sul", -1);
+            String consumerArgs = strArg(cmd, "ca", null);
 
             List<String> variableRates = lstArg(cmd, "vr");
             if (variableRates != null && !variableRates.isEmpty()) {
@@ -314,6 +315,7 @@ public class PerfTest {
             p.setJsonBody(jsonBody);
             p.setBodyFieldCount(bodyFieldCount);
             p.setBodyCount(bodyCount);
+            p.setConsumerArguments(convertKeyValuePairs(consumerArgs));
 
             ConcurrentMap<String, Integer> completionReasons = new ConcurrentHashMap<>();
 
@@ -618,6 +620,8 @@ public class PerfTest {
                 "Use with --json-body. Default is 1000."));
         options.addOption(new Option("bc", "body-count", true, "number of pre-generated message bodies. " +
                 "Use with --json-body. Default is 100."));
+        options.addOption(new Option("ca", "consumer-args", true, "consumer arguments as key/pair values, separated by commas, "
+                + "e.g. x-priority=10"));
 
         return options;
     }

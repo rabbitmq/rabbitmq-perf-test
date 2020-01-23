@@ -115,6 +115,8 @@ public class MulticastParams {
     private int bodyFieldCount = 1000;
     private int bodyCount = 100;
 
+    private Map<String, Object> consumerArguments = null;
+
     // for random JSON body generation
     private AtomicReference<MessageBodySource> messageBodySourceReference = new AtomicReference<>();
 
@@ -278,6 +280,10 @@ public class MulticastParams {
 
     public void setPublishingRates(List<String> publishingRates) {
         this.publishingRates = publishingRates;
+    }
+
+    public void setConsumerArguments(Map<String, Object> consumerArguments) {
+        this.consumerArguments = consumerArguments;
     }
 
     public int getConsumerCount() {
@@ -510,6 +516,7 @@ public class MulticastParams {
                 .setPolling(this.polling)
                 .setPollingInterval(this.pollingInterval)
                 .setNack(this.nack)
+                .setConsumerArguments(this.consumerArguments)
         );
         this.topologyHandler.next();
         return consumer;
