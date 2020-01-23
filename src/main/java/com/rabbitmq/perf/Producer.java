@@ -79,8 +79,10 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
     private final MessageBodySource messageBodySource;
 
     private final Function<AMQP.BasicProperties.Builder, AMQP.BasicProperties.Builder> propertiesBuilderProcessor;
-    private Semaphore confirmPool;
-    private int confirmTimeout;
+    private final Semaphore confirmPool;
+    private final int confirmTimeout;
+    private final int maxOutstandingConfirms;
+
     private final ConcurrentNavigableMap<Long, Long> unconfirmed = new ConcurrentSkipListMap<>();
 
     private final MulticastSet.CompletionHandler completionHandler;
@@ -120,8 +122,13 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
         this.shouldTrackPublishConfirms = shouldTrackPublishConfirm(parameters);
 
         if (parameters.getConfirm() > 0) {
-            this.confirmPool  = new Semaphore((int)parameters.getConfirm());
+            this.confirmPool = new Semaphore((int) parameters.getConfirm());
             this.confirmTimeout = parameters.getConfirmTimeout();
+            this.maxOutstandingConfirms = (int) parameters.getConfirm();
+        } else {
+            this.confirmPool = null;
+            this.confirmTimeout = -1;
+            this.maxOutstandingConfirms = -1;
         }
         this.stats = parameters.getStats();
         this.completionHandler = parameters.getCompletionHandler();
@@ -545,7 +552,18 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
 
     @Override
     public void recover(TopologyRecording topologyRecording) {
-        // nothing to recover for a producer
+        maybeResetConfirmPool();
+    }
+
+    private void maybeResetConfirmPool() {
+        if (this.confirmPool != null) {
+            // reset confirm pool. If the producer is waiting for confirms,
+            // it will move on without failing because of a confirm timeout, which is good,
+            // considering there has been a re-connection.
+            int usedPermits = maxOutstandingConfirms - this.confirmPool.availablePermits();
+            this.confirmPool.release(usedPermits);
+            LOGGER.debug("Resetting confirm pool in producer, used permit(s) {}, now {} available", usedPermits, this.confirmPool.availablePermits());
+        }
     }
 
     /**

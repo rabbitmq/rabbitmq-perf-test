@@ -30,8 +30,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
+import static com.rabbitmq.perf.TestUtils.waitAtMost;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonMap;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -363,6 +366,41 @@ public class ProducerTest {
                         .setMessageProperties(messageProperties)
         );
 
+    }
+
+    @Test
+    public void resetConfirmPoolAfterRecovery() throws Exception {
+        Recovery.RecoveryProcess recoveryProcess = mock(Recovery.RecoveryProcess.class);
+        when(recoveryProcess.isEnabled()).thenReturn(true);
+        when(recoveryProcess.isRecoverying()).thenReturn(false);
+        ProducerParameters parameters = parameters();
+        parameters.setConfirm(10).setConfirmTimeout(3).setMsgLimit(0).setRecoveryProcess(recoveryProcess);
+        AtomicLong publishSequence = new AtomicLong(0);
+        when(channel.getNextPublishSeqNo()).thenAnswer(invocation -> publishSequence.incrementAndGet());
+        Producer producer = new Producer(parameters);
+
+        AtomicBoolean failedWithPublisherConfirmTimeout = new AtomicBoolean(false);
+        new Thread(() -> {
+            try {
+                producer.run();
+            } catch (PerfTestException e) {
+                failedWithPublisherConfirmTimeout.set(e.getMessage().contains("publisher confirms"));
+            }
+        }).start();
+
+        waitAtMost(5, () -> publishSequence.get() == 10);
+        // 10 messages published, the producer is waiting for confirms, we send them
+        producer.handleAck(publishSequence.get(), true);
+        waitAtMost(5, () -> publishSequence.get() == 20);
+        // 10 more messages published, the producer is waiting for confirms, we simulate recovery
+        producer.recover(null);
+        // the producer resets the confirm pool and moves on to publishing
+        waitAtMost(5, () -> publishSequence.get() == 30);
+        // 10 more messages published, the producer is waiting for confirms, we send them
+        producer.handleAck(publishSequence.get(), true);
+        // the producer publishes again, it will wait for confirm but they will never come
+        // we wait until it reaches the confirm timeout and crashes
+        waitAtMost(10, () -> failedWithPublisherConfirmTimeout.get());
     }
 
     ProducerParameters parameters() {
