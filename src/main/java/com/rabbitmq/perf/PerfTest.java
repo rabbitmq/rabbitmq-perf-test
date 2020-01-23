@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2019 Pivotal Software, Inc.  All rights reserved.
+// Copyright (c) 2007-2020 Pivotal Software, Inc.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 1.1 ("MPL"), the GNU General Public License version 2
@@ -18,6 +18,7 @@ package com.rabbitmq.perf;
 import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.DefaultSaslConfig;
 import com.rabbitmq.client.ExceptionHandler;
+import com.rabbitmq.client.RecoveryDelayHandler;
 import com.rabbitmq.client.impl.ClientVersion;
 import com.rabbitmq.client.impl.DefaultExceptionHandler;
 import com.rabbitmq.client.impl.nio.NioParams;
@@ -190,6 +191,11 @@ public class PerfTest {
             }
 
             factory.setTopologyRecoveryEnabled(false);
+
+            RecoveryDelayHandler recoveryDelayHandler = Utils.getRecoveryDelayHandler(strArg(cmd, "cri", null));
+            if (recoveryDelayHandler != null) {
+                factory.setRecoveryDelayHandler(recoveryDelayHandler);
+            }
 
             CompositeMeterRegistry registry = new CompositeMeterRegistry();
             shutdownService.wrap(() -> registry.close());
@@ -622,6 +628,8 @@ public class PerfTest {
                 "Use with --json-body. Default is 100."));
         options.addOption(new Option("ca", "consumer-args", true, "consumer arguments as key/pair values, separated by commas, "
                 + "e.g. x-priority=10"));
+        options.addOption(new Option("cri", "connection-recovery-interval", true, "connection recovery interval in seconds. Default is 5 seconds. "
+                + "Interval syntax, e.g. 30-60, is supported to specify an random interval between 2 values between each attempt."));
 
         return options;
     }

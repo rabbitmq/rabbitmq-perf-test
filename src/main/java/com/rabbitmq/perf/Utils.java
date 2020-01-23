@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019 Pivotal Software, Inc.  All rights reserved.
+// Copyright (c) 2018-2020 Pivotal Software, Inc.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 1.1 ("MPL"), the GNU General Public License version 2
@@ -18,11 +18,15 @@ package com.rabbitmq.perf;
 import com.rabbitmq.client.Address;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
+import com.rabbitmq.client.RecoveryDelayHandler;
 import com.rabbitmq.client.impl.recovery.AutorecoveringConnection;
 
 import java.net.URISyntaxException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 abstract class Utils {
 
@@ -35,6 +39,37 @@ abstract class Utils {
     static synchronized Address extract(String uri) throws NoSuchAlgorithmException, KeyManagementException, URISyntaxException {
         CF.setUri(uri);
         return new Address(CF.getHost(), CF.getPort());
+    }
+
+    /**
+     * @param argument
+     * @return
+     * @since 2.11.0
+     */
+    static RecoveryDelayHandler getRecoveryDelayHandler(String argument) {
+        if (argument == null || argument.trim().isEmpty()) {
+            return null;
+        }
+        argument = argument.trim();
+        Pattern pattern = Pattern.compile("(\\d+)(-(\\d+))?");
+        Matcher matcher = pattern.matcher(argument);
+        if (!matcher.matches()) {
+            throw new IllegalArgumentException("Incorrect argument for connection recovery interval. Must be e.g. 30 or 30-60.");
+        }
+
+        RecoveryDelayHandler handler;
+        final long delay = Long.parseLong(matcher.group(1)) * 1000;
+        if (matcher.group(2) == null) {
+            handler = recoveryAttempts -> delay;
+        } else {
+            final long maxInput = Long.parseLong(matcher.group(2).replace("-", "")) * 1000;
+            if (maxInput <= delay) {
+                throw new IllegalArgumentException("Wrong interval min-max values: " + argument);
+            }
+            final long maxDelay = maxInput + 1000;
+            handler = recoveryAttempts -> ThreadLocalRandom.current().nextLong(delay, maxDelay);
+        }
+        return handler;
     }
 
 }
