@@ -555,7 +555,7 @@ public class PerfTest {
         options.addOption(new Option("ad", "auto-delete",           true, "should the queue be auto-deleted, default is true"));
         options.addOption(new Option("ms", "use-millis",            false,"should latency be collected in milliseconds, default is false. "
                                                                                                     + "Set to true if producers are consumers run on different machines."));
-        options.addOption(new Option("qa", "queue-args",            true, "queue arguments as key/pair values, separated by commas, "
+        options.addOption(new Option("qa", "queue-args",            true, "queue arguments as key/value pairs, separated by commas, "
                                                                                                     + "e.g. x-max-length=10"));
         options.addOption(new Option("L", "consumer-latency",       true, "consumer latency in microseconds"));
 
@@ -569,7 +569,7 @@ public class PerfTest {
         options.addOption(new Option("qpf", "queue-pattern-from",     true, "queue name pattern range start (inclusive)"));
         options.addOption(new Option("qpt", "queue-pattern-to",       true, "queue name pattern range end (inclusive)"));
         options.addOption(new Option("hst", "heartbeat-sender-threads",       true, "number of threads for producers and consumers heartbeat senders"));
-        options.addOption(new Option("mp", "message-properties",    true, "message properties as key/pair values, separated by commas, "
+        options.addOption(new Option("mp", "message-properties",    true, "message properties as key/value pairs, separated by commas, "
                                                                                                     + "e.g. priority=5"));
         options.addOption(new Option("rkcs", "routing-key-cache-size",true, "size of the random routing keys cache. See --random-routing-key."));
         options.addOption(new Option("E", "exclusive",                false, "use server-named exclusive queues. "
@@ -626,11 +626,10 @@ public class PerfTest {
                 "Use with --json-body. Default is 1000."));
         options.addOption(new Option("bc", "body-count", true, "number of pre-generated message bodies. " +
                 "Use with --json-body. Default is 100."));
-        options.addOption(new Option("ca", "consumer-args", true, "consumer arguments as key/pair values, separated by commas, "
+        options.addOption(new Option("ca", "consumer-args", true, "consumer arguments as key/values pairs, separated by commas, "
                 + "e.g. x-priority=10"));
         options.addOption(new Option("cri", "connection-recovery-interval", true, "connection recovery interval in seconds. Default is 5 seconds. "
                 + "Interval syntax, e.g. 30-60, is supported to specify an random interval between 2 values between each attempt."));
-
         return options;
     }
 

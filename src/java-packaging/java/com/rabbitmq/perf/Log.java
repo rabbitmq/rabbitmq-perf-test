@@ -21,8 +21,9 @@ import ch.qos.logback.core.joran.spi.JoranException;
 import ch.qos.logback.core.util.StatusPrinter;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.util.Map;
 
 /**
  * Configure logback.
@@ -31,13 +32,19 @@ public class Log {
 
     public static void configureLog() throws IOException {
         if (System.getProperty("logback.configurationFile") == null) {
+            String loggers = System.getProperty("rabbitmq.perftest.loggers") == null ?
+                    System.getenv("RABBITMQ_PERF_TEST_LOGGERS") :
+                    System.getProperty("rabbitmq.perftest.loggers");
             LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
             InputStream configurationFile = PerfTest.class.getResourceAsStream("/logback-perf-test.xml");
             try {
+                String configuration = processConfigurationFile(configurationFile, PerfTest.convertKeyValuePairs(loggers));
                 JoranConfigurator configurator = new JoranConfigurator();
                 configurator.setContext(context);
                 context.reset();
-                configurator.doConfigure(configurationFile);
+                configurator.doConfigure(new ByteArrayInputStream(
+                        configuration.getBytes(StandardCharsets.UTF_8)
+                ));
             } catch (JoranException je) {
                 // StatusPrinter will handle this
             } finally {
@@ -46,5 +53,36 @@ public class Log {
             StatusPrinter.printInCaseOfErrorsOrWarnings(context);
         }
     }
+
+    /**
+     * @param configurationFile
+     * @param loggers
+     * @return
+     * @throws IOException
+     * @since 2.11.0
+     */
+    static String processConfigurationFile(InputStream configurationFile, Map<String, Object> loggers) throws IOException {
+        StringBuilder loggersConfiguration = new StringBuilder();
+        if (loggers != null) {
+            for (Map.Entry<String, Object> logger : loggers.entrySet()) {
+                loggersConfiguration.append(String.format(
+                        "\t<logger name=\"%s\" level=\"%s\" />%s",
+                        logger.getKey(), logger.getValue().toString(), System.getProperty("line.separator")
+                ));
+            }
+        }
+
+        BufferedReader in = new BufferedReader(new InputStreamReader(configurationFile));
+        final int bufferSize = 1024;
+        final char[] buffer = new char[bufferSize];
+        StringBuilder builder = new StringBuilder();
+        int charsRead;
+        while ((charsRead = in.read(buffer, 0, buffer.length)) > 0) {
+            builder.append(buffer, 0, charsRead);
+        }
+
+        return builder.toString().replace("${loggers}", loggersConfiguration);
+    }
+
 
 }

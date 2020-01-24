@@ -48,7 +48,7 @@ To run the RabbitMQ broker within Docker, and run PerfTest against it, run the
 following commands:
 
  docker network create perf-test
- docker run -it --rm --network perf-test --name rabbitmq -p 15672:15672 rabbitmq:3.7.8-management
+ docker run -it --rm --network perf-test --name rabbitmq -p 15672:15672 rabbitmq:3.8.2-management
  docker run -it --rm --network perf-test pivotalrabbitmq/perf-test:latest --uri amqp://rabbitmq
 
 === For Cloud Foundry
