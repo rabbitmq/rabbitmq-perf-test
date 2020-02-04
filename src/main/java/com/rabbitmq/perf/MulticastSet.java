@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2019 Pivotal Software, Inc.  All rights reserved.
+// Copyright (c) 2007-2020 Pivotal Software, Inc.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 1.1 ("MPL"), the GNU General Public License version 2
@@ -370,12 +370,20 @@ public class MulticastSet {
                 );
             }
         } else {
-            this.rateIndicator.start();
-            ExecutorService producersExecutorService = this.threadingHandler.executorService(
-                    PRODUCER_THREAD_PREFIX, producerStates.length
-            );
-            for (AgentState producerState : producerStates) {
-                producerState.task = producersExecutorService.submit(producerState.runnable);
+            if (!this.rateIndicator.isVariable() && this.rateIndicator.getValue() == 0.0f) {
+                // don't do anything, the rate is 0, we just created the publishers connections
+                // but they won't publish anything.
+                for (AgentState producerState : producerStates) {
+                    producerState.task = Utils.NO_OP_FUTURE;
+                }
+            } else {
+                this.rateIndicator.start();
+                ExecutorService producersExecutorService = this.threadingHandler.executorService(
+                        PRODUCER_THREAD_PREFIX, producerStates.length
+                );
+                for (AgentState producerState : producerStates) {
+                    producerState.task = producersExecutorService.submit(producerState.runnable);
+                }
             }
         }
     }

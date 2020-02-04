@@ -470,6 +470,33 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         assertThat(shutdownReasons).hasSize(1).containsKey(MulticastSet.STOP_REASON_REACHED_TIME_LIMIT);
     }
 
+    @Test public void producersThreadsNotCreatedWhenRateIsZero() throws Exception {
+        countsAndTimeLimit(0, 0, 8);
+        params.setProducerRateLimit(0);
+        params.setProducerCount(10);
+
+        AtomicInteger publishedMessageCount = new AtomicInteger();
+        Channel channel = proxy(Channel.class,
+                callback("basicPublish", (proxy, method, args) -> {
+                    publishedMessageCount.incrementAndGet();
+                    return null;
+                })
+        );
+
+        Connection connection = proxy(Connection.class,
+                callback("createChannel", (proxy, method, args) -> channel)
+        );
+
+        MulticastSet multicastSet = getMulticastSet(connectionFactoryThatReturns(connection));
+
+        run(multicastSet);
+
+        waitForRunToStart();
+
+        waitAtMost(30, () -> testIsDone.get());
+        assertThat(publishedMessageCount).hasValue(0);
+    }
+
     @Test
     public void publishingInterval() throws InterruptedException {
         countsAndTimeLimit(0, 0, 6);

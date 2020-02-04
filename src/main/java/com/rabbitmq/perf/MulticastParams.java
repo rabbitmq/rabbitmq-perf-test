@@ -919,7 +919,7 @@ public class MulticastParams {
                 // to recover all resources, as the producer/consumer connections can recover
                 // before the configuration connections, and then don't see their resources
                 List<String> queuesForSubRecording = this.params.predeclared ?
-                        Collections.EMPTY_LIST : // not supposed to recover queues, so sub-recording will be empty
+                        Collections.emptyList() : // not supposed to recover queues, so sub-recording will be empty
                         queues; // the sub-record will contain all the info to re-create the queue on recovery
                 TopologyRecording clientTopologyRecording = this.topologyRecording.subRecording(queuesForSubRecording);
                 return new TopologyHandlerResult(

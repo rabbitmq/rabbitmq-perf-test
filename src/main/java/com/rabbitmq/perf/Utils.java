@@ -24,7 +24,7 @@ import com.rabbitmq.client.impl.recovery.AutorecoveringConnection;
 import java.net.URISyntaxException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -71,5 +71,33 @@ abstract class Utils {
         }
         return handler;
     }
+
+    static final Future<?> NO_OP_FUTURE = new Future<Object>() {
+
+        @Override
+        public boolean cancel(boolean mayInterruptIfRunning) {
+            return true;
+        }
+
+        @Override
+        public boolean isCancelled() {
+            return false;
+        }
+
+        @Override
+        public boolean isDone() {
+            return true;
+        }
+
+        @Override
+        public Object get() throws InterruptedException, ExecutionException {
+            return null;
+        }
+
+        @Override
+        public Object get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
+            return null;
+        }
+    };
 
 }
