@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Pivotal Software, Inc.  All rights reserved.
+// Copyright (c) 2018-2020 Pivotal Software, Inc.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 1.1 ("MPL"), the GNU General Public License version 2
@@ -15,7 +15,8 @@
 
 package com.rabbitmq.perf;
 
-import java.io.IOException;
+import java.io.*;
+import java.util.Map;
 
 /**
  * Stub to skip logback configuration.
@@ -29,6 +30,19 @@ import java.io.IOException;
 public class Log {
 
     public static void configureLog() throws IOException {
+    }
+
+    /**
+     * Empty placeholder to make test compile.
+     *
+     * @param configurationFile
+     * @param loggers
+     * @return
+     * @throws IOException
+     * @since 2.11.0
+     */
+    static String processConfigurationFile(InputStream configurationFile, Map<String, Object> loggers) throws IOException {
+        return null;
     }
 
 }
