@@ -254,7 +254,7 @@ Very few threads can be used for very slow publishers:
    --producer-scheduler-threads 10
 
 In the example above, 1000 publishers will publish every 60 seconds
-with a random start-up delay between 1 second and 15 minutes (1800 seconds). They
+with a random start-up delay between 1 second and 30 minutes (1800 seconds). They
 will be scheduled by only 10 threads (instead of 20 by default). Such delay
 values are suitable for long running tests.
 
