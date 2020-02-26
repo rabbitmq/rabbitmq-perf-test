@@ -442,7 +442,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <div id="header">
 <h1>RabbitMQ PerfTest</h1>
 <div class="details">
-<span id="revnumber">version 2.10.0</span>
+<span id="revnumber">version 2.11.0</span>
 </div>
 <div id="toc" class="toc2">
 <div id="toctitle">Table of Contents</div>
@@ -588,7 +588,7 @@ following commands:</p>
 <div class="literalblock">
 <div class="content">
 <pre>docker network create perf-test
-docker run -it --rm --network perf-test --name rabbitmq -p 15672:15672 rabbitmq:3.7.8-management
+docker run -it --rm --network perf-test --name rabbitmq -p 15672:15672 rabbitmq:3.8.2-management
 docker run -it --rm --network perf-test pivotalrabbitmq/perf-test:latest --uri amqp://rabbitmq</pre>
 </div>
 </div>
@@ -1252,7 +1252,7 @@ Very few threads can be used for very slow publishers:</p>
 </div>
 <div class="paragraph">
 <p>In the example above, 1000 publishers will publish every 60 seconds
-with a random start-up delay between 1 second and 15 minutes (1800 seconds). They
+with a random start-up delay between 1 second and 30 minutes (1800 seconds). They
 will be scheduled by only 10 threads (instead of 20 by default). Such delay
 values are suitable for long running tests.</p>
 </div>
@@ -1697,8 +1697,8 @@ can be changed:</p>
 </div>
 <div id="footer">
 <div id="footer-text">
-Version 2.10.0<br>
-Last updated 2020-01-06 17:01:57 +0100
+Version 2.11.0<br>
+Last updated 2020-02-26 10:20:39 +0100
 </div>
 </div>
 <style>
