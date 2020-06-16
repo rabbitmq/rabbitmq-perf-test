@@ -120,6 +120,19 @@ and `DURATION` is in seconds. In the previous example, the size of published mes
 will be 1 kB for 30 seconds, then 10 kB for 20 seconds, then 5 kB for 45 seconds,
 then back to 1 kB for 30 seconds, and so on.
 
+== Setting and varying consumer latency
+
+You can simulate processing time per message with either a fixed or a variable latency value in microseconds.
+
+The `--consumer-latency` (`-L`) option sets a fixed consumer latency in microseconds. In the example
+below a 1 ms latency is set:
+
+  bin/runjava com.rabbitmq.perf.PerfTest --consumer-latency 1000
+
+The `--variable-latency` (`-vl`) option sets a variable consumer latency. In the example below it is
+set to 1 ms for 60 seconds then 1 second for 30 seconds:
+
+  bin/runjava com.rabbitmq.perf.PerfTest --variable-latency 1000:60 --variable-latency 1000000:30
 
 == Working With Many Queues
    

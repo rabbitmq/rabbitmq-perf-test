@@ -77,8 +77,6 @@ public class MulticastParams {
 
     private Map<String, Object> queueArguments = null;
 
-    private int consumerLatencyInMicroseconds = 0;
-
     private String queuePattern = null;
     private int queueSequenceFrom = -1;
     private int queueSequenceTo = -1;
@@ -104,6 +102,9 @@ public class MulticastParams {
     private List<String> publishingRates = new ArrayList<>();
 
     private List<String> messageSizes = new ArrayList<>();
+
+    private long consumerLatencyInMicroseconds;
+    private List<String> consumerLatencies = new ArrayList<>();
 
     private boolean polling = false;
 
@@ -254,10 +255,6 @@ public class MulticastParams {
         this.queueArguments = queueArguments;
     }
 
-    public void setConsumerLatencyInMicroseconds(int consumerLatencyInMicroseconds) {
-        this.consumerLatencyInMicroseconds = consumerLatencyInMicroseconds;
-    }
-
     public void setMessageProperties(Map<String, Object> messageProperties) {
         this.messageProperties = messageProperties;
     }
@@ -362,6 +359,15 @@ public class MulticastParams {
         this.messageSizes = messageSizes;
     }
 
+    public void setConsumerLatencyInMicroseconds(long consumerLatencyInMicroseconds) {
+        this.consumerLatencyInMicroseconds = consumerLatencyInMicroseconds;
+    }
+
+
+    public void setConsumerLatencies(List<String> consumerLatencies) {
+        this.consumerLatencies = consumerLatencies;
+    }
+
     public int getHeartbeatSenderThreads() {
         return heartbeatSenderThreads <= 0 ? producerCount + consumerCount : this.heartbeatSenderThreads;
     }
@@ -404,6 +410,14 @@ public class MulticastParams {
 
     public List<String> getMessageSizes() {
         return messageSizes;
+    }
+
+    public long getConsumerLatencyInMicroseconds() {
+        return consumerLatencyInMicroseconds;
+    }
+
+    public List<String> getConsumerLatencies() {
+        return consumerLatencies;
     }
 
     public void setPolling(boolean polling) {
@@ -479,7 +493,11 @@ public class MulticastParams {
         return producer;
     }
 
-    public Consumer createConsumer(Connection connection, Stats stats, MulticastSet.CompletionHandler completionHandler, ExecutorService executorService) throws IOException {
+    public Consumer createConsumer(Connection connection,
+                                   Stats stats,
+                                   ValueIndicator<Long> consumerLatenciesIndicator,
+                                   MulticastSet.CompletionHandler completionHandler,
+                                   ExecutorService executorService) throws IOException {
         TopologyHandlerResult topologyHandlerResult = this.topologyHandler.configureQueuesForClient(connection);
         connection = topologyHandlerResult.connection;
         Channel channel = connection.createChannel(); //NOSONAR
@@ -508,7 +526,7 @@ public class MulticastParams {
                 .setStats(stats)
                 .setRateLimit(consumerRateLimit)
                 .setMsgLimit(consumerMsgCount)
-                .setConsumerLatencyInMicroSeconds(consumerLatencyInMicroseconds)
+                .setConsumerLatencyIndicator(consumerLatenciesIndicator)
                 .setTimestampProvider(tsp)
                 .setCompletionHandler(completionHandler)
                 .setRecoveryProcess(recoveryProcess)
