@@ -36,7 +36,7 @@ public class ConsumerParameters {
     private Stats stats;
     private float rateLimit;
     private int msgLimit;
-    private int consumerLatencyInMicroSeconds;
+    private ValueIndicator<Long> consumerLatenciesIndicator;
     private TimestampProvider timestampProvider;
     private MulticastSet.CompletionHandler completionHandler;
     private Recovery.RecoveryProcess recoveryProcess;
@@ -129,12 +129,12 @@ public class ConsumerParameters {
         return this;
     }
 
-    public int getConsumerLatencyInMicroSeconds() {
-        return consumerLatencyInMicroSeconds;
+    public ValueIndicator<Long> getConsumerLatenciesIndicator() {
+        return consumerLatenciesIndicator;
     }
 
-    public ConsumerParameters setConsumerLatencyInMicroSeconds(int consumerLatencyInMicroSeconds) {
-        this.consumerLatencyInMicroSeconds = consumerLatencyInMicroSeconds;
+    public ConsumerParameters setConsumerLatencyIndicator(ValueIndicator<Long> consumerLatenciesIndicator) {
+        this.consumerLatenciesIndicator = consumerLatenciesIndicator;
         return this;
     }
 

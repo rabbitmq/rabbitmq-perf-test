@@ -60,6 +60,7 @@ public class MulticastSet {
     private ThreadingHandler threadingHandler = new DefaultThreadingHandler();
     private final ValueIndicator<Float> rateIndicator;
     private final ValueIndicator<Integer> messageSizeIndicator;
+    private final ValueIndicator<Long> consumerLatencyIndicator;
     private final ConnectionCreator connectionCreator;
 
     public MulticastSet(Stats stats, ConnectionFactory factory,
@@ -102,6 +103,18 @@ public class MulticastSet {
                     params.getMessageSizes(), scheduledExecutorService, input -> Integer.valueOf(input)
             );
         }
+
+        if (this.params.getConsumerLatencies() == null || this.params.getConsumerLatencies().isEmpty()) {
+            this.consumerLatencyIndicator = new FixedValueIndicator<>(params.getConsumerLatencyInMicroseconds());
+        } else {
+            ScheduledExecutorService scheduledExecutorService = this.threadingHandler.scheduledExecutorService(
+                    "perf-test-variable-consumer-latency-scheduler", 1
+            );
+            this.consumerLatencyIndicator = new VariableValueIndicator<>(
+                    params.getConsumerLatencies(), scheduledExecutorService, input -> Long.valueOf(input)
+            );
+        }
+
         this.connectionCreator = new ConnectionCreator(this.factory, this.uris);
     }
 
@@ -297,7 +310,10 @@ public class MulticastSet {
         return consumersExecutorsFactory;
     }
 
-    private void createConsumers(boolean announceStartup, Runnable[] consumerRunnables, Connection[] consumerConnections, Function<Integer, ExecutorService> consumersExecutorsFactory) throws URISyntaxException, NoSuchAlgorithmException, KeyManagementException, IOException, TimeoutException {
+    private void createConsumers(boolean announceStartup,
+                                 Runnable[] consumerRunnables,
+                                 Connection[] consumerConnections,
+                                 Function<Integer, ExecutorService> consumersExecutorsFactory) throws URISyntaxException, NoSuchAlgorithmException, KeyManagementException, IOException, TimeoutException {
         for (int i = 0; i < consumerConnections.length; i++) {
             if (announceStartup) {
                 System.out.println("id: " + testID + ", starting consumer #" + i);
@@ -311,7 +327,7 @@ public class MulticastSet {
                 if (announceStartup) {
                     System.out.println("id: " + testID + ", starting consumer #" + i + ", channel #" + j);
                 }
-                consumerRunnables[(i * params.getConsumerChannelCount()) + j] = params.createConsumer(consumerConnection, stats, this.completionHandler, executorService);
+                consumerRunnables[(i * params.getConsumerChannelCount()) + j] = params.createConsumer(consumerConnection, stats, this.consumerLatencyIndicator, this.completionHandler, executorService);
             }
         }
     }
@@ -338,6 +354,7 @@ public class MulticastSet {
     }
 
     private void startConsumers(Runnable[] consumerRunnables) throws InterruptedException {
+        this.consumerLatencyIndicator.start();
         for (Runnable runnable : consumerRunnables) {
             runnable.run();
             if (params.getConsumerSlowStart()) {

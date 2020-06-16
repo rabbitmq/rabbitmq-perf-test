@@ -93,13 +93,17 @@ public class Consumer extends AgentBase implements Runnable {
         this.queueNames.set(new ArrayList<>(parameters.getQueueNames()));
         this.initialQueueNames = new ArrayList<>(parameters.getQueueNames());
 
-        int consumerLatencyInMicroSeconds = parameters.getConsumerLatencyInMicroSeconds();
-        if (consumerLatencyInMicroSeconds <= 0) {
-            this.consumerLatency = new NoWaitConsumerLatency();
-        } else if (consumerLatencyInMicroSeconds >= 1000) {
-            this.consumerLatency = new ThreadSleepConsumerLatency(consumerLatencyInMicroSeconds / 1000);
+        if(parameters.getConsumerLatenciesIndicator().isVariable()) {
+            this.consumerLatency = new VariableConsumerLatency(parameters.getConsumerLatenciesIndicator());
         } else {
-            this.consumerLatency = new BusyWaitConsumerLatency(consumerLatencyInMicroSeconds * 1000);
+            long consumerLatencyInMicroSeconds = parameters.getConsumerLatenciesIndicator().getValue();
+            if (consumerLatencyInMicroSeconds <= 0) {
+                this.consumerLatency = new NoWaitConsumerLatency();
+            } else if (consumerLatencyInMicroSeconds >= 1000) {
+                this.consumerLatency = new ThreadSleepConsumerLatency(parameters.getConsumerLatenciesIndicator());
+            } else {
+                this.consumerLatency = new BusyWaitConsumerLatency(parameters.getConsumerLatenciesIndicator());
+            }
         }
 
         if (timestampProvider.isTimestampInHeader()) {
@@ -387,6 +391,46 @@ public class Consumer extends AgentBase implements Runnable {
 
     }
 
+    private static class VariableConsumerLatency implements  ConsumerLatency {
+
+        private final ValueIndicator<Long> consumerLatenciesIndicator;
+
+        private VariableConsumerLatency(ValueIndicator<Long> consumerLatenciesIndicator) {
+            this.consumerLatenciesIndicator = consumerLatenciesIndicator;
+        }
+
+        @Override
+        public boolean simulateLatency()
+        {
+            long consumerLatencyInMicroSeconds = consumerLatenciesIndicator.getValue();
+            if (consumerLatencyInMicroSeconds <= 0) {
+                return true;
+            } else if (consumerLatencyInMicroSeconds >= 1000) {
+                return sleep();
+            } else {
+                return busyWait();
+            }
+        }
+
+        private boolean sleep() {
+            try {
+                long ms = consumerLatenciesIndicator.getValue() / 1000;
+                Thread.sleep(ms);
+                return true;
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return false;
+            }
+        }
+
+        private boolean busyWait() {
+            long delay = consumerLatenciesIndicator.getValue() * 1000;
+            long start = System.nanoTime();
+            while(System.nanoTime() - start < delay);
+            return true;
+        }
+    }
+
     private static class NoWaitConsumerLatency implements ConsumerLatency {
 
         @Override
@@ -398,16 +442,17 @@ public class Consumer extends AgentBase implements Runnable {
 
     private static class ThreadSleepConsumerLatency implements ConsumerLatency {
 
-        private final int waitTime;
+        private final ValueIndicator<Long> consumerLatenciesIndicator;
 
-        private ThreadSleepConsumerLatency(int waitTime) {
-            this.waitTime = waitTime;
+        private ThreadSleepConsumerLatency(ValueIndicator<Long> consumerLatenciesIndicator) {
+            this.consumerLatenciesIndicator = consumerLatenciesIndicator;
         }
 
         @Override
         public boolean simulateLatency() {
             try {
-                Thread.sleep(waitTime);
+                long ms = consumerLatenciesIndicator.getValue() / 1000;
+                Thread.sleep(ms);
                 return true;
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -419,14 +464,15 @@ public class Consumer extends AgentBase implements Runnable {
     // from https://stackoverflow.com/a/11499351
     private static class BusyWaitConsumerLatency implements ConsumerLatency {
 
-        private final long delay;
+        private final ValueIndicator<Long> consumerLatenciesIndicator;
 
-        private BusyWaitConsumerLatency(long delay) {
-            this.delay = delay;
+        private BusyWaitConsumerLatency(ValueIndicator<Long> consumerLatenciesIndicator) {
+            this.consumerLatenciesIndicator = consumerLatenciesIndicator;
         }
 
         @Override
         public boolean simulateLatency() {
+            long delay = consumerLatenciesIndicator.getValue() * 1000;
             long start = System.nanoTime();
             while(System.nanoTime() - start < delay);
             return true;

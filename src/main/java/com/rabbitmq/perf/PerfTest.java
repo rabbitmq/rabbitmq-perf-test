@@ -164,6 +164,18 @@ public class PerfTest {
                 }
             }
 
+            List<String> variableConsumerLatencies = lstArg(cmd, "vl");
+            if (variableConsumerLatencies != null && !variableConsumerLatencies.isEmpty()) {
+                for (String variableConsumerLatency : variableConsumerLatencies) {
+                    try {
+                        VariableValueIndicator.validate(variableConsumerLatency);
+                    } catch (IllegalArgumentException e) {
+                        System.out.println(e.getMessage());
+                        systemExiter.exit(1);
+                    }
+                }
+            }
+
             boolean polling = hasOption(cmd, "po");
             int pollingInterval = intArg(cmd, "pi", -1);
 
@@ -299,6 +311,7 @@ public class PerfTest {
             p.setBodyContentType(       bodyContentType);
             p.setQueueArguments(convertKeyValuePairs(queueArgs));
             p.setConsumerLatencyInMicroseconds(consumerLatencyInMicroseconds);
+            p.setConsumerLatencies(variableConsumerLatencies);
             p.setQueuePattern(queuePattern);
             p.setQueueSequenceFrom(from);
             p.setQueueSequenceTo(to);
@@ -611,6 +624,13 @@ public class PerfTest {
                           "to specify several values.");
         variableSize.setArgs(Option.UNLIMITED_VALUES);
         options.addOption(variableSize);
+
+        Option variableConsumerLatency = new Option("vl", "variable-latency",true,
+                "variable consumer processing latency with [MICROSECONDS]:[DURATION] syntax, " +
+                        "where [MICROSECONDS] integer >= 0 and [DURATION] integer > 0. Use the option several times " +
+                        "to specify several values.");
+        variableConsumerLatency.setArgs(Option.UNLIMITED_VALUES);
+        options.addOption(variableConsumerLatency);
 
         options.addOption(new Option("po", "polling",false,
                 "use basic.get to consume messages. " +
