@@ -71,7 +71,7 @@ public abstract class Stats {
             .description("message latency")
             .publishPercentiles(0.5, 0.75, 0.95, 0.99)
             .distributionStatisticExpiry(Duration.ofMillis(this.interval))
-            .sla()
+            .serviceLevelObjectives()
             .register(registry);
 
         Timer confirmLatencyTimer = Timer
@@ -79,7 +79,7 @@ public abstract class Stats {
                 .description("confirm latency")
                 .publishPercentiles(0.5, 0.75, 0.95, 0.99)
                 .distributionStatisticExpiry(Duration.ofMillis(this.interval))
-                .sla()
+                .serviceLevelObjectives()
                 .register(registry);
 
         DoubleBinaryOperator accumulatorFunction = (x, y) -> y;
