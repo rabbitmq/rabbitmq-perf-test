@@ -391,7 +391,25 @@ public class Consumer extends AgentBase implements Runnable {
 
     }
 
-    private static class VariableConsumerLatency implements  ConsumerLatency {
+    private static boolean latencySleep(long delay) {
+        try {
+            long ms = delay / 1000;
+            Thread.sleep(ms);
+            return true;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
+        }
+    }
+
+    private static boolean latencyBusyWait(long delay) {
+        delay = delay * 1000;
+        long start = System.nanoTime();
+        while (System.nanoTime() - start < delay) ;
+        return true;
+    }
+
+    private static class VariableConsumerLatency implements ConsumerLatency {
 
         private final ValueIndicator<Long> consumerLatenciesIndicator;
 
@@ -400,35 +418,17 @@ public class Consumer extends AgentBase implements Runnable {
         }
 
         @Override
-        public boolean simulateLatency()
-        {
+        public boolean simulateLatency() {
             long consumerLatencyInMicroSeconds = consumerLatenciesIndicator.getValue();
             if (consumerLatencyInMicroSeconds <= 0) {
                 return true;
             } else if (consumerLatencyInMicroSeconds >= 1000) {
-                return sleep();
+                return latencySleep(consumerLatencyInMicroSeconds);
             } else {
-                return busyWait();
+                return latencyBusyWait(consumerLatencyInMicroSeconds);
             }
         }
 
-        private boolean sleep() {
-            try {
-                long ms = consumerLatenciesIndicator.getValue() / 1000;
-                Thread.sleep(ms);
-                return true;
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                return false;
-            }
-        }
-
-        private boolean busyWait() {
-            long delay = consumerLatenciesIndicator.getValue() * 1000;
-            long start = System.nanoTime();
-            while(System.nanoTime() - start < delay);
-            return true;
-        }
     }
 
     private static class NoWaitConsumerLatency implements ConsumerLatency {
@@ -450,14 +450,7 @@ public class Consumer extends AgentBase implements Runnable {
 
         @Override
         public boolean simulateLatency() {
-            try {
-                long ms = consumerLatenciesIndicator.getValue() / 1000;
-                Thread.sleep(ms);
-                return true;
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                return false;
-            }
+            return latencySleep(consumerLatenciesIndicator.getValue());
         }
     }
 
@@ -472,10 +465,7 @@ public class Consumer extends AgentBase implements Runnable {
 
         @Override
         public boolean simulateLatency() {
-            long delay = consumerLatenciesIndicator.getValue() * 1000;
-            long start = System.nanoTime();
-            while(System.nanoTime() - start < delay);
-            return true;
+            return latencyBusyWait(consumerLatenciesIndicator.getValue());
         }
     }
 

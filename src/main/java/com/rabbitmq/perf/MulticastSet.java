@@ -332,7 +332,7 @@ public class MulticastSet {
         }
     }
 
-    private void createProducers(boolean announceStartup, AgentState[] producerStates, Connection[] producerConnections) throws URISyntaxException, NoSuchAlgorithmException, KeyManagementException, IOException, TimeoutException {
+    private void createProducers(boolean announceStartup, AgentState[] producerStates, Connection[] producerConnections) throws IOException, TimeoutException {
         for (int i = 0; i < producerConnections.length; i++) {
             if (announceStartup) {
                 System.out.println("id: " + testID + ", starting producer #" + i);
