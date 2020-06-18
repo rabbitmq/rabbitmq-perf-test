@@ -1,4 +1,4 @@
-FROM ubuntu:18.04 as builder
+FROM ubuntu:20.04 as builder
 
 ARG perf_test_version="2.7.0"
 
@@ -10,11 +10,10 @@ RUN set -eux; \
 		wget \
 		gnupg
 
-# change the JAVA_URL variable below as well
-ENV JAVA_VERSION="11.0.5"
-# https://github.com/AdoptOpenJDK/openjdk11-binaries/releases/download/jdk-11.0.4%2B11/OpenJDK11U-jdk_x64_linux_hotspot_11.0.4_11.tar.gz.sha256.txt
-ENV JAVA_SHA256="6dd0c9c8a740e6c19149e98034fba8e368fd9aa16ab417aa636854d40db1a161"
-ENV JAVA_URL="https://github.com/AdoptOpenJDK/openjdk11-binaries/releases/download/jdk-11.0.5%2B10/OpenJDK11U-jdk_x64_linux_hotspot_11.0.5_10.tar.gz"
+ENV JAVA_VERSION="11.0.7"
+# https://github.com/AdoptOpenJDK/openjdk11-binaries/releases/download/jdk-11.0.7%2B10/OpenJDK11U-jdk_x64_linux_hotspot_11.0.7_10.tar.gzsha256.txt
+ENV JAVA_SHA256="ee60304d782c9d5654bf1a6b3f38c683921c1711045e1db94525a51b7024a2ca"
+ENV JAVA_URL="https://github.com/AdoptOpenJDK/openjdk11-binaries/releases/download/jdk-11.0.7%2B10/OpenJDK11U-jdk_x64_linux_hotspot_11.0.7_10.tar.gz"
 
 RUN set -eux; \
     \
@@ -56,7 +55,7 @@ RUN set -eux; \
     mkdir -p "$PERF_TEST_HOME"; \
     tar --extract --file "$PERF_TEST_PATH.tar.gz" --directory "$PERF_TEST_HOME" --strip-components 1
 
-FROM ubuntu:18.04
+FROM ubuntu:20.04
 
 ENV JAVA_HOME=/usr/lib/jvm/java-1.11-openjdk/jre
 RUN mkdir -p $JAVA_HOME
