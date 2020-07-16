@@ -22,12 +22,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class Host {
 
     public static String capture(InputStream is)
-        throws IOException {
+            throws IOException {
         BufferedReader br = new BufferedReader(new InputStreamReader(is));
         String line;
         StringBuilder buff = new StringBuilder();
@@ -45,9 +47,9 @@ public class Host {
             String stdout = capture(pr.getInputStream());
             String stderr = capture(pr.getErrorStream());
             throw new IOException("unexpected command exit value: " + ev +
-                "\ncommand: " + command + "\n" +
-                "\nstdout:\n" + stdout +
-                "\nstderr:\n" + stderr + "\n");
+                    "\ncommand: " + command + "\n" +
+                    "\nstdout:\n" + stdout +
+                    "\nstderr:\n" + stderr + "\n");
         }
         return pr;
     }
@@ -82,7 +84,7 @@ public class Host {
 
     public static Process rabbitmqctl(String command) throws IOException {
         return executeCommand(rabbitmqctlCommand() +
-            " " + command);
+                " " + command);
     }
 
     public static void stopBrokerApp() throws IOException {
@@ -138,21 +140,24 @@ public class Host {
         // output:
         // name	messages
         // amq.gen-R6o236wc_tFFqMd2W2ldGg	0
-        String[] allLines = output.split("\n");
+        List<String> allLines = Arrays.asList(output.split("\n"));
 
-        List<String> result = new ArrayList<>();
-        for (String line : allLines) {
-            // line: amq.gen-R6o236wc_tFFqMd2W2ldGg	0
-            String[] columns = line.split("\t");
-            // can be also header line, so ignoring NumberFormatException
-            try {
-                Integer.valueOf(columns[1]);
-                result.add(columns[0]);
-            } catch (NumberFormatException e) {
-                // OK
-            }
-        }
-        return result;
+        return allLines.stream()
+                .filter(line -> line.trim().length() > 0)
+                .map(line -> {
+                    // line: amq.gen-R6o236wc_tFFqMd2W2ldGg	0
+                    String[] columns = line.split("\t");
+                    // can be also header line, so ignoring NumberFormatException
+                    try {
+                        Integer.valueOf(columns[1]);
+                        return columns[0];
+                    } catch (NumberFormatException e) {
+                        // OK
+                        return null;
+                    }
+                })
+                .filter(line -> line != null)
+                .collect(Collectors.toList());
     }
 
     private static Host.ConnectionInfo findConnectionInfoFor(List<ConnectionInfo> xs, NetworkConnection c) {
