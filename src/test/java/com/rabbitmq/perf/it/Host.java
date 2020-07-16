@@ -118,13 +118,36 @@ public class Host {
         // <rabbit@mercurio.1.11491.0>	58713
         String[] allLines = output.split("\n");
 
-        ArrayList<ConnectionInfo> result = new ArrayList<ConnectionInfo>();
+        List<ConnectionInfo> result = new ArrayList<ConnectionInfo>();
         for (String line : allLines) {
             // line: <rabbit@mercurio.1.11491.0>	58713
             String[] columns = line.split("\t");
             // can be also header line, so ignoring NumberFormatException
             try {
                 result.add(new ConnectionInfo(columns[0], Integer.valueOf(columns[1])));
+            } catch (NumberFormatException e) {
+                // OK
+            }
+        }
+        return result;
+    }
+
+    public static List<String> listQueues() throws IOException {
+        // "messages" column will help ignore the header line
+        String output = capture(rabbitmqctl("list_queues -q name messages").getInputStream());
+        // output:
+        // name	messages
+        // amq.gen-R6o236wc_tFFqMd2W2ldGg	0
+        String[] allLines = output.split("\n");
+
+        List<String> result = new ArrayList<>();
+        for (String line : allLines) {
+            // line: amq.gen-R6o236wc_tFFqMd2W2ldGg	0
+            String[] columns = line.split("\t");
+            // can be also header line, so ignoring NumberFormatException
+            try {
+                Integer.valueOf(columns[1]);
+                result.add(columns[0]);
             } catch (NumberFormatException e) {
                 // OK
             }

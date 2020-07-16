@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2019 Pivotal Software, Inc.  All rights reserved.
+// Copyright (c) 2007-2020 Pivotal Software, Inc.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 1.1 ("MPL"), the GNU General Public License version 2
@@ -119,6 +119,7 @@ public class TopologyRecording {
 
     /**
      * Create a subset of the topology of this recording for the passed-in queues.
+     *
      * @param queues
      * @return
      */
@@ -159,13 +160,34 @@ public class TopologyRecording {
                 synchronized (queue) {
                     String originalName = queue.name;
                     LOGGER.debug("Connection {}, recovering queue {}", connection.getClientProvidedName(), queue);
-                    channel = reliableWrite(connection, channel, ch -> {
-                        String newName = ch.queueDeclare(
-                                queue.serverNamed ? "" : queue.name, queue.durable, queue.exclusive,
-                                queue.autoDelete, queue.arguments
-                        ).getQueue();
-                        queue.name = newName;
-                    });
+                    boolean redeclare = true;
+                    // the queue may still be around (e.g. a quorum queue in a cluster)
+                    // so checking if it's necessary to create it
+                    if (queue.durable && queue.serverNamed && !queue.autoDelete && !queue.exclusive) {
+                        // so in this case, the server-named queue won't be renamed
+                        try {
+                            channel.queueDeclarePassive(queue.name);
+                            // the queue exists
+                            redeclare = false;
+                        } catch (IOException e) {
+                            // the queue does not exists
+                            redeclare = true;
+                            channel = connection.createChannel();
+                        }
+                    }
+                    if (redeclare) {
+                        channel = reliableWrite(connection, channel, ch -> {
+                            String newName = ch.queueDeclare(
+                                    queue.serverNamed ? "" : queue.name, queue.durable, queue.exclusive,
+                                    queue.autoDelete, queue.arguments
+                            ).getQueue();
+                            queue.name = newName;
+                            if (queue.serverNamed) {
+                                LOGGER.debug("Queue {} was server-named, it is now {}", originalName, newName);
+                            }
+                        });
+                    }
+
                     LOGGER.debug("Connection {}, recovered queue {}", connection.getClientProvidedName(), queue);
 
                     // Recovering an auto-delete, server-named queue create a brand new queue, with a new name.

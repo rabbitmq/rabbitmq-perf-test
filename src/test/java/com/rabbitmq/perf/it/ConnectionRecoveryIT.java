@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019 Pivotal Software, Inc.  All rights reserved.
+// Copyright (c) 2018-2020 Pivotal Software, Inc.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 1.1 ("MPL"), the GNU General Public License version 2
@@ -24,7 +24,10 @@ import com.rabbitmq.perf.MulticastSet;
 import com.rabbitmq.perf.NamedThreadFactory;
 import com.rabbitmq.perf.Stats;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -51,7 +54,8 @@ import static java.lang.String.valueOf;
 import static java.util.Arrays.asList;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.range;
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.assertj.core.api.Assertions.assertThat;
+
 
 /**
  *
@@ -129,7 +133,7 @@ public class ConnectionRecoveryIT {
                 namedConsumer("one server-named queue", empty()),
                 namedConsumer("several queues", severalQueues()),
                 namedConsumer("queue sequence", queueSequence()))
-                    .map(configurer -> Arguments.of(configurer));
+                .map(configurer -> Arguments.of(configurer));
     }
 
     static Consumer<MulticastParams> empty() {
@@ -244,7 +248,7 @@ public class ConnectionRecoveryIT {
         int messageCountBeforeClosing = msgConsumed.get();
         closeAllConnections();
         waitAtMost(10, () -> msgConsumed.get() >= 2 * messageCountBeforeClosing);
-        assertFalse(testIsDone.get());
+        assertThat(testIsDone.get()).isFalse();
     }
 
     @ParameterizedTest
@@ -261,7 +265,7 @@ public class ConnectionRecoveryIT {
         int messageCountBeforeClosing = msgConsumed.get();
         closeAllConnections();
         waitAtMost(10, () -> msgConsumed.get() >= 2 * messageCountBeforeClosing);
-        assertFalse(testIsDone.get());
+        assertThat(testIsDone.get()).isFalse();
     }
 
     @Test
@@ -287,7 +291,7 @@ public class ConnectionRecoveryIT {
         int messageCountBeforeClosing = msgConsumed.get();
         closeAllConnections();
         waitAtMost(10, () -> msgConsumed.get() >= 2 * messageCountBeforeClosing);
-        assertFalse(testIsDone.get());
+        assertThat(testIsDone.get()).isFalse();
     }
 
     @ParameterizedTest
@@ -306,14 +310,14 @@ public class ConnectionRecoveryIT {
         int messageCountBeforeClosing = msgConsumed.get();
         closeAllConnections();
         waitAtMost(10, () -> msgConsumed.get() >= 2 * messageCountBeforeClosing);
-        assertFalse(testIsDone.get());
+        assertThat(testIsDone.get()).isFalse();
     }
 
     @ValueSource(booleans = {false, true})
     @ParameterizedTest
     public void shouldRecoverWithPreDeclared(boolean polling, TestInfo info) throws Exception {
         int queueCount = 5;
-        String queuePattern = "perf-test-"+ info.getTestMethod().get().getName() + "-%d";
+        String queuePattern = "perf-test-" + info.getTestMethod().get().getName() + "-%d";
         ConnectionFactory connectionFactory = new ConnectionFactory();
         try (Connection c = connectionFactory.newConnection()) {
             Channel ch = c.createChannel();
@@ -338,7 +342,7 @@ public class ConnectionRecoveryIT {
             int messageCountBeforeClosing = msgConsumed.get();
             closeAllConnections();
             waitAtMost(10, () -> msgConsumed.get() >= 2 * messageCountBeforeClosing);
-            assertFalse(testIsDone.get());
+            assertThat(testIsDone.get()).isFalse();
         } finally {
             try (Connection c = connectionFactory.newConnection()) {
                 Channel ch = c.createChannel();
@@ -348,6 +352,41 @@ public class ConnectionRecoveryIT {
             }
         }
 
+    }
+
+    @Test
+    void durableServerNamedQueueShouldBeReusedIfStillThere(TestInfo info) throws Exception {
+        params.setFlags(Arrays.asList("persistent"));
+        params.setAutoDelete(false);
+        params.setExclusive(false);
+        params.setQueueNames(Collections.emptyList());
+
+        List<String> queuesBeforeTest = Host.listQueues();
+        MulticastSet.CompletionHandler completionHandler = latchCompletionHandler(1, info);
+        String createdQueue = null;
+        try {
+            int producerConsumerCount = params.getProducerCount();
+            MulticastSet set = new MulticastSet(stats, cf, params, "", URIS, completionHandler);
+            run(set);
+            waitAtMost(10, () -> msgConsumed.get() >= 3 * producerConsumerCount * RATE);
+            List<String> queuesDuringTest = Host.listQueues();
+            assertThat(queuesDuringTest).hasSize(queuesBeforeTest.size() + 1);
+            queuesDuringTest.removeAll(queuesBeforeTest);
+            assertThat(queuesDuringTest).hasSize(1);
+            createdQueue = queuesDuringTest.get(0);
+            int messageCountBeforeClosing = msgConsumed.get();
+            closeAllConnections();
+            waitAtMost(10, () -> msgConsumed.get() >= 2 * messageCountBeforeClosing);
+            assertThat(Host.listQueues()).hasSize(queuesBeforeTest.size() + 1);
+            completionHandler.countDown("stopped in test");
+            waitAtMost(10, () -> testIsDone.get());
+        } finally {
+            if (createdQueue != null) {
+                try (Connection c = new ConnectionFactory().newConnection()) {
+                    c.createChannel().queueDelete(createdQueue);
+                }
+            }
+        }
     }
 
     void closeAllConnections() throws IOException {

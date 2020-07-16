@@ -324,6 +324,7 @@ public class Consumer extends AgentBase implements Runnable {
         } else {
             for (Map.Entry<String, String> entry : consumerTagBranchMap.entrySet()) {
                 String queueName = queueName(topologyRecording, entry.getValue());
+                LOGGER.debug("Recovering consumer, starting consuming on {}", queueName);
                 try {
                     channel.basicConsume(queueName, autoAck, entry.getKey(), false, false, this.consumerArguments, q);
                 } catch (IOException e) {
