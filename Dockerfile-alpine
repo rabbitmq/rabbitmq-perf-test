@@ -10,12 +10,12 @@ RUN set -eux; \
 		gnupg
 
 
-ENV JAVA_VERSION="11.0.7"
-ENV JAVA_SHA256="0de7ac5afede2ddeda399f10c9f9df83f91c9b60481ecf304aa5785ed50f36ce"
+ENV JAVA_VERSION="11.0.8"
+ENV JAVA_SHA256="bd54bb1690ff7cd88f8b50aa089cd2e55911a62a18b096f43f0cf36fb0caec30"
 
 RUN set -eux; \
     \
-    JAVA_URL="https://cdn.azul.com/zulu/bin/zulu11.39.15-ca-jdk11.0.7-linux_musl_x64.tar.gz"; \
+    JAVA_URL="https://cdn.azul.com/zulu/bin/zulu11.41.23-ca-jdk11.0.8-linux_musl_x64.tar.gz"; \
     JAVA_PATH="/usr/lib/jdk-$JAVA_VERSION"; \
 	\
     wget --progress dot:giga --output-document "$JAVA_PATH.tar.gz" "$JAVA_URL"; \
