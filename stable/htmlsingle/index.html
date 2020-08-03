@@ -442,7 +442,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <div id="header">
 <h1>RabbitMQ PerfTest</h1>
 <div class="details">
-<span id="revnumber">version 2.11.0</span>
+<span id="revnumber">version 2.12.0</span>
 </div>
 <div id="toc" class="toc2">
 <div id="toctitle">Table of Contents</div>
@@ -469,6 +469,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 </li>
 <li><a href="#limiting-and-varying-publishing-rate">Limiting and varying publishing rate</a></li>
 <li><a href="#setting-and-varying-the-message-size">Setting and varying the message size</a></li>
+<li><a href="#setting-and-varying-consumer-latency">Setting and varying consumer latency</a></li>
 <li><a href="#working-with-many-queues">Working With Many Queues</a></li>
 <li><a href="#simulating-high-loads">Simulating High Loads</a></li>
 <li><a href="#workloads-with-a-large-number-of-clients">Workloads With a Large Number of Clients</a></li>
@@ -1063,6 +1064,32 @@ for periods of time, e.g.:</p>
 and <code>DURATION</code> is in seconds. In the previous example, the size of published messages
 will be 1 kB for 30 seconds, then 10 kB for 20 seconds, then 5 kB for 45 seconds,
 then back to 1 kB for 30 seconds, and so on.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="setting-and-varying-consumer-latency"><a class="anchor" href="#setting-and-varying-consumer-latency"></a>Setting and varying consumer latency</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>You can simulate processing time per message with either a fixed or a variable latency value in microseconds.</p>
+</div>
+<div class="paragraph">
+<p>The <code>--consumer-latency</code> (<code>-L</code>) option sets a fixed consumer latency in microseconds. In the example
+below a 1 ms latency is set:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>bin/runjava com.rabbitmq.perf.PerfTest --consumer-latency 1000</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The <code>--variable-latency</code> (<code>-vl</code>) option sets a variable consumer latency. In the example below it is
+set to 1 ms for 60 seconds then 1 second for 30 seconds:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>bin/runjava com.rabbitmq.perf.PerfTest --variable-latency 1000:60 --variable-latency 1000000:30</pre>
+</div>
 </div>
 </div>
 </div>
@@ -1697,8 +1724,8 @@ can be changed:</p>
 </div>
 <div id="footer">
 <div id="footer-text">
-Version 2.11.0<br>
-Last updated 2020-02-26 10:20:39 +0100
+Version 2.12.0<br>
+Last updated 2020-08-03 17:12:24 +0200
 </div>
 </div>
 <style>
