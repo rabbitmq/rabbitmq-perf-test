@@ -3,7 +3,7 @@
 [![Travis CI](https://travis-ci.org/rabbitmq/rabbitmq-jms-client.svg?branch=master)](https://travis-ci.org/rabbitmq/rabbitmq-perf-test)
 
 This repository contains source code of the RabbitMQ Performance Testing Tool.
-The client is maintained by the [RabbitMQ team at Pivotal](https://github.com/rabbitmq/).
+The client is maintained by the [RabbitMQ team at VMware](https://github.com/rabbitmq/).
 
 ## Installation
 
