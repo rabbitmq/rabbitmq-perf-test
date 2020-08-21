@@ -47,6 +47,7 @@ public class Consumer extends AgentBase implements Runnable {
     private final String                id;
     private final int                   txSize;
     private final boolean               autoAck;
+    private final String                consumerTag;
     private final int                   multiAckEvery;
     private final Stats                 stats;
     private final int                   msgLimit;
@@ -88,6 +89,7 @@ public class Consumer extends AgentBase implements Runnable {
         this.executorService   = parameters.getExecutorService();
         this.polling           = parameters.isPolling();
         this.pollingInterval   = parameters.getPollingInterval();
+        this.consumerTag       = parameters.getConsumerTag();
         this.consumerArguments = parameters.getConsumerArguments();
 
         this.queueNames.set(new ArrayList<>(parameters.getQueueNames()));
@@ -202,7 +204,12 @@ public class Consumer extends AgentBase implements Runnable {
         try {
             q = new ConsumerImpl(channel);
             for (String qName : queueNames.get()) {
-                String tag = channel.basicConsume(qName, autoAck, this.consumerArguments, q);
+                String tag = null;
+                if (this.consumerTag != null && this.consumerTag.length()!=0) {
+                    tag = channel.basicConsume(qName, autoAck, this.consumerTag, false, false, this.consumerArguments, q);
+                } else {
+                    tag = channel.basicConsume(qName, autoAck, this.consumerArguments, q);
+                }
                 consumerTagBranchMap.put(tag, qName);
             }
         } catch (IOException e) {
@@ -298,7 +305,7 @@ public class Consumer extends AgentBase implements Runnable {
             if (consumerTagBranchMap.containsKey(consumerTag)) {
                 String qName = consumerTagBranchMap.get(consumerTag);
                 System.out.printf("Re-consuming. Queue: %s for Tag: %s", qName, consumerTag);
-                channel.basicConsume(qName, autoAck, consumerArguments, q);
+                channel.basicConsume(qName, autoAck, consumerTag, false, false,  consumerArguments, q);
             } else {
                 System.out.printf("Could not find queue for consumer tag: %s", consumerTag);
             }

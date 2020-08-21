@@ -139,6 +139,7 @@ public class PerfTest {
             int serversStartUpTimeout = intArg(cmd, "sst", -1);
             int serversUpLimit = intArg(cmd, "sul", -1);
             String consumerArgs = strArg(cmd, "ca", null);
+            String consumerTag = strArg(cmd, "ctag", null);
 
             List<String> variableRates = lstArg(cmd, "vr");
             if (variableRates != null && !variableRates.isEmpty()) {
@@ -335,6 +336,7 @@ public class PerfTest {
             p.setBodyFieldCount(bodyFieldCount);
             p.setBodyCount(bodyCount);
             p.setConsumerArguments(convertKeyValuePairs(consumerArgs));
+            p.setConsumerTag(consumerTag);
 
             ConcurrentMap<String, Integer> completionReasons = new ConcurrentHashMap<>();
 
@@ -648,6 +650,7 @@ public class PerfTest {
                 "Use with --json-body. Default is 100."));
         options.addOption(new Option("ca", "consumer-args", true, "consumer arguments as key/values pairs, separated by commas, "
                 + "e.g. x-priority=10"));
+        options.addOption(new Option("ctag", "consumer-tag", true, "consumer tag"));
         options.addOption(new Option("cri", "connection-recovery-interval", true, "connection recovery interval in seconds. Default is 5 seconds. "
                 + "Interval syntax, e.g. 30-60, is supported to specify an random interval between 2 values between each attempt."));
         return options;

@@ -47,6 +47,7 @@ public class ConsumerParameters {
     private int pollingInterval;
 
     private Map<String, Object> consumerArguments = null;
+    private String consumerTag;
 
     public Channel getChannel() {
         return channel;
@@ -59,6 +60,15 @@ public class ConsumerParameters {
 
     public String getId() {
         return id;
+    }
+
+    public ConsumerParameters setConsumerTag(String consumerTag) {
+        this.consumerTag = consumerTag;
+        return this;
+    }
+
+    public String getConsumerTag() {
+        return consumerTag;
     }
 
     public ConsumerParameters setId(String id) {
