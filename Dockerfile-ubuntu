@@ -56,6 +56,19 @@ RUN set -eux; \
 
 FROM ubuntu:20.04
 
+# we need locales support for characters like µ to show up correctly in the console
+RUN set -eux; \
+	apt-get update; \
+	apt-get install -y --no-install-recommends \
+		locales \
+	; \
+	rm -rf /var/lib/apt/lists/*; \
+	locale-gen en_US.UTF-8
+
+ENV LANG en_US.UTF-8
+ENV LANGUAGE en_US:en
+ENV LC_ALL en_US.UTF-8
+
 ENV JAVA_HOME=/usr/lib/jvm/java-1.11-openjdk/jre
 RUN mkdir -p $JAVA_HOME
 COPY --from=builder /jre $JAVA_HOME/
