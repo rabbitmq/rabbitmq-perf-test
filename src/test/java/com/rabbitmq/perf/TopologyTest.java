@@ -20,6 +20,7 @@ import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.impl.AMQImpl;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
@@ -56,6 +57,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.anyList;
 import static org.mockito.Mockito.*;
 import static org.mockito.MockitoAnnotations.initMocks;
+import static org.mockito.MockitoAnnotations.openMocks;
 
 public class TopologyTest {
 
@@ -81,6 +83,8 @@ public class TopologyTest {
     @Captor
     ArgumentCaptor<Map<String, Object>> consumerArgumentsCaptor;
 
+    AutoCloseable mocks;
+
     static Stream<Arguments> reuseConnectionForExclusiveQueuesWhenMoreConsumersThanQueuesArguments() {
         return Stream.of(
                 // exclusive, sequence of queues, queues, consumers, expected number of non-used connections, message
@@ -98,12 +102,17 @@ public class TopologyTest {
 
     @BeforeEach
     public void init() throws Exception {
-        initMocks(this);
+        mocks = openMocks(this);
 
         when(cf.newConnection(anyList(), anyString())).thenReturn(c);
         when(c.createChannel()).thenReturn(ch);
 
         params = new MulticastParams();
+    }
+
+    @AfterEach
+    public void tearDown() throws Exception {
+        mocks.close();
     }
 
     @Test

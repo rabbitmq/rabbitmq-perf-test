@@ -32,7 +32,7 @@ public class RandomJsonMessageBodySourceTest {
         RandomJsonMessageBodySource source = new RandomJsonMessageBodySource(
                 1200, 10000, 50
         );
-        assertThat(source.bodies()).hasSize(50);
+        assertThat(source.bodies().length).isEqualTo(50);
         Gson gson = new Gson();
         for (byte[] body : source.bodies()) {
             gson.fromJson(new String(body), Map.class);
@@ -44,7 +44,7 @@ public class RandomJsonMessageBodySourceTest {
         RandomJsonMessageBodySource source = new RandomJsonMessageBodySource(
                 128000, 10000, 50
         );
-        assertThat(source.bodies()).hasSize(50);
+        assertThat(source.bodies().length).isEqualTo(50);
         Set<String> bodies = new HashSet<>();
         IntStream.range(0, 100).forEach(i -> bodies.add(new String(source.create(0).getBody())));
         assertThat(bodies).hasSizeGreaterThan(1);
@@ -55,7 +55,7 @@ public class RandomJsonMessageBodySourceTest {
         RandomJsonMessageBodySource source = new RandomJsonMessageBodySource(
                 12000, 1000, 50000
         );
-        assertThat(source.bodies()).hasSize(50000);
+        assertThat(source.bodies().length).isEqualTo(50_000);
         // an extra field could be added at the very end and make the body bigger than expected
         // worst case:
         // ,"max-is-30" : "max-is-200" }

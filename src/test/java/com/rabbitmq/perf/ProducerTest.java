@@ -17,6 +17,7 @@ package com.rabbitmq.perf;
 
 import com.rabbitmq.client.AMQP.BasicProperties;
 import com.rabbitmq.client.Channel;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -52,9 +53,16 @@ public class ProducerTest {
     @Captor
     private ArgumentCaptor<byte[]> bodyCaptor;
 
+    AutoCloseable mocks;
+
     @BeforeEach
     public void init() {
-        MockitoAnnotations.initMocks(this);
+        mocks = MockitoAnnotations.openMocks(this);
+    }
+
+    @AfterEach
+    public void tearDown() throws Exception {
+        mocks.close();
     }
 
     @Test

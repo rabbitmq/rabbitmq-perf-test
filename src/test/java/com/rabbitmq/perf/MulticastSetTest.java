@@ -19,6 +19,7 @@ import com.rabbitmq.client.Address;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 import org.apache.commons.lang3.time.StopWatch;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -57,6 +58,8 @@ public class MulticastSetTest {
     @Mock
     Stats stats;
 
+    AutoCloseable mocks;
+
     static List<String> oneUri() {
         return new ArrayList<>(asList("amqp://host1"));
     }
@@ -68,7 +71,12 @@ public class MulticastSetTest {
     @BeforeEach
     public void init() {
         params = new MulticastParams();
-        MockitoAnnotations.initMocks(this);
+        mocks = MockitoAnnotations.openMocks(this);
+    }
+
+    @AfterEach
+    public void tearDown() throws Exception {
+        mocks.close();
     }
 
     @Test

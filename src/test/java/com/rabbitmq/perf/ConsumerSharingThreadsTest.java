@@ -19,6 +19,7 @@ import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.impl.AMQImpl;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -33,6 +34,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
+import static org.mockito.MockitoAnnotations.openMocks;
 
 /**
  *
@@ -56,10 +58,12 @@ public class ConsumerSharingThreadsTest {
 
     MulticastParams params;
 
+    AutoCloseable mocks;
+
     @BeforeEach
     @SuppressWarnings("unchecked")
     public void init() throws Exception {
-        initMocks(this);
+        mocks = openMocks(this);
 
         when(cf.newConnection(anyList(), anyString())).thenReturn(c);
         when(c.createChannel()).thenReturn(ch);
@@ -70,6 +74,11 @@ public class ConsumerSharingThreadsTest {
         when(executorService.submit(any(Runnable.class))).thenReturn(future);
 
         params = new MulticastParams();
+    }
+
+    @AfterEach
+    public void tearDown() throws Exception {
+        mocks.close();
     }
 
     @Test
