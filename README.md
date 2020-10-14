@@ -127,5 +127,5 @@ for the support timeline of this library.
 ## License
 
 This package, the RabbitMQ Performance Testing Tool library, is triple-licensed under
-the Mozilla Public License 1.1 ("MPL"), the GNU General Public License
+the Mozilla Public License 2.0 ("MPL"), the GNU General Public License
 version 2 ("GPL") and the Apache License version 2 ("ASL").
