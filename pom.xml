@@ -54,7 +54,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
-    <rabbitmq.version>5.9.0</rabbitmq.version>
+    <rabbitmq.version>5.10.0.RC2</rabbitmq.version>
     <commons-cli.version>1.4</commons-cli.version>
     <metrics.version>4.1.13</metrics.version>
     <micrometer.version>1.5.5</micrometer.version>
@@ -854,6 +854,19 @@
     </profile>
 
   </profiles>
+
+  <repositories>
+    <repository>
+      <id>packagecloud-rabbitmq-maven-milestones</id>
+      <url>https://packagecloud.io/rabbitmq/maven-milestones/maven2</url>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+    </repository>
+  </repositories>
 
 </project>
 
