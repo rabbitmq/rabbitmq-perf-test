@@ -62,7 +62,7 @@
     <logback.version>1.2.3</logback.version>
     <jetty.version>9.4.33.v20201020</jetty.version>
     <junit.jupiter.version>5.7.0</junit.jupiter.version>
-    <mockito.version>3.5.13</mockito.version>
+    <mockito.version>3.5.15</mockito.version>
     <assertj.version>3.17.2</assertj.version>
     <commons-lang3.version>3.11</commons-lang3.version>
     <jmh.version>1.26</jmh.version>
