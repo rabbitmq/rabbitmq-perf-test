@@ -37,6 +37,7 @@ import java.util.concurrent.*;
 import java.util.function.Function;
 
 import static com.rabbitmq.perf.OptionsUtils.forEach;
+import static com.rabbitmq.perf.Utils.strArg;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
@@ -204,7 +205,8 @@ public class PerfTest {
 
             factory.setTopologyRecoveryEnabled(false);
 
-            RecoveryDelayHandler recoveryDelayHandler = Utils.getRecoveryDelayHandler(strArg(cmd, "cri", null));
+            RecoveryDelayHandler recoveryDelayHandler = Utils.getRecoveryDelayHandler(
+                strArg(cmd, "cri", null));
             if (recoveryDelayHandler != null) {
                 factory.setRecoveryDelayHandler(recoveryDelayHandler);
             }
@@ -275,6 +277,11 @@ public class PerfTest {
             if (factory.getNioParams().getNioExecutor() != null) {
                 ExecutorService nioExecutor = factory.getNioParams().getNioExecutor();
                 shutdownService.wrap(() -> nioExecutor.shutdownNow());
+            }
+
+            factory.setSocketConfigurator(Utils.socketConfigurator(cmd));
+            if (factory.getNioParams() != null) {
+               factory.getNioParams().setSslEngineConfigurator(Utils.sslEngineConfigurator(cmd));
             }
 
             MulticastParams p = new MulticastParams();
@@ -650,15 +657,9 @@ public class PerfTest {
                 + "e.g. x-priority=10"));
         options.addOption(new Option("cri", "connection-recovery-interval", true, "connection recovery interval in seconds. Default is 5 seconds. "
                 + "Interval syntax, e.g. 30-60, is supported to specify an random interval between 2 values between each attempt."));
+
+        options.addOption(new Option("sni", "server-name-indication", true, "server names for Server Name Indication TLS parameter, separated by commas"));
         return options;
-    }
-
-    static String strArg(CommandLineProxy cmd, char opt, String def) {
-        return cmd.getOptionValue(opt, def);
-    }
-
-    static String strArg(CommandLineProxy cmd, String opt, String def) {
-        return cmd.getOptionValue(opt, def);
     }
 
     static int intArg(CommandLineProxy cmd, char opt, int def) {

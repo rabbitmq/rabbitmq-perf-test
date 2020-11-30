@@ -30,7 +30,7 @@ import org.apache.commons.cli.Options;
 import java.util.ArrayList;
 import java.util.Collection;
 
-import static com.rabbitmq.perf.PerfTest.strArg;
+import static com.rabbitmq.perf.Utils.strArg;
 
 /**
  *
