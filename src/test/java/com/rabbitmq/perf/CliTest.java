@@ -46,7 +46,7 @@ public class CliTest {
     @CsvSource({"-d testId, testId", "--id testId, testId", "'', default-test-id"})
     public void strArg(String commandLine, String expectedArgumentValue) throws ParseException {
         CommandLineProxy cmd = cmd(commandLine);
-        String value = PerfTest.strArg(cmd, 'd', "default-test-id");
+        String value = Utils.strArg(cmd, 'd', "default-test-id");
         assertEquals(expectedArgumentValue, value);
     }
 

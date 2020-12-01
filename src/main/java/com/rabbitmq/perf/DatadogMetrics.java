@@ -30,7 +30,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static com.rabbitmq.perf.PerfTest.hasOption;
-import static com.rabbitmq.perf.PerfTest.strArg;
+import static com.rabbitmq.perf.Utils.strArg;
 import static java.lang.Boolean.valueOf;
 
 /**

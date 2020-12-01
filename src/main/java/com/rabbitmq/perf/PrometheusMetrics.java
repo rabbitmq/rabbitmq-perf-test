@@ -34,7 +34,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
 import static com.rabbitmq.perf.PerfTest.intArg;
-import static com.rabbitmq.perf.PerfTest.strArg;
+import static com.rabbitmq.perf.Utils.strArg;
 
 /**
  *
