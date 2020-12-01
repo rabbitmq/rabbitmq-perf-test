@@ -1,4 +1,4 @@
-FROM alpine:3.12.0 as builder
+FROM alpine:3.12.1 as builder
 
 ARG perf_test_version="2.7.0"
 
@@ -10,12 +10,12 @@ RUN set -eux; \
 		gnupg
 
 
-ENV JAVA_VERSION="11.0.8"
-ENV JAVA_SHA256="bd54bb1690ff7cd88f8b50aa089cd2e55911a62a18b096f43f0cf36fb0caec30"
+ENV JAVA_VERSION="11.0.9"
+ENV JAVA_SHA256="89cfac2a64f0a820917c65d490bef270bcb066ad7f042a36153d24c3098bc5cd"
 
 RUN set -eux; \
     \
-    JAVA_URL="https://cdn.azul.com/zulu/bin/zulu11.41.23-ca-jdk11.0.8-linux_musl_x64.tar.gz"; \
+    JAVA_URL="https://cdn.azul.com/zulu/bin/zulu11.43.55-ca-jdk11.0.9.1-linux_musl_x64.tar.gz"; \
     JAVA_PATH="/usr/lib/jdk-$JAVA_VERSION"; \
 	\
     wget --progress dot:giga --output-document "$JAVA_PATH.tar.gz" "$JAVA_URL"; \
@@ -57,7 +57,7 @@ RUN set -eux; \
     mkdir -p "$PERF_TEST_HOME"; \
     tar --extract --file "$PERF_TEST_PATH.tar.gz" --directory "$PERF_TEST_HOME" --strip-components 1
 
-FROM alpine:3.12.0
+FROM alpine:3.12.1
 
 RUN apk add --no-cache bash
 

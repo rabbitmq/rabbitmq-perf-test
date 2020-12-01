@@ -9,9 +9,9 @@ RUN set -eux ; \
       unzip \
       wget
 
-ENV JAVA_VERSION="11.0.8"
-ENV JAVA_SHA256="6e4cead158037cb7747ca47416474d4f408c9126be5b96f9befd532e0a762b47"
-ENV JAVA_URL="https://github.com/AdoptOpenJDK/openjdk11-binaries/releases/download/jdk-11.0.8%2B10/OpenJDK11U-jdk_x64_linux_hotspot_11.0.8_10.tar.gz"
+ENV JAVA_VERSION="11.0.9"
+ENV JAVA_SHA256="e388fd7f3f2503856d0b04fde6e151cbaa91a1df3bcebf1deddfc3729d677ca3"
+ENV JAVA_URL="https://github.com/AdoptOpenJDK/openjdk11-binaries/releases/download/jdk-11.0.9.1%2B1/OpenJDK11U-jdk_x64_linux_hotspot_11.0.9.1_1.tar.gz"
 
 ENV JAVA_PATH="/jdk-${JAVA_VERSION}"
 ENV JAVA_HOME="${JAVA_PATH}"
