@@ -1,6 +1,6 @@
 ## RabbitMQ Performance Testing Tool
 
-[![Travis CI](https://travis-ci.org/rabbitmq/rabbitmq-jms-client.svg?branch=master)](https://travis-ci.org/rabbitmq/rabbitmq-perf-test)
+[![Build Status](https://github.com/rabbitmq/rabbitmq-perf-test/workflows/Build%20(Linux)/badge.svg?branch=master)](https://github.com/rabbitmq/rabbitmq-perf-test/actions?query=workflow%3A%22Build+%28Linux%29%22+branch%3Amaster)
 
 This repository contains source code of the RabbitMQ Performance Testing Tool.
 The client is maintained by the [RabbitMQ team at VMware](https://github.com/rabbitmq/).
@@ -56,7 +56,7 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for an overview of the development proc
 To build the JAR file:
 
 ```
-./mvnw clean package
+./mvnw clean package -Dmaven.test.skip
 ```
 
 Files are then in the `target` directory.
@@ -64,8 +64,27 @@ Files are then in the `target` directory.
 To build the JAR file, source and binary distributions:
 
 ```
-./mvnw clean package -P assemblies -Dgpg.skip=true
+./mvnw clean package -P assemblies -Dgpg.skip=true -Dmaven.test.skip
 ```
+
+### Running tests
+
+The test suite needs to execute `rabbitmqctl` to test connection recovery. You
+can specify the path to `rabbitmqctl` like the following:
+
+    ./mvnw clean verify -Drabbitmqctl.bin=/path/to/rabbitmqctl
+
+You need a local running RabbitMQ instance.
+
+### Running tests with Docker
+
+Start a RabbitMQ container:
+
+    docker run -it --rm --name rabbitmq -p 5672:5672 rabbitmq:3.8
+
+Run the test suite:
+
+    ./mvnw clean verify -Drabbitmqctl.bin=DOCKER:rabbitmq
 
 Files are then in the `target` directory.
 

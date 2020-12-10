@@ -15,8 +15,6 @@
 
 package com.rabbitmq.perf.it;
 
-import com.rabbitmq.client.impl.NetworkConnection;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -96,10 +94,21 @@ public class Host {
     }
 
     public static String rabbitmqctlCommand() {
-        return System.getProperty("rabbitmqctl.bin");
+        String rabbitmqCtl = System.getProperty("rabbitmqctl.bin");
+        if (rabbitmqCtl == null) {
+            throw new IllegalStateException("Please define the rabbitmqctl.bin system property");
+        }
+        if (rabbitmqCtl.startsWith("DOCKER:")) {
+            String containerId = rabbitmqCtl.split(":")[1];
+            return "docker exec " + containerId + " rabbitmqctl";
+        } else if ("sudo_rabbitmqctl".equals(rabbitmqCtl)) {
+            return "sudo rabbitmqctl";
+        } else {
+            return rabbitmqCtl;
+        }
     }
 
-    public static void closeConnection(String pid) throws IOException {
+    private static void closeConnection(String pid) throws IOException {
         rabbitmqctl("close_connection '" + pid + "' 'Closed via rabbitmqctl'");
     }
 
@@ -109,10 +118,6 @@ public class Host {
         }
     }
 
-    public static void closeAllConnections() throws IOException {
-        closeAllConnections(listConnections());
-    }
-
     public static List<ConnectionInfo> listConnections() throws IOException {
         String output = capture(rabbitmqctl("list_connections -q pid peer_port").getInputStream());
         // output (header line presence depends on broker version):
@@ -120,13 +125,14 @@ public class Host {
         // <rabbit@mercurio.1.11491.0>	58713
         String[] allLines = output.split("\n");
 
-        List<ConnectionInfo> result = new ArrayList<ConnectionInfo>();
+        List<ConnectionInfo> result = new ArrayList<>();
         for (String line : allLines) {
             // line: <rabbit@mercurio.1.11491.0>	58713
             String[] columns = line.split("\t");
             // can be also header line, so ignoring NumberFormatException
             try {
-                result.add(new ConnectionInfo(columns[0], Integer.valueOf(columns[1])));
+                Integer.valueOf(columns[1]);
+                result.add(new ConnectionInfo(columns[0]));
             } catch (NumberFormatException e) {
                 // OK
             }
@@ -160,33 +166,17 @@ public class Host {
                 .collect(Collectors.toList());
     }
 
-    private static Host.ConnectionInfo findConnectionInfoFor(List<ConnectionInfo> xs, NetworkConnection c) {
-        Host.ConnectionInfo result = null;
-        for (Host.ConnectionInfo ci : xs) {
-            if (c.getLocalPort() == ci.getPeerPort()) {
-                result = ci;
-                break;
-            }
-        }
-        return result;
-    }
-
     public static class ConnectionInfo {
 
         private final String pid;
-        private final int peerPort;
 
-        public ConnectionInfo(String pid, int peerPort) {
+        public ConnectionInfo(String pid) {
             this.pid = pid;
-            this.peerPort = peerPort;
         }
 
         public String getPid() {
             return pid;
         }
 
-        public int getPeerPort() {
-            return peerPort;
-        }
     }
 }
