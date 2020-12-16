@@ -264,7 +264,7 @@ public class ConnectionRecoveryIT {
         waitAtMost(10, () -> msgConsumed.get() >= 3 * producerConsumerCount);
         int messageCountBeforeClosing = msgConsumed.get();
         closeAllConnections();
-        waitAtMost(10, () -> msgConsumed.get() >= 2 * messageCountBeforeClosing);
+        waitAtMost(20, () -> msgConsumed.get() >= 2 * messageCountBeforeClosing);
         assertThat(testIsDone.get()).isFalse();
     }
 
