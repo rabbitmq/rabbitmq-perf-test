@@ -8,8 +8,7 @@ The client is maintained by the [RabbitMQ team at VMware](https://github.com/rab
 ## Installation
 
 This is a standalone tool that is distributed in binary form using
-[GitHub releases](https://github.com/rabbitmq/rabbitmq-perf-test/releases) or
-[Bintray](https://bintray.com/rabbitmq/java-tools/perf-test)
+[GitHub releases](https://github.com/rabbitmq/rabbitmq-perf-test/releases)
 and as a JAR file on Maven Central (see below). A [Docker image](https://hub.docker.com/r/pivotalrabbitmq/perf-test/) is available as well.
 
 ## Documentation
