@@ -56,7 +56,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.anyList;
 import static org.mockito.Mockito.*;
-import static org.mockito.MockitoAnnotations.initMocks;
 import static org.mockito.MockitoAnnotations.openMocks;
 
 public class TopologyTest {
@@ -495,9 +494,9 @@ public class TopologyTest {
 
     // --queue-pattern 'perf-test-%d' --queue-pattern-from 10 --queue-pattern-to 50
     @ParameterizedTest
-    @ValueSource(strings = {"true", "false"})
-    public void sequenceQueuesDefinition10to50(String exclusive) throws Exception {
-        params.setExclusive(valueOf(exclusive));
+    @ValueSource(booleans = {true, false})
+    public void sequenceQueuesDefinition10to50(boolean exclusive) throws Exception {
+        params.setExclusive(exclusive);
         String queuePrefix = "perf-test-";
         params.setQueuePattern(queuePrefix + "%d");
         params.setQueueSequenceFrom(10);
@@ -514,12 +513,41 @@ public class TopologyTest {
         verify(cf, times(1 + 41 + 1)).newConnection(anyList(), anyString()); // configuration, consumers, producer
         verify(c, atLeast(1 + 1 + 1)).createChannel(); // configuration, producer, consumer, and checks
         verify(ch, times(41))
-                .queueDeclare(startsWith(queuePrefix), anyBoolean(), eq(valueOf(exclusive)), anyBoolean(), isNull());
+                .queueDeclare(startsWith(queuePrefix), anyBoolean(), eq(exclusive), anyBoolean(), isNull());
         verify(ch, times(41))
                 .queueBind(startsWith(queuePrefix), eq("direct"), routingKeyCaptor.capture());
 
         assertThat(queueNameCaptor.getAllValues()).hasSize(41).contains(queuePrefix + "10", queuePrefix + "11", queuePrefix + "49", queuePrefix + "50");
         assertThat(routingKeyCaptor.getAllValues()).hasSize(41).contains(queuePrefix + "10", queuePrefix + "11", queuePrefix + "49", queuePrefix + "50");
+    }
+
+    @Test
+    public void sequenceQueuesDefinitionShouldUseRoutingKeyIfProvided() throws Exception {
+        String queuePrefix = "perf-test-";
+        String routingKey = "rk";
+        params.setExclusive(false);
+        params.setQueuePattern(queuePrefix + "%d");
+        params.setQueueSequenceFrom(1);
+        params.setQueueSequenceTo(100);
+        params.setConsumerCount(100);
+        params.setRoutingKey(routingKey);
+
+        when(ch.queueDeclare(queueNameCaptor.capture(), anyBoolean(), anyBoolean(), anyBoolean(), isNull()))
+            .then(invocation -> new AMQImpl.Queue.DeclareOk(invocation.getArgument(0), 0, 0));
+
+        MulticastSet set = getMulticastSet();
+
+        set.run();
+
+        verify(cf, times(1 + 100 + 1)).newConnection(anyList(), anyString()); // configuration, consumers, producer
+        verify(c, atLeast(1 + 1 + 1)).createChannel(); // configuration, producer, consumer, and checks
+        verify(ch, times(100))
+            .queueDeclare(startsWith(queuePrefix), anyBoolean(), eq(false), anyBoolean(), isNull());
+        verify(ch, times(100))
+            .queueBind(startsWith(queuePrefix), eq("direct"), routingKeyCaptor.capture());
+
+        assertThat(queueNameCaptor.getAllValues()).hasSize(100).contains(queuePrefix + "1", queuePrefix + "2", queuePrefix + "100");
+        assertThat(new HashSet<>(routingKeyCaptor.getAllValues())).hasSize(1).contains(routingKey);
     }
 
     //  --queue-pattern 'perf-test-%d' --queue-pattern-from 52 --queue-pattern-to 501

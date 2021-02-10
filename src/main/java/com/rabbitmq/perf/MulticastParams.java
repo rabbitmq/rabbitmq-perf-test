@@ -549,7 +549,7 @@ public class MulticastParams {
         if (this.queuePattern == null) {
             this.topologyHandler = new FixedQueuesTopologyHandler(this, this.routingKey, this.queueNames, topologyRecording);
         } else {
-            this.topologyHandler = new SequenceTopologyHandler(this, this.queueSequenceFrom, this.queueSequenceTo, this.queuePattern, topologyRecording);
+            this.topologyHandler = new SequenceTopologyHandler(this, this.queueSequenceFrom, this.queueSequenceTo, this.queuePattern, topologyRecording, this.routingKey);
         }
 
     }
@@ -908,19 +908,21 @@ public class MulticastParams {
         final List<String> queues;
         int index = 0;
         private final TopologyRecording topologyRecording;
+        private final String routingKey;
 
-        public SequenceTopologyHandler(MulticastParams params, int from, int to, String queuePattern, TopologyRecording topologyRecording) {
+        public SequenceTopologyHandler(MulticastParams params, int from, int to, String queuePattern, TopologyRecording topologyRecording, String routingKey) {
             super(params);
             queues = new ArrayList<>(to - from + 1);
             for (int i = from; i <= to; i++) {
                 queues.add(String.format(queuePattern, i));
             }
             this.topologyRecording = topologyRecording;
+            this.routingKey = routingKey;
         }
 
         @Override
         public String getRoutingKey() {
-            return this.getQueueNamesForClient().get(0);
+            return this.routingKey == null ? this.getQueueNamesForClient().get(0) : this.routingKey;
         }
 
         @Override

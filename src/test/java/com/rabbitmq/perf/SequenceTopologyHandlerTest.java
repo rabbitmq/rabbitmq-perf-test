@@ -26,7 +26,7 @@ public class SequenceTopologyHandlerTest {
 
     @Test
     public void sequence() {
-        handler = new MulticastParams.SequenceTopologyHandler(null, 1, 5, "test-%d", new TopologyRecording(false));
+        handler = new MulticastParams.SequenceTopologyHandler(null, 1, 5, "test-%d", new TopologyRecording(false), null);
         assertThat(handler.getQueueNames()).hasSize(5).contains("test-1", "test-2", "test-3", "test-4", "test-5");
 
         assertThat(handler.getRoutingKey()).isEqualTo("test-1");
@@ -50,8 +50,20 @@ public class SequenceTopologyHandlerTest {
     }
 
     @Test
+    public void useFixedRoutingKeyWhenProvided() {
+        handler = new MulticastParams.SequenceTopologyHandler(null, 1, 5, "test-%d", new TopologyRecording(false), "rk");
+        assertThat(handler.getQueueNames()).hasSize(5).contains("test-1", "test-2", "test-3", "test-4", "test-5");
+
+        assertThat(handler.getQueueNamesForClient()).hasSize(1).contains("test-1");
+        assertThat(handler.getRoutingKey()).isEqualTo("rk");
+        handler.next();
+        assertThat(handler.getQueueNamesForClient()).hasSize(1).contains("test-2");
+        assertThat(handler.getRoutingKey()).isEqualTo("rk");
+    }
+
+    @Test
     public void reset() {
-        handler = new MulticastParams.SequenceTopologyHandler(null, 1, 100, "test-%d", new TopologyRecording(false));
+        handler = new MulticastParams.SequenceTopologyHandler(null, 1, 100, "test-%d", new TopologyRecording(false), null);
         assertThat(handler.getQueueNames()).hasSize(100);
 
         assertThat(handler.getRoutingKey()).isEqualTo("test-1");
@@ -74,7 +86,7 @@ public class SequenceTopologyHandlerTest {
 
     @Test
     public void format() {
-        handler = new MulticastParams.SequenceTopologyHandler(null, 1, 5, "test-%03d", new TopologyRecording(false));
+        handler = new MulticastParams.SequenceTopologyHandler(null, 1, 5, "test-%03d", new TopologyRecording(false), null);
         assertThat(handler.getQueueNames()).hasSize(5).contains("test-001", "test-002", "test-003", "test-004", "test-005");
     }
 }
