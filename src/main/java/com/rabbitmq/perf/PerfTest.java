@@ -711,9 +711,8 @@ public class PerfTest {
     }
 
     private static String getExchangeName(CommandLineProxy cmd, String def) {
-        String exchangeName = null;
-        if (cmd.hasOption('e')) {
-            exchangeName = cmd.getOptionValue('e');
+        String exchangeName = strArg(cmd, 'e', null);
+        if (exchangeName != null) {
             if (exchangeName == null || exchangeName.equals("amq.default")) {
                 exchangeName = "";
             }
