@@ -9,12 +9,9 @@ export PATH := $(CURDIR):$(CURDIR)/scripts:$(PATH)
 OS := $$(uname -s | tr '[:upper:]' '[:lower:]')
 HARDWARE := $$(uname -m | tr '[:upper:]' '[:lower:]')
 
-GPG_KEYNAME := $$(awk -F'[<>]' '/<gpg.keyname>/ { print $$3 }' pom.xml)
-
 TODAY := $(shell date -u +'%Y.%m.%d')
 
-RELEASE_VERSION ?= 2.7.0
-PGP_KEYSERVER ?= pgpkeys.uk
+RELEASE_VERSION ?= 2.13.0
 
 ### TARGETS ###
 #
@@ -37,9 +34,9 @@ native-image: clean ## Build the native image
 	    -H:IncludeResources="rabbitmq-perf-test.properties"
 
 .PHONY: docker-image-dev
-docker-image-dev: ## Build Docker image with the local PerfTest version
+docker-image-dev: binary ## Build Docker image with the local PerfTest version
 	@docker build \
-	  --file Dockerfile.dev \
+	  --file Dockerfile-ubuntu \
 	  --tag pivotalrabbitmq/perf-test:dev-$(TODAY) \
 	  .
 
@@ -52,12 +49,10 @@ push-docker-image-dev: ## Push the Docker image with the local PerfTest version
 	@docker push pivotalrabbitmq/perf-test:dev-$(TODAY)
 
 .PHONY: docker-image-alpine
-docker-image-alpine: ## Build Alpine-based Docker image
+docker-image-alpine: binary ## Build Alpine-based Docker image
 	@docker build \
 	  --file Dockerfile-alpine \
 	  --tag pivotalrabbitmq/perf-test:$(RELEASE_VERSION)-alpine \
-	  --build-arg perf_test_version=$(RELEASE_VERSION) \
-	  --build-arg PGP_KEYSERVER=$(PGP_KEYSERVER) \
 	  .
 
 .PHONY: test-docker-image-alpine
@@ -65,14 +60,12 @@ test-docker-image-alpine: ## Test the Alpine-based Docker image
 	@docker run -it --rm pivotalrabbitmq/perf-test:$(RELEASE_VERSION)-alpine --version
 
 .PHONY: docker-image-ubuntu
-docker-image-ubuntu: ## Build Ubuntu-based Docker image
+docker-image-ubuntu: binary ## Build Ubuntu-based Docker image
 	@docker build \
 	  --file Dockerfile-ubuntu \
 	  --tag pivotalrabbitmq/perf-test:$(RELEASE_VERSION)-ubuntu \
 	  --tag pivotalrabbitmq/perf-test:$(RELEASE_VERSION) \
 	  --tag pivotalrabbitmq/perf-test:latest \
-	  --build-arg perf_test_version=$(RELEASE_VERSION) \
-	  --build-arg PGP_KEYSERVER=$(PGP_KEYSERVER) \
 	  .
 
 .PHONY: test-docker-image-ubuntu

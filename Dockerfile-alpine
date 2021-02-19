@@ -1,6 +1,6 @@
-FROM alpine:3.12.1 as builder
+FROM alpine:3.12.2 as builder
 
-ARG perf_test_version="2.7.0"
+ARG perf_test_binary="target/rabbitmq-perf-test-*-bin.tar.gz"
 
 RUN set -eux; \
 	\
@@ -9,9 +9,8 @@ RUN set -eux; \
 		wget \
 		gnupg
 
-
-ENV JAVA_VERSION="11.0.9"
-ENV JAVA_SHA256="89cfac2a64f0a820917c65d490bef270bcb066ad7f042a36153d24c3098bc5cd"
+ENV JAVA_VERSION="11"
+ENV JAVA_SHA256="efc94aa65985153c4400a86bcbb8d86031040fd0a8f6883739f569c3a01219f8"
 
 RUN set -eux; \
     \
@@ -25,39 +24,20 @@ RUN set -eux; \
 	$JAVA_PATH/bin/jlink --compress=2 --output /jre --add-modules java.base,java.management,java.xml,java.naming,java.sql,jdk.crypto.cryptoki; \
 	/jre/bin/java -version
 
-# pgpkeys.uk is quite reliable, but allow for substitutions locally
-ARG PGP_KEYSERVER=pgpkeys.uk
-# If you are building this image locally and are getting `gpg: keyserver receive failed: No data` errors,
-# run the build with a different PGP_KEYSERVER, e.g. docker build --tag rabbitmq:3.7 --build-arg PGP_KEYSERVER=pgpkeys.eu 3.7/ubuntu
-# For context, see https://github.com/docker-library/official-images/issues/4252
-
-# https://www.rabbitmq.com/signatures.html#importing-gpg
-ENV RABBITMQ_PGP_KEY_ID="0x0A9AF2115F4687BD29803A206B73A36E6026DFCA"
 ENV PERF_TEST_HOME="/perf_test"
+ENV PERF_TEST_PATH="/usr/local/src/perf-test"
+
+COPY $perf_test_binary $PERF_TEST_PATH.tar.gz
 
 RUN set -eux; \
     \
-    PERF_TEST_URL=https://github.com/rabbitmq/rabbitmq-perf-test/releases/download/v$perf_test_version/rabbitmq-perf-test-$perf_test_version-bin.tar.gz; \
-    PERF_TEST_PATH="/usr/local/src/perf-test-$perf_test_version"; \
-    \
 # /usr/local/src doesn't exist in Alpine by default
-    mkdir /usr/local/src; \
-    \
-    wget --progress dot:giga --output-document "$PERF_TEST_PATH.tar.gz.asc" "$PERF_TEST_URL.asc"; \
-    wget --progress dot:giga --output-document "$PERF_TEST_PATH.tar.gz" "$PERF_TEST_URL"; \
-    PERF_TEST_SHA256="$(wget -qO- $PERF_TEST_URL.sha256)"; \
-    echo "$PERF_TEST_SHA256 *$PERF_TEST_PATH.tar.gz" | sha256sum -c -; \
-    \
-    export GNUPGHOME="$(mktemp -d)"; \
-    gpg --batch --keyserver "$PGP_KEYSERVER" --recv-keys "$RABBITMQ_PGP_KEY_ID"; \
-    gpg --batch --verify "$PERF_TEST_PATH.tar.gz.asc" "$PERF_TEST_PATH.tar.gz"; \
-    gpgconf --kill all; \
-    rm -rf "$GNUPGHOME"; \
+    mkdir -p /usr/local/src; \
     \
     mkdir -p "$PERF_TEST_HOME"; \
     tar --extract --file "$PERF_TEST_PATH.tar.gz" --directory "$PERF_TEST_HOME" --strip-components 1
 
-FROM alpine:3.12.1
+FROM alpine:3.12.2
 
 RUN apk add --no-cache bash
 
