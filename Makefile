@@ -9,6 +9,8 @@ export PATH := $(CURDIR):$(CURDIR)/scripts:$(PATH)
 OS := $$(uname -s | tr '[:upper:]' '[:lower:]')
 HARDWARE := $$(uname -m | tr '[:upper:]' '[:lower:]')
 
+GPG_KEYNAME := $$(awk -F'[<>]' '/<gpg.keyname>/ { print $$3 }' pom.xml)
+
 TODAY := $(shell date -u +'%Y.%m.%d')
 
 RELEASE_VERSION ?= 2.13.0
