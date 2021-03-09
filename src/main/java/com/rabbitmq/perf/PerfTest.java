@@ -273,6 +273,27 @@ public class PerfTest {
                 }
             }
 
+            List<String> queues = queueNames == null ? null : asList(queueNames.split(","));
+
+            String queueFile = strArg(cmd, "qf", null);
+            if (queueFile != null && queuePattern != null && queueNames != null) {
+                System.err.println("Too many ways to list queues, use only the queue file argument");
+                systemExiter.exit(1);
+            } else if (queueFile != null) {
+                File file = new File(queueFile);
+                if (!file.exists() || !file.canRead()) {
+                    System.err.println("Queue file " + queueFile + " does not exist or is not readable");
+                    systemExiter.exit(1);
+                }
+                try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+                    queues = new ArrayList<>();
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        queues.add(line.trim());
+                    }
+                }
+            }
+
             factory = configureNioIfRequested(cmd, factory);
             if (factory.getNioParams().getNioExecutor() != null) {
                 ExecutorService nioExecutor = factory.getNioParams().getNioExecutor();
@@ -307,7 +328,7 @@ public class PerfTest {
             p.setProducerChannelCount(  producerChannelCount);
             p.setProducerMsgCount(      producerMsgCount);
             p.setProducerTxSize(        producerTxSize);
-            p.setQueueNames(            queueNames == null ? null : asList(queueNames.split(",")));
+            p.setQueueNames(            queues);
             p.setRoutingKey(            routingKey);
             p.setSkipBindingQueues(     skipBindingQueues);
             p.setRandomRoutingKey(      randomRoutingKey);
@@ -342,6 +363,7 @@ public class PerfTest {
             p.setBodyFieldCount(bodyFieldCount);
             p.setBodyCount(bodyCount);
             p.setConsumerArguments(convertKeyValuePairs(consumerArgs));
+            p.setQueuesInSequence(queueFile != null);
 
             ConcurrentMap<String, Integer> completionReasons = new ConcurrentHashMap<>();
 
@@ -658,6 +680,7 @@ public class PerfTest {
         options.addOption(new Option("cri", "connection-recovery-interval", true, "connection recovery interval in seconds. Default is 5 seconds. "
                 + "Interval syntax, e.g. 30-60, is supported to specify an random interval between 2 values between each attempt."));
 
+        options.addOption(new Option("qf", "queue-file", true, "file to look up queue names from"));
         options.addOption(new Option("sni", "server-name-indication", true, "server names for Server Name Indication TLS parameter, separated by commas"));
         return options;
     }

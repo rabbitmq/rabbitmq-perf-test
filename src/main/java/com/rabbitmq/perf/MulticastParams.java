@@ -59,6 +59,7 @@ public class MulticastParams {
     private String exchangeName = "direct";
     private String exchangeType = "direct";
     private List<String> queueNames = new ArrayList<>();
+    private boolean queuesInSequence = false;
     private String routingKey = null;
     private boolean randomRoutingKey = false;
     private boolean skipBindingQueues = false;
@@ -448,6 +449,10 @@ public class MulticastParams {
         this.bodyCount = bodyCount;
     }
 
+    public void setQueuesInSequence(boolean queuesInSequence) {
+        this.queuesInSequence = queuesInSequence;
+    }
+
     public Producer createProducer(Connection connection, Stats stats, MulticastSet.CompletionHandler completionHandler,
                                    ValueIndicator<Float> rateIndicator, ValueIndicator<Integer> messageSizeIndicator) throws IOException {
         Channel channel = connection.createChannel(); //NOSONAR
@@ -546,12 +551,13 @@ public class MulticastParams {
 
     public void init() {
         this.topologyRecording = new TopologyRecording(this.isPolling());
-        if (this.queuePattern == null) {
+        if (this.queuePattern == null && !this.queuesInSequence) {
             this.topologyHandler = new FixedQueuesTopologyHandler(this, this.routingKey, this.queueNames, topologyRecording);
+        } else if (this.queuePattern == null && this.queuesInSequence) {
+            this.topologyHandler = new SequenceTopologyHandler(this, this.queueNames, topologyRecording, this.routingKey);
         } else {
             this.topologyHandler = new SequenceTopologyHandler(this, this.queueSequenceFrom, this.queueSequenceTo, this.queuePattern, topologyRecording, this.routingKey);
         }
-
     }
 
     public void resetTopologyHandler() {
@@ -912,10 +918,17 @@ public class MulticastParams {
 
         public SequenceTopologyHandler(MulticastParams params, int from, int to, String queuePattern, TopologyRecording topologyRecording, String routingKey) {
             super(params);
-            queues = new ArrayList<>(to - from + 1);
+            this.queues = new ArrayList<>(to - from + 1);
             for (int i = from; i <= to; i++) {
                 queues.add(String.format(queuePattern, i));
             }
+            this.topologyRecording = topologyRecording;
+            this.routingKey = routingKey;
+        }
+
+        public SequenceTopologyHandler(MulticastParams params, List<String> queues, TopologyRecording topologyRecording, String routingKey) {
+            super(params);
+            this.queues = new ArrayList<>(queues);
             this.topologyRecording = topologyRecording;
             this.routingKey = routingKey;
         }
