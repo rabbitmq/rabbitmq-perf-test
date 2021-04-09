@@ -54,7 +54,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
-    <rabbitmq.version>5.11.0</rabbitmq.version>
+    <rabbitmq.version>5.12.0</rabbitmq.version>
     <commons-cli.version>1.4</commons-cli.version>
     <metrics.version>4.1.19</metrics.version>
     <micrometer.version>1.6.5</micrometer.version>
