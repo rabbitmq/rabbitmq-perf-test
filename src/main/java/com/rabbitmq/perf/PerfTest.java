@@ -198,6 +198,19 @@ public class PerfTest {
             String urisParameter     = strArg(cmd, 'H', null);
             String outputFile        = strArg(cmd, 'o', null);
 
+            Map<String, Object> queueArguments = convertKeyValuePairs(queueArgs);
+            boolean quorumQueue = hasOption(cmd,"qq");
+
+            if (quorumQueue) {
+                if (!flags.contains("persistent")) {
+                    flags = new ArrayList<>(flags);
+                    flags.add("persistent");
+                }
+                autoDelete = false;
+                queueArguments = queueArguments == null ? new HashMap<>() : queueArguments;
+                queueArguments.put("x-queue-type", "quorum");
+            }
+
             ConnectionFactory factory = new ConnectionFactory();
             if (disableConnectionRecovery) {
                 factory.setAutomaticRecoveryEnabled(false);
@@ -337,7 +350,7 @@ public class PerfTest {
             p.setUseMillis(             useMillis);
             p.setBodyFiles(             bodyFiles == null ? null : asList(bodyFiles.split(",")));
             p.setBodyContentType(       bodyContentType);
-            p.setQueueArguments(convertKeyValuePairs(queueArgs));
+            p.setQueueArguments(queueArguments);
             p.setConsumerLatencyInMicroseconds(consumerLatencyInMicroseconds);
             p.setConsumerLatencies(variableConsumerLatencies);
             p.setQueuePattern(queuePattern);
@@ -682,6 +695,7 @@ public class PerfTest {
 
         options.addOption(new Option("qf", "queue-file", true, "file to look up queue names from"));
         options.addOption(new Option("sni", "server-name-indication", true, "server names for Server Name Indication TLS parameter, separated by commas"));
+        options.addOption(new Option("qq", "quorum-queue", false,"create quorum queue(s)"));
         return options;
     }
 

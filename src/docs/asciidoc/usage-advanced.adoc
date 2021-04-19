@@ -11,6 +11,16 @@ key/value pairs with commas:
  bin/runjava com.rabbitmq.perf.PerfTest \
    --queue-args x-max-length=10,x-dead-letter-exchange=some.exchange.name
 
+It is possible to use several arguments to
+create https://rabbitmq.com/quorum-queues.html[quorum queues], but PerfTest provides
+a `--quorum-queue` flag to do that:
+
+ bin/runjava com.rabbitmq.perf.PerfTest \
+   --quorum-queue --queue name
+
+`--quorum-queue` is a shortcut for `--flag persistent --queue-args x-queue-type=quorum --auto-delete false`. Note a quorum queue cannot have a server-generated name, so the
+`--queue` argument must be used to specify the name of the queue(s).
+
 == Customising messages
 
 It is possible to customise messages that PerfTest publishes. This allows
