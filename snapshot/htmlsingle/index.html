@@ -894,6 +894,21 @@ key/value pairs with commas:</p>
   --queue-args x-max-length=10,x-dead-letter-exchange=some.exchange.name</pre>
 </div>
 </div>
+<div class="paragraph">
+<p>It is possible to use several arguments to
+create <a href="https://rabbitmq.com/quorum-queues.html">quorum queues</a>, but PerfTest provides
+a <code>--quorum-queue</code> flag to do that:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>bin/runjava com.rabbitmq.perf.PerfTest \
+  --quorum-queue --queue name</pre>
+</div>
+</div>
+<div class="paragraph">
+<p><code>--quorum-queue</code> is a shortcut for <code>--flag persistent --queue-args x-queue-type=quorum --auto-delete false</code>. Note a quorum queue cannot have a server-generated name, so the
+<code>--queue</code> argument must be used to specify the name of the queue(s).</p>
+</div>
 </div>
 </div>
 <div class="sect1">
@@ -1722,7 +1737,7 @@ can be changed:</p>
 <div id="footer">
 <div id="footer-text">
 Version 2.15.0-SNAPSHOT<br>
-Last updated 2021-04-19 13:09:58 UTC
+Last updated 2021-04-19 15:24:59 UTC
 </div>
 </div>
 <style>
