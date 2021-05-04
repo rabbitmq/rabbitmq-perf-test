@@ -13,7 +13,7 @@ GPG_KEYNAME := $$(awk -F'[<>]' '/<gpg.keyname>/ { print $$3 }' pom.xml)
 
 TODAY := $(shell date -u +'%Y.%m.%d')
 
-RELEASE_VERSION ?= 2.13.0
+RELEASE_VERSION ?= 2.14.0
 
 ### TARGETS ###
 #
