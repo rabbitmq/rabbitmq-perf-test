@@ -442,7 +442,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <div id="header">
 <h1>RabbitMQ PerfTest</h1>
 <div class="details">
-<span id="revnumber">version 2.14.0-SNAPSHOT</span>
+<span id="revnumber">version 2.15.0.RC1</span>
 </div>
 <div id="toc" class="toc2">
 <div id="toctitle">Table of Contents</div>
@@ -893,6 +893,21 @@ key/value pairs with commas:</p>
 <pre>bin/runjava com.rabbitmq.perf.PerfTest \
   --queue-args x-max-length=10,x-dead-letter-exchange=some.exchange.name</pre>
 </div>
+</div>
+<div class="paragraph">
+<p>It is possible to use several arguments to
+create <a href="https://rabbitmq.com/quorum-queues.html">quorum queues</a>, but PerfTest provides
+a <code>--quorum-queue</code> flag to do that:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>bin/runjava com.rabbitmq.perf.PerfTest \
+  --quorum-queue --queue name</pre>
+</div>
+</div>
+<div class="paragraph">
+<p><code>--quorum-queue</code> is a shortcut for <code>--flag persistent --queue-args x-queue-type=quorum --auto-delete false</code>. Note a quorum queue cannot have a server-generated name, so the
+<code>--queue</code> argument must be used to specify the name of the queue(s).</p>
 </div>
 </div>
 </div>
@@ -1721,8 +1736,8 @@ can be changed:</p>
 </div>
 <div id="footer">
 <div id="footer-text">
-Version 2.14.0-SNAPSHOT<br>
-Last updated 2021-02-23 13:48:11 UTC
+Version 2.15.0.RC1<br>
+Last updated 2021-05-05 15:18:58 UTC
 </div>
 </div>
 <style>
