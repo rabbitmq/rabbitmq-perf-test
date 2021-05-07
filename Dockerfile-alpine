@@ -1,4 +1,6 @@
-FROM alpine:3.12.2 as builder
+ARG alpine_version="3.13.5"
+
+FROM alpine:$alpine_version as builder
 
 ARG perf_test_binary="target/rabbitmq-perf-test-*-bin.tar.gz"
 
@@ -7,22 +9,20 @@ RUN set -eux; \
 	apk add --no-cache --virtual .build-deps \
 	    ca-certificates \
 		wget \
-		gnupg
+		gnupg \
+    jq
 
-ENV JAVA_VERSION="11"
-ENV JAVA_SHA256="efc94aa65985153c4400a86bcbb8d86031040fd0a8f6883739f569c3a01219f8"
+ARG JAVA_VERSION="11"
 
+RUN wget "https://api.azul.com/zulu/download/community/v1.0/bundles/latest/?jdk_version=$JAVA_VERSION&ext=tar.gz&os=linux_musl&arch=x86&hw_bitness=64&release_status=ga" -O jdk-info.json
+RUN wget --progress=bar:force:noscroll -O "jdk.tar.gz" $(cat jdk-info.json | jq --raw-output .url)
+RUN echo "$(cat jdk-info.json | jq --raw-output .sha256_hash) *jdk.tar.gz" | sha256sum -cw -
 RUN set -eux; \
-    \
-    JAVA_URL="https://cdn.azul.com/zulu/bin/zulu11.45.27-ca-jdk11.0.10-linux_musl_x64.tar.gz"; \
     JAVA_PATH="/usr/lib/jdk-$JAVA_VERSION"; \
-	\
-    wget --progress dot:giga --output-document "$JAVA_PATH.tar.gz" "$JAVA_URL"; \
-    echo "$JAVA_SHA256 *$JAVA_PATH.tar.gz" | sha256sum -c -; \
-	mkdir -p "$JAVA_PATH"; \
-	tar --extract --file "$JAVA_PATH.tar.gz" --directory "$JAVA_PATH" --strip-components 1; \
-	$JAVA_PATH/bin/jlink --compress=2 --output /jre --add-modules java.base,java.management,java.xml,java.naming,java.sql,jdk.crypto.cryptoki; \
-	/jre/bin/java -version
+    mkdir $JAVA_PATH && \
+    tar --extract  --file jdk.tar.gz --directory "$JAVA_PATH" --strip-components 1; \
+    $JAVA_PATH/bin/jlink --compress=2 --output /jre --add-modules java.base,java.management,java.xml,java.naming,java.sql,jdk.crypto.cryptoki; \
+    /jre/bin/java -version
 
 ENV PERF_TEST_HOME="/perf_test"
 ENV PERF_TEST_PATH="/usr/local/src/perf-test"
@@ -37,7 +37,7 @@ RUN set -eux; \
     mkdir -p "$PERF_TEST_HOME"; \
     tar --extract --file "$PERF_TEST_PATH.tar.gz" --directory "$PERF_TEST_HOME" --strip-components 1
 
-FROM alpine:3.12.2
+FROM alpine:$alpine_version
 
 RUN apk add --no-cache bash
 
@@ -49,6 +49,7 @@ RUN ln -svT $JAVA_HOME/bin/java /usr/local/bin/java
 RUN mkdir -p /perf_test
 WORKDIR /perf_test
 COPY --from=builder /perf_test ./
+RUN bin/runjava com.rabbitmq.perf.PerfTest --version
 RUN bin/runjava com.rabbitmq.perf.PerfTest --help
 
 ENTRYPOINT ["bin/runjava", "com.rabbitmq.perf.PerfTest"]
