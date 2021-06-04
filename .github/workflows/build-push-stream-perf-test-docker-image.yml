@@ -34,12 +34,11 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
-      - run: wget ${{ github.event.client_payload.archive_url }}
-      - run: mkdir target
-      - run: mv rabbitmq-perf-test-*-bin.tar.gz target
       - name: Push to Docker Hub
         uses: docker/build-push-action@v2
         with:
+          build-args: |
+            perf_test_binary=${{ github.event.client_payload.archive_url }}
           push: true
           file: Dockerfile
           platforms: linux/amd64,linux/arm64

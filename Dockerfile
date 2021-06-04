@@ -32,15 +32,22 @@ RUN set -eux; \
     tar --extract  --file jdk.tar.gz --directory "$JAVA_PATH" --strip-components 1; \
 	  fi
 
+RUN rm jdk.tar.gz
+
 ENV PERF_TEST_HOME="/perf_test"
 ENV PERF_TEST_PATH="/usr/local/src/perf-test"
 
-COPY $perf_test_binary $PERF_TEST_PATH.tar.gz
+ADD $perf_test_binary /
 
-RUN set -eux; \
+RUN if ls rabbitmq-perf-test-*.tar.gz 1> /dev/null 2>&1; then \
+    set -eux; \
     \
+    mv rabbitmq-perf-test-*.tar.gz rabbitmq-perf-test.tar.gz; \
     mkdir -p "$PERF_TEST_HOME"; \
-    tar --extract --file "$PERF_TEST_PATH.tar.gz" --directory "$PERF_TEST_HOME" --strip-components 1
+    tar --extract --file "rabbitmq-perf-test.tar.gz" --directory "$PERF_TEST_HOME" --strip-components 1; \
+    else \
+    mv rabbitmq-perf-test-* "$PERF_TEST_HOME"; \
+    fi
 
 FROM ubuntu:20.04
 
