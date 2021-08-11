@@ -43,6 +43,7 @@ public class ConsumerParameters {
     private ExecutorService executorService;
     private boolean polling;
     private boolean nack = false;
+    private boolean requeue = true;
 
     private int pollingInterval;
 
@@ -201,6 +202,15 @@ public class ConsumerParameters {
         return this;
     }
 
+    public boolean isRequeue() {
+        return requeue;
+    }
+
+    public ConsumerParameters setRequeue(boolean requeue) {
+        this.requeue = requeue;
+        return this;
+    }
+ 
     public ConsumerParameters setConsumerArguments(Map<String, Object> consumerArguments) {
         this.consumerArguments = consumerArguments;
         return this;

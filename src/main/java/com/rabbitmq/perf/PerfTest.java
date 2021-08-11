@@ -181,6 +181,7 @@ public class PerfTest {
             int pollingInterval = intArg(cmd, "pi", -1);
 
             boolean nack = hasOption(cmd, "na");
+            boolean requeue = boolArg(cmd, "re", true);
 
             boolean jsonBody = hasOption(cmd, "jb");
             int bodyFieldCount = intArg(cmd, "bfc", 1000);
@@ -372,6 +373,7 @@ public class PerfTest {
             p.setPolling(polling);
             p.setPollingInterval(pollingInterval);
             p.setNack(nack);
+            p.setRequeue(requeue);
             p.setJsonBody(jsonBody);
             p.setBodyFieldCount(bodyFieldCount);
             p.setBodyCount(bodyCount);
@@ -680,7 +682,8 @@ public class PerfTest {
         options.addOption(new Option("pi", "polling-interval",true, "time to wait before polling with basic.get, " +
                 "in millisecond, default is 0."));
 
-        options.addOption(new Option("na", "nack",false,"nack and requeue messages"));
+        options.addOption(new Option("na", "nack",false,"nack messages"));
+        options.addOption(new Option("re", "requeue",true,"should nacked messages be requeued"));
 
         options.addOption(new Option("jb", "json-body", false, "generate a random JSON document for message body. " +
                 "Use with --size."));
