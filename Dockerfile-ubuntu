@@ -60,4 +60,9 @@ WORKDIR /perf_test
 COPY --from=builder /perf_test ./
 RUN bin/runjava com.rabbitmq.perf.PerfTest --help
 
+RUN groupadd --gid 1000 perf-test
+RUN useradd --uid 1000 --gid perf-test --comment "perf-test user" perf-test
+
+USER perf-test:perf-test
+
 ENTRYPOINT ["bin/runjava", "com.rabbitmq.perf.PerfTest"]
