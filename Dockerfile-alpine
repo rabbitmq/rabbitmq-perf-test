@@ -53,4 +53,9 @@ COPY --from=builder /perf_test ./
 RUN bin/runjava com.rabbitmq.perf.PerfTest --version
 RUN bin/runjava com.rabbitmq.perf.PerfTest --help
 
+RUN addgroup -g 1000 perf-test
+RUN adduser -u 1000 -G perf-test -D -g "perf-test user" perf-test
+
+USER perf-test:perf-test
+
 ENTRYPOINT ["bin/runjava", "com.rabbitmq.perf.PerfTest"]
