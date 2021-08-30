@@ -81,4 +81,9 @@ RUN set -eux; \
     if [ "$(uname -m)" = "x86_64" ] ; then bin/runjava com.rabbitmq.perf.PerfTest --help ; \
 	  fi
 
+RUN groupadd --gid 1000 perf-test
+RUN useradd --uid 1000 --gid perf-test --comment "perf-test user" perf-test
+
+USER perf-test:perf-test
+
 ENTRYPOINT ["bin/runjava", "com.rabbitmq.perf.PerfTest"]
