@@ -682,8 +682,8 @@ public class PerfTest {
         options.addOption(new Option("pi", "polling-interval",true, "time to wait before polling with basic.get, " +
                 "in millisecond, default is 0."));
 
-        options.addOption(new Option("na", "nack",false,"nack messages"));
-        options.addOption(new Option("re", "requeue",true,"should nacked messages be requeued"));
+        options.addOption(new Option("na", "nack", false, "nack messages, requeue them by default."));
+        options.addOption(new Option("re", "requeue", true, "should nacked messages be requeued, default is true."));
 
         options.addOption(new Option("jb", "json-body", false, "generate a random JSON document for message body. " +
                 "Use with --size."));
