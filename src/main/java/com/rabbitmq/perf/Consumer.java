@@ -36,10 +36,10 @@ public class Consumer extends AgentBase implements Runnable {
     private static final Logger LOGGER = LoggerFactory.getLogger(Consumer.class);
 
     private static final AckNackOperation ACK_OPERATION =
-            (ch, envelope, multiple) -> ch.basicAck(envelope.getDeliveryTag(), multiple);
+            (ch, envelope, multiple, requeue) -> ch.basicAck(envelope.getDeliveryTag(), multiple);
 
     private static final AckNackOperation NACK_OPERATION =
-            (ch, envelope, multiple) -> ch.basicNack(envelope.getDeliveryTag(), multiple, true);
+            (ch, envelope, multiple, requeue) -> ch.basicNack(envelope.getDeliveryTag(), multiple, requeue);
     static final String STOP_REASON_CONSUMER_REACHED_MESSAGE_LIMIT = "Consumer reached message limit";
 
     private volatile ConsumerImpl       q;
@@ -48,6 +48,7 @@ public class Consumer extends AgentBase implements Runnable {
     private final int                   txSize;
     private final boolean               autoAck;
     private final int                   multiAckEvery;
+    private final boolean               requeue;
     private final Stats                 stats;
     private final int                   msgLimit;
     private final Map<String, String>   consumerTagBranchMap = Collections.synchronizedMap(new HashMap<>());
@@ -81,6 +82,7 @@ public class Consumer extends AgentBase implements Runnable {
         this.txSize            = parameters.getTxSize();
         this.autoAck           = parameters.isAutoAck();
         this.multiAckEvery     = parameters.getMultiAckEvery();
+        this.requeue           = parameters.isRequeue();
         this.stats             = parameters.getStats();
         this.msgLimit          = parameters.getMsgLimit();
         this.timestampProvider = parameters.getTimestampProvider();
@@ -266,9 +268,9 @@ public class Consumer extends AgentBase implements Runnable {
             if (!autoAck) {
                 dealWithWriteOperation(() -> {
                     if (multiAckEvery == 0) {
-                        ackNackOperation.apply(ch, envelope, false);
+                        ackNackOperation.apply(ch, envelope, false, requeue);
                     } else if (currentMessageCount % multiAckEvery == 0) {
-                        ackNackOperation.apply(ch, envelope, true);
+                        ackNackOperation.apply(ch, envelope, true, requeue);
                     }
                 }, recoveryProcess);
             }
@@ -473,7 +475,7 @@ public class Consumer extends AgentBase implements Runnable {
     @FunctionalInterface
     private interface AckNackOperation {
 
-        void apply(Channel channel, Envelope envelope, boolean multiple) throws IOException;
+        void apply(Channel channel, Envelope envelope, boolean multiple, boolean requeue) throws IOException;
 
     }
 

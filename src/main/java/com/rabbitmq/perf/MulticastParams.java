@@ -112,6 +112,7 @@ public class MulticastParams {
     private int pollingInterval = -1;
 
     private boolean nack = false;
+    private boolean requeue = true;
 
     private boolean jsonBody = false;
     private int bodyFieldCount = 1000;
@@ -437,6 +438,10 @@ public class MulticastParams {
         this.nack = nack;
     }
 
+    public void setRequeue(boolean requeue) {
+        this.requeue = requeue;
+    }
+
     public void setJsonBody(boolean jsonBody) {
         this.jsonBody = jsonBody;
     }
@@ -539,6 +544,7 @@ public class MulticastParams {
                 .setPolling(this.polling)
                 .setPollingInterval(this.pollingInterval)
                 .setNack(this.nack)
+                .setRequeue(this.requeue)
                 .setConsumerArguments(this.consumerArguments)
         );
         this.topologyHandler.next();
