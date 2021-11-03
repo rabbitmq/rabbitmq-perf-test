@@ -396,7 +396,6 @@
           <sourceDocumentName>index.adoc</sourceDocumentName>
           <!-- Attributes common to all output formats -->
           <backend>html5</backend>
-          <sourceHighlighter>coderay</sourceHighlighter>
           <attributes>
             <endpoint-url>https://example.org</endpoint-url>
             <sourcedir>${project.build.sourceDirectory}</sourcedir>
@@ -409,6 +408,7 @@
             <idprefix />
             <idseparator>-</idseparator>
             <docinfo1>true</docinfo1>
+            <source-highlighter>coderay</source-highlighter>
           </attributes>
 
         </configuration>
