@@ -17,6 +17,7 @@ package com.rabbitmq.perf;
 
 import com.rabbitmq.client.Channel;
 
+import com.rabbitmq.perf.PerfTest.EXIT_WHEN;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -46,6 +47,8 @@ public class ConsumerParameters {
     private boolean requeue = true;
 
     private int pollingInterval;
+
+    private EXIT_WHEN exitWhen = EXIT_WHEN.NEVER;
 
     private Map<String, Object> consumerArguments = null;
 
@@ -218,5 +221,14 @@ public class ConsumerParameters {
 
     public Map<String, Object> getConsumerArguments() {
         return consumerArguments;
+    }
+
+    public ConsumerParameters setExitWhen(EXIT_WHEN exitWhen) {
+        this.exitWhen = exitWhen;
+        return this;
+    }
+
+    public EXIT_WHEN getExitWhen() {
+        return exitWhen;
     }
 }

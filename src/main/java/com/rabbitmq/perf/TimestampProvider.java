@@ -15,6 +15,8 @@
 
 package com.rabbitmq.perf;
 
+import java.time.Duration;
+
 public class TimestampProvider {
     private final boolean useMillis;
     private final boolean isTimestampInHeader;
@@ -38,5 +40,14 @@ public class TimestampProvider {
 
     public long getDifference(long ts1, long ts2) {
         return Math.abs(ts1 - ts2);
+    }
+
+    Duration difference(long ts1, long ts2) {
+        long difference = getDifference(ts1, ts2);
+        if (useMillis) {
+            return Duration.ofMillis(difference);
+        } else {
+            return Duration.ofNanos(difference);
+        }
     }
 }

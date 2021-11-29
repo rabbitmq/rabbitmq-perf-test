@@ -212,6 +212,18 @@ public class PerfTest {
                 queueArguments.put("x-queue-type", "quorum");
             }
 
+            String exitWhenParameter = strArg(cmd, "ew", null);
+            EXIT_WHEN exitWhen;
+            if (exitWhenParameter != null) {
+                if (!"empty".equals(exitWhenParameter) && !"idle".equals(exitWhenParameter)) {
+                    System.out.println("--exit-when must be 'empty' or 'idle'.");
+                    systemExiter.exit(1);
+                }
+                exitWhen = EXIT_WHEN.valueOf(exitWhenParameter.toUpperCase(Locale.ENGLISH));
+            } else {
+                exitWhen = EXIT_WHEN.NEVER;
+            }
+
             ConnectionFactory factory = new ConnectionFactory();
             if (disableConnectionRecovery) {
                 factory.setAutomaticRecoveryEnabled(false);
@@ -379,6 +391,7 @@ public class PerfTest {
             p.setBodyCount(bodyCount);
             p.setConsumerArguments(convertKeyValuePairs(consumerArgs));
             p.setQueuesInSequence(queueFile != null);
+            p.setExitWhen(exitWhen);
 
             ConcurrentMap<String, Integer> completionReasons = new ConcurrentHashMap<>();
 
@@ -490,9 +503,13 @@ public class PerfTest {
             if (p.getProducerMsgCount() > 0) {
                 countLimit += p.getProducerThreadCount();
             }
-            if (p.getConsumerMsgCount() > 0) {
+            if (p.getConsumerMsgCount() > 0 || p.getExitWhen() == EXIT_WHEN.EMPTY
+                || p.getExitWhen() == EXIT_WHEN.IDLE) {
                 countLimit += p.getConsumerThreadCount();
             }
+            LOGGER.debug("Creating completion handler with time limit {} and count limit {}",
+                p.getTimeLimit(), countLimit
+                );
             completionHandler = new MulticastSet.DefaultCompletionHandler(
                 p.getTimeLimit(),
                 countLimit,
@@ -699,6 +716,7 @@ public class PerfTest {
         options.addOption(new Option("qf", "queue-file", true, "file to look up queue names from"));
         options.addOption(new Option("sni", "server-name-indication", true, "server names for Server Name Indication TLS parameter, separated by commas"));
         options.addOption(new Option("qq", "quorum-queue", false,"create quorum queue(s)"));
+        options.addOption(new Option("ew", "exit-when", true, "exit when queue(s) empty or consumer(s) idle for 1 second, valid values are empty or idle"));
         return options;
     }
 
@@ -867,4 +885,7 @@ public class PerfTest {
 
     private static final Function<String, String> ENVIRONMENT_VARIABLE_LOOKUP = name -> System.getenv(name);
 
+    enum EXIT_WHEN {
+        NEVER, EMPTY, IDLE
+    }
 }
