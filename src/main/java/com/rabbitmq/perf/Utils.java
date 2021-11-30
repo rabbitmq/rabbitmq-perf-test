@@ -16,6 +16,7 @@
 package com.rabbitmq.perf;
 
 import com.rabbitmq.client.Address;
+import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.RecoveryDelayHandler;
@@ -24,6 +25,7 @@ import com.rabbitmq.client.SocketConfigurators;
 import com.rabbitmq.client.SslEngineConfigurator;
 import com.rabbitmq.client.SslEngineConfigurators;
 import com.rabbitmq.client.impl.recovery.AutorecoveringConnection;
+import java.io.IOException;
 import java.net.URISyntaxException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
@@ -179,5 +181,12 @@ abstract class Utils {
 
   static String strArg(CommandLineProxy cmd, char opt, String def) {
       return cmd.getOptionValue(opt, def);
+  }
+
+  static void exchangeDeclare(Channel channel, String exchange, String type) throws IOException {
+    if ("".equals(exchange) || exchange.startsWith("amq.")) {
+      LOGGER.info("Skipping creation of exchange {}", exchange);
+    }
+    channel.exchangeDeclare(exchange, type);
   }
 }

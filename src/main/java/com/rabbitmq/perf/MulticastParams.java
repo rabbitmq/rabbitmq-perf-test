@@ -465,7 +465,7 @@ public class MulticastParams {
         if (confirm >= 0) channel.confirmSelect();
         TopologyRecording topologyRecording = new TopologyRecording(this.isPolling());
         if (!predeclared || !exchangeExists(connection, exchangeName)) {
-            channel.exchangeDeclare(exchangeName, exchangeType);
+            Utils.exchangeDeclare(channel, exchangeName, exchangeType);
             topologyRecording.recordExchange(exchangeName, exchangeType);
         }
         MessageBodySource messageBodySource;
@@ -586,8 +586,9 @@ public class MulticastParams {
     }
 
     private static boolean exchangeExists(Connection connection, final String exchangeName) throws IOException {
-        if ("".equals(exchangeName)) {
+        if ("".equals(exchangeName) || exchangeName.startsWith("amq.")) {
             // NB: default exchange always exists
+            // amq.* exchanges may not exist, but they cannot be created anyway
             return true;
         } else {
             return exists(connection, ch -> ch.exchangeDeclarePassive(exchangeName));
@@ -784,7 +785,7 @@ public class MulticastParams {
 
             State firstState = states.get(0);
             if (!params.predeclared || !exchangeExists(firstState.c, params.exchangeName)) {
-                firstState.ch.exchangeDeclare(params.exchangeName, params.exchangeType);
+                Utils.exchangeDeclare(firstState.ch, params.exchangeName, params.exchangeType);
                 firstState.topologyRecording.recordExchange(params.exchangeName, params.exchangeType);
             }
 

@@ -201,7 +201,7 @@ public class TopologyRecording {
             }
             for (RecordedExchange exchange : exchanges.values()) {
                 LOGGER.debug("Connection {}, recovering exchange {}", connection.getClientProvidedName(), exchange);
-                channel = reliableWrite(connection, channel, ch -> ch.exchangeDeclare(exchange.name, exchange.type));
+                channel = reliableWrite(connection, channel, ch -> Utils.exchangeDeclare(ch, exchange.name, exchange.type));
                 LOGGER.debug("Connection {}, recovered exchange {}", connection.getClientProvidedName(), exchange);
             }
             for (RecordedBinding binding : bindings) {
