@@ -15,25 +15,46 @@
 
 package com.rabbitmq.perf;
 
-import com.rabbitmq.client.*;
-import com.rabbitmq.client.impl.recovery.AutorecoveringConnection;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static com.rabbitmq.perf.Utils.isRecoverable;
+import static java.lang.Math.min;
+import static java.lang.String.format;
 
+import com.rabbitmq.client.AMQP;
+import com.rabbitmq.client.Address;
+import com.rabbitmq.client.AlreadyClosedException;
+import com.rabbitmq.client.Connection;
+import com.rabbitmq.client.ConnectionFactory;
+import com.rabbitmq.client.Recoverable;
+import com.rabbitmq.client.RecoveryListener;
+import com.rabbitmq.client.impl.recovery.AutorecoveringConnection;
+import com.rabbitmq.perf.PerfTest.EXIT_WHEN;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.IntStream;
-
-import static com.rabbitmq.perf.Utils.isRecoverable;
-import static java.lang.Math.min;
-import static java.lang.String.format;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class MulticastSet {
 
@@ -165,7 +186,7 @@ public class MulticastSet {
 
             this.params.resetTopologyHandler();
 
-            Runnable[] consumerRunnables = new Runnable[params.getConsumerThreadCount()];
+            Consumer[] consumerRunnables = new Consumer[params.getConsumerThreadCount()];
             Connection[] consumerConnections = new Connection[params.getConsumerCount()];
             Function<Integer, ExecutorService> consumersExecutorsFactory;
             consumersExecutorsFactory = createConsumersExecutorsFactory();
@@ -188,6 +209,24 @@ public class MulticastSet {
             startConsumers(consumerRunnables);
             startProducers(producerStates);
 
+            if (params.getExitWhen() == EXIT_WHEN.EMPTY || params.getExitWhen() == EXIT_WHEN.IDLE) {
+                ScheduledExecutorService scheduledExecutorService =
+                    this.threadingHandler.scheduledExecutorService(
+                        "perf-test-queue-empty-consumer-idle-scheduler", 1);
+                    scheduledExecutorService.scheduleAtFixedRate(
+                    () -> {
+                      for (Consumer consumer : consumerRunnables) {
+                        try {
+                            consumer.maybeStopIfNoActivityOrQueueEmpty();
+                        } catch (Exception e) {
+                            LOGGER.info("Error while checking exit-when for consumer {}: {}", consumer, e.getMessage());
+                        }
+                      }
+                    },
+                    2,
+                    1,
+                    TimeUnit.SECONDS);
+            }
 
             AutoCloseable shutdownSequence;
             int shutdownTimeout = this.params.getShutdownTimeout();
@@ -313,7 +352,7 @@ public class MulticastSet {
     private void createConsumers(boolean announceStartup,
                                  Runnable[] consumerRunnables,
                                  Connection[] consumerConnections,
-                                 Function<Integer, ExecutorService> consumersExecutorsFactory) throws URISyntaxException, NoSuchAlgorithmException, KeyManagementException, IOException, TimeoutException {
+                                 Function<Integer, ExecutorService> consumersExecutorsFactory) throws IOException, TimeoutException {
         for (int i = 0; i < consumerConnections.length; i++) {
             if (announceStartup) {
                 System.out.println("id: " + testID + ", starting consumer #" + i);
@@ -327,7 +366,8 @@ public class MulticastSet {
                 if (announceStartup) {
                     System.out.println("id: " + testID + ", starting consumer #" + i + ", channel #" + j);
                 }
-                consumerRunnables[(i * params.getConsumerChannelCount()) + j] = params.createConsumer(consumerConnection, stats, this.consumerLatencyIndicator, this.completionHandler, executorService);
+                Consumer consumer = params.createConsumer(consumerConnection, stats, this.consumerLatencyIndicator, this.completionHandler, executorService);
+                consumerRunnables[(i * params.getConsumerChannelCount()) + j] = consumer;
             }
         }
     }

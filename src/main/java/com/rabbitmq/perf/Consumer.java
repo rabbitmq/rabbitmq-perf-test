@@ -17,6 +17,10 @@ package com.rabbitmq.perf;
 
 import com.rabbitmq.client.AMQP.BasicProperties;
 import com.rabbitmq.client.*;
+import com.rabbitmq.client.AMQP.Queue.DeclareOk;
+import com.rabbitmq.perf.PerfTest.EXIT_WHEN;
+import java.time.Duration;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,6 +45,8 @@ public class Consumer extends AgentBase implements Runnable {
     private static final AckNackOperation NACK_OPERATION =
             (ch, envelope, multiple, requeue) -> ch.basicNack(envelope.getDeliveryTag(), multiple, requeue);
     static final String STOP_REASON_CONSUMER_REACHED_MESSAGE_LIMIT = "Consumer reached message limit";
+    static final String STOP_REASON_CONSUMER_IDLE = "Consumer is idle for more than 1 second";
+    static final String STOP_REASON_CONSUMER_QUEUE_EMPTY = "Consumer queue(s) empty";
 
     private volatile ConsumerImpl       q;
     private final Channel               channel;
@@ -76,6 +82,8 @@ public class Consumer extends AgentBase implements Runnable {
 
     private final Map<String, Object> consumerArguments;
 
+    private final EXIT_WHEN exitWhen;
+
     public Consumer(ConsumerParameters parameters) {
         this.channel           = parameters.getChannel();
         this.id                = parameters.getId();
@@ -91,6 +99,7 @@ public class Consumer extends AgentBase implements Runnable {
         this.polling           = parameters.isPolling();
         this.pollingInterval   = parameters.getPollingInterval();
         this.consumerArguments = parameters.getConsumerArguments();
+        this.exitWhen          = parameters.getExitWhen();
 
         this.queueNames.set(new ArrayList<>(parameters.getQueueNames()));
         this.initialQueueNames = new ArrayList<>(parameters.getQueueNames());
@@ -133,7 +142,7 @@ public class Consumer extends AgentBase implements Runnable {
         }
 
 
-        this.state = new ConsumerState(parameters.getRateLimit());
+        this.state = new ConsumerState(parameters.getRateLimit(), timestampProvider);
         this.recoveryProcess = parameters.getRecoveryProcess();
         this.recoveryProcess.init(this);
     }
@@ -232,9 +241,10 @@ public class Consumer extends AgentBase implements Runnable {
 
         void handleMessage(Envelope envelope, BasicProperties properties, byte[] body, Channel ch) throws IOException {
             int currentMessageCount = state.incrementMessageCount();
+            long nowTimestamp = timestampProvider.getCurrentTime();
+            state.setLastActivityTimestamp(nowTimestamp);
             if (msgLimit == 0 || currentMessageCount <= msgLimit) {
                 long messageTimestamp = timestampExtractor.apply(properties, body);
-                long nowTimestamp = timestampProvider.getCurrentTime();
                 long diff_time = timestampProvider.getDifference(nowTimestamp, messageTimestamp);
 
                 stats.handleRecv(id.equals(envelope.getRoutingKey()) ? diff_time : 0L);
@@ -339,6 +349,47 @@ public class Consumer extends AgentBase implements Runnable {
         }
     }
 
+    void maybeStopIfNoActivityOrQueueEmpty() {
+        LOGGER.debug("Checking consumer activity");
+        if (this.exitWhen == EXIT_WHEN.NEVER) {
+            return;
+        }
+        TimestampProvider tp = state.getTimestampProvider();
+        long lastActivityTimestamp = state.getLastActivityTimestamp();
+        if (lastActivityTimestamp == -1) {
+            // this avoids not terminating a consumer that never consumes
+            state.setLastActivityTimestamp(tp.getCurrentTime());
+            return;
+        }
+        Duration idleDuration = tp.difference(tp.getCurrentTime(), lastActivityTimestamp);
+        if (idleDuration.toMillis() > 1000) {
+            LOGGER.debug("Consumer idle for {}", idleDuration);
+            List<String> queues = queueNames.get();
+            if (this.exitWhen == EXIT_WHEN.IDLE) {
+                LOGGER.debug("Terminating consumer {} because of inactivity", this);
+                countDown(STOP_REASON_CONSUMER_IDLE);
+            } else if (this.exitWhen == EXIT_WHEN.EMPTY){
+                LOGGER.debug("Checking content of consumer queue(s)");
+                boolean empty = false;
+                for (String queue : queues) {
+                    try {
+                        DeclareOk declareOk = this.channel.queueDeclarePassive(queue);
+                        LOGGER.debug("Message count for queue {}: {}", queue, declareOk.getMessageCount());
+                        if (declareOk.getMessageCount() == 0) {
+                            empty = true;
+                        }
+                    } catch (IOException e) {
+                        LOGGER.info("Error when calling queue.declarePassive({}) in consumer {}", queue, this);
+                    }
+                }
+                if (empty) {
+                    LOGGER.debug("Terminating consumer {} because its queue(s) is (are) empty", this);
+                    countDown(STOP_REASON_CONSUMER_QUEUE_EMPTY);
+                }
+            }
+        }
+    }
+
     private static String queueName(TopologyRecording recording, String queue) {
         TopologyRecording.RecordedQueue queueRecord = recording.queue(queue);
         // The recording is missing when using pre-declared, so just using the initial name.
@@ -352,10 +403,14 @@ public class Consumer extends AgentBase implements Runnable {
 
         private final float rateLimit;
         private volatile long  lastStatsTime;
+        private volatile long lastActivityTimestamp = -1;
         private final AtomicInteger msgCount = new AtomicInteger(0);
+        private final TimestampProvider timestampProvider;
 
-        protected ConsumerState(float rateLimit) {
+        protected ConsumerState(float rateLimit,
+            TimestampProvider timestampProvider) {
             this.rateLimit = rateLimit;
+            this.timestampProvider = timestampProvider;
         }
 
         public float getRateLimit() {
@@ -370,8 +425,20 @@ public class Consumer extends AgentBase implements Runnable {
             this.lastStatsTime = lastStatsTime;
         }
 
+        public void setLastActivityTimestamp(long lastActivityTimestamp) {
+            this.lastActivityTimestamp = lastActivityTimestamp;
+        }
+
+        public long getLastActivityTimestamp() {
+            return lastActivityTimestamp;
+        }
+
         public int getMsgCount() {
             return msgCount.get();
+        }
+
+        public TimestampProvider getTimestampProvider() {
+            return timestampProvider;
         }
 
         protected void setMsgCount(int msgCount) {

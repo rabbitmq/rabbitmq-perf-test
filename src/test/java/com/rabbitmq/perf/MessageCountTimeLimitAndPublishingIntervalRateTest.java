@@ -15,8 +15,13 @@
 
 package com.rabbitmq.perf;
 
+import com.rabbitmq.client.AMQP.Queue.DeclareOk;
 import com.rabbitmq.client.Consumer;
 import com.rabbitmq.client.*;
+import com.rabbitmq.perf.PerfTest.EXIT_WHEN;
+import java.util.stream.Collectors;
+import org.assertj.core.api.Assertions;
+import org.assertj.core.api.Condition;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,7 +37,6 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -43,6 +47,7 @@ import static com.rabbitmq.perf.TestUtils.waitAtMost;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
+import static org.assertj.core.api.Assertions.anyOf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -76,6 +81,17 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
                 Arguments.of(1, 3),
                 Arguments.of(2, 3)
         );
+    }
+
+    static Arguments[] consumerActivityArguments() {
+        List<Arguments> consumerArguments = consumerCountArguments().collect(Collectors.toList());
+        List<Arguments> result = new ArrayList<>();
+        Stream.of("idle", "empty").forEach(exitWhen -> {
+            for (Arguments consumerArgument : consumerArguments) {
+                result.add(Arguments.arguments(exitWhen, consumerArgument.get()[0], consumerArgument.get()[1]));
+            }
+        });
+        return result.toArray(new Arguments[0]);
     }
 
     static Stream<Arguments> pollingWithBasicGetArguments() {
@@ -295,6 +311,64 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
                 .hasSize(1)
                 .containsKey(com.rabbitmq.perf.Consumer.STOP_REASON_CONSUMER_REACHED_MESSAGE_LIMIT)
                 .containsValue(consumersCount * channelsCount);
+    }
+
+    @ParameterizedTest
+    @MethodSource("consumerActivityArguments")
+    public void consumerActivity(String exitWhen, int consumersCount, int channelsCount) throws Exception {
+        int messagesCount = consumersCount * channelsCount;
+        params.setExitWhen(EXIT_WHEN.valueOf(exitWhen.toUpperCase(Locale.ENGLISH)));
+        params.setConsumerCount(consumersCount);
+        params.setConsumerChannelCount(channelsCount);
+        params.setQueueNames(asList("queue"));
+
+        CountDownLatch consumersLatch = new CountDownLatch(consumersCount * channelsCount);
+        AtomicInteger consumerTagCounter = new AtomicInteger(0);
+        List<Consumer> consumers = new CopyOnWriteArrayList<>();
+        Channel channel = proxy(Channel.class,
+            callback("basicConsume", (proxy, method, args) -> {
+                consumers.add((Consumer) args[3]);
+                consumersLatch.countDown();
+                return consumerTagCounter.getAndIncrement() + "";
+            }),
+            callback("queueDeclarePassive", (proxy, method, args) -> new DeclareOk.Builder().queue("test").messageCount(0).build())
+        );
+
+        Connection connection = proxy(Connection.class,
+            callback("createChannel", (proxy, method, args) -> channel)
+        );
+
+        MulticastSet multicastSet = getMulticastSet(connectionFactoryThatReturns(connection));
+        run(multicastSet);
+
+        waitForRunToStart();
+
+        assertThat(consumersLatch.await(5, TimeUnit.SECONDS))
+            .as(consumersCount * channelsCount + " consumer(s) should have been registered by now")
+            .isTrue();
+
+        waitAtMost(20, () -> consumers.size() == (consumersCount * channelsCount));
+
+        Collection<Future<?>> sendTasks = new ArrayList<>(consumers.size());
+        for (Consumer consumer : consumers) {
+            Collection<Future<?>> tasks = sendMessagesToConsumer(messagesCount, consumer);
+            sendTasks.addAll(tasks);
+        }
+
+        for (Future<?> latch : sendTasks) {
+            latch.get(10, TimeUnit.SECONDS);
+        }
+
+        waitAtMost(20, () -> testIsDone.get());
+        assertThat(shutdownReasons)
+            .hasSize(1)
+            .hasKeySatisfying(anyOf(isKey(com.rabbitmq.perf.Consumer.STOP_REASON_CONSUMER_IDLE), isKey(
+                com.rabbitmq.perf.Consumer.STOP_REASON_CONSUMER_QUEUE_EMPTY)))
+            .containsValue(consumersCount * channelsCount);
+    }
+
+    static Condition<String> isKey(String value) {
+        return new Condition<>(key -> key.equals(value), "'%s' is a key", value);
     }
 
     // --time 5 -x 1 --pmessages 10 -y 1 --cmessages 10

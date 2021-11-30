@@ -20,6 +20,7 @@ import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ShutdownSignalException;
 
+import com.rabbitmq.perf.PerfTest.EXIT_WHEN;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -119,6 +120,8 @@ public class MulticastParams {
     private int bodyCount = 100;
 
     private Map<String, Object> consumerArguments = null;
+
+    private EXIT_WHEN exitWhen = EXIT_WHEN.NEVER;
 
     // for random JSON body generation
     private AtomicReference<MessageBodySource> messageBodySourceReference = new AtomicReference<>();
@@ -285,6 +288,10 @@ public class MulticastParams {
         this.consumerArguments = consumerArguments;
     }
 
+    public void setExitWhen(EXIT_WHEN exitWhen) {
+        this.exitWhen = exitWhen;
+    }
+
     public int getConsumerCount() {
         return consumerCount;
     }
@@ -422,6 +429,10 @@ public class MulticastParams {
         return consumerLatencies;
     }
 
+    public EXIT_WHEN getExitWhen() {
+        return exitWhen;
+    }
+
     public void setPolling(boolean polling) {
         this.polling = polling;
     }
@@ -546,6 +557,7 @@ public class MulticastParams {
                 .setNack(this.nack)
                 .setRequeue(this.requeue)
                 .setConsumerArguments(this.consumerArguments)
+                .setExitWhen(this.exitWhen)
         );
         this.topologyHandler.next();
         return consumer;
@@ -600,7 +612,9 @@ public class MulticastParams {
     }
 
     public boolean hasLimit() {
-        return this.timeLimit > 0 || this.consumerMsgCount > 0 || this.producerMsgCount > 0;
+        return this.timeLimit > 0 || this.consumerMsgCount > 0 || this.producerMsgCount > 0
+            || this.exitWhen == EXIT_WHEN.EMPTY
+            || this.exitWhen == EXIT_WHEN.IDLE;
     }
 
     public void setExclusive(boolean exclusive) {
