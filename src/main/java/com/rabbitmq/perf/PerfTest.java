@@ -759,10 +759,14 @@ public class PerfTest {
         Map<String, Object> properties = new HashMap<>();
         for (String entry : arg.split(",")) {
             String [] keyValue = entry.split("=");
-            try {
-                properties.put(keyValue[0], Long.parseLong(keyValue[1]));
-            } catch(NumberFormatException e) {
-                properties.put(keyValue[0], keyValue[1]);
+            if (keyValue.length == 1) {
+                properties.put(keyValue[0], "");
+            } else {
+                try {
+                    properties.put(keyValue[0], Long.parseLong(keyValue[1]));
+                } catch(NumberFormatException e) {
+                    properties.put(keyValue[0], keyValue[1]);
+                }
             }
         }
         return properties;
