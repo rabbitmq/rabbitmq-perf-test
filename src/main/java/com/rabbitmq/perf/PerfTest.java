@@ -759,7 +759,9 @@ public class PerfTest {
         Map<String, Object> properties = new HashMap<>();
         for (String entry : arg.split(",")) {
             String [] keyValue = entry.split("=");
-            if (keyValue.length == 1) {
+            if (keyValue.length == 1 ||
+                    keyValue[0].equals("x-dead-letter-exchange") &&
+                    keyValue[1].equals("amq.default")) {
                 properties.put(keyValue[0], "");
             } else {
                 try {
