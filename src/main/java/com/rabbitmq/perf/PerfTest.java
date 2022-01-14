@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2020 VMware, Inc. or its affiliates.  All rights reserved.
+// Copyright (c) 2007-2022 VMware, Inc. or its affiliates.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 2.0 ("MPL"), the GNU General Public License version 2
@@ -23,6 +23,7 @@ import com.rabbitmq.client.impl.ClientVersion;
 import com.rabbitmq.client.impl.DefaultExceptionHandler;
 import com.rabbitmq.client.impl.nio.NioParams;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
+import java.util.stream.Collectors;
 import org.apache.commons.cli.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -756,16 +757,24 @@ public class PerfTest {
         if (arg == null || arg.trim().isEmpty()) {
             return null;
         }
-        Map<String, Object> properties = new HashMap<>();
-        for (String entry : arg.split(",")) {
+        return Arrays.stream(arg.split(",")).map(entry -> {
             String [] keyValue = entry.split("=");
-            try {
-                properties.put(keyValue[0], Long.parseLong(keyValue[1]));
-            } catch(NumberFormatException e) {
-                properties.put(keyValue[0], keyValue[1]);
+            if (keyValue.length == 1) {
+                return new Object[] {keyValue[0], ""};
+            } else {
+                try {
+                    return new Object[] {keyValue[0], Long.parseLong(keyValue[1])};
+                } catch(NumberFormatException e) {
+                    return new Object[] {keyValue[0], keyValue[1]};
+                }
             }
-        }
-        return properties;
+        }).map(keyValue -> {
+            if ("x-dead-letter-exchange".equals(keyValue[0]) && "amq.default".equals(keyValue[1])) {
+                return new String[] {"x-dead-letter-exchange", ""};
+            } else {
+                return keyValue;
+            }
+        }).collect(Collectors.toMap(keyEntry -> keyEntry[0].toString(), keyEntry -> keyEntry[1]));
     }
 
     private static String getExchangeName(CommandLineProxy cmd, String def) {
