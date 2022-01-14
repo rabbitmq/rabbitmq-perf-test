@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020 VMware, Inc. or its affiliates.  All rights reserved.
+// Copyright (c) 2018-2022 VMware, Inc. or its affiliates.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 2.0 ("MPL"), the GNU General Public License version 2
@@ -15,12 +15,12 @@
 
 package com.rabbitmq.perf;
 
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.Map;
 
+import static com.rabbitmq.perf.PerfTest.convertKeyValuePairs;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -96,5 +96,21 @@ public class PerfTestTest {
             result.put(reason[0], Integer.parseInt(reason[1]));
         }
         return result;
+    }
+
+    @Test
+    void convertPostProcessKeyValuePairs() {
+        assertThat(convertKeyValuePairs("x-queue-type=quorum,max-length-bytes=100000"))
+            .hasSize(2)
+            .containsEntry("x-queue-type", "quorum")
+            .containsEntry("max-length-bytes", 100000L);
+        assertThat(convertKeyValuePairs("x-dead-letter-exchange=,x-queue-type=quorum"))
+            .hasSize(2)
+            .containsEntry("x-dead-letter-exchange", "")
+            .containsEntry("x-queue-type", "quorum");
+        assertThat(convertKeyValuePairs("x-dead-letter-exchange=amq.default,x-queue-type=quorum"))
+            .hasSize(2)
+            .containsEntry("x-dead-letter-exchange", "")
+            .containsEntry("x-queue-type", "quorum");
     }
 }
