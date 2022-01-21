@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2020 VMware, Inc. or its affiliates.  All rights reserved.
+// Copyright (c) 2007-2022 VMware, Inc. or its affiliates.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 2.0 ("MPL"), the GNU General Public License version 2
@@ -22,6 +22,7 @@ import com.rabbitmq.client.ShutdownSignalException;
 
 import com.rabbitmq.perf.PerfTest.EXIT_WHEN;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -92,7 +93,7 @@ public class MulticastParams {
 
     private int routingKeyCacheSize = 0;
     private boolean exclusive = false;
-    private int publishingInterval = -1;
+    private Duration publishingInterval = null;
     private int producerRandomStartDelayInSeconds;
     private int producerSchedulerThreadCount = -1;
     private int consumersThreadPools = -1;
@@ -625,11 +626,11 @@ public class MulticastParams {
         return exclusive;
     }
 
-    public void setPublishingInterval(int publishingIntervalInSeconds) {
-        this.publishingInterval = publishingIntervalInSeconds;
+    public void setPublishingInterval(Duration publishingInterval) {
+        this.publishingInterval = publishingInterval;
     }
 
-    public int getPublishingInterval() {
+    public Duration getPublishingInterval() {
         return publishingInterval;
     }
 

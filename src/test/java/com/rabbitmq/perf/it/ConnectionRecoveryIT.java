@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020 VMware, Inc. or its affiliates.  All rights reserved.
+// Copyright (c) 2018-2022 VMware, Inc. or its affiliates.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 2.0 ("MPL"), the GNU General Public License version 2
@@ -24,6 +24,7 @@ import com.rabbitmq.perf.MulticastSet;
 import com.rabbitmq.perf.NamedThreadFactory;
 import com.rabbitmq.perf.Stats;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
+import java.time.Duration;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -225,7 +226,7 @@ public class ConnectionRecoveryIT {
         cf.setAutomaticRecoveryEnabled(false);
         configurer.accept(params);
         cfConfigurer.accept(cf);
-        params.setPublishingInterval(1);
+        params.setPublishingInterval(Duration.ofSeconds(1));
         int producerConsumerCount = params.getProducerCount();
 
         MulticastSet set = new MulticastSet(stats, cf, params, "", URIS, latchCompletionHandler(1, info));
@@ -255,7 +256,7 @@ public class ConnectionRecoveryIT {
     @MethodSource("configurationArguments")
     public void shouldRecoverWhenConnectionsAreKilledAndUsingPublishingInterval(Consumer<MulticastParams> configurer, Consumer<ConnectionFactory> cfConfigurer,
                                                                                 TestInfo info) throws Exception {
-        params.setPublishingInterval(1);
+        params.setPublishingInterval(Duration.ofSeconds(1));
         configurer.accept(params);
         cfConfigurer.accept(cf);
         int producerConsumerCount = params.getProducerCount();

@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020 VMware, Inc. or its affiliates.  All rights reserved.
+// Copyright (c) 2018-2022 VMware, Inc. or its affiliates.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 2.0 ("MPL"), the GNU General Public License version 2
@@ -19,6 +19,7 @@ import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.impl.AMQImpl;
+import java.time.Duration;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestInfo;
@@ -49,12 +50,17 @@ public class PublisherOnlyStopsCorrectlyTest {
     ExecutorService executorService;
 
     static Stream<Arguments> publisherOnlyStopsWhenBrokerCrashesArguments() {
-        return Stream.of(
-                // number of messages before throwing exception, configurator, assertion message
-                Arguments.of(10, (Consumer<MulticastParams>) (params) -> {
-                }, "Sender should have failed and program should stop"),
-                Arguments.of(2, (Consumer<MulticastParams>) (params) -> params.setPublishingInterval(1), "Sender should have failed and program should stop")
-        );
+    return Stream.of(
+        // number of messages before throwing exception, configurator, assertion message
+        Arguments.of(
+            10,
+            (Consumer<MulticastParams>) (params) -> {},
+            "Sender should have failed and program should stop"),
+        Arguments.of(
+            2,
+            (Consumer<MulticastParams>)
+                (params) -> params.setPublishingInterval(Duration.ofSeconds(1)),
+            "Sender should have failed and program should stop"));
     }
 
     @BeforeEach

@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2020 VMware, Inc. or its affiliates.  All rights reserved.
+// Copyright (c) 2007-2022 VMware, Inc. or its affiliates.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 2.0 ("MPL"), the GNU General Public License version 2
@@ -32,6 +32,7 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -61,14 +62,6 @@ public class MulticastSet {
     // from Java Client ConsumerWorkService
     public final static int DEFAULT_CONSUMER_WORK_SERVICE_THREAD_POOL_SIZE = Runtime.getRuntime().availableProcessors() * 2;
     private static final Logger LOGGER = LoggerFactory.getLogger(MulticastSet.class);
-    /**
-     * Why 50? This is arbitrary. The fastest rate is 1 message / second when
-     * using a publishing interval, so 1 thread should be able to keep up easily with
-     * up to 50 messages / seconds (ie. 50 producers). Then, a new thread is used
-     * every 50 producers. This is 20 threads for 1000 producers, which seems reasonable.
-     * There's a command line argument to override this anyway.
-     */
-    private static final int PUBLISHING_INTERVAL_NB_PRODUCERS_PER_THREAD = 50;
     private static final String PRODUCER_THREAD_PREFIX = "perf-test-producer-";
     static final String STOP_REASON_REACHED_TIME_LIMIT = "Reached time limit";
     private final Stats stats;
@@ -149,7 +142,28 @@ public class MulticastSet {
     protected static int nbThreadsForProducerScheduledExecutorService(MulticastParams params) {
         int producerExecutorServiceNbThreads = params.getProducerSchedulerThreadCount();
         if (producerExecutorServiceNbThreads <= 0) {
-            return params.getProducerThreadCount() / PUBLISHING_INTERVAL_NB_PRODUCERS_PER_THREAD + 1;
+            int producerThreadCount = params.getProducerThreadCount();
+            Duration publishingInterval = params.getPublishingInterval() == null ? Duration.ofSeconds(1)
+                : params.getPublishingInterval();
+            long publishingIntervalMs = publishingInterval.toMillis();
+
+            double publishingIntervalSeconds = (double) publishingIntervalMs / 1000d;
+            double rate = (double) producerThreadCount / publishingIntervalSeconds;
+            /**
+             * Why 100? This is arbitrary. We assume 1 thread is more than enough to handle
+             * the publishing of 100 messages in 1 second, the fastest rate
+             * being 10 messages / second when using --publishing-interval.
+             * Then, a new thread is used
+             * every for every 100 messages / second.
+             * This is 21 threads for 1000 producers publishing 1 message / second,
+             * which seems reasonable.
+             * There's a command line argument to override this anyway.
+             */
+            int threadCount = (int) (rate / 100d) + 1;
+            LOGGER.debug("Using {} thread(s) to schedule {} publisher(s) publishing every {} ms",
+                threadCount, producerThreadCount, publishingInterval.toMillis()
+            );
+            return threadCount;
         } else {
             return producerExecutorServiceNbThreads;
         }
@@ -406,9 +420,9 @@ public class MulticastSet {
 
     private void startProducers(AgentState[] producerStates) {
         this.messageSizeIndicator.start();
-        if (params.getPublishingInterval() > 0) {
+        if (params.getPublishingInterval() != null) {
             ScheduledExecutorService producersExecutorService = this.threadingHandler.scheduledExecutorService(
-                    PRODUCER_THREAD_PREFIX, nbThreadsForConsumer(params)
+                    PRODUCER_THREAD_PREFIX, nbThreadsForProducerScheduledExecutorService(params)
             );
             Supplier<Integer> startDelaySupplier;
             if (params.getProducerRandomStartDelayInSeconds() > 0) {
@@ -417,13 +431,13 @@ public class MulticastSet {
             } else {
                 startDelaySupplier = () -> 0;
             }
-            int publishingInterval = params.getPublishingInterval();
+            Duration publishingInterval = params.getPublishingInterval();
             for (int i = 0; i < producerStates.length; i++) {
                 AgentState producerState = producerStates[i];
                 int delay = startDelaySupplier.get();
                 producerState.task = producersExecutorService.scheduleAtFixedRate(
                         producerState.runnable.createRunnableForScheduling(),
-                        delay, publishingInterval, TimeUnit.SECONDS
+                        delay, publishingInterval.toMillis(), TimeUnit.MILLISECONDS
                 );
             }
         } else {

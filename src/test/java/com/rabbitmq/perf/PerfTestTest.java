@@ -19,9 +19,14 @@ import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.Map;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import static com.rabbitmq.perf.PerfTest.convertKeyValuePairs;
+import static com.rabbitmq.perf.PerfTest.parsePublishingInterval;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -112,5 +117,29 @@ public class PerfTestTest {
             .hasSize(2)
             .containsEntry("x-dead-letter-exchange", "")
             .containsEntry("x-queue-type", "quorum");
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "1,1000",
+        "0.1,100",
+        "0.5,500",
+        "0.55,550",
+        "2,2000",
+        "15,15000",
+    })
+    void parsePublishingIntervalOK(String input, long expectedMs) {
+        assertThat(parsePublishingInterval(input).toMillis()).isEqualTo(expectedMs);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "0.09",
+        "-1",
+        "0"
+    })
+    void parsePublishingIntervalKO(String input) {
+        assertThatThrownBy(() -> parsePublishingInterval(input))
+            .isInstanceOf(IllegalArgumentException.class);
     }
 }
