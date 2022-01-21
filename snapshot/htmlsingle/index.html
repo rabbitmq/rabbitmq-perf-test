@@ -1202,11 +1202,12 @@ set to 1 ms for 60 seconds then 1 second for 30 seconds:</p>
 <p>PertTest supports balancing the publishing and the consumption
 across a sequence of queues, e.g.:</p>
 </div>
-<div class="literalblock">
+<div class="listingblock">
+<div class="title">Using a sequence of queues</div>
 <div class="content">
-<pre>bin/runjava com.rabbitmq.perf.PerfTest --queue-pattern 'perf-test-%d' \
+<pre class="CodeRay highlight"><code data-lang="bash">bin/runjava com.rabbitmq.perf.PerfTest --queue-pattern 'perf-test-%d' \
   --queue-pattern-from 1 --queue-pattern-to 10 \
-  --producers 100 --consumers 100</pre>
+  --producers 100 --consumers 100</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -1254,11 +1255,12 @@ with the <a href="#working-with-many-queues">queue sequence</a> feature.</p>
 creates 500 queues (from <code>perf-test-1</code> to <code>perf-test-500</code>).
 Each queue will have 3 consumers and 1 producer sending messages to it:</p>
 </div>
-<div class="literalblock">
+<div class="listingblock">
+<div class="title">Creating a first set of 500 queues</div>
 <div class="content">
-<pre>bin/runjava com.rabbitmq.perf.PerfTest --queue-pattern 'perf-test-%d' \
+<pre class="CodeRay highlight"><code data-lang="bash">bin/runjava com.rabbitmq.perf.PerfTest --queue-pattern 'perf-test-%d' \
   --queue-pattern-from 1 --queue-pattern-to 500 \
-  --producers 500 --consumers 1500</pre>
+  --producers 500 --consumers 1500</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -1266,11 +1268,12 @@ Each queue will have 3 consumers and 1 producer sending messages to it:</p>
 that creates 500 queues (from <code>perf-test-501</code> to <code>perf-test-1000</code>).
 Each queue will have 3 consumers and 1 producer sending messages to it:</p>
 </div>
-<div class="literalblock">
+<div class="listingblock">
+<div class="title">Creating a second set of 500 queues</div>
 <div class="content">
-<pre>bin/runjava com.rabbitmq.perf.PerfTest --queue-pattern 'perf-test-%d' \
+<pre class="CodeRay highlight"><code data-lang="bash">bin/runjava com.rabbitmq.perf.PerfTest --queue-pattern 'perf-test-%d' \
  --queue-pattern-from 501 --queue-pattern-to 1000 \
- --producers 500 --consumers 1500</pre>
+ --producers 500 --consumers 1500</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -1283,11 +1286,12 @@ across 1000 queues.</p>
 exceptions. A first way to avoid this is to reduce the number of Java threads
 PerfTest uses with the <code>--heartbeat-sender-threads</code> option:</p>
 </div>
-<div class="literalblock">
+<div class="listingblock">
+<div class="title">Using <code>--heartbeat-sender-threads</code> to reduce the number of threads</div>
 <div class="content">
-<pre>bin/runjava com.rabbitmq.perf.PerfTest --queue-pattern 'perf-test-%d' \
+<pre class="CodeRay highlight"><code data-lang="bash">bin/runjava com.rabbitmq.perf.PerfTest --queue-pattern 'perf-test-%d' \
   --queue-pattern-from 1 --queue-pattern-to 1000 \
-  --producers 1000 --consumers 3000 --heartbeat-sender-threads 10</pre>
+  --producers 1000 --consumers 3000 --heartbeat-sender-threads 10</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -1317,16 +1321,18 @@ many producers and consumers (dozens or hundreds of thousands)
 that exchange messages at a low and mostly constant rate, usually a message every few seconds or minutes.
 Simulating such workloads requires a different set of settings compared to
 the workloads that have higher throughput and a small number of clients. With the appropriate set of flags,
-PerfTest can simulate IoT workloads without requiring too many resources, especially threads.</p>
+PerfTest can simulate IoT workloads without requiring too many resources, especially threads.
+Let&#8217;s explore these flags.</p>
 </div>
 <div class="paragraph">
 <p>With an IoT workload, publishers usually don&#8217;t publish many messages per second,
 but rather a message every fixed period of time. This can be achieved by using the <code>--publishing-interval</code>
 flag instead of the <code>--rate</code> one. For example:</p>
 </div>
-<div class="literalblock">
+<div class="listingblock">
+<div class="title">Using <code>--publishing-interval</code> for low-throughput workloads</div>
 <div class="content">
-<pre>bin/runjava com.rabbitmq.perf.PerfTest --publishing-interval 5</pre>
+<pre class="CodeRay highlight"><code data-lang="bash">bin/runjava com.rabbitmq.perf.PerfTest --publishing-interval 5</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -1334,28 +1340,30 @@ flag instead of the <code>--rate</code> one. For example:</p>
 To simulate a group of consumers, use the <code>--queue-pattern</code> flag to simulate many consumers across
 many queues:</p>
 </div>
-<div class="literalblock">
+<div class="listingblock">
+<div class="title">Simulating 2000 clients on 1000 queues</div>
 <div class="content">
-<pre>bin/runjava com.rabbitmq.perf.PerfTest --queue-pattern 'perf-test-%d' \
+<pre class="CodeRay highlight"><code data-lang="bash">bin/runjava com.rabbitmq.perf.PerfTest --queue-pattern 'perf-test-%d' \
   --queue-pattern-from 1 --queue-pattern-to 1000 \
   --producers 1000 --consumers 1000 \
   --heartbeat-sender-threads 10 \
-  --publishing-interval 5</pre>
+  --publishing-interval 5</code></pre>
 </div>
 </div>
 <div class="paragraph">
 <p>To prevent publishers from publishing at roughly the same time and
 distribute the rate more evenly, use
-the <code>--producer-random-start-delay</code> option to add an random
+the <code>--producer-random-start-delay</code> option to add a random
 delay before the first published message:</p>
 </div>
-<div class="literalblock">
+<div class="listingblock">
+<div class="title">Using <code>--producer-random-start-delay</code> to spread publishing in a random way</div>
 <div class="content">
-<pre>bin/runjava com.rabbitmq.perf.PerfTest --queue-pattern 'perf-test-%d' \
+<pre class="CodeRay highlight"><code data-lang="bash">bin/runjava com.rabbitmq.perf.PerfTest --queue-pattern 'perf-test-%d' \
   --queue-pattern-from 1 --queue-pattern-to 1000 \
   --producers 1000 --consumers 1000 \
   --heartbeat-sender-threads 10 \
-  --publishing-interval 5 --producer-random-start-delay 120</pre>
+  --publishing-interval 5 --producer-random-start-delay 120</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -1363,26 +1371,27 @@ delay before the first published message:</p>
 between 1 and 120 seconds.</p>
 </div>
 <div class="paragraph">
-<p>When using <code>--publishing-interval</code>, PerfTest will use one thread
-for scheduling publishing for all 50 producers. So 1000 producers should keep 20 threads busy for
-the publishing scheduling. This ratio can be decreased or increased with the
-<code>--producer-scheduler-threads</code> options depending on the load and the target environment.
-Very few threads can be used for very slow publishers:</p>
+<p>When using <code>--publishing-interval</code>, PerfTest will use one thread for 100 operations per second.
+So 1,000 producers publishing at 1 message / second should keep 10 threads busy for
+the publishing scheduling.
+It is possible to set the number of threads used with the <code>--producer-scheduler-threads</code> options.
+Set your own value if the default value is not appropriate for some reasons:</p>
 </div>
-<div class="literalblock">
+<div class="listingblock">
+<div class="title">Using <code>--producer-scheduler-threads</code> to set the number of publishing threads</div>
 <div class="content">
-<pre>bin/runjava com.rabbitmq.perf.PerfTest --queue-pattern 'perf-test-%d' \
+<pre class="CodeRay highlight"><code data-lang="bash">bin/runjava com.rabbitmq.perf.PerfTest --queue-pattern 'perf-test-%d' \
   --queue-pattern-from 1 --queue-pattern-to 1000 \
   --producers 1000 --consumers 1000 \
   --heartbeat-sender-threads 10 \
   --publishing-interval 60 --producer-random-start-delay 1800 \
-  --producer-scheduler-threads 10</pre>
+  --producer-scheduler-threads 5</code></pre>
 </div>
 </div>
 <div class="paragraph">
 <p>In the example above, 1000 publishers will publish every 60 seconds
 with a random start-up delay between 1 second and 30 minutes (1800 seconds). They
-will be scheduled by only 10 threads (instead of 20 by default). Such delay
+will be scheduled by only 5 threads. Such delay
 values are suitable for long running tests.</p>
 </div>
 <div class="paragraph">
@@ -1393,15 +1402,16 @@ would use a 1-thread thread pool, which is overkill considering consumers proces
 is fast and producers publish one message every second. We can set the number of thread pools
 to use with <code>--consumers-thread-pools</code> and they will be shared by the consumers:</p>
 </div>
-<div class="literalblock">
+<div class="listingblock">
+<div class="title">Using <code>--consumers-thread-pools</code> to reduce the number of consumer threads</div>
 <div class="content">
-<pre>bin/runjava com.rabbitmq.perf.PerfTest --queue-pattern 'perf-test-%d' \
+<pre class="CodeRay highlight"><code data-lang="bash">bin/runjava com.rabbitmq.perf.PerfTest --queue-pattern 'perf-test-%d' \
   --queue-pattern-from 1 --queue-pattern-to 1000 \
   --producers 1000 --consumers 1000 \
   --heartbeat-sender-threads 10 \
   --publishing-interval 60 --producer-random-start-delay 1800 \
   --producer-scheduler-threads 10 \
-  --consumers-thread-pools 10</pre>
+  --consumers-thread-pools 10</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -1419,15 +1429,16 @@ In the slow publisher example above, a handful of threads should be enough
 to handle the I/O. That&#8217;s what the
 <code>--nio-threads</code> flag is for:</p>
 </div>
-<div class="literalblock">
+<div class="listingblock">
+<div class="title">Reducing the number of IO threads by enabling the NIO mode with <code>--nio-threads</code></div>
 <div class="content">
-<pre>bin/runjava com.rabbitmq.perf.PerfTest --queue-pattern 'perf-test-%d' \
+<pre class="CodeRay highlight"><code data-lang="bash">bin/runjava com.rabbitmq.perf.PerfTest --queue-pattern 'perf-test-%d' \
   --queue-pattern-from 1 --queue-pattern-to 1000 \
   --producers 1000 --consumers 1000 \
   --heartbeat-sender-threads 10 \
   --publishing-interval 60 --producer-random-start-delay 1800 \
-  --producer-scheduler-threads 10
-  --nio-threads 10</pre>
+  --producer-scheduler-threads 10 \
+  --nio-threads 10</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -1827,7 +1838,7 @@ can be changed:</p>
 <div id="footer">
 <div id="footer-text">
 Version 2.17.0-SNAPSHOT<br>
-Last updated 2022-01-14 15:04:50 UTC
+Last updated 2022-01-21 15:46:28 UTC
 </div>
 </div>
 </body>
