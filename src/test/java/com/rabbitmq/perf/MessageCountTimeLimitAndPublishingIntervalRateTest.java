@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2O20 Pivotal Software, Inc.  All rights reserved.
+// Copyright (c) 2018-2O22 Pivotal Software, Inc.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 2.0 ("MPL"), the GNU General Public License version 2
@@ -19,6 +19,7 @@ import com.rabbitmq.client.AMQP.Queue.DeclareOk;
 import com.rabbitmq.client.Consumer;
 import com.rabbitmq.client.*;
 import com.rabbitmq.perf.PerfTest.EXIT_WHEN;
+import java.time.Duration;
 import java.util.stream.Collectors;
 import org.assertj.core.api.Assertions;
 import org.assertj.core.api.Condition;
@@ -574,7 +575,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
     @Test
     public void publishingInterval() throws InterruptedException {
         countsAndTimeLimit(0, 0, 6);
-        params.setPublishingInterval(1);
+        params.setPublishingInterval(Duration.ofSeconds(1));
         params.setProducerCount(3);
 
         AtomicInteger publishedMessageCount = new AtomicInteger();

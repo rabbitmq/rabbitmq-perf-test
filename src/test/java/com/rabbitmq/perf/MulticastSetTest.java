@@ -18,10 +18,13 @@ package com.rabbitmq.perf;
 import com.rabbitmq.client.Address;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
+import java.time.Duration;
 import org.apache.commons.lang3.time.StopWatch;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
@@ -105,16 +108,33 @@ public class MulticastSetTest {
     }
 
     @Test
-    public void nbThreadsForProducerScheduledExecutorServiceOneThreadEvery50Producers() {
-        params.setProducerCount(120);
+    public void nbThreadsForProducerScheduledExecutorServiceOneThreadEvery100Producers() {
+        params.setProducerCount(220);
         assertThat(nbThreadsForProducerScheduledExecutorService(params)).isEqualTo(3);
     }
 
     @Test
-    public void nbThreadsForProducerScheduledExecutorServiceOneThreadEvery50ProducersIncludeChannels() {
+    public void nbThreadsForProducerScheduledExecutorServiceOneThreadEvery100ProducersIncludeChannels() {
         params.setProducerCount(30);
-        params.setProducerChannelCount(4);
+        params.setProducerChannelCount(8);
         assertThat(nbThreadsForProducerScheduledExecutorService(params)).isEqualTo(3);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "1,1000,1",
+        "200,1000,3",
+        "299,1000,3",
+        "300,1000,4",
+        "200,100,21",
+        "2000,1000,21",
+    })
+    void nbThreadsForProducerScheduledExecutorServiceOK(int producerCount, int publishingIntervalMs,
+            int expectedThreadCount) {
+        params.setProducerCount(producerCount);
+        params.setPublishingInterval(Duration.ofMillis(publishingIntervalMs));
+        assertThat(nbThreadsForProducerScheduledExecutorService(params))
+            .isEqualTo(expectedThreadCount);
     }
 
     @Test

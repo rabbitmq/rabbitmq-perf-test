@@ -23,6 +23,8 @@ import com.rabbitmq.client.impl.ClientVersion;
 import com.rabbitmq.client.impl.DefaultExceptionHandler;
 import com.rabbitmq.client.impl.nio.NioParams;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
+import java.math.BigDecimal;
+import java.time.Duration;
 import java.util.stream.Collectors;
 import org.apache.commons.cli.*;
 import org.slf4j.Logger;
@@ -130,7 +132,16 @@ public class PerfTest {
             String messageProperties = strArg(cmd, "mp", null);
             int routingKeyCacheSize  = intArg(cmd, "rkcs", 0);
             boolean exclusive = hasOption(cmd, "E");
-            int publishingIntervalInSeconds = intArg(cmd, "P", -1);
+            Duration publishingInterval = null;
+            String publishingIntervalArg = strArg(cmd, "P", null);
+            if (publishingIntervalArg != null) {
+                try {
+                    publishingInterval = parsePublishingInterval(publishingIntervalArg);
+                } catch (IllegalArgumentException e) {
+                    System.out.println("Invalid value for --publishing-interval: " + e.getMessage());
+                    systemExiter.exit(1);
+                }
+            }
             int producerRandomStartDelayInSeconds = intArg(cmd, "prsd", -1);
             int producerSchedulingThreads = intArg(cmd, "pst", -1);
 
@@ -374,7 +385,7 @@ public class PerfTest {
             p.setMessageProperties(convertKeyValuePairs(messageProperties));
             p.setRoutingKeyCacheSize(routingKeyCacheSize);
             p.setExclusive(exclusive);
-            p.setPublishingInterval(publishingIntervalInSeconds);
+            p.setPublishingInterval(publishingInterval);
             p.setProducerRandomStartDelayInSeconds(producerRandomStartDelayInSeconds);
             p.setProducerSchedulerThreadCount(producerSchedulingThreads);
             p.setConsumersThreadPools(consumersThreadPools);
@@ -809,6 +820,23 @@ public class PerfTest {
         );
         System.out.println("\u001B[1m" + version);
         System.out.println("\u001B[0m" + info);
+    }
+
+    static Duration parsePublishingInterval(String input) {
+        BigDecimal decimalValue;
+        try {
+         decimalValue = new BigDecimal(input);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Must be a number");
+        }
+        if (decimalValue.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Must be positive");
+        }
+        Duration result = Duration.ofMillis(decimalValue.multiply(BigDecimal.valueOf(1000)).longValue());
+        if (result.toMillis() < 100) {
+            throw new IllegalArgumentException("Cannot be less than 0.1");
+        }
+        return result;
     }
 
     /**
