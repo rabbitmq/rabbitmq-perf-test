@@ -128,6 +128,7 @@ public class MulticastSetTest {
         "300,1000,4",
         "200,100,21",
         "2000,1000,21",
+        "1000,60000,1"
     })
     void nbThreadsForProducerScheduledExecutorServiceOK(int producerCount, int publishingIntervalMs,
             int expectedThreadCount) {

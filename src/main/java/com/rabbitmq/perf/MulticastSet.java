@@ -29,7 +29,6 @@ import com.rabbitmq.client.RecoveryListener;
 import com.rabbitmq.client.impl.recovery.AutorecoveringConnection;
 import com.rabbitmq.perf.PerfTest.EXIT_WHEN;
 import java.io.IOException;
-import java.math.BigDecimal;
 import java.net.URISyntaxException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
@@ -148,10 +147,8 @@ public class MulticastSet {
                 : params.getPublishingInterval();
             long publishingIntervalMs = publishingInterval.toMillis();
 
-            BigDecimal publishingIntervalSeconds = new BigDecimal(publishingIntervalMs)
-                .divide(new BigDecimal(1000));
-            BigDecimal rate = new BigDecimal(producerThreadCount)
-                .divide(publishingIntervalSeconds);
+            double publishingIntervalSeconds = (double) publishingIntervalMs / 1000d;
+            double rate = (double) producerThreadCount / publishingIntervalSeconds;
             /**
              * Why 100? This is arbitrary. We assume 1 thread is more than enough to handle
              * the publishing of 100 messages in 1 second, the fastest rate
@@ -162,10 +159,10 @@ public class MulticastSet {
              * which seems reasonable.
              * There's a command line argument to override this anyway.
              */
-            int threadCount = rate.intValue() / 100 + 1;
+            int threadCount = (int) (rate / 100d) + 1;
             LOGGER.debug("Using {} thread(s) to schedule {} publisher(s) publishing every {} ms",
                 threadCount, producerThreadCount, publishingInterval.toMillis()
-                );
+            );
             return threadCount;
         } else {
             return producerExecutorServiceNbThreads;
