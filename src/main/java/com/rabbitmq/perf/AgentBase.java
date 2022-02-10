@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2020 VMware, Inc. or its affiliates.  All rights reserved.
+// Copyright (c) 2007-2022 VMware, Inc. or its affiliates.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 2.0 ("MPL"), the GNU General Public License version 2
@@ -58,7 +58,7 @@ public abstract class AgentBase {
         if (LOGGER.isDebugEnabled()) {
             LOGGER.debug(
                 "Handling write error, recovery process enabled? {}, condition to trigger connection recovery? {}",
-                recoveryProcess.isEnabled(), isConnectionRecoveryTriggered(e)
+                recoveryProcess.isEnabled(), isConnectionRecoveryTriggered(e), e
             );
         }
         if (shouldStop(recoveryProcess, e)) {

@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2020 VMware, Inc. or its affiliates.  All rights reserved.
+// Copyright (c) 2007-2022 VMware, Inc. or its affiliates.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 2.0 ("MPL"), the GNU General Public License version 2
@@ -207,11 +207,21 @@ public class TopologyRecording {
             for (RecordedBinding binding : bindings) {
                 LOGGER.debug("Connection {}, recovering binding {}", connection.getClientProvidedName(), binding);
                 RecordedQueue queue = queues.get(binding.queue);
-                if (queue != null) { // can be null when using predeclared
-                    synchronized (queue) {
-                        channel = reliableWrite(connection, channel,
-                                ch -> ch.queueBind(queue.name, binding.exchange, binding.routingKeyIsQueue() ? queue.name : binding.routingKey));
-                    }
+                String queueName;
+                Object lock;
+                // we may have not recorded the queue because it's --predeclared
+                // we do our best to re-create the binding nevertheless, assuming the queue is still around
+                // otherwise we may end with publishers publishing to an exchange without bindings
+                if (queue == null) {
+                    queueName = binding.queue;
+                    lock = new Object();
+                } else {
+                    queueName = queue.name;
+                    lock = queue;
+                }
+                synchronized (lock) {
+                    channel = reliableWrite(connection, channel,
+                        ch -> ch.queueBind(queueName, binding.exchange, binding.routingKeyIsQueue() ? queueName : binding.routingKey));
                 }
                 LOGGER.debug("Connection {}, recovered binding {}", connection.getClientProvidedName(), binding);
             }

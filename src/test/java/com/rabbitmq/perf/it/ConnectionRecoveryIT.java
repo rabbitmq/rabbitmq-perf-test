@@ -24,11 +24,14 @@ import com.rabbitmq.perf.MulticastSet;
 import com.rabbitmq.perf.NamedThreadFactory;
 import com.rabbitmq.perf.Stats;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
+import java.lang.reflect.Method;
 import java.time.Duration;
+import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -390,6 +393,38 @@ public class ConnectionRecoveryIT {
         }
     }
 
+    @Test
+    void recreateBindingEvenOnPreDeclaredDurableQueue(TestInfo info) throws Exception {
+        String queue = queueName(info);
+        ConnectionFactory connectionFactory = new ConnectionFactory();
+        try (Connection c = connectionFactory.newConnection()) {
+            Channel ch = c.createChannel();
+            ch.queueDeclare(queue, true, false, false, null);
+            ch.exchangeDelete("direct");
+        }
+
+        params.setQueueNames(Collections.singletonList(queue));
+        params.setPredeclared(true);
+
+        int producerConsumerCount = params.getProducerCount();
+        try {
+            MulticastSet set = new MulticastSet(stats, cf, params, "", URIS, latchCompletionHandler(1, info));
+            run(set);
+            waitAtMost(10, () -> msgConsumed.get() >= 3 * producerConsumerCount * RATE);
+            int messageCountBeforeClosing = msgConsumed.get();
+            Host.stopBrokerApp();
+            Thread.sleep(2000);
+            Host.startBrokerApp();
+            waitAtMost(30, () -> msgConsumed.get() >= 2 * messageCountBeforeClosing);
+            assertThat(testIsDone.get()).isFalse();
+        } finally {
+            try (Connection c = connectionFactory.newConnection()) {
+                Channel ch = c.createChannel();
+                ch.queueDelete(queue);
+            }
+        }
+    }
+
     void closeAllConnections() throws IOException {
         List<Host.ConnectionInfo> connectionInfos = new ArrayList<>(Host.listConnections());
         Collections.shuffle(connectionInfos);
@@ -440,5 +475,20 @@ public class ConnectionRecoveryIT {
         public void countDown(String reason) {
             latch.countDown();
         }
+    }
+
+    static String queueName(TestInfo info) {
+        return queueName(info.getTestClass().get(), info.getTestMethod().get());
+    }
+
+    private static String queueName(ExtensionContext context) {
+        return queueName(context.getTestInstance().get().getClass(), context.getTestMethod().get());
+    }
+
+    private static String queueName(Class<?> testClass, Method testMethod) {
+        String uuid = UUID.randomUUID().toString();
+        return String.format(
+            "%s_%s%s",
+            testClass.getSimpleName(), testMethod.getName(), uuid.substring(uuid.length() / 2));
     }
 }
