@@ -387,28 +387,35 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
             } else {
                 reason = STOP_REASON_PRODUCER_MESSAGE_LIMIT;
                 LOGGER.debug("Producer reached message limit of {}", this.msgLimit);
-                if (confirmPool != null) {
-                    LOGGER.debug("Publish confirms enabled, making sure all messages have been confirmed");
-                    LOGGER.debug("Outstanding publish confirm(s): {}", this.unconfirmed.size());
-                    long timeout = this.confirmTimeout * 1000;
-                    long waited = 0;
-                    long waitTime = 100;
-                    while (waited <= timeout) {
-                        if (this.unconfirmed.isEmpty()) {
-                            LOGGER.debug("All messages have been confirmed, moving on...");
-                            waited = timeout;
-                        }
-                        try {
-                            Thread.sleep(waitTime);
-                        } catch (InterruptedException e) {
-                            Thread.currentThread().interrupt();
-                            waited = timeout;
-                        }
-                        waited += waitTime;
-                    }
-                }
+                maybeWaitForPublishConfirms();
             }
             countDown(reason);
+        }
+    }
+
+    private void maybeWaitForPublishConfirms() {
+        if (confirmPool != null) {
+            LOGGER.debug("Publish confirms enabled, making sure all messages have been confirmed");
+            LOGGER.debug("Outstanding publish confirm(s): {}", this.unconfirmed.size());
+            long timeout = this.confirmTimeout * 1000;
+            long waited = 0;
+            long waitTime = 100;
+            while (waited <= timeout) {
+                if (this.unconfirmed.isEmpty()) {
+                    LOGGER.debug("All messages have been confirmed, moving on...");
+                    waited = timeout;
+                }
+                try {
+                    Thread.sleep(waitTime);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    waited = timeout;
+                }
+                waited += waitTime;
+            }
+            if (waited > timeout) {
+                LOGGER.debug("Unconfirmed message(s): {}", this.unconfirmed.size());
+            }
         }
     }
 
@@ -470,6 +477,8 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
             String reason;
             if (messageLimitReached(state)) {
                 reason = STOP_REASON_PRODUCER_MESSAGE_LIMIT;
+                LOGGER.debug("Producer reached message limit of {}", this.msgLimit);
+                maybeWaitForPublishConfirms();
             } else {
                 reason = STOP_REASON_PRODUCER_THREAD_INTERRUPTED;
             }
