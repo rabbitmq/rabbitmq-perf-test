@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2020 VMware, Inc. or its affiliates.  All rights reserved.
+// Copyright (c) 2007-2022 VMware, Inc. or its affiliates.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 2.0 ("MPL"), the GNU General Public License version 2
@@ -386,8 +386,36 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
                 reason = STOP_REASON_PRODUCER_THREAD_INTERRUPTED;
             } else {
                 reason = STOP_REASON_PRODUCER_MESSAGE_LIMIT;
+                LOGGER.debug("Producer reached message limit of {}", this.msgLimit);
+                maybeWaitForPublishConfirms();
             }
             countDown(reason);
+        }
+    }
+
+    private void maybeWaitForPublishConfirms() {
+        if (confirmPool != null) {
+            LOGGER.debug("Publish confirms enabled, making sure all messages have been confirmed");
+            LOGGER.debug("Outstanding publish confirm(s): {}", this.unconfirmed.size());
+            long timeout = this.confirmTimeout * 1000;
+            long waited = 0;
+            long waitTime = 100;
+            while (waited <= timeout) {
+                if (this.unconfirmed.isEmpty()) {
+                    LOGGER.debug("All messages have been confirmed, moving on...");
+                    waited = timeout;
+                }
+                try {
+                    Thread.sleep(waitTime);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    waited = timeout;
+                }
+                waited += waitTime;
+            }
+            if (waited > timeout) {
+                LOGGER.debug("Unconfirmed message(s): {}", this.unconfirmed.size());
+            }
         }
     }
 
@@ -449,6 +477,8 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
             String reason;
             if (messageLimitReached(state)) {
                 reason = STOP_REASON_PRODUCER_MESSAGE_LIMIT;
+                LOGGER.debug("Producer reached message limit of {}", this.msgLimit);
+                maybeWaitForPublishConfirms();
             } else {
                 reason = STOP_REASON_PRODUCER_THREAD_INTERRUPTED;
             }
