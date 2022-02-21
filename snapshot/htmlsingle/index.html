@@ -562,7 +562,7 @@ table.CodeRay td.code{padding:0 0 0 .75em}
 <li><a href="#setting-and-varying-consumer-latency">Setting and varying consumer latency</a></li>
 <li><a href="#working-with-many-queues">Working With Many Queues</a></li>
 <li><a href="#simulating-high-loads">Simulating High Loads</a></li>
-<li><a href="#workloads-with-a-large-number-of-clients">Workloads With a Large Number of Clients</a></li>
+<li><a href="#workloads_with_a_large_number_of_clients">Workloads With a Large Number of Clients</a></li>
 <li><a href="#running-producers-and-consumers-on-different-machines">Running Producers and Consumers on Different Machines</a></li>
 <li><a href="#asynchronous-consumers-vs-synchronous-consumers">Asynchronous Consumers vs Synchronous Consumers</a></li>
 <li><a href="#tls-support">TLS Support</a></li>
@@ -676,7 +676,7 @@ following commands:</p>
 <div class="literalblock">
 <div class="content">
 <pre>docker network create perf-test
-docker run -it --rm --network perf-test --name rabbitmq -p 15672:15672 rabbitmq:3.8.2-management
+docker run -it --rm --network perf-test --name rabbitmq -p 15672:15672 rabbitmq:3.9-management
 docker run -it --rm --network perf-test pivotalrabbitmq/perf-test:latest --uri amqp://rabbitmq</pre>
 </div>
 </div>
@@ -825,6 +825,21 @@ important to monitor.</p>
 <p>Note that the consumer rate limit is applied per consumer, so in the
 configuration above the limit is actually 2 * 2000 = 4000
 deliveries/second.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>PerfTest automatically converts low publishing rates (between 1 and 10 messages / second) to <a href="#workloads_with_a_large_number_of_clients">publishing intervals</a>.
+This makes the simulation more accurate when simulating many slow publishers.</p>
+</div>
+</td>
+</tr>
+</table>
 </div>
 <div class="paragraph">
 <p>PerfTest can be configured to run for a limited amount of time in seconds with the
@@ -1313,7 +1328,7 @@ can refer to our <a href="https://www.rabbitmq.com/networking.html#os-tuning">ne
 </div>
 </div>
 <div class="sect1">
-<h2 id="workloads-with-a-large-number-of-clients"><a class="anchor" href="#workloads-with-a-large-number-of-clients"></a>Workloads With a Large Number of Clients</h2>
+<h2 id="workloads_with_a_large_number_of_clients"><a class="anchor" href="#workloads_with_a_large_number_of_clients"></a>Workloads With a Large Number of Clients</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>A typical connected device workload (a.k.a "IoT workload") involves
@@ -1838,7 +1853,7 @@ can be changed:</p>
 <div id="footer">
 <div id="footer-text">
 Version 2.17.0-SNAPSHOT<br>
-Last updated 2022-02-18 15:50:37 UTC
+Last updated 2022-02-21 11:47:33 UTC
 </div>
 </div>
 </body>
