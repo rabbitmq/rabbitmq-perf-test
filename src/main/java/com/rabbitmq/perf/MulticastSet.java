@@ -420,6 +420,13 @@ public class MulticastSet {
 
     private void startProducers(AgentState[] producerStates) {
         this.messageSizeIndicator.start();
+        Float rateIndication = this.rateIndicator.getValue();
+        if (!this.rateIndicator.isVariable() && rateIndication >= 1.0f && rateIndication <= 10.0f) {
+            Duration calculatedPublishingInterval = rateToPublishingInterval(rateIndication);
+            LOGGER.debug("Rate between 1 and 10 messages / second, "
+                + "falling back to scheduling with {} ms as publishing interval", calculatedPublishingInterval.toMillis());
+            params.setPublishingInterval(calculatedPublishingInterval);
+        }
         if (params.getPublishingInterval() != null) {
             ScheduledExecutorService producersExecutorService = this.threadingHandler.scheduledExecutorService(
                     PRODUCER_THREAD_PREFIX, nbThreadsForProducerScheduledExecutorService(params)
@@ -457,6 +464,10 @@ public class MulticastSet {
                 }
             }
         }
+    }
+
+    static Duration rateToPublishingInterval(double rate) {
+        return Duration.ofMillis((long) (1.0d / rate * 1000.0));
     }
 
     private void shutdown(List<Connection> configurationConnections, Connection[] consumerConnections, AgentState[] producerStates, Connection[] producerConnections) {

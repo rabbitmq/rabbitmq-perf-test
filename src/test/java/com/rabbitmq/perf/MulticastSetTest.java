@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020 VMware, Inc. or its affiliates.  All rights reserved.
+// Copyright (c) 2018-2022 VMware, Inc. or its affiliates.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 2.0 ("MPL"), the GNU General Public License version 2
@@ -25,6 +25,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
@@ -315,6 +316,23 @@ public class MulticastSetTest {
                     .hasFieldOrPropertyWithValue("port", 5672 + i);
         });
 
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "1,1000",
+        "2,500",
+        "3,333",
+        "4,250",
+        "5,200",
+        "6,166",
+        "7,142",
+        "8,125",
+        "9,111",
+        "10,100"
+    })
+    void rateToPublishingIntervalTest(double input, long expectedMs) {
+        assertThat(rateToPublishingInterval(input)).hasMillis(expectedMs);
     }
 
     @SuppressWarnings("unchecked")

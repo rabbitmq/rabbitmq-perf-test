@@ -606,6 +606,39 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
     }
 
     @Test
+    public void smallPublishingRateFallsBackToPublishingInterval() throws InterruptedException {
+        countsAndTimeLimit(0, 0, 6);
+        params.setProducerRateLimit(5);
+        params.setProducerCount(3);
+
+        AtomicInteger publishedMessageCount = new AtomicInteger();
+        Channel channel = proxy(Channel.class,
+            callback("basicPublish", (proxy, method, args) -> {
+                publishedMessageCount.incrementAndGet();
+                return null;
+            }),
+            callback("getNextPublishSeqNo", (proxy, method, args) -> 0L)
+        );
+
+        Connection connection = proxy(Connection.class,
+            callback("createChannel", (proxy, method, args) -> channel)
+        );
+
+        MulticastSet multicastSet = getMulticastSet(connectionFactoryThatReturns(connection));
+
+        run(multicastSet);
+
+        waitForRunToStart();
+
+        waitAtMost(10, () -> testIsDone.get());
+        assertThat(publishedMessageCount.get())
+            .isGreaterThanOrEqualTo(3 * 2 * 5)  // 3 publishers should publish at least a couple of times
+            .isLessThan(3 * 2 * 5 * 8); //  but they don't publish too much
+        assertThat(testDurationInMs).isGreaterThan(5000L);
+        assertThat(shutdownReasons).hasSize(1).containsKey(MulticastSet.STOP_REASON_REACHED_TIME_LIMIT);
+    }
+
+    @Test
     public void shutdownCalledIfShutdownTimeoutIsGreatherThanZero() throws Exception {
         countsAndTimeLimit(0, 0, 0);
 

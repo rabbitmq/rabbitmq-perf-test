@@ -86,6 +86,13 @@ Note that the consumer rate limit is applied per consumer, so in the
 configuration above the limit is actually 2 * 2000 = 4000
 deliveries/second.
 
+[NOTE]
+====
+PerfTest automatically converts low publishing rates (between 1 and 10 messages / second) to <<usage-advanced#workloads_with_a_large_number_of_clients,publishing intervals>>.
+This makes the simulation more accurate when simulating many slow publishers.
+====
+
+
 PerfTest can be configured to run for a limited amount of time in seconds with the
 `-z` option:
 

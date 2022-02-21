@@ -240,6 +240,7 @@ at the OS level, as some distributions use very low limits.
 Here the recommendations are the same as for the broker, so you
 can refer to our https://www.rabbitmq.com/networking.html#os-tuning[networking guide].
 
+[[workloads_with_a_large_number_of_clients]]
 == Workloads With a Large Number of Clients
 
 A typical connected device workload (a.k.a "IoT workload") involves

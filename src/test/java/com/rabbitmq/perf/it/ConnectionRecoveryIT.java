@@ -72,7 +72,7 @@ public class ConnectionRecoveryIT {
 
     static final List<String> URIS = Collections.singletonList(URI);
 
-    static final int RATE = 10;
+    static final int RATE = 11;
 
     MulticastParams params;
 
