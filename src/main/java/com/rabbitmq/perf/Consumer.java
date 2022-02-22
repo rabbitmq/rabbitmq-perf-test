@@ -20,7 +20,6 @@ import com.rabbitmq.client.*;
 import com.rabbitmq.client.AMQP.Queue.DeclareOk;
 import com.rabbitmq.perf.PerfTest.EXIT_WHEN;
 import java.time.Duration;
-import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -83,6 +82,8 @@ public class Consumer extends AgentBase implements Runnable {
     private final Map<String, Object> consumerArguments;
 
     private final EXIT_WHEN exitWhen;
+
+    private volatile long lastDeliveryTag, lastAckedDeliveryTag;
 
     public Consumer(ConsumerParameters parameters) {
         this.channel           = parameters.getChannel();
@@ -252,6 +253,7 @@ public class Consumer extends AgentBase implements Runnable {
                 if (consumerLatency.simulateLatency()) {
                     ackIfNecessary(envelope, currentMessageCount, ch);
                     commitTransactionIfNecessary(currentMessageCount, ch);
+                    lastDeliveryTag = envelope.getDeliveryTag();
 
                     long now = System.currentTimeMillis();
                     if (this.rateLimitation) {
@@ -275,19 +277,21 @@ public class Consumer extends AgentBase implements Runnable {
         }
 
         private void ackIfNecessary(Envelope envelope, int currentMessageCount, final Channel ch) throws IOException {
-            if (!autoAck) {
+            if (ackEnabled()) {
                 dealWithWriteOperation(() -> {
                     if (multiAckEvery == 0) {
                         ackNackOperation.apply(ch, envelope, false, requeue);
+                        lastAckedDeliveryTag = envelope.getDeliveryTag();
                     } else if (currentMessageCount % multiAckEvery == 0) {
                         ackNackOperation.apply(ch, envelope, true, requeue);
+                        lastAckedDeliveryTag = envelope.getDeliveryTag();
                     }
                 }, recoveryProcess);
             }
         }
 
         private void commitTransactionIfNecessary(int currentMessageCount, final Channel ch) throws IOException {
-            if (txSize != 0 && currentMessageCount % txSize == 0) {
+            if (transactionEnabled() && currentMessageCount % txSize == 0) {
                 dealWithWriteOperation(() -> ch.txCommit(), recoveryProcess);
             }
         }
@@ -315,6 +319,14 @@ public class Consumer extends AgentBase implements Runnable {
                 System.out.printf("Could not find queue for consumer tag: %s", consumerTag);
             }
         }
+    }
+
+    private boolean ackEnabled() {
+        return !autoAck;
+    }
+
+    private boolean transactionEnabled() {
+        return txSize != 0;
     }
 
     private void countDown(String reason) {
@@ -366,6 +378,7 @@ public class Consumer extends AgentBase implements Runnable {
             LOGGER.debug("Consumer idle for {}", idleDuration);
             List<String> queues = queueNames.get();
             if (this.exitWhen == EXIT_WHEN.IDLE) {
+                maybeAckCommitBeforeExit();
                 LOGGER.debug("Terminating consumer {} because of inactivity", this);
                 countDown(STOP_REASON_CONSUMER_IDLE);
             } else if (this.exitWhen == EXIT_WHEN.EMPTY){
@@ -383,9 +396,26 @@ public class Consumer extends AgentBase implements Runnable {
                     }
                 }
                 if (empty) {
+                    maybeAckCommitBeforeExit();
                     LOGGER.debug("Terminating consumer {} because its queue(s) is (are) empty", this);
                     countDown(STOP_REASON_CONSUMER_QUEUE_EMPTY);
                 }
+            }
+        }
+    }
+
+    private void maybeAckCommitBeforeExit() {
+        if (ackEnabled() && lastAckedDeliveryTag < lastDeliveryTag) {
+            LOGGER.debug("Acking/committing before exit");
+            try {
+                dealWithWriteOperation(() -> {
+                    this.channel.basicAck(lastDeliveryTag, true);
+                    if (transactionEnabled()) {
+                        this.channel.txCommit();
+                    }
+                }, recoveryProcess);
+            } catch (IOException e) {
+                LOGGER.warn("Error while acking/committing on exit: {}", e.getMessage());
             }
         }
     }

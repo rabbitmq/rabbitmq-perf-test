@@ -20,8 +20,8 @@ import com.rabbitmq.client.Consumer;
 import com.rabbitmq.client.*;
 import com.rabbitmq.perf.PerfTest.EXIT_WHEN;
 import java.time.Duration;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
-import org.assertj.core.api.Assertions;
 import org.assertj.core.api.Condition;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -48,6 +48,7 @@ import static com.rabbitmq.perf.TestUtils.waitAtMost;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.anyOf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -143,7 +144,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         if (runnables.size() > 0) {
             LOGGER.warn("Some tasks are still waiting execution: {}", runnables);
         }
-        boolean allTerminated = executorService.awaitTermination(5, TimeUnit.SECONDS);
+        boolean allTerminated = executorService.awaitTermination(5, SECONDS);
         if (!allTerminated) {
             LOGGER.warn("All tasks couldn't finish in time");
         }
@@ -180,7 +181,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         waitForRunToStart();
 
         assertTrue(
-                publishedLatch.await(10, TimeUnit.SECONDS),
+                publishedLatch.await(10, SECONDS),
                 () -> format("Only %d / %d messages have been published", publishedLatch.getCount(), nbMessages)
         );
 
@@ -250,7 +251,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         waitForRunToStart();
 
         assertTrue(
-                publishedLatch.await(60, TimeUnit.SECONDS),
+                publishedLatch.await(60, SECONDS),
                 () -> format("Only %d / %d messages have been published", publishedLatch.getCount(), messagesTotal)
         );
         waitAtMost(20, () -> testIsDone.get());
@@ -291,7 +292,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         waitForRunToStart();
 
-        assertThat(consumersLatch.await(5, TimeUnit.SECONDS))
+        assertThat(consumersLatch.await(5, SECONDS))
                 .as(consumersCount * channelsCount + " consumer(s) should have been registered by now")
                 .isTrue();
 
@@ -304,7 +305,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         }
 
         for (Future<?> latch : sendTasks) {
-            latch.get(10, TimeUnit.SECONDS);
+            latch.get(10, SECONDS);
         }
 
         waitAtMost(20, () -> testIsDone.get());
@@ -344,7 +345,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         waitForRunToStart();
 
-        assertThat(consumersLatch.await(5, TimeUnit.SECONDS))
+        assertThat(consumersLatch.await(5, SECONDS))
             .as(consumersCount * channelsCount + " consumer(s) should have been registered by now")
             .isTrue();
 
@@ -357,7 +358,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         }
 
         for (Future<?> latch : sendTasks) {
-            latch.get(10, TimeUnit.SECONDS);
+            latch.get(10, SECONDS);
         }
 
         waitAtMost(20, () -> testIsDone.get());
@@ -370,6 +371,57 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
     static Condition<String> isKey(String value) {
         return new Condition<>(key -> key.equals(value), "'%s' is a key", value);
+    }
+
+    @Test
+    void shouldAckOneLastTimeWhenQueueIsEmpty() throws Exception {
+        int messagesCount = 15;
+        params.setExitWhen(EXIT_WHEN.EMPTY);
+        params.setQueueNames(asList("queue"));
+        params.setMultiAckEvery(10);
+
+        CountDownLatch consumersLatch = new CountDownLatch(1);
+        AtomicInteger consumerTagCounter = new AtomicInteger(0);
+        AtomicReference<Consumer> consumer = new AtomicReference<>();
+        AtomicInteger ackCount = new AtomicInteger();
+        Channel channel = proxy(Channel.class,
+            callback("basicConsume", (proxy, method, args) -> {
+                consumer.set((Consumer) args[3]);
+                consumersLatch.countDown();
+                return consumerTagCounter.getAndIncrement() + "";
+            }),
+            callback("queueDeclarePassive", (proxy, method, args) -> new DeclareOk.Builder().queue("test").messageCount(0).build()),
+            callback("basicAck", (proxy, method, args) -> {
+                ackCount.incrementAndGet();
+                return null;
+            })
+        );
+
+        Connection connection = proxy(Connection.class,
+            callback("createChannel", (proxy, method, args) -> channel)
+        );
+
+        MulticastSet multicastSet = getMulticastSet(connectionFactoryThatReturns(connection));
+        run(multicastSet);
+
+        waitForRunToStart();
+
+        assertThat(consumersLatch.await(5, SECONDS))
+            .as("consumer should have been registered by now")
+            .isTrue();
+
+        waitAtMost(20, () -> consumer.get() != null);
+
+        sendMessagesToConsumerSync(messagesCount, consumer.get()).get(10, SECONDS);
+
+        waitAtMost(20, () -> testIsDone.get());
+        assertThat(shutdownReasons)
+            .hasSize(1)
+            .hasKeySatisfying(anyOf(isKey(com.rabbitmq.perf.Consumer.STOP_REASON_CONSUMER_IDLE), isKey(
+                com.rabbitmq.perf.Consumer.STOP_REASON_CONSUMER_QUEUE_EMPTY)))
+            .containsValue(1);
+
+        assertThat(ackCount).hasValue(1 + 1);
     }
 
     // --time 5 -x 1 --pmessages 10 -y 1 --cmessages 10
@@ -409,13 +461,13 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         waitForRunToStart();
 
-        assertThat(consumersLatch.await(10, TimeUnit.SECONDS))
+        assertThat(consumersLatch.await(10, SECONDS))
                 .as("1 consumer should have been registered by now").isTrue();
         assertThat(consumer.get()).isNotNull();
         sendMessagesToConsumer(nbMessages / 2, consumer.get());
 
         assertTrue(
-                publishedLatch.await(10, TimeUnit.SECONDS),
+                publishedLatch.await(10, SECONDS),
                 () -> format("Only %d / %d messages have been published", publishedLatch.getCount(), nbMessages)
         );
 
@@ -459,7 +511,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         waitForRunToStart();
 
-        assertThat(consumersLatch.await(20, TimeUnit.SECONDS))
+        assertThat(consumersLatch.await(20, SECONDS))
                 .as("1 consumer should have been registered by now").isTrue();
         assertThat(consumers).hasSize(1);
 
@@ -503,7 +555,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         waitForRunToStart();
 
         assertTrue(
-                publishedLatch.await(20, TimeUnit.SECONDS),
+                publishedLatch.await(20, SECONDS),
                 () -> format("Only %d / %d messages have been published", publishedLatch.getCount(), nbMessages)
         );
         assertThat(testIsDone.get()).isFalse();
@@ -859,7 +911,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         waitForRunToStart();
 
-        assertThat(consumersLatch.await(5, TimeUnit.SECONDS))
+        assertThat(consumersLatch.await(5, SECONDS))
                 .as("consumer should have been registered by now").isTrue();
 
         waitAtMost(20, () -> consumers.size() == 1);
@@ -871,7 +923,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         }
 
         for (Future<?> latch : sendTasks) {
-            latch.get(10, TimeUnit.SECONDS);
+            latch.get(10, SECONDS);
         }
 
         waitAtMost(20, () -> testIsDone.get());
@@ -891,12 +943,13 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
     private Collection<Future<?>> sendMessagesToConsumer(int messagesCount, Consumer consumer) {
         final Collection<Future<?>> tasks = new ArrayList<>(messagesCount);
+        AtomicLong deliveryTag = new AtomicLong(0);
         IntStream.range(0, messagesCount).forEach(i -> {
             Future<?> task = executorService.submit(() -> {
                 try {
                     consumer.handleDelivery(
                             "",
-                            new Envelope(1, false, "", ""),
+                            new Envelope(deliveryTag.incrementAndGet(), false, "", ""),
                             null,
                             new byte[20]
                     );
@@ -907,6 +960,23 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
             tasks.add(task);
         });
         return tasks;
+    }
+
+    private Future<?> sendMessagesToConsumerSync(int messagesCount, Consumer consumer) {
+        AtomicLong deliveryTag = new AtomicLong(0);
+        return executorService.submit(() -> {
+                IntStream.range(0, messagesCount).forEach(i -> {
+                try {
+                    consumer.handleDelivery(
+                        "",
+                        new Envelope(deliveryTag.incrementAndGet(), false, "", ""),
+                        null,
+                        new byte[20]
+                    );
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }});
+        });
     }
 
     private void countsAndTimeLimit(int pmc, int cmc, int time) {
@@ -920,7 +990,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
     }
 
     void waitForRunToStart() throws InterruptedException {
-        assertTrue(runStartedLatch.await(20, TimeUnit.SECONDS), "Run should have started by now");
+        assertTrue(runStartedLatch.await(20, SECONDS), "Run should have started by now");
     }
 
     private MulticastSet getMulticastSet(ConnectionFactory connectionFactory, MulticastSet.CompletionHandler completionHandler) {
