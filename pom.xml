@@ -97,7 +97,7 @@
     <jruby.version>9.3.3.0</jruby.version>
     <!-- For GraalVM native image -->
     <maven-jar-plugin.version>3.2.0</maven-jar-plugin.version>
-    <slf4j.version>1.7.30</slf4j.version>
+    <slf4j.version>1.7.36</slf4j.version>
     <graal-sdk.version>21.3.0</graal-sdk.version>
     <build-helper-maven-plugin.version>3.3.0</build-helper-maven-plugin.version>
   </properties>
