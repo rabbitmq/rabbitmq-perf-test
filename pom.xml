@@ -93,7 +93,7 @@
     <finalName>rabbitmq-${project.build.finalName}</finalName>
 
     <asciidoctor.maven.plugin.version>2.2.2</asciidoctor.maven.plugin.version>
-    <asciidoctorj.version>2.5.2</asciidoctorj.version>
+    <asciidoctorj.version>2.5.3</asciidoctorj.version>
     <jruby.version>9.3.3.0</jruby.version>
     <!-- For GraalVM native image -->
     <maven-jar-plugin.version>3.2.2</maven-jar-plugin.version>
