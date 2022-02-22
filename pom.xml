@@ -94,7 +94,7 @@
 
     <asciidoctor.maven.plugin.version>2.2.1</asciidoctor.maven.plugin.version>
     <asciidoctorj.version>2.5.2</asciidoctorj.version>
-    <jruby.version>9.3.1.0</jruby.version>
+    <jruby.version>9.3.3.0</jruby.version>
     <!-- For GraalVM native image -->
     <maven-jar-plugin.version>3.2.0</maven-jar-plugin.version>
     <slf4j.version>1.7.30</slf4j.version>
