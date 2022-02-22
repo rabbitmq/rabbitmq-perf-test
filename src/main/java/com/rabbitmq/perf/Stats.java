@@ -36,6 +36,7 @@ public abstract class Stats {
     protected final long startTime;
     private final Consumer<Long> updateLatency;
     private final Consumer<Long> updateConfirmLatency;
+    // instant rates
     private final DoubleAccumulator published, returned, confirmed, nacked, consumed;
     protected long lastStatsTime;
     protected int sendCountInterval;
@@ -113,6 +114,12 @@ public abstract class Stats {
         cumulativeLatencyInterval = 0L;
         latency = new MetricRegistry().histogram("latency");
         confirmLatency = new MetricRegistry().histogram("confirm-latency");
+
+        published.accumulate(0);
+        returned.accumulate(0);
+        confirmed.accumulate(0);
+        nacked.accumulate(0);
+        consumed.accumulate(0);
     }
 
     private void report() {
