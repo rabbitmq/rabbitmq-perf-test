@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2020 VMware, Inc. or its affiliates.  All rights reserved.
+// Copyright (c) 2007-2022 VMware, Inc. or its affiliates.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 2.0 ("MPL"), the GNU General Public License version 2
@@ -22,8 +22,6 @@ import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 
 import java.time.Duration;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.DoubleAccumulator;
 import java.util.function.Consumer;
@@ -34,10 +32,16 @@ public abstract class Stats {
     protected final long interval;
 
     protected final long startTime;
-    private final Consumer<Long> updateLatency;
-    private final Consumer<Long> updateConfirmLatency;
+
+    // Micrometer's metrics
     // instant rates
     private final DoubleAccumulator published, returned, confirmed, nacked, consumed;
+    // latency update functions
+    private final Consumer<Long> updateLatency;
+    private final Consumer<Long> updateConfirmLatency;
+    // end of Micrometer's metrics
+    private int lastPublishedCount, lastReturnedCount, lastConfirmedCount, lastNackedCount, lastConsumedCount;
+
     protected long lastStatsTime;
     protected int sendCountInterval;
     protected int returnCountInterval;
@@ -102,6 +106,8 @@ public abstract class Stats {
     private void reset(long t) {
         lastStatsTime = t;
 
+        resetLastCounts();
+
         sendCountInterval = 0;
         returnCountInterval = 0;
         confirmCountInterval = 0;
@@ -114,18 +120,11 @@ public abstract class Stats {
         cumulativeLatencyInterval = 0L;
         latency = new MetricRegistry().histogram("latency");
         confirmLatency = new MetricRegistry().histogram("confirm-latency");
-
-        published.accumulate(0);
-        returned.accumulate(0);
-        confirmed.accumulate(0);
-        nacked.accumulate(0);
-        consumed.accumulate(0);
     }
 
     private void report() {
         long now = System.currentTimeMillis();
         elapsedInterval = now - lastStatsTime;
-
         if (elapsedInterval >= interval) {
             elapsedTotal += elapsedInterval;
             report(now);
@@ -195,4 +194,38 @@ public abstract class Stats {
     protected void received(double rate) {
         this.consumed.accumulate(rate);
     }
+
+    synchronized void maybeResetGauges() {
+       if (noActivity()) {
+           long now = System.currentTimeMillis();
+           elapsedInterval = now - lastStatsTime;
+
+           if (elapsedInterval >= 2 * interval) {
+               published.accumulate(0);
+               returned.accumulate(0);
+               confirmed.accumulate(0);
+               nacked.accumulate(0);
+               consumed.accumulate(0);
+           }
+       } else {
+            resetLastCounts();
+       }
+    }
+
+    private boolean noActivity() {
+        return lastPublishedCount == sendCountInterval &&
+            lastReturnedCount == recvCountInterval &&
+            lastConfirmedCount == confirmCountInterval &&
+            lastNackedCount == nackCountInterval &&
+            lastConsumedCount == recvCountInterval;
+    }
+
+    private void resetLastCounts() {
+        lastPublishedCount = sendCountInterval;
+        lastReturnedCount = recvCountInterval;
+        lastConfirmedCount = confirmCountInterval;
+        lastNackedCount = nackCountInterval;
+        lastConsumedCount = recvCountInterval;
+    }
+
 }
