@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020 VMware, Inc. or its affiliates.  All rights reserved.
+// Copyright (c) 2018-2022 VMware, Inc. or its affiliates.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 2.0 ("MPL"), the GNU General Public License version 2
@@ -107,6 +107,8 @@ public class TopologyTest {
         when(c.createChannel()).thenReturn(ch);
 
         params = new MulticastParams();
+
+        when(stats.interval()).thenReturn(-1L);
     }
 
     @AfterEach

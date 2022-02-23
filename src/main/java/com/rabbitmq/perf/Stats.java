@@ -228,4 +228,7 @@ public abstract class Stats {
         lastConsumedCount = recvCountInterval;
     }
 
+    long interval() {
+        return this.interval;
+    }
 }

@@ -130,14 +130,16 @@ public class MulticastSet {
         }
 
         this.connectionCreator = new ConnectionCreator(this.factory, this.uris);
-        this.threadingHandler.scheduledExecutorService("perf-test-stats-activity-check-", 1)
-            .scheduleAtFixedRate(() -> {
-                try {
-                    stats.maybeResetGauges();
-                } catch (Exception e) {
-                    LOGGER.warn("Error while checking stats activity: {}", e.getMessage());
-                }
-            }, stats.interval * 2, stats.interval, TimeUnit.MILLISECONDS);
+        if (stats.interval() > 0) {
+            this.threadingHandler.scheduledExecutorService("perf-test-stats-activity-check-", 1)
+                .scheduleAtFixedRate(() -> {
+                    try {
+                        stats.maybeResetGauges();
+                    } catch (Exception e) {
+                        LOGGER.warn("Error while checking stats activity: {}", e.getMessage());
+                    }
+                }, stats.interval() * 2, stats.interval(), TimeUnit.MILLISECONDS);
+        }
     }
 
     protected static int nbThreadsForConsumer(MulticastParams params) {
