@@ -31,34 +31,97 @@ public class StatsTest {
   private static final long INTERVAL = 10;
   private final AtomicInteger reportCount = new AtomicInteger();
 
+  private static void startTask(Runnable task) {
+    new Thread(task).start();
+  }
+
   @BeforeEach
   void init() {
     reportCount.set(0);
   }
 
   @Test
-  void maybeResetGauges() throws Exception {
+  void gaugesAreResetIfThereIsNoActivity() throws Exception {
     MeterRegistry registry = new SimpleMeterRegistry();
     Stats stats = new SimpleStats(INTERVAL, true, registry, "");
     Gauge published = registry.get("published").gauge();
+    Gauge consumed = registry.get("consumed").gauge();
     assertThat(published.value()).isZero();
     AtomicBoolean keepSending = new AtomicBoolean(true);
-    new Thread(
-            () -> {
-              while (keepSending.get()) {
-                stats.handleSend();
-              }
-            })
-        .start();
-    waitAtMost(10, () -> reportCount.get() > 1);
-    assertThat(published.value()).isPositive();
-    keepSending.set(false);
+    AtomicBoolean keepConsuming = new AtomicBoolean(true);
+    try {
+      startTask(
+          () -> {
+            while (keepSending.get()) {
+              stats.handleSend();
+            }
+          });
+      startTask(
+          () -> {
+            while (keepConsuming.get()) {
+              stats.handleRecv(1);
+            }
+          });
+      waitAtMost(10, () -> reportCount.get() > 1);
+      assertThat(published.value()).isPositive();
+      assertThat(consumed.value()).isPositive();
+      keepSending.set(false);
+      keepConsuming.set(false);
 
-    Thread.sleep(4 * INTERVAL);
-    // we simulate a service polling 2 times
-    stats.maybeResetGauges();
-    stats.maybeResetGauges();
+      Thread.sleep(4 * INTERVAL);
+      // we simulate a service polling 2 times
+      stats.maybeResetGauges();
+      Thread.sleep(INTERVAL);
+      stats.maybeResetGauges();
+      assertThat(published.value()).isZero();
+      assertThat(consumed.value()).isZero();
+    } finally {
+      keepSending.set(false);
+      keepConsuming.set(false);
+    }
+  }
+
+  @Test
+  void gaugesAreResetAutomaticallyIfActivityOnOneOfThem() throws Exception {
+    MeterRegistry registry = new SimpleMeterRegistry();
+    Stats stats = new SimpleStats(INTERVAL, true, registry, "");
+    Gauge published = registry.get("published").gauge();
+    Gauge consumed = registry.get("consumed").gauge();
     assertThat(published.value()).isZero();
+    AtomicBoolean keepSending = new AtomicBoolean(true);
+    AtomicBoolean keepConsuming = new AtomicBoolean(true);
+    try {
+      startTask(
+          () -> {
+            while (keepSending.get()) {
+              stats.handleSend();
+            }
+          });
+      startTask(
+          () -> {
+            while (keepConsuming.get()) {
+              stats.handleRecv(1);
+            }
+          });
+      waitAtMost(10, () -> reportCount.get() > 1);
+      assertThat(published.value()).isPositive();
+      assertThat(consumed.value()).isPositive();
+      keepSending.set(false);
+
+      Thread.sleep(4 * INTERVAL);
+      // we simulate a service polling 2 times
+      stats.maybeResetGauges();
+      // give some time to handle consuming (all stats methods are synchronized)
+      Thread.sleep(INTERVAL);
+      stats.maybeResetGauges();
+      // the gauge is actually reset in the report calculation
+      assertThat(published.value()).isZero();
+      // this one is active, so it still reports something
+      assertThat(consumed.value()).isPositive();
+    } finally {
+      keepSending.set(false);
+      keepConsuming.set(false);
+    }
   }
 
   private class SimpleStats extends Stats {
@@ -69,8 +132,10 @@ public class StatsTest {
 
     @Override
     protected void report(long now) {
-      double ratePublished = rate(sendCountInterval, elapsedInterval);
-      this.published(ratePublished);
+      double rate = rate(sendCountInterval, elapsedInterval);
+      this.published(rate);
+      rate = rate(recvCountInterval, elapsedInterval);
+      this.received(rate);
       reportCount.incrementAndGet();
     }
 
