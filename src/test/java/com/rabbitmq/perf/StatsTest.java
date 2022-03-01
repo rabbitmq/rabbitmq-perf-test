@@ -63,8 +63,8 @@ public class StatsTest {
             }
           });
       waitAtMost(10, () -> reportCount.get() > 1);
-      assertThat(published.value()).isPositive();
-      assertThat(consumed.value()).isPositive();
+      waitAtMost(10, () -> published.value() > 0);
+      waitAtMost(10, () -> consumed.value() > 0);
       keepSending.set(false);
       keepConsuming.set(false);
 
@@ -104,8 +104,8 @@ public class StatsTest {
             }
           });
       waitAtMost(10, () -> reportCount.get() > 1);
-      assertThat(published.value()).isPositive();
-      assertThat(consumed.value()).isPositive();
+      waitAtMost(10, () -> published.value() > 0);
+      waitAtMost(10, () -> consumed.value() > 0);
       keepSending.set(false);
 
       Thread.sleep(4 * INTERVAL);
