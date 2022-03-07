@@ -59,7 +59,7 @@
     <metrics.version>4.2.8</metrics.version>
     <micrometer.version>1.8.3</micrometer.version>
     <gson.version>2.9.0</gson.version>
-    <logback.version>1.2.10</logback.version>
+    <logback.version>1.2.11</logback.version>
     <jetty.version>9.4.45.v20220203</jetty.version>
     <junit.jupiter.version>5.8.2</junit.jupiter.version>
     <mockito.version>4.3.1</mockito.version>
