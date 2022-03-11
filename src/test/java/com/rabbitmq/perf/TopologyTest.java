@@ -603,7 +603,7 @@ public class TopologyTest {
 
         // once all producers have published messages (producerCount routing keys in the set),
         // we open the latch so MulticastSet.run can end
-        Set<String> routingKeys = new HashSet<>();
+        Set<String> routingKeys = ConcurrentHashMap.newKeySet(producerCount);
         CountDownLatch latchPublishing = new CountDownLatch(1);
         doAnswer(invocation -> {
             routingKeys.add(invocation.getArgument(1));
@@ -611,7 +611,7 @@ public class TopologyTest {
                 latchPublishing.countDown();
             }
             return null;
-        }).when(ch).basicPublish(eq("direct"), routingKeyCaptor.capture(),
+        }).when(ch).basicPublish(eq("direct"), anyString(),
                 anyBoolean(), eq(false),
                 any(), any(byte[].class));
 
@@ -627,9 +627,9 @@ public class TopologyTest {
                 .queueBind(startsWith(queuePrefix), eq("direct"), startsWith(queuePrefix));
         verify(ch, never()).basicConsume(anyString(), anyBoolean(), anyMap(), any());
 
-        assertThat(routingKeyCaptor.getAllValues().stream().distinct().toArray())
+        assertThat(routingKeys)
                 .hasSize(10)
-                .contains(range(1, 11).mapToObj(i -> queuePrefix + i).toArray());
+                .containsAll(range(1, 11).mapToObj(i -> queuePrefix + i).collect(toList()));
     }
 
     // --queue-pattern 'perf-test-%d' --queue-pattern-from 1 --queue-pattern-to 10 --producers 15 --consumers 30
