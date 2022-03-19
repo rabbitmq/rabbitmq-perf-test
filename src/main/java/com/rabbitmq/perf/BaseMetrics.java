@@ -58,7 +58,7 @@ public class BaseMetrics implements Metrics {
         Collection<Tag> tags = new ArrayList<>();
         if (argumentTags != null) {
             for (String tag : argumentTags.split(",")) {
-                String[] keyValue = tag.split("=");
+                String[] keyValue = tag.split("=", 2);
                 tags.add(Tag.of(keyValue[0], keyValue[1]));
             }
         }
