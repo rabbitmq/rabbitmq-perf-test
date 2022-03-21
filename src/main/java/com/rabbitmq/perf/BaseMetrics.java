@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020 VMware, Inc. or its affiliates.  All rights reserved.
+// Copyright (c) 2018-2022 VMware, Inc. or its affiliates.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 2.0 ("MPL"), the GNU General Public License version 2
@@ -24,6 +24,7 @@ import io.micrometer.core.instrument.binder.jvm.JvmMemoryMetrics;
 import io.micrometer.core.instrument.binder.jvm.JvmThreadMetrics;
 import io.micrometer.core.instrument.binder.system.ProcessorMetrics;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
+import java.util.Collections;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 
@@ -55,14 +56,7 @@ public class BaseMetrics implements Metrics {
     @Override
     public void configure(CommandLineProxy cmd, CompositeMeterRegistry meterRegistry, ConnectionFactory factory) {
         String argumentTags = strArg(cmd, "mt", null);
-        Collection<Tag> tags = new ArrayList<>();
-        if (argumentTags != null) {
-            for (String tag : argumentTags.split(",")) {
-                String[] keyValue = tag.split("=", 2);
-                tags.add(Tag.of(keyValue[0], keyValue[1]));
-            }
-        }
-        meterRegistry.config().commonTags(tags);
+        meterRegistry.config().commonTags(parseTags(argumentTags));
         if (cmd.hasOption("mc")) {
             factory.setMetricsCollector(new MicrometerMetricsCollector(meterRegistry, "client"));
         }
@@ -87,5 +81,18 @@ public class BaseMetrics implements Metrics {
     @Override
     public String toString() {
         return "Base Metrics";
+    }
+
+    static Collection<Tag> parseTags(String argument) {
+        if (argument == null || argument.trim().isEmpty()) {
+            return Collections.emptyList();
+        } else {
+            Collection<Tag> tags = new ArrayList<>();
+            for (String tag : argument.split(",")) {
+                String[] keyValue = tag.split("=", 2);
+                tags.add(Tag.of(keyValue[0], keyValue[1]));
+            }
+            return tags;
+        }
     }
 }
