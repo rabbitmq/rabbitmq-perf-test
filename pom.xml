@@ -705,6 +705,25 @@
     </profile>
 
     <profile>
+      <id>ci-test</id>
+      <build>
+       <plugins>
+         <plugin>
+           <groupId>org.apache.maven.plugins</groupId>
+           <artifactId>maven-jar-plugin</artifactId>
+           <version>${maven.jar.plugin.version}</version>
+           <executions>
+             <execution>
+               <id>default-jar</id>
+               <phase>none</phase>
+             </execution>
+           </executions>
+         </plugin>
+       </plugins>
+      </build>
+    </profile>
+
+    <profile>
       <id>native-image</id>
       <dependencies>
 
