@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020 VMware, Inc. or its affiliates.  All rights reserved.
+// Copyright (c) 2018-2022 VMware, Inc. or its affiliates.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 2.0 ("MPL"), the GNU General Public License version 2
@@ -27,7 +27,7 @@ public interface Metrics {
 
     Options options();
 
-    default void configure(CommandLineProxy cmd, CompositeMeterRegistry meterRegistry, ConnectionFactory factory) throws Exception { }
+    default void configure(ConfigurationContext context) throws Exception { }
 
     default boolean isEnabled(CommandLineProxy cmd) {
         for (Object optObj : this.options().getOptions()) {
@@ -40,5 +40,44 @@ public interface Metrics {
     }
 
     default void close() throws Exception { }
+
+    class ConfigurationContext {
+
+        private final CommandLineProxy cmd;
+        private final CompositeMeterRegistry meterRegistry;
+        private final ConnectionFactory factory;
+        private final String [] args;
+        private final String metricsPrefix;
+
+        public ConfigurationContext(CommandLineProxy cmd,
+            CompositeMeterRegistry meterRegistry, ConnectionFactory factory,
+            String[] args, String metricsPrefix) {
+            this.cmd = cmd;
+            this.meterRegistry = meterRegistry;
+            this.factory = factory;
+            this.args = args;
+            this.metricsPrefix = metricsPrefix;
+        }
+
+        public CommandLineProxy cmd() {
+            return cmd;
+        }
+
+        public CompositeMeterRegistry meterRegistry() {
+            return meterRegistry;
+        }
+
+        public ConnectionFactory factory() {
+            return factory;
+        }
+
+        public String[] args() {
+            return args;
+        }
+
+        public String metricsPrefix() {
+            return metricsPrefix;
+        }
+    }
 
 }

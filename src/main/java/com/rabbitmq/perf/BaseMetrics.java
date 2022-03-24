@@ -18,6 +18,7 @@ package com.rabbitmq.perf;
 import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.impl.MicrometerMetricsCollector;
 import io.micrometer.core.instrument.Tag;
+import io.micrometer.core.instrument.Tags;
 import io.micrometer.core.instrument.binder.jvm.ClassLoaderMetrics;
 import io.micrometer.core.instrument.binder.jvm.JvmGcMetrics;
 import io.micrometer.core.instrument.binder.jvm.JvmMemoryMetrics;
@@ -25,6 +26,7 @@ import io.micrometer.core.instrument.binder.jvm.JvmThreadMetrics;
 import io.micrometer.core.instrument.binder.system.ProcessorMetrics;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
 import java.util.Collections;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 
@@ -38,10 +40,13 @@ import static com.rabbitmq.perf.Utils.strArg;
  */
 public class BaseMetrics implements Metrics {
 
+    private final AtomicInteger argumentsGauge = new AtomicInteger(1);
+
     @Override
     public Options options() {
         Options options = new Options();
         options.addOption(new Option("mt", "metrics-tags", true, "metrics tags as key-value pairs separated by commas"));
+        options.addOption(new Option("mcla", "metrics-command-line-arguments", false, "add fixed metrics with command line arguments label"));
         options.addOption(new Option("mpx", "metrics-prefix", true, "prefix for PerfTest metrics, default is perftest_"));
         options.addOption(new Option("mc", "metrics-client", false, "enable client metrics"));
         options.addOption(new Option("mcl", "metrics-class-loader", false, "enable JVM class loader metrics"));
@@ -54,9 +59,23 @@ public class BaseMetrics implements Metrics {
     }
 
     @Override
-    public void configure(CommandLineProxy cmd, CompositeMeterRegistry meterRegistry, ConnectionFactory factory) {
+    public void configure(ConfigurationContext context) {
+        CommandLineProxy cmd = context.cmd();
+        CompositeMeterRegistry meterRegistry = context.meterRegistry();
+        ConnectionFactory factory = context.factory();
         String argumentTags = strArg(cmd, "mt", null);
         meterRegistry.config().commonTags(parseTags(argumentTags));
+        if (cmd.hasOption("mcla")) {
+            String metricsPrefix = context.metricsPrefix() == null ? "" : context.metricsPrefix();
+            String [] args = context.args();
+            Tags tags;
+            if (args == null || args.length == 0) {
+               tags = Tags.of("command_line", "");
+            } else {
+               tags = Tags.of("command_line", String.join(" ", args));
+            }
+            meterRegistry.gauge(metricsPrefix + "args", tags, argumentsGauge);
+        }
         if (cmd.hasOption("mc")) {
             factory.setMetricsCollector(new MicrometerMetricsCollector(meterRegistry, "client"));
         }

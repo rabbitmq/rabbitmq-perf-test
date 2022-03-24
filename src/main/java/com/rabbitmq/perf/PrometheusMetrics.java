@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020 VMware, Inc. or its affiliates.  All rights reserved.
+// Copyright (c) 2018-2022 VMware, Inc. or its affiliates.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 2.0 ("MPL"), the GNU General Public License version 2
@@ -15,7 +15,6 @@
 
 package com.rabbitmq.perf;
 
-import com.rabbitmq.client.ConnectionFactory;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
 import io.micrometer.prometheus.PrometheusConfig;
 import io.micrometer.prometheus.PrometheusMeterRegistry;
@@ -53,7 +52,9 @@ public class PrometheusMetrics implements Metrics {
         return options;
     }
 
-    public void configure(CommandLineProxy cmd, CompositeMeterRegistry meterRegistry, ConnectionFactory factory) throws Exception {
+    public void configure(ConfigurationContext context) throws Exception {
+        CommandLineProxy cmd = context.cmd();
+        CompositeMeterRegistry meterRegistry = context.meterRegistry();
         if (isEnabled(cmd)) {
             registry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
             meterRegistry.add(registry);
@@ -69,9 +70,9 @@ public class PrometheusMetrics implements Metrics {
             connector.setPort(prometheusHttpEndpointPort);
             server.setConnectors(new Connector[] { connector });
 
-            ContextHandler context = new ContextHandler();
-            context.setContextPath(prometheusHttpEndpoint);
-            context.setHandler(new AbstractHandler() {
+            ContextHandler ctx = new ContextHandler();
+            ctx.setContextPath(prometheusHttpEndpoint);
+            ctx.setHandler(new AbstractHandler() {
 
                 @Override
                 public void handle(String s, Request request, HttpServletRequest httpServletRequest, HttpServletResponse response)
@@ -88,7 +89,7 @@ public class PrometheusMetrics implements Metrics {
                 }
             });
 
-            server.setHandler(context);
+            server.setHandler(ctx);
 
             server.setStopTimeout(1000);
             server.start();

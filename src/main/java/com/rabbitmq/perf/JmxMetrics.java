@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020 VMware, Inc. or its affiliates.  All rights reserved.
+// Copyright (c) 2018-2022 VMware, Inc. or its affiliates.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 2.0 ("MPL"), the GNU General Public License version 2
@@ -15,7 +15,6 @@
 
 package com.rabbitmq.perf;
 
-import com.rabbitmq.client.ConnectionFactory;
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
@@ -37,7 +36,9 @@ public class JmxMetrics implements Metrics {
         return options;
     }
 
-    public void configure(CommandLineProxy cmd, CompositeMeterRegistry meterRegistry, ConnectionFactory factory) throws Exception {
+    public void configure(ConfigurationContext context) throws Exception {
+        CommandLineProxy cmd = context.cmd();
+        CompositeMeterRegistry meterRegistry = context.meterRegistry();
         if (isEnabled(cmd)) {
             registry = new JmxMeterRegistry(
                 JmxConfig.DEFAULT,

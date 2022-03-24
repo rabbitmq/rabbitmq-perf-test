@@ -22,6 +22,7 @@ import com.rabbitmq.client.RecoveryDelayHandler;
 import com.rabbitmq.client.impl.ClientVersion;
 import com.rabbitmq.client.impl.DefaultExceptionHandler;
 import com.rabbitmq.client.impl.nio.NioParams;
+import com.rabbitmq.perf.Metrics.ConfigurationContext;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
 import java.math.BigDecimal;
 import java.time.Duration;
@@ -252,7 +253,8 @@ public class PerfTest {
             CompositeMeterRegistry registry = new CompositeMeterRegistry();
             shutdownService.wrap(() -> registry.close());
 
-            metrics.configure(cmd, registry, factory);
+            String metricsPrefix = strArg(cmd, "mpx", "perftest_");
+            metrics.configure(new ConfigurationContext(cmd, registry, factory, args, metricsPrefix));
 
             PrintWriter output;
             if (outputFile != null) {
@@ -272,7 +274,6 @@ public class PerfTest {
                 uris = singletonList(uri);
             }
 
-            String metricsPrefix = strArg(cmd, "mpx", "perftest_");
             //setup
             PrintlnStats stats = new PrintlnStats(testID,
                 1000L * samplingInterval,

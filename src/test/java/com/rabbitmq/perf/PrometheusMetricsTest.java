@@ -15,6 +15,7 @@
 
 package com.rabbitmq.perf;
 
+import com.rabbitmq.perf.Metrics.ConfigurationContext;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
 import org.apache.commons.cli.*;
 import org.junit.jupiter.api.Test;
@@ -49,7 +50,7 @@ public class PrometheusMetricsTest {
         CompositeMeterRegistry registry = new CompositeMeterRegistry();
         AtomicInteger metric = registry.gauge("dummy", new AtomicInteger(0));
         metric.set(42);
-        metrics.configure(cmd, registry, null);
+        metrics.configure(new ConfigurationContext(cmd, registry, null, null, null));
 
         URL url = new URL("http://localhost:" + port + "/metrics");
         HttpURLConnection con = (HttpURLConnection) url.openConnection();

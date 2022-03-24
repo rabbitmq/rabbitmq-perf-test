@@ -15,6 +15,7 @@
 
 package com.rabbitmq.perf;
 
+import com.rabbitmq.perf.Metrics.ConfigurationContext;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
 import org.apache.commons.cli.*;
 import org.junit.jupiter.api.AfterEach;
@@ -54,7 +55,7 @@ public class JmxMetricsTest {
         CompositeMeterRegistry registry = new CompositeMeterRegistry();
         AtomicInteger metric = registry.gauge("dummy", new AtomicInteger(0));
         metric.set(42);
-        metrics.configure(cmd, registry, null);
+        metrics.configure(new ConfigurationContext(cmd, registry, null, null, null));
 
         MBeanServer server = ManagementFactory.getPlatformMBeanServer();
         Set<ObjectName> objectNames = server.queryNames(new ObjectName("*:name=dummy"), null);

@@ -15,6 +15,7 @@
 
 package com.rabbitmq.perf;
 
+import com.rabbitmq.perf.Metrics.ConfigurationContext;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
 import org.apache.commons.cli.*;
@@ -90,7 +91,7 @@ public class DatadogMetricsTest {
         registry.config().commonTags("host", "test");
         AtomicInteger gauge = new AtomicInteger(42);
         Gauge.builder("dummy", gauge, g -> g.doubleValue()).description("this is a dummy meter").register(registry);
-        metrics.configure(cmd, registry, null);
+        metrics.configure(new ConfigurationContext(cmd, registry, null, null, null));
 
         assertTrue(latch.await(10, TimeUnit.SECONDS), NB_REQUESTS + " metrics requests should have been sent by now");
 
