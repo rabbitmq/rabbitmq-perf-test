@@ -65,7 +65,7 @@
     <mockito.version>4.4.0</mockito.version>
     <assertj.version>3.22.0</assertj.version>
     <commons-lang3.version>3.12.0</commons-lang3.version>
-    <jmh.version>1.34</jmh.version>
+    <jmh.version>1.35</jmh.version>
 
     <!-- to sign artifacts when releasing -->
     <gpg.keyname>6026DFCA</gpg.keyname>
