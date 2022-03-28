@@ -49,6 +49,7 @@ public class PrometheusMetrics implements Metrics {
         options.addOption(new Option("mpr", "metrics-prometheus", false, "enable Prometheus metrics"));
         options.addOption(new Option("mpe", "metrics-prometheus-endpoint", true, "the HTTP metrics endpoint, default is /metrics"));
         options.addOption(new Option("mpp", "metrics-prometheus-port", true, "the port to launch the HTTP metrics endpoint on, default is 8080"));
+
         return options;
     }
 

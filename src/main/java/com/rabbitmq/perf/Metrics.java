@@ -48,15 +48,18 @@ public interface Metrics {
         private final ConnectionFactory factory;
         private final String [] args;
         private final String metricsPrefix;
+        private final Options metricsOptions;
 
         public ConfigurationContext(CommandLineProxy cmd,
             CompositeMeterRegistry meterRegistry, ConnectionFactory factory,
-            String[] args, String metricsPrefix) {
+            String[] args, String metricsPrefix,
+            Options metricsOptions) {
             this.cmd = cmd;
             this.meterRegistry = meterRegistry;
             this.factory = factory;
             this.args = args;
             this.metricsPrefix = metricsPrefix;
+            this.metricsOptions = metricsOptions;
         }
 
         public CommandLineProxy cmd() {
@@ -77,6 +80,10 @@ public interface Metrics {
 
         public String metricsPrefix() {
             return metricsPrefix;
+        }
+
+        public Options metricsOptions() {
+            return metricsOptions;
         }
     }
 

@@ -254,7 +254,8 @@ public class PerfTest {
             shutdownService.wrap(() -> registry.close());
 
             String metricsPrefix = strArg(cmd, "mpx", "perftest_");
-            metrics.configure(new ConfigurationContext(cmd, registry, factory, args, metricsPrefix));
+            metrics.configure(new ConfigurationContext(cmd, registry, factory, args,
+                metricsPrefix, metricsOptions));
 
             PrintWriter output;
             if (outputFile != null) {

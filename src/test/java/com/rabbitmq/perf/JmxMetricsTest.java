@@ -55,7 +55,7 @@ public class JmxMetricsTest {
         CompositeMeterRegistry registry = new CompositeMeterRegistry();
         AtomicInteger metric = registry.gauge("dummy", new AtomicInteger(0));
         metric.set(42);
-        metrics.configure(new ConfigurationContext(cmd, registry, null, null, null));
+        metrics.configure(new ConfigurationContext(cmd, registry, null, null, null, null));
 
         MBeanServer server = ManagementFactory.getPlatformMBeanServer();
         Set<ObjectName> objectNames = server.queryNames(new ObjectName("*:name=dummy"), null);

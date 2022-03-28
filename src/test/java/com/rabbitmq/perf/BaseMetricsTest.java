@@ -15,10 +15,12 @@
 
 package com.rabbitmq.perf;
 
+import static com.rabbitmq.perf.BaseMetrics.commandLineMetrics;
 import static com.rabbitmq.perf.BaseMetrics.parseTags;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.micrometer.core.instrument.Tag;
+import org.apache.commons.cli.Options;
 import org.junit.jupiter.api.Test;
 
 public class BaseMetricsTest {
@@ -38,5 +40,40 @@ public class BaseMetricsTest {
     assertThat(parseTags("args=--queue-args \"x-max-length=100000\""))
         .hasSize(1)
         .contains(tag("args", "--queue-args \"x-max-length=100000\""));
+  }
+
+  @Test
+  void commandLineMetricsTest() {
+    Options metricsOptions = new Options();
+    new BaseMetrics().options().getOptions().forEach(metricsOptions::addOption);
+    new PrometheusMetrics().options().getOptions().forEach(metricsOptions::addOption);
+    assertThat(
+            commandLineMetrics(
+                ("--uri amqp://default_user_kdId_cNrxfdolc5V7WJ:K8IYrRjh1NGqdVsaxfFa-r0KR1vGuPHB@cqv2 "
+                        + "--metrics-prometheus --use-millis --servers-startup-timeout 300 "
+                        + "--metrics-command-line-arguments "
+                        + "-mt rabbitmq_cluster=cqv2,workload_name=test-new "
+                        + "-x 1 -y 2 -u cq -c 1000 -A 1000 -q 1000 -f persistent -s 1000 "
+                        + "--queue-args x-queue-version=2,x-queue-mode=lazy --auto-delete false")
+                    .split(" "),
+                metricsOptions))
+        .isEqualTo(
+            "--use-millis --servers-startup-timeout 300 "
+                + "-x 1 -y 2 -u cq -c 1000 -A 1000 -q 1000 -f persistent -s 1000 "
+                + "--queue-args x-queue-version=2,x-queue-mode=lazy --auto-delete false");
+    assertThat(
+            commandLineMetrics(
+                ("-h amqp://default_user_kdId_cNrxfdolc5V7WJ:K8IYrRjh1NGqdVsaxfFa-r0KR1vGuPHB@cqv2 "
+                        + "-mpr --use-millis --servers-startup-timeout 300 "
+                        + "-mcla "
+                        + "-mt rabbitmq_cluster=cqv2,workload_name=test-new "
+                        + "-x 1 -y 2 -u cq -c 1000 -A 1000 -q 1000 -f persistent -s 1000 "
+                        + "--queue-args x-queue-version=2,x-queue-mode=lazy --auto-delete false")
+                    .split(" "),
+                metricsOptions))
+        .isEqualTo(
+            "--use-millis --servers-startup-timeout 300 "
+                + "-x 1 -y 2 -u cq -c 1000 -A 1000 -q 1000 -f persistent -s 1000 "
+                + "--queue-args x-queue-version=2,x-queue-mode=lazy --auto-delete false");
   }
 }

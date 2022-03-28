@@ -25,7 +25,11 @@ import io.micrometer.core.instrument.binder.jvm.JvmMemoryMetrics;
 import io.micrometer.core.instrument.binder.jvm.JvmThreadMetrics;
 import io.micrometer.core.instrument.binder.system.ProcessorMetrics;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
@@ -72,7 +76,7 @@ public class BaseMetrics implements Metrics {
             if (args == null || args.length == 0) {
                tags = Tags.of("command_line", "");
             } else {
-               tags = Tags.of("command_line", String.join(" ", args));
+               tags = Tags.of("command_line", commandLineMetrics(args, context.metricsOptions()));
             }
             meterRegistry.gauge(metricsPrefix + "args", tags, argumentsGauge);
         }
@@ -113,5 +117,30 @@ public class BaseMetrics implements Metrics {
             }
             return tags;
         }
+    }
+
+    static String commandLineMetrics(String [] args, Options metricsOptions) {
+        Map<String, Boolean> filteredOptions = new HashMap<>();
+        filteredOptions.put("--uri", true);
+        filteredOptions.put("-h", true);
+        for (Option option : metricsOptions.getOptions()) {
+            filteredOptions.put("-" + option.getOpt(), option.hasArg());
+            if (option.hasLongOpt()) {
+                filteredOptions.put("--" + option.getLongOpt(), option.hasArg());
+            }
+        }
+        Collection<String> filtered = new ArrayList<>();
+        Iterator<String> iterator = Arrays.stream(args).iterator();
+        while(iterator.hasNext()) {
+            String option = iterator.next();
+            if (filteredOptions.containsKey(option)) {
+                if (filteredOptions.get(option)) {
+                    iterator.next();
+                }
+            } else {
+                filtered.add(option);
+            }
+        }
+        return String.join(" ", filtered);
     }
 }
