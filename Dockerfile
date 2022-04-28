@@ -1,4 +1,4 @@
-FROM ubuntu:20.04 as builder
+FROM ubuntu:22.04 as builder
 
 ARG perf_test_binary="target/rabbitmq-perf-test-*-bin.tar.gz"
 
@@ -49,7 +49,7 @@ RUN if ls rabbitmq-perf-test-*.tar.gz 1> /dev/null 2>&1; then \
     mv rabbitmq-perf-test-* "$PERF_TEST_HOME"; \
     fi
 
-FROM ubuntu:20.04
+FROM ubuntu:22.04
 
 # we need locales support for characters like µ to show up correctly in the console
 RUN set -eux; \
