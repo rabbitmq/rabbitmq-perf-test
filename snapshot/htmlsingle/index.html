@@ -1364,6 +1364,24 @@ many queues:</p>
   --publishing-interval 5</code></pre>
 </div>
 </div>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-important" title="Important"></i>
+</td>
+<td class="content">
+<div class="title">Mind the sampling interval with slow publishers!</div>
+<div class="paragraph">
+<p>The <code>--interval</code> option (<code>-i</code>) sets the sampling interval for statistics and defaults to 1 second.
+Keeping this value with slow publishers (1 message per second or less with <code>--publishing-interval</code>) can cause dips for some metrics, as they may not get any value for a while.
+Note this affects only metrics and not the way PerfTest or the broker behave.
+To avoid the metrics dips, you can increase the value of the sampling interval – twice the value of the publishing interval is a reasonable rule of thumb – or use the <code>--producer-random-start-delay</code> option to ramp up the start of publishers (see below).</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
 <div class="paragraph">
 <p>To prevent publishers from publishing at roughly the same time and
 distribute the rate more evenly, use
@@ -1852,7 +1870,7 @@ can be changed:</p>
 <div id="footer">
 <div id="footer-text">
 Version 2.18.0-SNAPSHOT<br>
-Last updated 2022-04-28 08:28:01 UTC
+Last updated 2022-05-05 09:32:10 UTC
 </div>
 </div>
 </body>
