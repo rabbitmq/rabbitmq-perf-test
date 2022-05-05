@@ -275,6 +275,15 @@ bin/runjava com.rabbitmq.perf.PerfTest --queue-pattern 'perf-test-%d' \
   --publishing-interval 5
 --------
 
+[IMPORTANT]
+.Mind the sampling interval with slow publishers!
+====
+The `--interval` option (`-i`) sets the sampling interval for statistics and defaults to 1 second.
+Keeping this value with slow publishers (1 message per second or less with `--publishing-interval`) can cause dips for some metrics, as they may not get any value for a while.
+Note this affects only metrics and not the way PerfTest or the broker behave.
+To avoid the metrics dips, you can increase the value of the sampling interval – twice the value of the publishing interval is a reasonable rule of thumb – or use the `--producer-random-start-delay` option to ramp up the start of publishers (see below).
+====
+
 To prevent publishers from publishing at roughly the same time and
 distribute the rate more evenly, use
 the `--producer-random-start-delay` option to add a random
