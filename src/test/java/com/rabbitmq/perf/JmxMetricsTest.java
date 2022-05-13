@@ -58,7 +58,8 @@ public class JmxMetricsTest {
         metrics.configure(new ConfigurationContext(cmd, registry, null, null, null, null));
 
         MBeanServer server = ManagementFactory.getPlatformMBeanServer();
-        Set<ObjectName> objectNames = server.queryNames(new ObjectName("*:name=dummy"), null);
+//        Thread.sleep(1000000000);
+        Set<ObjectName> objectNames = server.queryNames(new ObjectName("*:name=dummy,type=gauges"), null);
         assertEquals(1, objectNames.size());
         ObjectName objectName = objectNames.iterator().next();
         MBeanInfo info = server.getMBeanInfo(objectName);
