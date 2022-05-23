@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2020 VMware, Inc. or its affiliates.  All rights reserved.
+// Copyright (c) 2007-2022 VMware, Inc. or its affiliates.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 2.0 ("MPL"), the GNU General Public License version 2
@@ -19,7 +19,11 @@ import com.rabbitmq.client.AMQP.BasicProperties;
 import com.rabbitmq.client.*;
 import com.rabbitmq.client.AMQP.Queue.DeclareOk;
 import com.rabbitmq.perf.PerfTest.EXIT_WHEN;
+import com.rabbitmq.perf.TopologyRecording.RecordedQueue;
 import java.time.Duration;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -85,6 +89,8 @@ public class Consumer extends AgentBase implements Runnable {
 
     private volatile long lastDeliveryTag, lastAckedDeliveryTag;
 
+    private final ScheduledExecutorService topologyRecoveryScheduledExecutorService;
+
     public Consumer(ConsumerParameters parameters) {
         this.channel           = parameters.getChannel();
         this.id                = parameters.getId();
@@ -101,6 +107,7 @@ public class Consumer extends AgentBase implements Runnable {
         this.pollingInterval   = parameters.getPollingInterval();
         this.consumerArguments = parameters.getConsumerArguments();
         this.exitWhen          = parameters.getExitWhen();
+        this.topologyRecoveryScheduledExecutorService = parameters.getTopologyRecoveryScheduledExecutorService();
 
         this.queueNames.set(new ArrayList<>(parameters.getQueueNames()));
         this.initialQueueNames = new ArrayList<>(parameters.getQueueNames());
@@ -313,8 +320,9 @@ public class Consumer extends AgentBase implements Runnable {
             System.out.printf("Consumer cancelled by broker for tag: %s", consumerTag);
             if (consumerTagBranchMap.containsKey(consumerTag)) {
                 String qName = consumerTagBranchMap.get(consumerTag);
-                System.out.printf("Re-consuming. Queue: %s for Tag: %s", qName, consumerTag);
-                channel.basicConsume(qName, autoAck, consumerArguments, q);
+                TopologyRecording topologyRecording = topologyRecording();
+                RecordedQueue queueRecord = topologyRecording.queue(qName);
+                consumeOrScheduleConsume(queueRecord, topologyRecording, consumerTag, qName);
             } else {
                 System.out.printf("Could not find queue for consumer tag: %s", consumerTag);
             }
@@ -348,10 +356,12 @@ public class Consumer extends AgentBase implements Runnable {
         } else {
             for (Map.Entry<String, String> entry : consumerTagBranchMap.entrySet()) {
                 String queueName = queueName(topologyRecording, entry.getValue());
+                String consumerTag = entry.getKey();
                 LOGGER.debug("Recovering consumer, starting consuming on {}", queueName);
                 try {
-                    channel.basicConsume(queueName, autoAck, entry.getKey(), false, false, this.consumerArguments, q);
-                } catch (IOException e) {
+                    TopologyRecording.RecordedQueue queueRecord = topologyRecording.queue(entry.getValue());
+                    consumeOrScheduleConsume(queueRecord, topologyRecording, consumerTag, queueName);
+                } catch (Exception e) {
                     LOGGER.warn(
                             "Error while recovering consumer {} on queue {} on connection {}",
                             entry.getKey(), queueName, channel.getConnection().getClientProvidedName(), e
@@ -359,6 +369,55 @@ public class Consumer extends AgentBase implements Runnable {
                 }
             }
         }
+    }
+
+    private void consumeOrScheduleConsume(RecordedQueue queueRecord,
+                                          TopologyRecording topologyRecording,
+                                          String consumerTag,
+                                          String queueName) throws IOException {
+        if (queueMayBeDown(queueRecord, topologyRecording)) {
+            // If the queue is on a cluster node that is down, basic.consume will fail with a 404.
+            // This will close the channel and we can't afford it, so we check if the queue exists with a different channel,
+            // and postpone the subscription if the queue does not exist
+            LOGGER.debug("Checking if queue {} exists before subscribing", queueName);
+            if (Utils.exists(channel.getConnection(), ch -> ch.queueDeclarePassive(queueName))) {
+                LOGGER.debug("Queue {} does exist, subscribing", queueName);
+                channel.basicConsume(queueName, autoAck, consumerTag, false, false, this.consumerArguments, q);
+            } else {
+                LOGGER.debug("Queue {} does not exist, it is likely unavailable, scheduling subscription.", queueName);
+                Duration schedulingPeriod = Duration.ofSeconds(5);
+                int maxRetry = (int) (Duration.ofMinutes(10).getSeconds() / schedulingPeriod.getSeconds());
+                AtomicInteger retryCount = new AtomicInteger(0);
+                AtomicReference<Callable<Void>> resubscriptionReference = new AtomicReference<>();
+                Callable<Void> resubscription = () -> {
+                    LOGGER.debug("Scheduled re-subscription for {}...", queueName);
+                    if (Utils.exists(channel.getConnection(), ch -> ch.queueDeclarePassive(queueName))) {
+                        LOGGER.debug("Queue {} exists, re-subscribing", queueName);
+                        channel.basicConsume(queueName, autoAck, consumerTag, false, false, consumerArguments, q);
+                    } else if (retryCount.incrementAndGet() <= maxRetry){
+                        LOGGER.debug("Queue {} does not exist, scheduling re-subscription", queueName);
+                        this.topologyRecoveryScheduledExecutorService.schedule(
+                            resubscriptionReference.get(), schedulingPeriod.getSeconds(), TimeUnit.SECONDS
+                        );
+                    } else {
+                       LOGGER.debug("Max subscription retry count reached {} for queue {}",
+                           retryCount.get(), queueName);
+                    }
+                    return null;
+                };
+                resubscriptionReference.set(resubscription);
+                this.topologyRecoveryScheduledExecutorService.schedule(
+                    resubscription, schedulingPeriod.getSeconds(), TimeUnit.SECONDS
+                );
+            }
+        } else {
+            channel.basicConsume(queueName, autoAck, consumerTag, false, false, this.consumerArguments, q);
+        }
+    }
+
+    private static boolean queueMayBeDown(RecordedQueue queueRecord, TopologyRecording topologyRecording) {
+        return queueRecord != null
+            && queueRecord.isClassic() && queueRecord.isDurable() && topologyRecording.isCluster();
     }
 
     void maybeStopIfNoActivityOrQueueEmpty() {

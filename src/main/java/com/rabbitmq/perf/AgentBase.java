@@ -30,6 +30,16 @@ public abstract class AgentBase {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AgentBase.class);
 
+    private volatile TopologyRecording topologyRecording;
+
+    public void setTopologyRecording(TopologyRecording topologyRecording) {
+        this.topologyRecording = topologyRecording;
+    }
+
+    protected TopologyRecording topologyRecording() {
+        return this.topologyRecording;
+    }
+
     protected void delay(long now, AgentState state) {
 
         long elapsed = now - state.getLastStatsTime();

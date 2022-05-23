@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2020 VMware, Inc. or its affiliates.  All rights reserved.
+// Copyright (c) 2007-2022 VMware, Inc. or its affiliates.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 2.0 ("MPL"), the GNU General Public License version 2
@@ -57,6 +57,7 @@ public class Recovery {
                 @Override
                 public void init(AgentBase agent) {
                     agentReference.set(agent);
+                    agent.setTopologyRecording(topologyRecording);
                 }
 
                 @Override
@@ -74,6 +75,7 @@ public class Recovery {
 
                 @Override
                 public void handleRecoveryStarted(Recoverable recoverable) {
+                    // FIXME use lock to avoid start topology recovery twice
                     recoveryInProgress.set(true);
                 }
 

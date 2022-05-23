@@ -18,7 +18,6 @@ package com.rabbitmq.perf;
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
-import com.rabbitmq.client.ShutdownSignalException;
 
 import com.rabbitmq.perf.PerfTest.EXIT_WHEN;
 import java.io.IOException;
@@ -31,11 +30,13 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 import static com.rabbitmq.perf.Recovery.setupRecoveryProcess;
+import static com.rabbitmq.perf.Utils.exists;
 
 public class MulticastParams {
 
@@ -126,6 +127,8 @@ public class MulticastParams {
 
     // for random JSON body generation
     private AtomicReference<MessageBodySource> messageBodySourceReference = new AtomicReference<>();
+
+    private boolean cluster = false;
 
     public void setExchangeType(String exchangeType) {
         this.exchangeType = exchangeType;
@@ -291,6 +294,10 @@ public class MulticastParams {
 
     public void setExitWhen(EXIT_WHEN exitWhen) {
         this.exitWhen = exitWhen;
+    }
+
+    void setCluster(boolean cluster) {
+        this.cluster = cluster;
     }
 
     public int getConsumerCount() {
@@ -475,7 +482,7 @@ public class MulticastParams {
         Channel channel = connection.createChannel(); //NOSONAR
         if (producerTxSize > 0) channel.txSelect();
         if (confirm >= 0) channel.confirmSelect();
-        TopologyRecording topologyRecording = new TopologyRecording(this.isPolling());
+        TopologyRecording topologyRecording = new TopologyRecording(this.isPolling(), this.cluster);
         if (!predeclared || !exchangeExists(connection, exchangeName)) {
             Utils.exchangeDeclare(channel, exchangeName, exchangeType);
             topologyRecording.recordExchange(exchangeName, exchangeType);
@@ -519,7 +526,8 @@ public class MulticastParams {
                                    Stats stats,
                                    ValueIndicator<Long> consumerLatenciesIndicator,
                                    MulticastSet.CompletionHandler completionHandler,
-                                   ExecutorService executorService) throws IOException {
+                                   ExecutorService executorService,
+                                   ScheduledExecutorService topologyRecordingScheduledExecutorService) throws IOException {
         TopologyHandlerResult topologyHandlerResult = this.topologyHandler.configureQueuesForClient(connection);
         connection = topologyHandlerResult.connection;
         Channel channel = connection.createChannel(); //NOSONAR
@@ -559,17 +567,20 @@ public class MulticastParams {
                 .setRequeue(this.requeue)
                 .setConsumerArguments(this.consumerArguments)
                 .setExitWhen(this.exitWhen)
+                .setTopologyRecoveryScheduledExecutorService(topologyRecordingScheduledExecutorService)
         );
         this.topologyHandler.next();
         return consumer;
     }
 
-    public List<TopologyHandlerResult> configureAllQueues(List<Connection> connection) throws IOException {
-        return this.topologyHandler.configureAllQueues(connection);
+    public List<TopologyHandlerResult> configureAllQueues(List<Connection> connections) throws IOException {
+        return this.topologyHandler.configureAllQueues(connections);
     }
 
     public void init() {
-        this.topologyRecording = new TopologyRecording(this.isPolling());
+        this.topologyRecording = new TopologyRecording(
+            this.isPolling(), this.cluster
+        );
         if (this.queuePattern == null && !this.queuesInSequence) {
             this.topologyHandler = new FixedQueuesTopologyHandler(this, this.routingKey, this.queueNames, topologyRecording);
         } else if (this.queuePattern == null && this.queuesInSequence) {
@@ -648,29 +659,6 @@ public class MulticastParams {
 
     public void setProducerSchedulerThreadCount(int producerSchedulerThreadCount) {
         this.producerSchedulerThreadCount = producerSchedulerThreadCount;
-    }
-
-    private interface Checker {
-        void check(Channel ch) throws IOException;
-    }
-
-    private static boolean exists(Connection connection, Checker checker) throws IOException {
-        try {
-            Channel ch = connection.createChannel();
-            checker.check(ch);
-            ch.abort();
-            return true;
-        }
-        catch (IOException e) {
-            ShutdownSignalException sse = (ShutdownSignalException) e.getCause();
-            if (!sse.isHardError()) {
-                AMQP.Channel.Close closeMethod = (AMQP.Channel.Close) sse.getReason();
-                if (closeMethod.getReplyCode() == AMQP.NOT_FOUND) {
-                    return false;
-                }
-            }
-            throw e;
-        }
     }
 
     /**

@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020 VMware, Inc. or its affiliates.  All rights reserved.
+// Copyright (c) 2018-2022 VMware, Inc. or its affiliates.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 2.0 ("MPL"), the GNU General Public License version 2
@@ -15,11 +15,13 @@
 
 package com.rabbitmq.perf;
 
+import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Address;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.RecoveryDelayHandler;
+import com.rabbitmq.client.ShutdownSignalException;
 import com.rabbitmq.client.SocketConfigurator;
 import com.rabbitmq.client.SocketConfigurators;
 import com.rabbitmq.client.SslEngineConfigurator;
@@ -188,5 +190,28 @@ abstract class Utils {
       LOGGER.info("Skipping creation of exchange {}", exchange);
     }
     channel.exchangeDeclare(exchange, type);
+  }
+
+  interface Checker {
+    void check(Channel ch) throws IOException;
+  }
+
+  static boolean exists(Connection connection, Checker checker) throws IOException {
+    try {
+      Channel ch = connection.createChannel();
+      checker.check(ch);
+      ch.abort();
+      return true;
+    }
+    catch (IOException e) {
+      ShutdownSignalException sse = (ShutdownSignalException) e.getCause();
+      if (!sse.isHardError()) {
+        AMQP.Channel.Close closeMethod = (AMQP.Channel.Close) sse.getReason();
+        if (closeMethod.getReplyCode() == AMQP.NOT_FOUND) {
+          return false;
+        }
+      }
+      throw e;
+    }
   }
 }

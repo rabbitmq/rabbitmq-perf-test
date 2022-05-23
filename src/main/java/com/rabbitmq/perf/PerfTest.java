@@ -406,6 +406,7 @@ public class PerfTest {
             p.setConsumerArguments(convertKeyValuePairs(consumerArgs));
             p.setQueuesInSequence(queueFile != null);
             p.setExitWhen(exitWhen);
+            p.setCluster(uris.size() > 0);
 
             ConcurrentMap<String, Integer> completionReasons = new ConcurrentHashMap<>();
 
