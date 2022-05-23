@@ -17,6 +17,8 @@ package com.rabbitmq.perf;
 
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
+import java.util.Collections;
+import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,6 +44,7 @@ public class TopologyRecording {
     private final Collection<TopologyRecording> children = new CopyOnWriteArrayList<>();
 
     private final boolean polling;
+    private final boolean cluster;
 
     /**
      * Create  a {@link TopologyRecording} with or without polling option.
@@ -52,16 +55,25 @@ public class TopologyRecording {
      *
      * @param polling
      */
-    public TopologyRecording(boolean polling) {
+    public TopologyRecording(boolean polling, boolean cluster) {
         this.polling = polling;
+        this.cluster = cluster;
     }
 
     private static Channel reliableWrite(Connection connection, Channel channel, WriteOperation operation) throws IOException {
+        return reliableWrite(connection, channel, operation, () -> "");
+    }
+
+    private static Channel reliableWrite(Connection connection, Channel channel, WriteOperation operation, Supplier<String> message) throws IOException {
         try {
             operation.write(channel);
             return channel;
         } catch (Exception e) {
             LOGGER.warn("Error during topology recovery: {}", e.getMessage());
+            String msg = message.get();
+            if (msg != null && !msg.isEmpty()) {
+               LOGGER.debug(msg);
+            }
             return connection.createChannel();
         }
     }
@@ -76,7 +88,7 @@ public class TopologyRecording {
      * @return
      */
     TopologyRecording child() {
-        TopologyRecording child = new TopologyRecording(this.polling);
+        TopologyRecording child = new TopologyRecording(this.polling, this.cluster);
         this.children.add(child);
         return child;
     }
@@ -176,16 +188,18 @@ public class TopologyRecording {
                         }
                     }
                     if (redeclare) {
+                        LOGGER.debug("Trying to re-declare queue {}", originalName);
                         channel = reliableWrite(connection, channel, ch -> {
                             String newName = ch.queueDeclare(
                                     queue.serverNamed ? "" : queue.name, queue.durable, queue.exclusive,
                                     queue.autoDelete, queue.arguments
                             ).getQueue();
+                            LOGGER.debug("Re-declared queue {}", originalName);
                             queue.name = newName;
                             if (queue.serverNamed) {
                                 LOGGER.debug("Queue {} was server-named, it is now {}", originalName, newName);
                             }
-                        });
+                        }, () -> "Error while trying to re-declare queue " + originalName);
                     }
 
                     LOGGER.debug("Connection {}, recovered queue {}", connection.getClientProvidedName(), queue);
@@ -237,6 +251,10 @@ public class TopologyRecording {
         void write(Channel channel) throws IOException;
     }
 
+    boolean isCluster() {
+        return this.cluster;
+    }
+
     class RecordedExchange {
 
         private final String name, type;
@@ -264,12 +282,12 @@ public class TopologyRecording {
         private final boolean serverNamed;
         private String name;
 
-        public RecordedQueue(String name, boolean durable, boolean exclusive, boolean autoDelete, Map<String, Object> arguments, boolean serverNamed) {
+        private RecordedQueue(String name, boolean durable, boolean exclusive, boolean autoDelete, Map<String, Object> arguments, boolean serverNamed) {
             this.name = name;
             this.durable = durable;
             this.exclusive = exclusive;
             this.autoDelete = autoDelete;
-            this.arguments = arguments;
+            this.arguments = arguments == null ? Collections.emptyMap() : arguments;
             this.serverNamed = serverNamed;
         }
 
@@ -287,6 +305,22 @@ public class TopologyRecording {
 
         public boolean isExclusive() {
             return exclusive;
+        }
+
+        boolean isQuorum() {
+            return "quorum".equals(this.arguments.get("x-queue-type"));
+        }
+
+        boolean isStream() {
+            return "stream".equals(this.arguments.get("x-queue-type"));
+        }
+
+        boolean isClassic() {
+            return !isQuorum() && !isStream();
+        }
+
+        boolean isDurable() {
+            return durable;
         }
 
         @Override

@@ -208,6 +208,13 @@ public class MulticastSet {
             List<MulticastParams.TopologyHandlerResult> topologyHandlerResults = params.configureAllQueues(configurationConnections);
             enableTopologyRecoveryIfNecessary(topologyHandlerResults);
 
+            ScheduledExecutorService topologyRecordingScheduledExecutorService = null;
+            if (!configurationConnections.isEmpty() && Utils.isRecoverable(configurationConnections.get(0))) {
+                topologyRecordingScheduledExecutorService = this.threadingHandler.scheduledExecutorService(
+                  "perf-test-topology-recovery-", 1
+                );
+            }
+
             this.params.resetTopologyHandler();
 
             Consumer[] consumerRunnables = new Consumer[params.getConsumerThreadCount()];
@@ -215,7 +222,8 @@ public class MulticastSet {
             Function<Integer, ExecutorService> consumersExecutorsFactory;
             consumersExecutorsFactory = createConsumersExecutorsFactory();
 
-            createConsumers(announceStartup, consumerRunnables, consumerConnections, consumersExecutorsFactory);
+            createConsumers(announceStartup, consumerRunnables, consumerConnections,
+                consumersExecutorsFactory, topologyRecordingScheduledExecutorService);
 
             this.params.resetTopologyHandler();
 
@@ -376,7 +384,8 @@ public class MulticastSet {
     private void createConsumers(boolean announceStartup,
                                  Runnable[] consumerRunnables,
                                  Connection[] consumerConnections,
-                                 Function<Integer, ExecutorService> consumersExecutorsFactory) throws IOException, TimeoutException {
+                                 Function<Integer, ExecutorService> consumersExecutorsFactory,
+                                 ScheduledExecutorService topologyRecordingScheduledExecutorService) throws IOException, TimeoutException {
         for (int i = 0; i < consumerConnections.length; i++) {
             if (announceStartup) {
                 System.out.println("id: " + testID + ", starting consumer #" + i);
@@ -390,13 +399,16 @@ public class MulticastSet {
                 if (announceStartup) {
                     System.out.println("id: " + testID + ", starting consumer #" + i + ", channel #" + j);
                 }
-                Consumer consumer = params.createConsumer(consumerConnection, stats, this.consumerLatencyIndicator, this.completionHandler, executorService);
+                Consumer consumer = params.createConsumer(consumerConnection, stats,
+                    this.consumerLatencyIndicator, this.completionHandler, executorService,
+                    topologyRecordingScheduledExecutorService);
                 consumerRunnables[(i * params.getConsumerChannelCount()) + j] = consumer;
             }
         }
     }
 
-    private void createProducers(boolean announceStartup, AgentState[] producerStates, Connection[] producerConnections) throws IOException, TimeoutException {
+    private void createProducers(boolean announceStartup, AgentState[] producerStates,
+                                 Connection[] producerConnections) throws IOException, TimeoutException {
         for (int i = 0; i < producerConnections.length; i++) {
             if (announceStartup) {
                 System.out.println("id: " + testID + ", starting producer #" + i);

@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020 VMware, Inc. or its affiliates.  All rights reserved.
+// Copyright (c) 2018-2022 VMware, Inc. or its affiliates.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 2.0 ("MPL"), the GNU General Public License version 2
@@ -26,7 +26,7 @@ public class SequenceTopologyHandlerTest {
 
     @Test
     public void sequence() {
-        handler = new MulticastParams.SequenceTopologyHandler(null, 1, 5, "test-%d", new TopologyRecording(false), null);
+        handler = new MulticastParams.SequenceTopologyHandler(null, 1, 5, "test-%d", new TopologyRecording(false, false), null);
         assertThat(handler.getQueueNames()).hasSize(5).contains("test-1", "test-2", "test-3", "test-4", "test-5");
 
         assertThat(handler.getRoutingKey()).isEqualTo("test-1");
@@ -51,7 +51,7 @@ public class SequenceTopologyHandlerTest {
 
     @Test
     public void useFixedRoutingKeyWhenProvided() {
-        handler = new MulticastParams.SequenceTopologyHandler(null, 1, 5, "test-%d", new TopologyRecording(false), "rk");
+        handler = new MulticastParams.SequenceTopologyHandler(null, 1, 5, "test-%d", new TopologyRecording(false, false), "rk");
         assertThat(handler.getQueueNames()).hasSize(5).contains("test-1", "test-2", "test-3", "test-4", "test-5");
 
         assertThat(handler.getQueueNamesForClient()).hasSize(1).contains("test-1");
@@ -63,7 +63,7 @@ public class SequenceTopologyHandlerTest {
 
     @Test
     public void reset() {
-        handler = new MulticastParams.SequenceTopologyHandler(null, 1, 100, "test-%d", new TopologyRecording(false), null);
+        handler = new MulticastParams.SequenceTopologyHandler(null, 1, 100, "test-%d", new TopologyRecording(false, false), null);
         assertThat(handler.getQueueNames()).hasSize(100);
 
         assertThat(handler.getRoutingKey()).isEqualTo("test-1");
@@ -86,7 +86,7 @@ public class SequenceTopologyHandlerTest {
 
     @Test
     public void format() {
-        handler = new MulticastParams.SequenceTopologyHandler(null, 1, 5, "test-%03d", new TopologyRecording(false), null);
+        handler = new MulticastParams.SequenceTopologyHandler(null, 1, 5, "test-%03d", new TopologyRecording(false, false), null);
         assertThat(handler.getQueueNames()).hasSize(5).contains("test-001", "test-002", "test-003", "test-004", "test-005");
     }
 }
