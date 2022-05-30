@@ -643,7 +643,7 @@ public class PerfTest {
         options.addOption(new Option("o", "output-file",            true, "output file for timing results"));
         options.addOption(new Option("ad", "auto-delete",           true, "should the queue be auto-deleted, default is true"));
         options.addOption(new Option("ms", "use-millis",            false,"should latency be collected in milliseconds, default is false. "
-                                                                                                    + "Set to true if producers are consumers run on different machines."));
+                                                                                                    + "Set to true if producers and consumers run on different machines."));
         options.addOption(new Option("qa", "queue-args",            true, "queue arguments as key/value pairs, separated by commas, "
                                                                                                     + "e.g. x-max-length=10"));
         options.addOption(new Option("L", "consumer-latency",       true, "consumer latency in microseconds"));
