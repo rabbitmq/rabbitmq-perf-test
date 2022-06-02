@@ -484,7 +484,7 @@ the `PERF_TEST_CONFIRM_TIMEOUT` environment variable, not only `CONFIRM_TIMEOUT`
 [#native-executable]
 == Native Executable
 
-PerfTest is also distributed as a https://www.graalvm.org/docs/reference-manual/aot-compilation/[native executable]
+PerfTest is also distributed as a https://www.graalvm.org/22.1/reference-manual/native-image/[native executable]
 built with https://www.graalvm.org/[GraalVM]. The native executable has the following
 advantages: it doesn't need a JVM to run, it has faster startup time
 and lower runtime memory overhead compared to a Java VM.
