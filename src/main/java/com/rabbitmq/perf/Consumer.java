@@ -91,6 +91,8 @@ public class Consumer extends AgentBase implements Runnable {
 
     private final ScheduledExecutorService topologyRecoveryScheduledExecutorService;
 
+    private final AtomicLong epochMessageCount = new AtomicLong(0);
+
     public Consumer(ConsumerParameters parameters) {
         this.channel           = parameters.getChannel();
         this.id                = parameters.getId();
@@ -156,6 +158,7 @@ public class Consumer extends AgentBase implements Runnable {
     }
 
     public void run() {
+        epochMessageCount.set(0);
         if (this.polling) {
             startBasicGetConsumer();
         } else {
@@ -234,6 +237,7 @@ public class Consumer extends AgentBase implements Runnable {
     private class ConsumerImpl extends DefaultConsumer {
 
         private final boolean rateLimitation;
+        private final AtomicLong receivedMessageCount = new AtomicLong(0);
 
         private ConsumerImpl(Channel channel) {
             super(channel);
@@ -248,18 +252,20 @@ public class Consumer extends AgentBase implements Runnable {
         }
 
         void handleMessage(Envelope envelope, BasicProperties properties, byte[] body, Channel ch) throws IOException {
+            receivedMessageCount.incrementAndGet();
+            epochMessageCount.incrementAndGet();
             int currentMessageCount = state.incrementMessageCount();
             long nowTimestamp = timestampProvider.getCurrentTime();
             state.setLastActivityTimestamp(nowTimestamp);
-            if (msgLimit == 0 || currentMessageCount <= msgLimit) {
+            if (msgLimit == 0 || receivedMessageCount.get() <= msgLimit) {
                 long messageTimestamp = timestampExtractor.apply(properties, body);
                 long diff_time = timestampProvider.getDifference(nowTimestamp, messageTimestamp);
 
                 stats.handleRecv(id.equals(envelope.getRoutingKey()) ? diff_time : 0L);
 
                 if (consumerLatency.simulateLatency()) {
-                    ackIfNecessary(envelope, currentMessageCount, ch);
-                    commitTransactionIfNecessary(currentMessageCount, ch);
+                    ackIfNecessary(envelope, epochMessageCount.get(), ch);
+                    commitTransactionIfNecessary(epochMessageCount.get(), ch);
                     lastDeliveryTag = envelope.getDeliveryTag();
 
                     long now = System.currentTimeMillis();
@@ -278,12 +284,12 @@ public class Consumer extends AgentBase implements Runnable {
                     }
                 }
             }
-            if (msgLimit != 0 && currentMessageCount >= msgLimit) { // NB: not quite the inverse of above
+            if (msgLimit != 0 && receivedMessageCount.get() >= msgLimit) { // NB: not quite the inverse of above
                 countDown(STOP_REASON_CONSUMER_REACHED_MESSAGE_LIMIT);
             }
         }
 
-        private void ackIfNecessary(Envelope envelope, int currentMessageCount, final Channel ch) throws IOException {
+        private void ackIfNecessary(Envelope envelope, long currentMessageCount, final Channel ch) throws IOException {
             if (ackEnabled()) {
                 dealWithWriteOperation(() -> {
                     if (multiAckEvery == 0) {
@@ -297,7 +303,7 @@ public class Consumer extends AgentBase implements Runnable {
             }
         }
 
-        private void commitTransactionIfNecessary(int currentMessageCount, final Channel ch) throws IOException {
+        private void commitTransactionIfNecessary(long currentMessageCount, final Channel ch) throws IOException {
             if (transactionEnabled() && currentMessageCount % txSize == 0) {
                 dealWithWriteOperation(() -> ch.txCommit(), recoveryProcess);
             }
@@ -318,6 +324,7 @@ public class Consumer extends AgentBase implements Runnable {
         @Override
         public void handleCancel(String consumerTag) throws IOException {
             System.out.printf("Consumer cancelled by broker for tag: %s", consumerTag);
+            epochMessageCount.set(0);
             if (consumerTagBranchMap.containsKey(consumerTag)) {
                 String qName = consumerTagBranchMap.get(consumerTag);
                 TopologyRecording topologyRecording = topologyRecording();
@@ -345,6 +352,7 @@ public class Consumer extends AgentBase implements Runnable {
 
     @Override
     public void recover(TopologyRecording topologyRecording) {
+        epochMessageCount.set(0);
         if (this.polling) {
             // we get the "latest" names of the queue (useful only when there are server-generated name for recovered queues)
             List<String> queues = new ArrayList<>(this.initialQueueNames.size());

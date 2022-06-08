@@ -41,7 +41,6 @@ public abstract class AgentBase {
     }
 
     protected void delay(long now, AgentState state) {
-
         long elapsed = now - state.getLastStatsTime();
         //example: rateLimit is 5000 msg/s,
         //10 ms have elapsed, we have published 200 messages

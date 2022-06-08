@@ -24,9 +24,7 @@ import com.rabbitmq.perf.MulticastSet;
 import com.rabbitmq.perf.NamedThreadFactory;
 import com.rabbitmq.perf.Stats;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
-import java.lang.reflect.Method;
 import java.time.Duration;
-import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -53,6 +51,8 @@ import java.util.stream.Stream;
 
 import static com.rabbitmq.perf.TestUtils.threadFactory;
 import static com.rabbitmq.perf.TestUtils.waitAtMost;
+import static com.rabbitmq.perf.it.Utils.latchCompletionHandler;
+import static com.rabbitmq.perf.it.Utils.queueName;
 import static java.lang.String.format;
 import static java.lang.String.valueOf;
 import static java.util.Arrays.asList;
@@ -85,14 +85,15 @@ public class ConnectionRecoveryIT {
 
     AtomicInteger msgPublished, msgConsumed;
 
-    Stats stats = new Stats(1000, false, new CompositeMeterRegistry(), "") {
+  Stats stats =
+      new Stats(1000, false, new CompositeMeterRegistry(), "") {
 
         @Override
         protected void report(long now) {
-            msgPublished.set(sendCountTotal);
-            msgConsumed.set(recvCountTotal);
+          msgPublished.set(sendCountTotal);
+          msgConsumed.set(recvCountTotal);
         }
-    };
+      };
 
     static Stream<Arguments> configurationArguments() {
         return Stream.of(blockingIoAndNio(multicastParamsConfigurers()));
@@ -446,49 +447,4 @@ public class ConnectionRecoveryIT {
         });
     }
 
-    private MulticastSet.CompletionHandler latchCompletionHandler(int count, TestInfo info) {
-        return new LatchCompletionHandler(new CountDownLatch(count), info);
-    }
-
-    private static class LatchCompletionHandler implements MulticastSet.CompletionHandler {
-
-        final CountDownLatch latch;
-
-        final String name;
-
-        private LatchCompletionHandler(CountDownLatch latch, TestInfo info) {
-            this.latch = latch;
-            this.name = info.getDisplayName();
-        }
-
-        @Override
-        public void waitForCompletion() {
-            LOGGER.info("Waiting completion for test [{}]", name);
-            try {
-                latch.await();
-            } catch (InterruptedException e) {
-                LOGGER.info("Completion waiting has been interrupted for test [{}]", name);
-            }
-        }
-
-        @Override
-        public void countDown(String reason) {
-            latch.countDown();
-        }
-    }
-
-    static String queueName(TestInfo info) {
-        return queueName(info.getTestClass().get(), info.getTestMethod().get());
-    }
-
-    private static String queueName(ExtensionContext context) {
-        return queueName(context.getTestInstance().get().getClass(), context.getTestMethod().get());
-    }
-
-    private static String queueName(Class<?> testClass, Method testMethod) {
-        String uuid = UUID.randomUUID().toString();
-        return String.format(
-            "%s_%s%s",
-            testClass.getSimpleName(), testMethod.getName(), uuid.substring(uuid.length() / 2));
-    }
 }
