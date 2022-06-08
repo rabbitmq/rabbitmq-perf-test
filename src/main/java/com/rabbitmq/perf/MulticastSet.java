@@ -453,20 +453,22 @@ public class MulticastSet {
             ScheduledExecutorService producersExecutorService = this.threadingHandler.scheduledExecutorService(
                     PRODUCER_THREAD_PREFIX, nbThreadsForProducerScheduledExecutorService(params)
             );
-            Supplier<Integer> startDelaySupplier;
+            Supplier<Duration> startDelaySupplier;
             if (params.getProducerRandomStartDelayInSeconds() > 0) {
                 Random random = new Random();
-                startDelaySupplier = () -> random.nextInt(params.getProducerRandomStartDelayInSeconds()) + 1;
+                startDelaySupplier = () -> Duration.ofSeconds(
+                    random.nextInt(params.getProducerRandomStartDelayInSeconds()) + 1
+                );
             } else {
-                startDelaySupplier = () -> 0;
+                startDelaySupplier = () -> Duration.ZERO;
             }
             Duration publishingInterval = params.getPublishingInterval();
             for (int i = 0; i < producerStates.length; i++) {
                 AgentState producerState = producerStates[i];
-                int delay = startDelaySupplier.get();
+                Duration delay = startDelaySupplier.get();
                 producerState.task = producersExecutorService.scheduleAtFixedRate(
                         producerState.runnable.createRunnableForScheduling(),
-                        delay, publishingInterval.toMillis(), TimeUnit.MILLISECONDS
+                        delay.toMillis(), publishingInterval.toMillis(), TimeUnit.MILLISECONDS
                 );
             }
         } else {
