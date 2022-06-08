@@ -5,6 +5,9 @@
 This repository contains source code of the RabbitMQ Performance Testing Tool.
 The client is maintained by the [RabbitMQ team at VMware](https://github.com/rabbitmq/).
 
+PerfTest uses the [AMQP 0.9.1 protocol](https://www.rabbitmq.com/tutorials/amqp-concepts.html) to communicate with a RabbitMQ cluster.
+Use [Stream PerfTest](https://rabbitmq.github.io/rabbitmq-stream-java-client/stable/htmlsingle/#the-performance-tool) if you want to test [RabbitMQ Streams](https://rabbitmq.com/streams.html) with the [stream protocol](https://github.com/rabbitmq/rabbitmq-server/blob/master/deps/rabbitmq_stream/docs/PROTOCOL.adoc).
+
 ## Installation
 
 This is a standalone tool that is distributed in binary form using
