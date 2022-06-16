@@ -102,7 +102,8 @@ run: compile ## Run PerfTest, pass exec arguments via ARGS, e.g. ARGS="-x 1 -y 1
 
 .PHONY: signed-binary
 signed-binary: clean ## Build a GPG signed binary
-	@mvnw package -P assemblies
+	@mvnw package -Dmaven.test.skip -Dgpg.skip=false
+	@mvnw assembly:single -P assemblies -Dmaven.test.skip
 
 .PHONY: doc
 doc: ## Generate PerfTest documentation
