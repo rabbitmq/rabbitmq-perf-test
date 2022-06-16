@@ -256,6 +256,7 @@
         <version>${maven.javadoc.plugin.version}</version>
         <configuration>
           <additionalOptions>-Xdoclint:none</additionalOptions>
+          <detectJavaApiLink>false</detectJavaApiLink>
           <quiet>true</quiet>
         </configuration>
         <executions>
