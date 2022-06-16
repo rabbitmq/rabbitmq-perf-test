@@ -23,8 +23,6 @@ binary: clean ## Build the binary distribution
 
 .PHONY: native-image
 native-image: clean ## Build the native image
-## FIXME try to remove "-J--add-exports=java.management/sun.management=ALL-UNNAMED" when GraalVM 22 is out
-## see https://github.com/oracle/graal/issues/3875
 	@mvnw -q package -DskipTests -P native-image -P '!java-packaging'
 	native-image -jar target/perf-test.jar -H:Features="com.rabbitmq.perf.NativeImageFeature" \
 	    --initialize-at-build-time=io.micrometer \
@@ -33,7 +31,6 @@ native-image: clean ## Build the native image
 	    --initialize-at-build-time=javax.servlet \
 	    --initialize-at-build-time=org.slf4j \
 	    --no-fallback \
-	    -J--add-exports=java.management/sun.management=ALL-UNNAMED \
 	    -H:IncludeResources="rabbitmq-perf-test.properties"
 
 .PHONY: docker-image-dev
