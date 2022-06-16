@@ -350,7 +350,7 @@
         <executions>
           <execution>
             <id>sign-artifacts</id>
-            <phase>package</phase>
+            <phase>install</phase>
             <goals>
               <goal>sign</goal>
             </goals>
