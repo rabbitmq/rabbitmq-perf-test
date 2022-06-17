@@ -25,6 +25,7 @@ binary: clean ## Build the binary distribution
 native-image: clean ## Build the native image
 	@mvnw -q package -DskipTests -P native-image -P '!java-packaging'
 	native-image -jar target/perf-test.jar -H:Features="com.rabbitmq.perf.NativeImageFeature" \
+	    --static --libc=musl \
 	    --initialize-at-build-time=io.micrometer \
 	    --initialize-at-build-time=com.rabbitmq.client \
 	    --initialize-at-build-time=org.eclipse.jetty \
