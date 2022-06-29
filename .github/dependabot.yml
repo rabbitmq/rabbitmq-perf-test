@@ -2,11 +2,11 @@
 # https://docs.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
 version: 2
 updates:
-  - package-ecosystem: "maven"
-    directory: "/"
-    schedule:
-      interval: "daily"
-    open-pull-requests-limit: 20
-    ignore:
-      - dependency-name: "org.eclipse.jetty:jetty-servlet"
-        versions: ["[10.0,)"]
+#  - package-ecosystem: "maven"
+#    directory: "/"
+#    schedule:
+#      interval: "daily"
+#    open-pull-requests-limit: 20
+#    ignore:
+#      - dependency-name: "org.eclipse.jetty:jetty-servlet"
+#        versions: ["[10.0,)"]
