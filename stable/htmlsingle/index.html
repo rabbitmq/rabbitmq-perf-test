@@ -531,7 +531,7 @@ table.CodeRay td.code{padding:0 0 0 .75em}
 <div id="header">
 <h1>RabbitMQ PerfTest</h1>
 <div class="details">
-<span id="revnumber">version 2.17.0</span>
+<span id="revnumber">version 2.18.0</span>
 </div>
 <div id="toc" class="toc2">
 <div id="toctitle">Table of Contents</div>
@@ -602,6 +602,10 @@ from infrastructure-level constraints (e.g. network bandwidth) to
 RabbitMQ configuration and topology to applications that publish
 and consume. PerfTest can demonstrate baseline performance of a
 node or a cluster of nodes.</p>
+</div>
+<div class="paragraph">
+<p>PerfTest uses the <a href="https://www.rabbitmq.com/tutorials/amqp-concepts.html">AMQP 0.9.1 protocol</a> to communicate with a RabbitMQ cluster.
+Use <a href="https://rabbitmq.github.io/rabbitmq-stream-java-client/stable/htmlsingle/#the-performance-tool">Stream PerfTest</a> if you want to test <a href="https://rabbitmq.com/streams.html">RabbitMQ Streams</a> with the <a href="https://github.com/rabbitmq/rabbitmq-server/blob/master/deps/rabbitmq_stream/docs/PROTOCOL.adoc">stream protocol</a>.</p>
 </div>
 </div>
 </div>
@@ -675,7 +679,7 @@ following commands:</p>
 <div class="literalblock">
 <div class="content">
 <pre>docker network create perf-test
-docker run -it --rm --network perf-test --name rabbitmq -p 15672:15672 rabbitmq:3.9-management
+docker run -it --rm --network perf-test --name rabbitmq -p 15672:15672 rabbitmq:3.10-management
 docker run -it --rm --network perf-test pivotalrabbitmq/perf-test:latest --uri amqp://rabbitmq</pre>
 </div>
 </div>
@@ -1364,6 +1368,24 @@ many queues:</p>
   --publishing-interval 5</code></pre>
 </div>
 </div>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-important" title="Important"></i>
+</td>
+<td class="content">
+<div class="title">Mind the sampling interval with slow publishers!</div>
+<div class="paragraph">
+<p>The <code>--interval</code> option (<code>-i</code>) sets the sampling interval for statistics and defaults to 1 second.
+Keeping this value with slow publishers (1 message per second or less with <code>--publishing-interval</code>) can cause dips for some metrics, as they may not get any value for a while.
+Note this affects only metrics and not the way PerfTest or the broker behave.
+To avoid the metrics dips, you can increase the value of the sampling interval – twice the value of the publishing interval is a reasonable rule of thumb – or use the <code>--producer-random-start-delay</code> option to ramp up the start of publishers (see below).</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
 <div class="paragraph">
 <p>To prevent publishers from publishing at roughly the same time and
 distribute the rate more evenly, use
@@ -1629,7 +1651,7 @@ the <code>PERF_TEST_CONFIRM_TIMEOUT</code> environment variable, not only <code>
 <h2 id="native-executable"><a class="anchor" href="#native-executable"></a>Native Executable</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>PerfTest is also distributed as a <a href="https://www.graalvm.org/docs/reference-manual/aot-compilation/">native executable</a>
+<p>PerfTest is also distributed as a <a href="https://www.graalvm.org/22.1/reference-manual/native-image/">native executable</a>
 built with <a href="https://www.graalvm.org/">GraalVM</a>. The native executable has the following
 advantages: it doesn&#8217;t need a JVM to run, it has faster startup time
 and lower runtime memory overhead compared to a Java VM.</p>
@@ -1851,8 +1873,8 @@ can be changed:</p>
 </div>
 <div id="footer">
 <div id="footer-text">
-Version 2.17.0<br>
-Last updated 2022-04-04 13:08:50 UTC
+Version 2.18.0<br>
+Last updated 2022-07-01 08:49:24 UTC
 </div>
 </div>
 </body>
