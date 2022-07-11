@@ -132,7 +132,10 @@ public class PerfTest {
             int heartbeatSenderThreads = intArg(cmd, "hst", -1);
             String messageProperties = strArg(cmd, "mp", null);
             int routingKeyCacheSize  = intArg(cmd, "rkcs", 0);
-            boolean exclusive = hasOption(cmd, "E");
+            boolean exclusive        = hasOption(cmd, "E");
+            String virtualHost       = strArg(cmd, "vh", null);
+            String user              = strArg(cmd, "user", null);
+            String pass              = strArg(cmd, "pass", null);
             Duration publishingInterval = null;
             String publishingIntervalArg = strArg(cmd, "P", null);
             if (publishingIntervalArg != null) {
@@ -413,6 +416,13 @@ public class PerfTest {
             MulticastSet.CompletionHandler completionHandler = getCompletionHandler(p, completionReasons);
 
             factory.setExceptionHandler(perfTestOptions.exceptionHandler);
+            if (virtualHost != null) {
+                factory.setVirtualHost(virtualHost);
+            }
+            if (user != null && pass != null) {
+                factory.setUsername(user);
+                factory.setPassword(pass);
+            }
 
             MulticastSet set = new MulticastSet(stats, factory, p, testID, uris, completionHandler, shutdownService);
             set.run(true);
@@ -732,6 +742,9 @@ public class PerfTest {
         options.addOption(new Option("sni", "server-name-indication", true, "server names for Server Name Indication TLS parameter, separated by commas"));
         options.addOption(new Option("qq", "quorum-queue", false,"create quorum queue(s)"));
         options.addOption(new Option("ew", "exit-when", true, "exit when queue(s) empty or consumer(s) idle for 1 second, valid values are empty or idle"));
+        options.addOption(new Option("vh", "virtual-host", true, "specify the virtual host"));
+        options.addOption(new Option("user", "username", true, "specify the username"));
+        options.addOption(new Option("pass", "password", true, "specify the password"));
         return options;
     }
 
