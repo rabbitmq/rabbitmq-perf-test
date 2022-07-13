@@ -74,8 +74,9 @@ RUN set -eux; \
     if [ "$(uname -m)" = "x86_64" ] ; then java -jar /perf_test/perf-test.jar --help ; \
 	  fi
 
-RUN groupadd --gid 1000 perf-test
-RUN useradd --uid 1000 --gid perf-test --comment "perf-test user" perf-test
+RUN groupadd --gid 1000 perf-test;\
+    useradd --uid 1000 --gid perf-test --comment "perf-test user" perf-test; \
+    chown -R 'perf-test':'perf-test' /perf_test
 
 USER perf-test:perf-test
 
