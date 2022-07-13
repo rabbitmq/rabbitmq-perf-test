@@ -1,6 +1,6 @@
 FROM ubuntu:22.04 as builder
 
-ARG perf_test_binary="target/rabbitmq-perf-test-*-bin.tar.gz"
+ARG perf_test_binary="target/perf-test.jar"
 
 RUN set -eux; \
 	\
@@ -39,15 +39,8 @@ ENV PERF_TEST_PATH="/usr/local/src/perf-test"
 
 ADD $perf_test_binary /
 
-RUN if ls rabbitmq-perf-test-*.tar.gz 1> /dev/null 2>&1; then \
-    set -eux; \
-    \
-    mv rabbitmq-perf-test-*.tar.gz rabbitmq-perf-test.tar.gz; \
-    mkdir -p "$PERF_TEST_HOME"; \
-    tar --extract --file "rabbitmq-perf-test.tar.gz" --directory "$PERF_TEST_HOME" --strip-components 1; \
-    else \
-    mv rabbitmq-perf-test-* "$PERF_TEST_HOME"; \
-    fi
+RUN mkdir $PERF_TEST_HOME; \
+    mv /*.jar "$PERF_TEST_HOME/perf-test.jar"
 
 FROM ubuntu:22.04
 
@@ -74,11 +67,11 @@ WORKDIR /perf_test
 COPY --from=builder /perf_test ./
 
 RUN set -eux; \
-    if [ "$(uname -m)" = "x86_64" ] ; then bin/runjava com.rabbitmq.perf.PerfTest --version ; \
+    if [ "$(uname -m)" = "x86_64" ] ; then java -jar /perf_test/perf-test.jar --version ; \
 	  fi
 
 RUN set -eux; \
-    if [ "$(uname -m)" = "x86_64" ] ; then bin/runjava com.rabbitmq.perf.PerfTest --help ; \
+    if [ "$(uname -m)" = "x86_64" ] ; then java -jar /perf_test/perf-test.jar --help ; \
 	  fi
 
 RUN groupadd --gid 1000 perf-test
@@ -86,4 +79,4 @@ RUN useradd --uid 1000 --gid perf-test --comment "perf-test user" perf-test
 
 USER perf-test:perf-test
 
-ENTRYPOINT ["bin/runjava", "com.rabbitmq.perf.PerfTest"]
+ENTRYPOINT ["java", "-jar", "/perf_test/perf-test.jar"]
