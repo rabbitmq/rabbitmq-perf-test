@@ -14,27 +14,34 @@ This is a standalone tool that is distributed in binary form using
 [GitHub releases](https://github.com/rabbitmq/rabbitmq-perf-test/releases)
 and as a JAR file on Maven Central (see below). A [Docker image](https://hub.docker.com/r/pivotalrabbitmq/perf-test/) is available as well.
 
+The [latest snapshot](https://github.com/rabbitmq/rabbitmq-java-tools-binaries-dev/releases/tag/v-rabbitmq-perf-test-latest) is also available.
+
 ## Documentation
 
- * [Latest stable release](https://rabbitmq.github.io/rabbitmq-perf-test/stable/htmlsingle/)
+ * [Latest stable release](https://perftest.rabbitmq.com)
  * [Latest milestone release](https://rabbitmq.github.io/rabbitmq-perf-test/milestone/htmlsingle/)
- * [Latest development build](https://rabbitmq.github.io/rabbitmq-perf-test/snapshot/htmlsingle/)
+ * [Latest development build](https://perftest-dev.rabbitmq.com)
 
 ## Usage
 
 ### Running Performance Tests
 
-Assuming the current directory is the root directory of the binary distribution,
-to launch a performance test with 1 producer and 1 consumer:
+Download the latest snapshot:
 
+```shell
+wget https://github.com/rabbitmq/rabbitmq-java-tools-binaries-dev/releases/download/v-rabbitmq-perf-test-latest/perf-test-latest.jar
 ```
-bin/runjava com.rabbitmq.perf.PerfTest
+
+Launch a performance test with 1 producer and 1 consumer:
+
+```shell
+java -jar perf-test-latest.jar
 ```
 
 Use
 
-```
-bin/runjava com.rabbitmq.perf.PerfTest --help
+```shell
+java -jar perf-test-latest.jar --help
 ```
 
 to see all supported options.
@@ -55,19 +62,21 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for an overview of the development proc
 
 ## Building from Source
 
+To build the Uber JAR:
+
+```shell
+./mvnw clean package -P uber-jar -Dgpg.skip=true -Dmaven.test.skip
+```
+
+The generated file is `target/perf-test.jar`.
+
 To build the JAR file:
 
-```
+```shell
 ./mvnw clean package -Dmaven.test.skip
 ```
 
-Files are then in the `target` directory.
-
-To build the JAR file, source and binary distributions:
-
-```
-./mvnw clean package -P assemblies -Dgpg.skip=true -Dmaven.test.skip
-```
+The file is then in the `target` directory.
 
 ### Running tests
 
@@ -102,16 +111,16 @@ Files are then in the `target` directory.
 ships with Logback as a SLF4J binding and uses Logback default configuration (printing logs to the console). If
 for any reason you need to use a specific Logback configuration file, you can do it this way:
 
-```
-bin/runjava -Dlogback.configurationFile=/path/to/logback.xml com.rabbitmq.perf.PerfTest
+```shell
+java -Dlogback.configurationFile=/path/to/logback.xml -jar perf-test.jar
 ```
 
 As of PerfTest 2.11.0, it is possible to define loggers directly from the command line. This is less powerful
 than using a configuration file, yet simpler to use and useful for quick debugging. Use the `rabbitmq.perftest.loggers`
 system property with `name=level` pairs, e.g.:
 
-```
-bin/runjava -Drabbitmq.perftest.loggers=com.rabbitmq.perf=debug com.rabbitmq.perf.PerfTest
+```shell
+java -Drabbitmq.perftest.loggers=com.rabbitmq.perf=debug -jar perf-test.jar
 ```
 
 It is possible to define several loggers by separating them with commas, e.g.
