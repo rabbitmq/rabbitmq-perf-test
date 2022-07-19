@@ -22,7 +22,7 @@ RUN set -eux; \
     if [ "$(uname -m)" = "x86_64" ] ; then JAVA_PATH="/usr/lib/jdk-$JAVA_VERSION"; \
     mkdir $JAVA_PATH && \
     tar --extract  --file jdk.tar.gz --directory "$JAVA_PATH" --strip-components 1; \
-    $JAVA_PATH/bin/jlink --compress=2 --output /jre --add-modules java.base,java.management,java.xml,java.naming,java.sql,jdk.crypto.cryptoki; \
+    $JAVA_PATH/bin/jlink --compress=2 --output /jre --add-modules java.base,java.management,java.xml,java.naming,java.sql,jdk.crypto.cryptoki,jdk.httpserver; \
 	  /jre/bin/java -version; \
 	  fi
 

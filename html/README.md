@@ -339,31 +339,6 @@ Some browsers may need to use a web server (`file://` wouldn't work).
 
 From the `html` directory, you can start a web server with Python:
 
+```shell
 $ python -m SimpleHTTPServer
-
-As an alternative, from the root directory of the binary distribution,
-you can launch a Java-based web server:
-
 ```
-bin/runjava com.rabbitmq.perf.WebServer
-```
-
-The latter command starts a web server listening on port 8080, with the
-`html` directory as its base directory. You can then see the included
-sample at http://localhost:8080/examples/sample.html. To change these defaults:
-
-```
-bin/runjava com.rabbitmq.perf.WebServer ./other-base-dir 9090
-```
-
-At last, if you want a quick preview of your results (same layout
-as the first 'consume' scenario above), ensure the scenario name is
-'benchmark' in the result file and launch the following command:
-
-```
-$ bin/runjava com.rabbitmq.perf.BenchmarkResults my-result-file.js
-```
-
-The latter command will start a web server on port 8080 and open
-a browser window to display the results.
-

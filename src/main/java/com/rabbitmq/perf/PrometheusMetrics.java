@@ -15,22 +15,15 @@
 
 package com.rabbitmq.perf;
 
+import com.sun.net.httpserver.HttpServer;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
 import io.micrometer.prometheus.PrometheusConfig;
 import io.micrometer.prometheus.PrometheusMeterRegistry;
+import java.io.OutputStream;
+import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
-import org.eclipse.jetty.server.Connector;
-import org.eclipse.jetty.server.Request;
-import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.ServerConnector;
-import org.eclipse.jetty.server.handler.AbstractHandler;
-import org.eclipse.jetty.server.handler.ContextHandler;
-import org.eclipse.jetty.util.thread.QueuedThreadPool;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
 
 import static com.rabbitmq.perf.PerfTest.intArg;
 import static com.rabbitmq.perf.Utils.strArg;
@@ -40,7 +33,7 @@ import static com.rabbitmq.perf.Utils.strArg;
  */
 public class PrometheusMetrics implements Metrics {
 
-    private volatile Server server;
+    private volatile HttpServer server;
 
     private volatile PrometheusMeterRegistry registry;
 
@@ -62,44 +55,22 @@ public class PrometheusMetrics implements Metrics {
             int prometheusHttpEndpointPort = intArg(cmd, "mpp", 8080);
             String prometheusHttpEndpoint = strArg(cmd, "mpe", "metrics");
             prometheusHttpEndpoint = prometheusHttpEndpoint.startsWith("/") ? prometheusHttpEndpoint : "/" + prometheusHttpEndpoint;
-            QueuedThreadPool threadPool = new QueuedThreadPool();
-            // difference between those 2 should be high enough to avoid a warning
-            threadPool.setMinThreads(2);
-            threadPool.setMaxThreads(12);
-            server = new Server(threadPool);
-            ServerConnector connector = new ServerConnector(server); //NOSONAR
-            connector.setPort(prometheusHttpEndpointPort);
-            server.setConnectors(new Connector[] { connector });
-
-            ContextHandler ctx = new ContextHandler();
-            ctx.setContextPath(prometheusHttpEndpoint);
-            ctx.setHandler(new AbstractHandler() {
-
-                @Override
-                public void handle(String s, Request request, HttpServletRequest httpServletRequest, HttpServletResponse response)
-                    throws IOException {
-                    String scraped = registry.scrape();
-
-                    response.setStatus(HttpServletResponse.SC_OK);
-                    response.setContentLength(scraped.length());
-                    response.setContentType("text/plain");
-
-                    response.getWriter().print(scraped);
-
-                    request.setHandled(true);
+            server = HttpServer.create(new InetSocketAddress(prometheusHttpEndpointPort), 0);
+            server.createContext(prometheusHttpEndpoint, exchange -> {
+                exchange.getResponseHeaders().set("Content-Type", "text/plain");
+                byte[] content = registry.scrape().getBytes(StandardCharsets.UTF_8);
+                exchange.sendResponseHeaders(200, content.length);
+                try (OutputStream out = exchange.getResponseBody()) {
+                    out.write(content);
                 }
             });
-
-            server.setHandler(ctx);
-
-            server.setStopTimeout(1000);
             server.start();
         }
     }
 
     public void close() throws Exception {
         if (server != null) {
-            server.stop();
+            server.stop(0);
         }
         if (registry != null) {
             registry.close();

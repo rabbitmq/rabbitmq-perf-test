@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020 VMware, Inc. or its affiliates.  All rights reserved.
+// Copyright (c) 2018-2022 VMware, Inc. or its affiliates.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 2.0 ("MPL"), the GNU General Public License version 2
@@ -16,28 +16,26 @@
 package com.rabbitmq.perf;
 
 import com.rabbitmq.perf.Metrics.ConfigurationContext;
+
+import com.sun.net.httpserver.HttpServer;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.stream.Collectors;
 import org.apache.commons.cli.*;
-import org.eclipse.jetty.server.Connector;
-import org.eclipse.jetty.server.Request;
-import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.ServerConnector;
-import org.eclipse.jetty.server.handler.AbstractHandler;
-import org.eclipse.jetty.server.handler.ContextHandler;
-import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -54,7 +52,7 @@ public class DatadogMetricsTest {
     final AtomicReference<String> description = new AtomicReference<>();
     final CountDownLatch latch = new CountDownLatch(NB_REQUESTS);
     int port;
-    Server server;
+    HttpServer server;
     DatadogMetrics metrics;
 
     @BeforeEach
@@ -69,7 +67,7 @@ public class DatadogMetricsTest {
             metrics.close();
         }
         if (server != null) {
-            server.stop();
+            server.stop(0);
         }
     }
 
@@ -103,45 +101,38 @@ public class DatadogMetricsTest {
         assertTrue(content.get().contains("\"host\":\"test\""));
     }
 
-    private Server startMockDatadogService() throws Exception {
-        QueuedThreadPool threadPool = new QueuedThreadPool();
-        // difference between those 2 should be high enough to avoid a warning
-        threadPool.setMinThreads(2);
-        threadPool.setMaxThreads(12);
-        server = new Server(threadPool);
-        ServerConnector connector = new ServerConnector(server);
-        connector.setPort(port);
-        server.setConnectors(new Connector[] { connector });
-
-        ContextHandler context = new ContextHandler();
-        context.setContextPath("/datadog");
-        context.setHandler(new AbstractHandler() {
-
-            @Override
-            public void handle(String s, Request request, HttpServletRequest httpServletRequest, HttpServletResponse response)
-                throws IOException {
-                if (request.getParameter("api_key") != null) {
-                    apiKey.set(request.getParameter("api_key"));
+    private HttpServer startMockDatadogService() throws Exception {
+        server = HttpServer.create(new InetSocketAddress(port), 0);
+        server.createContext(
+            "/datadog",
+            exchange -> {
+                Map<String, String> parameters =
+                    Arrays.stream(exchange.getRequestURI().getQuery().split("&"))
+                        .map(parameter -> parameter.split("="))
+                        .collect(
+                            Collectors.toMap(
+                                parameterNameValue -> parameterNameValue[0],
+                                parameterNameValue -> parameterNameValue[1]));
+                if (parameters.get("api_key") != null) {
+                    apiKey.set(parameters.get("api_key"));
                 }
-                if (request.getParameter("application_key") != null) {
-                    appKey.set(request.getParameter("application_key"));
+                if (parameters.get("application_key") != null) {
+                    appKey.set(parameters.get("application_key"));
                 }
+                try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(exchange.getRequestBody(), StandardCharsets.UTF_8))) {
+                    String body = reader.lines().collect(Collectors.joining("\n"));
+                    DatadogMetricsTest.this.content.set(body);
 
-                String body = request.getReader().lines().collect(Collectors.joining("\n"));
-                DatadogMetricsTest.this.content.set(body);
-
-                if (body.contains("\"description\"")) {
-                    description.set(body);
+                    if (body.contains("\"description\"")) {
+                        description.set(body);
+                    }
                 }
+                exchange.sendResponseHeaders(200, 0);
+                exchange.getResponseBody().close();
 
-                request.setHandled(true);
                 latch.countDown();
-            }
-        });
-
-        server.setHandler(context);
-
-        server.setStopTimeout(1000);
+            });
         server.start();
         return server;
     }
