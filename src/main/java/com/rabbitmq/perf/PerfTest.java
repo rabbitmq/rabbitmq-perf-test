@@ -804,23 +804,22 @@ public class PerfTest {
     }
 
     private static void versionInformation() {
-        String lineSeparator = System.getProperty("line.separator");
         String version = format(
             "RabbitMQ Perf Test %s (%s; %s)",
             Version.VERSION, Version.BUILD, Version.BUILD_TIMESTAMP
         );
-        String info = format(
-            "RabbitMQ AMQP Client version: %s" + lineSeparator +
-            "Java version: %s, vendor: %s" + lineSeparator +
-            "Java home: %s" + lineSeparator +
-            "Default locale: %s, platform encoding: %s" + lineSeparator +
-            "OS name: %s, version: %s, arch: %s",
-            ClientVersion.VERSION,
-            System.getProperty("java.version"), System.getProperty("java.vendor"),
-            System.getProperty("java.home"),
-            Locale.getDefault().toString(), Charset.defaultCharset().toString(),
-            System.getProperty("os.name"), System.getProperty("os.version"), System.getProperty("os.arch")
-        );
+        StringBuilder info = new StringBuilder();
+        info.append(format("RabbitMQ AMQP Client version: %s%n", ClientVersion.VERSION));
+        info.append(format("Java version: %s, vendor: %s%n",
+            System.getProperty("java.version"), System.getProperty("java.vendor")));
+        String javaHome = System.getProperty("java.home");
+        if (javaHome != null && !javaHome.isEmpty()) {
+           info.append(format("Java home: %s%n", javaHome));
+        }
+        info.append(format("Default locale: %s, platform encoding: %s%n",
+            Locale.getDefault().toString(), Charset.defaultCharset()));
+        info.append(format("OS name: %s, version: %s, arch: %s",
+            System.getProperty("os.name"), System.getProperty("os.version"), System.getProperty("os.arch")));
         System.out.println("\u001B[1m" + version);
         System.out.println("\u001B[0m" + info);
     }
