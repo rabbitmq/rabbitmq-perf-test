@@ -16,25 +16,25 @@ will publish as quickly as possible, without any rate
 limiting. Results will be prefixed with “test1” for easier
 identification and comparison:
 
- bin/runjava com.rabbitmq.perf.PerfTest -x 1 -y 2 -u "throughput-test-1" -a --id "test 1"
+ java -jar perf-test.jar -x 1 -y 2 -u "throughput-test-1" -a --id "test 1"
 
 This modification will use 2 publishers and 4 consumers,
 typically yielding higher throughput given enough CPU cores
 on the machine and RabbitMQ nodes:
 
- bin/runjava com.rabbitmq.perf.PerfTest -x 2 -y 4 -u "throughput-test-2" -a --id "test 2"
+ java -jar perf-test.jar -x 2 -y 4 -u "throughput-test-2" -a --id "test 2"
 
 This modification switches consumers to manual acknowledgements:
 
- bin/runjava com.rabbitmq.perf.PerfTest -x 1 -y 2 -u "throughput-test-3" --id "test 3"
+ java -jar perf-test.jar -x 1 -y 2 -u "throughput-test-3" --id "test 3"
 
 This modification changes message size from default (12 bytes) to 4 kB:
 
- bin/runjava com.rabbitmq.perf.PerfTest -x 1 -y 2 -u "throughput-test-4" --id "test 4" -s 4000
+ java -jar perf-test.jar -x 1 -y 2 -u "throughput-test-4" --id "test 4" -s 4000
 
 PerfTest can use durable queues and persistent messages:
 
- bin/runjava com.rabbitmq.perf.PerfTest -x 1 -y 2 -u "throughput-test-5" --id "test-5" -f persistent
+ java -jar perf-test.jar -x 1 -y 2 -u "throughput-test-5" --id "test-5" -f persistent
 
 When PerfTest is running, it is important to monitor various
 publisher and consumer metrics provided by the https://www.rabbitmq.com/management.html[management UI].
@@ -52,34 +52,34 @@ important to monitor.
 
 Consumers can ack multiple messages at once, for example, 100 in this configuration:
 
- bin/runjava com.rabbitmq.perf.PerfTest -x 1 -y 2 -u "throughput-test-6" --id "test-6" \
+ java -jar perf-test.jar -x 1 -y 2 -u "throughput-test-6" --id "test-6" \
    -f persistent --multi-ack-every 100
 
 
 https://www.rabbitmq.com/confirms.html[Consumer prefetch (QoS)] can be configured as well
 (in this example to 500):
 
- bin/runjava com.rabbitmq.perf.PerfTest -x 1 -y 2 -u "throughput-test-7" --id "test-7" \
+ java -jar perf-test.jar -x 1 -y 2 -u "throughput-test-7" --id "test-7" \
    -f persistent --multi-ack-every 200 -q 500
 
 Publisher confirms can be used with a maximum of N outstanding publishes:
 
- bin/runjava com.rabbitmq.perf.PerfTest -x 1 -y 2 -u "throughput-test-8" --id "test-8" \
+ java -jar perf-test.jar -x 1 -y 2 -u "throughput-test-8" --id "test-8" \
    -f persistent -q 500 -c 500
 
 PerfTest can publish only a certain number of messages instead of running until shut down:
 
- bin/runjava com.rabbitmq.perf.PerfTest -x 1 -y 2 -u "throughput-test-10" --id "test-10" \
+ java -jar perf-test.jar -x 1 -y 2 -u "throughput-test-10" --id "test-10" \
    -f persistent -q 500 -pmessages 100000
 
 Publisher rate can be limited:
 
- bin/runjava com.rabbitmq.perf.PerfTest -x 1 -y 2 -u "throughput-test-11" --id "test-11" \
+ java -jar perf-test.jar -x 1 -y 2 -u "throughput-test-11" --id "test-11" \
    -f persistent -q 500 --rate 5000
 
 Consumer rate can be limited as well to simulate slower consumers or create a backlog:
 
- bin/runjava com.rabbitmq.perf.PerfTest -x 1 -y 2 -u "throughput-test-12" --id "test-12" \
+ java -jar perf-test.jar -x 1 -y 2 -u "throughput-test-12" --id "test-12" \
    -f persistent --rate 5000 --consumer-rate 2000
 
 Note that the consumer rate limit is applied per consumer, so in the
@@ -96,14 +96,14 @@ This makes the simulation more accurate when simulating many slow publishers.
 PerfTest can be configured to run for a limited amount of time in seconds with the
 `-z` option:
 
- bin/runjava com.rabbitmq.perf.PerfTest -x 1 -y 2 -u "throughput-test-13" --id "test-13" \
+ java -jar perf-test.jar -x 1 -y 2 -u "throughput-test-13" --id "test-13" \
    -f persistent -z 30
 
 Running PerfTest without consumers and with a limited number
 of messages can be used to pre-populate a queue, e.g. with
 1M messages 1 kB in size each::
 
- bin/runjava com.rabbitmq.perf.PerfTest -y0 -p -u "throughput-test-14" \
+ java -jar perf-test.jar -y0 -p -u "throughput-test-14" \
    -s 1000 -C 1000000 --id "test-14" -f persistent
 
 Use the `-D` option to limit the number of consumed messages. Note
@@ -117,7 +117,7 @@ the remaining 10 messages (as the publisher is stopped).
 To consume from a pre-declared and pre-populated queue without starting any publishers,
 use
 
- bin/runjava com.rabbitmq.perf.PerfTest -x0 -y10 -p -u "throughput-test-14" --id "test-15"
+ java -jar perf-test.jar -x0 -y10 -p -u "throughput-test-14" --id "test-15"
 
 PerfTest is useful for establishing baseline cluster throughput with
 various configurations but does not simulate many other aspects of
@@ -173,7 +173,7 @@ The connection closing timeout can be set up with the `--shutdown-timeout` argum
 The default timeout can be increased to let more time to close connections, e.g. the
 command below uses a shutdown timeout of 20 seconds:
 
- bin/runjava com.rabbitmq.perf.PerfTest --shutdown-timeout 20
+ java -jar perf-test.jar --shutdown-timeout 20
 
 The connection closing sequence can also be skipped by setting the timeout to 0 or any negative
 value:

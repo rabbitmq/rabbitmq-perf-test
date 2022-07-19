@@ -2,20 +2,20 @@
 
 PerfTest can create queues using provided queue arguments:
 
- bin/runjava com.rabbitmq.perf.PerfTest --queue-args x-max-length=10
+ java -jar perf-test.jar --queue-args x-max-length=10
 
 The previous command will create a https://www.rabbitmq.com/maxlength.html[queue with a length limit]
 of 10. You can also provide several queue arguments by separating the
 key/value pairs with commas:
 
- bin/runjava com.rabbitmq.perf.PerfTest \
+ java -jar perf-test.jar \
    --queue-args x-max-length=10,x-dead-letter-exchange=some.exchange.name
 
 It is possible to use several arguments to
 create https://rabbitmq.com/quorum-queues.html[quorum queues], but PerfTest provides
 a `--quorum-queue` flag to do that:
 
- bin/runjava com.rabbitmq.perf.PerfTest \
+ java -jar perf-test.jar \
    --quorum-queue --queue name
 
 `--quorum-queue` is a shortcut for `--flag persistent --queue-args x-queue-type=quorum --auto-delete false`. Note a quorum queue cannot have a server-generated name, so the
@@ -31,7 +31,7 @@ with messages that real consumers will process.
 
 You can specify message properties with key/value pairs separated by commas:
 
- bin/runjava com.rabbitmq.perf.PerfTest \
+ java -jar perf-test.jar \
    --message-properties priority=5,timestamp=2007-12-03T10:15:30+01:00
 
 The supported property keys are: `contentType`, `contentEncoding`,
@@ -40,7 +40,7 @@ The supported property keys are: `contentType`, `contentEncoding`,
 keys do not belong to the previous list, the pairs will be considered
 as headers (arbitrary key/value pairs):
 
- bin/runjava com.rabbitmq.perf.PerfTest \
+ java -jar perf-test.jar \
    --message-properties priority=10,header1=value1,header2=value2
 
 === Message Payload from Files
@@ -50,7 +50,7 @@ content type. This can be useful when plugging real application
 consumers downstream. The content can come from one or several files and
 the content-type can be specified:
 
-  bin/runjava com.rabbitmq.perf.PerfTest --consumers 0 \
+  java -jar perf-test.jar --consumers 0 \
     --body content1.json,content2.json --body-content-type application/json
 
 === Random JSON Payload
@@ -60,7 +60,7 @@ experiment with traffic that (almost) always changes. To generate random JSON
 payloads, use the `--json-body` flag and the `--size` argument to specify
 the size in bytes:
 
- bin/runjava com.rabbitmq.perf.PerfTest --json-body --size 16000
+ java -jar perf-test.jar --json-body --size 16000
 
 Generate random values is costly, so PerfTest generates a pool of payloads upfront
 and uses them randomly in published messages. This way the generation of payloads
@@ -93,12 +93,12 @@ By default, PerfTest publishes as fast as possible.
 The publishing rate per producer can be limited with the `--rate` option (`-r`). E.g. to
 publishing at most 100 messages per second for the whole run:
 
-  bin/runjava com.rabbitmq.perf.PerfTest --rate 100
+  java -jar perf-test.jar --rate 100
 
 The `--variable-rate` (`-vr`) option can be used several times to specify a publishing rate
 for a duration, e.g.:
 
-  bin/runjava com.rabbitmq.perf.PerfTest \
+  java -jar perf-test.jar \
     --variable-rate 100:60 --variable-rate 1000:10 --variable-rate 500:15
 
 The variable rate option uses the `[RATE]:[DURATION]` syntax, where `RATE` is in messages per second
@@ -117,12 +117,12 @@ some data in the message to calculate latency on the consumer side).
 It is possible to make messages bigger with the `--size` (`-s`) option, e.g. to publish
 4 kB messages:
 
-  bin/runjava com.rabbitmq.perf.PerfTest --size 4000
+  java -jar perf-test.jar --size 4000
 
 The `--variable-size` (`-vs`) option allows to specify different message sizes
 for periods of time, e.g.:
 
-  bin/runjava com.rabbitmq.perf.PerfTest \
+  java -jar perf-test.jar \
     --variable-size 1000:30 --variable-size 10000:20 --variable-size 5000:45
 
 The variable rate option uses the `[SIZE]:[DURATION]` syntax, where `SIZE` is in bytes
@@ -137,12 +137,12 @@ You can simulate processing time per message with either a fixed or a variable l
 The `--consumer-latency` (`-L`) option sets a fixed consumer latency in microseconds. In the example
 below a 1 ms latency is set:
 
-  bin/runjava com.rabbitmq.perf.PerfTest --consumer-latency 1000
+  java -jar perf-test.jar --consumer-latency 1000
 
 The `--variable-latency` (`-vl`) option sets a variable consumer latency. In the example below it is
 set to 1 ms for 60 seconds then 1 second for 30 seconds:
 
-  bin/runjava com.rabbitmq.perf.PerfTest --variable-latency 1000:60 --variable-latency 1000000:30
+  java -jar perf-test.jar --variable-latency 1000:60 --variable-latency 1000000:30
 
 == Working With Many Queues
    
@@ -152,7 +152,7 @@ across a sequence of queues, e.g.:
 .Using a sequence of queues
 [source,bash,indent=0]
 --------
-bin/runjava com.rabbitmq.perf.PerfTest --queue-pattern 'perf-test-%d' \
+java -jar perf-test.jar --queue-pattern 'perf-test-%d' \
   --queue-pattern-from 1 --queue-pattern-to 10 \
   --producers 100 --consumers 100
 --------
@@ -163,7 +163,7 @@ This way each queue will have 10 consumers and 10 producers sending messages to 
 
 Load is balanced in a round-robin fashion:
 
- bin/runjava com.rabbitmq.perf.PerfTest --queue-pattern 'perf-test-%d' \
+ java -jar perf-test.jar --queue-pattern 'perf-test-%d' \
    --queue-pattern-from 1 --queue-pattern-to 10 \
    --producers 15 --consumers 30
 
@@ -193,7 +193,7 @@ Each queue will have 3 consumers and 1 producer sending messages to it:
 .Creating a first set of 500 queues
 [source,bash,indent=0]
 --------
-bin/runjava com.rabbitmq.perf.PerfTest --queue-pattern 'perf-test-%d' \
+java -jar perf-test.jar --queue-pattern 'perf-test-%d' \
   --queue-pattern-from 1 --queue-pattern-to 500 \
   --producers 500 --consumers 1500
 --------
@@ -205,7 +205,7 @@ Each queue will have 3 consumers and 1 producer sending messages to it:
 .Creating a second set of 500 queues
 [source,bash,indent=0]
 --------
-bin/runjava com.rabbitmq.perf.PerfTest --queue-pattern 'perf-test-%d' \
+java -jar perf-test.jar --queue-pattern 'perf-test-%d' \
  --queue-pattern-from 501 --queue-pattern-to 1000 \
  --producers 500 --consumers 1500
 --------
@@ -221,7 +221,7 @@ PerfTest uses with the `--heartbeat-sender-threads` option:
 .Using `--heartbeat-sender-threads` to reduce the number of threads
 [source,bash,indent=0]
 --------
-bin/runjava com.rabbitmq.perf.PerfTest --queue-pattern 'perf-test-%d' \
+java -jar perf-test.jar --queue-pattern 'perf-test-%d' \
   --queue-pattern-from 1 --queue-pattern-to 1000 \
   --producers 1000 --consumers 3000 --heartbeat-sender-threads 10
 --------
@@ -258,7 +258,7 @@ flag instead of the `--rate` one. For example:
 .Using `--publishing-interval` for low-throughput workloads
 [source,bash,indent=0]
 --------
-bin/runjava com.rabbitmq.perf.PerfTest --publishing-interval 5
+java -jar perf-test.jar --publishing-interval 5
 --------
 
 The command above makes the publisher publish a message every 5 seconds.
@@ -268,7 +268,7 @@ many queues:
 .Simulating 2000 clients on 1000 queues
 [source,bash,indent=0]
 --------
-bin/runjava com.rabbitmq.perf.PerfTest --queue-pattern 'perf-test-%d' \
+java -jar perf-test.jar --queue-pattern 'perf-test-%d' \
   --queue-pattern-from 1 --queue-pattern-to 1000 \
   --producers 1000 --consumers 1000 \
   --heartbeat-sender-threads 10 \
@@ -292,7 +292,7 @@ delay before the first published message:
 .Using `--producer-random-start-delay` to spread publishing in a random way
 [source,bash,indent=0]
 --------
-bin/runjava com.rabbitmq.perf.PerfTest --queue-pattern 'perf-test-%d' \
+java -jar perf-test.jar --queue-pattern 'perf-test-%d' \
   --queue-pattern-from 1 --queue-pattern-to 1000 \
   --producers 1000 --consumers 1000 \
   --heartbeat-sender-threads 10 \
@@ -311,7 +311,7 @@ Set your own value if the default value is not appropriate for some reasons:
 .Using `--producer-scheduler-threads` to set the number of publishing threads
 [source,bash,indent=0]
 --------
-bin/runjava com.rabbitmq.perf.PerfTest --queue-pattern 'perf-test-%d' \
+java -jar perf-test.jar --queue-pattern 'perf-test-%d' \
   --queue-pattern-from 1 --queue-pattern-to 1000 \
   --producers 1000 --consumers 1000 \
   --heartbeat-sender-threads 10 \
@@ -334,7 +334,7 @@ to use with `--consumers-thread-pools` and they will be shared by the consumers:
 .Using `--consumers-thread-pools` to reduce the number of consumer threads
 [source,bash,indent=0]
 --------
-bin/runjava com.rabbitmq.perf.PerfTest --queue-pattern 'perf-test-%d' \
+java -jar perf-test.jar --queue-pattern 'perf-test-%d' \
   --queue-pattern-from 1 --queue-pattern-to 1000 \
   --producers 1000 --consumers 1000 \
   --heartbeat-sender-threads 10 \
@@ -359,7 +359,7 @@ to handle the I/O. That's what the
 .Reducing the number of IO threads by enabling the NIO mode with `--nio-threads`
 [source,bash,indent=0]
 --------
-bin/runjava com.rabbitmq.perf.PerfTest --queue-pattern 'perf-test-%d' \
+java -jar perf-test.jar --queue-pattern 'perf-test-%d' \
   --queue-pattern-from 1 --queue-pattern-to 1000 \
   --producers 1000 --consumers 1000 \
   --heartbeat-sender-threads 10 \
@@ -387,12 +387,12 @@ in different processes, and you want PerfTest to calculate latency,
 you need to use the `--use-millis` flag. E.g. for sending messages
 from one host:
 
- bin/runjava com.rabbitmq.perf.PerfTest --producers 1 --consumers 0 \
+ java -jar perf-test.jar --producers 1 --consumers 0 \
    --predeclared --routing-key rk --queue q --use-millis
 
 And for consuming messages from another host:
 
- bin/runjava com.rabbitmq.perf.PerfTest --producers 0 --consumers 1 \
+ java -jar perf-test.jar --producers 0 --consumers 1 \
    --predeclared --routing-key rk --queue q --use-millis
 
 Note that as soon as you use `--use-millis`, latency is calculated in
@@ -424,7 +424,7 @@ PerfTest can use TLS to connect to a node that is
 https://www.rabbitmq.com/ssl.html[configured to accept TLS connections].
 To enable TLS, simply specify a URI that uses the `amqps` schema:
 
- bin/runjava com.rabbitmq.perf.PerfTest -h amqps://localhost:5671
+ java -jar perf-test.jar -h amqps://localhost:5671
 
 By default PerfTest automatically trusts the server
 and doesn't present any client certificate (a warning
@@ -435,7 +435,7 @@ JVM properties] on the command line to override the default `SSLContext`.
 For example, to trust a given server:
 
  JAVA_OPTS="-Djavax.net.ssl.trustStore=/path/to/server_key.p12 -Djavax.net.ssl.trustStorePassword=bunnies -Djavax.net.ssl.trustStoreType=PKCS12" \
-   bin/runjava com.rabbitmq.perf.PerfTest -h amqps://localhost:5671
+   java -jar perf-test.jar -h amqps://localhost:5671
 
 The previous snippet uses a one-liner to define the `JAVA_OPTS` environment variable
 while running PerfTest. Please refer to the
@@ -446,7 +446,7 @@ is with https://github.com/michaelklishin/tls-gen/[`tls-gen`].
 a certificate/key pair generated by the aforementioned profile:
 
  JAVA_OPTS="-Djavax.net.ssl.trustStore=/path/to/server_key.p12 -Djavax.net.ssl.trustStorePassword=bunnies -Djavax.net.ssl.trustStoreType=PKCS12 -Djavax.net.ssl.keyStore=/path/to/client_key.p12 -Djavax.net.ssl.keyStorePassword=bunnies -Djavax.net.ssl.keyStoreType=PKCS12" \
-   bin/runjava com.rabbitmq.perf.PerfTest -h amqps://localhost:5671
+   java -jar perf-test.jar -h amqps://localhost:5671
 
 == Using Environment Variables as Options
 
@@ -460,11 +460,11 @@ for the `--confirm-timeout` option, but only if the environment variable is defi
 
 You can list the environment variables that PerfTest will pick up with the following command:
 
-  bin/runjava com.rabbitmq.perf.PerfTest --env
+  java -jar perf-test.jar --env
 
 Note that some options can be used several times to define several values, e.g.:
 
-  bin/runjava com.rabbitmq.perf.PerfTest \
+  java -jar perf-test.jar \
     --variable-rate 100:60 --variable-rate 1000:10 --variable-rate 500:15
 
 Declaring an environment variable several times just overrides the previous value, so to

@@ -8,7 +8,7 @@ as OS process and JVM metrics (memory, CPU usage, garbage collection, JVM heap, 
 Here is how to list the available metrics options:
 
 ----
-./runjava com.rabbitmq.perf.PerfTest --metrics-help
+java -jar perf-test.jar --metrics-help
 ----
 
 This command displays the available flags to enable the various metrics PerfTest
@@ -76,14 +76,14 @@ https://github.com/rabbitmq/rabbitmq-perf-test/issues[request support for other 
 The API key is the only required option to send metrics to Datadog:
 
 ```
-./runjava com.rabbitmq.perf.PerfTest --metrics-datadog-api-key YOUR_API_KEY
+java -jar perf-test.jar --metrics-datadog-api-key YOUR_API_KEY
 ```
 
 Another useful option is the step size or reporting frequency. The default value is
 10 seconds.
 
 ```
-./runjava com.rabbitmq.perf.PerfTest --metrics-datadog-api-key YOUR_API_KEY \
+java -jar perf-test.jar --metrics-datadog-api-key YOUR_API_KEY \
     --metrics-datadog-step-size 20
 ```
 
@@ -93,7 +93,7 @@ JMX support provides a simple way to view metrics locally. Use the `--metrics-jm
 export metrics to JMX:
 
 ```
-./runjava com.rabbitmq.perf.PerfTest --metrics-jmx
+java -jar perf-test.jar --metrics-jmx
 ```
 
 ==== Prometheus
@@ -101,7 +101,7 @@ export metrics to JMX:
 Use the `-mpr` or `--metrics-prometheus` flag to enable metrics reporting to Prometheus:
 
 ```
-./runjava com.rabbitmq.perf.PerfTest --metrics-prometheus
+java -jar perf-test.jar --metrics-prometheus
 ```
 
 Prometheus expects to scrape or poll individual app instances for metrics, so PerfTest starts up
@@ -109,7 +109,7 @@ a web server listening on port 8080 and exposes metrics on the `/metrics` endpoi
 can be changed:
 
 ```
-./runjava com.rabbitmq.perf.PerfTest --metrics-prometheus \
+java -jar perf-test.jar --metrics-prometheus \
     --metrics-prometheus-port 8090 --metrics-prometheus-endpoint perf-test-metrics
 ```
 

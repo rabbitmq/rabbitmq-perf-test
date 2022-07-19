@@ -62,7 +62,7 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for an overview of the development proc
 
 ## Building from Source
 
-To build the Uber JAR:
+To build the uber JAR:
 
 ```shell
 ./mvnw clean package -P uber-jar -Dgpg.skip=true -Dmaven.test.skip
