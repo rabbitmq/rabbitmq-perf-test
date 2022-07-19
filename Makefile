@@ -27,8 +27,6 @@ native-image: clean ## Build the native image
 	    --static --libc=musl \
 	    --initialize-at-build-time=io.micrometer \
 	    --initialize-at-build-time=com.rabbitmq.client \
-	    --initialize-at-build-time=org.eclipse.jetty \
-	    --initialize-at-build-time=javax.servlet \
 	    --initialize-at-build-time=org.slf4j \
 	    --no-fallback \
 	    -H:IncludeResources="rabbitmq-perf-test.properties"
