@@ -12,7 +12,7 @@ PerfTest is a throughput testing tool for https://www.rabbitmq.com/[RabbitMQ]
 https://www.rabbitmq.com/[RabbitMQ] has a throughput testing tool,
 PerfTest, that is based on
 the Java client and can be configured to simulate basic
-workloads and link:#workloads-with-a-large-number-of-clients[more advanced workloads] as well.
+workloads and <<usage-advanced.adoc#workloads-with-a-large-number-of-clients, more advanced workloads>> as well.
 PerfTest has extra tools that produce HTML graphs of the output.
 
 A RabbitMQ cluster can be limited by a number of factors,

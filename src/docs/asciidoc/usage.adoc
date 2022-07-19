@@ -88,7 +88,7 @@ deliveries/second.
 
 [NOTE]
 ====
-PerfTest automatically converts low publishing rates (between 1 and 10 messages / second) to <<usage-advanced#workloads_with_a_large_number_of_clients,publishing intervals>>.
+PerfTest automatically converts low publishing rates (between 1 and 10 messages / second) to <<usage-advanced.adoc#workloads-with-a-large-number-of-clients,publishing intervals>>.
 This makes the simulation more accurate when simulating many slow publishers.
 ====
 
@@ -148,8 +148,8 @@ replicated to multiple queues (number of queues equals
 number of consumers), while each consumer will be receiving
 messages from only one queue.
 
-Note it is possible to link:#customising-queues-and-messages[customise]
-the queue and to work against link:#working-with-many-queues[several queues] as well.
+Note it is possible to <<usage-advanced.adoc#customising-queues, customise>>
+the queue and to work against <<usage-advanced.adoc#working-with-many-queues, several queues>> as well.
 
 == Stopping PerfTest
 

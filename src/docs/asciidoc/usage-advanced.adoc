@@ -1,3 +1,4 @@
+[[customising-queues]]
 == Customising queues
 
 PerfTest can create queues using provided queue arguments:
@@ -144,6 +145,7 @@ set to 1 ms for 60 seconds then 1 second for 30 seconds:
 
   java -jar perf-test.jar --variable-latency 1000:60 --variable-latency 1000000:30
 
+[[working-with-many-queues]]
 == Working With Many Queues
    
 PertTest supports balancing the publishing and the consumption
@@ -240,7 +242,7 @@ at the OS level, as some distributions use very low limits.
 Here the recommendations are the same as for the broker, so you
 can refer to our https://www.rabbitmq.com/networking.html#os-tuning[networking guide].
 
-[[workloads_with_a_large_number_of_clients]]
+[[workloads-with-a-large-number-of-clients]]
 == Workloads With a Large Number of Clients
 
 A typical connected device workload (a.k.a "IoT workload") involves
@@ -491,7 +493,7 @@ and lower runtime memory overhead compared to a Java VM.
 
 PerfTest native executable has also some limitations:
 
- * link:#supported-metrics[JVM metrics] are not supported
+ * <<monitoring.adoc#supported-metrics, JVM metrics>> are not supported
  * it is not possible to configure logging
  * TLS is not supported (this is likely to be fixed someday)
  * IPv6 only hosts are not supported (this is likely to be fixed someday)

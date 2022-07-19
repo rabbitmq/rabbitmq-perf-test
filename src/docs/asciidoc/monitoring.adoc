@@ -15,6 +15,7 @@ This command displays the available flags to enable the various metrics PerfTest
 can gather, as well as options to configure the exposure to the monitoring systems
 PerfTest supports.
 
+[[supported-metrics]]
 === Supported Metrics
 
 Here are the metrics PerfTest can gather:
