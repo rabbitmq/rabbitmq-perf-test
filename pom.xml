@@ -76,7 +76,7 @@
     <maven.javadoc.plugin.version>3.4.0</maven.javadoc.plugin.version>
     <maven.gpg.plugin.version>3.0.1</maven.gpg.plugin.version>
     <maven.assembly.plugin.version>3.4.2</maven.assembly.plugin.version>
-    <maven.install.plugin.version>3.0.0</maven.install.plugin.version>
+    <maven.install.plugin.version>3.0.1</maven.install.plugin.version>
     <maven.jar.plugin.version>3.2.2</maven.jar.plugin.version>
     <buildnumber.plugin.version>3.0.0</buildnumber.plugin.version>
     <maven.surefire.plugin.version>2.22.2</maven.surefire.plugin.version>
