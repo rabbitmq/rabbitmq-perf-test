@@ -21,7 +21,6 @@ import org.HdrHistogram.DoubleRecorder;
 import org.HdrHistogram.Histogram;
 import org.graalvm.nativeimage.hosted.Feature;
 import org.graalvm.nativeimage.hosted.RuntimeReflection;
-import org.slf4j.impl.StaticLoggerBinder;
 
 /**
  * GraalVM feature to customize image generation.
@@ -43,7 +42,6 @@ public class NativeImageFeature implements Feature {
          * image with GraalVM.
          */
         RuntimeReflection.register(DoubleRecorder[].class);
-        RuntimeReflection.register(StaticLoggerBinder.class);
         try {
             RuntimeReflection.register(Histogram.class.getConstructor(long.class, long.class, int.class));
             RuntimeReflection.register(ConcurrentHistogram.class.getConstructor(long.class, long.class, int.class));

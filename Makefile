@@ -22,13 +22,15 @@ binary: clean ## Build the binary distribution
 
 .PHONY: native-image
 native-image: clean ## Build the native image
+	## for -J--add-modules -JALL-SYSTEM argument, see https://github.com/oracle/graal/issues/4671
 	@mvnw -q package -DskipTests -P native-image -P '!java-packaging'
 	native-image -jar target/perf-test.jar -H:Features="com.rabbitmq.perf.NativeImageFeature" \
-	    --static --libc=musl \
+	    --static --libc=glibc \
 	    --initialize-at-build-time=io.micrometer \
 	    --initialize-at-build-time=com.rabbitmq.client \
 	    --initialize-at-build-time=org.slf4j \
 	    --no-fallback \
+	    -J--add-modules -JALL-SYSTEM \
 	    -H:IncludeResources="rabbitmq-perf-test.properties"
 
 .PHONY: docker-image-dev

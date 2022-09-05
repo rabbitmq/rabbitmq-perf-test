@@ -8,5 +8,5 @@ updates:
      interval: "daily"
    open-pull-requests-limit: 20
    ignore:
-     - dependency-name: "org.eclipse.jetty:jetty-servlet"
-       versions: ["[10.0,)"]
+     - dependency-name: "ch.qos.logback:logback-classic"
+       versions: [ "[1.3,)" ]
