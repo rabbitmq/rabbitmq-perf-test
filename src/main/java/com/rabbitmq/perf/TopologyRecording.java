@@ -245,6 +245,28 @@ public class TopologyRecording {
         }
     }
 
+    public void recoverQueueAndBindings(Connection connection, RecordedQueue queueRecord) {
+        String queueName = queueRecord.name();
+        try {
+            Channel ch = connection.createChannel();
+            ch.queueDeclare(queueName,
+                            queueRecord.isDurable(),
+                            queueRecord.isExclusive(),
+                            queueRecord.isAutoDelete(),
+                            queueRecord.getArguments());
+
+            Collection<TopologyRecording.RecordedBinding> bindingsForQ = getBindingsFor(queueName);
+            for (TopologyRecording.RecordedBinding binding : bindingsForQ) {
+                ch.queueBind(queueName, binding.getExchange(), binding.routingKeyIsQueue() ? queueName : binding.routingKey);
+            }
+            ch.close();
+        } catch (Exception e) {
+            LOGGER.warn("Exception during Queue and Binding recovery for connection {}: {}",
+                    connection.getClientProvidedName(),
+                    e.getMessage());
+        }
+    }
+
     @FunctionalInterface
     private interface WriteOperation {
 
@@ -321,6 +343,10 @@ public class TopologyRecording {
 
         boolean isDurable() {
             return durable;
+        }
+
+        public Map<String, Object> getArguments() {
+            return this.arguments;
         }
 
         @Override

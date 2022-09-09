@@ -323,7 +323,7 @@ public class Consumer extends AgentBase implements Runnable {
 
         @Override
         public void handleCancel(String consumerTag) throws IOException {
-            System.out.printf("Consumer cancelled by broker for tag: %s", consumerTag);
+            System.out.printf("Consumer cancelled by broker for tag: %s\n", consumerTag);
             epochMessageCount.set(0);
             if (consumerTagBranchMap.containsKey(consumerTag)) {
                 String qName = consumerTagBranchMap.get(consumerTag);
@@ -331,7 +331,7 @@ public class Consumer extends AgentBase implements Runnable {
                 RecordedQueue queueRecord = topologyRecording.queue(qName);
                 consumeOrScheduleConsume(queueRecord, topologyRecording, consumerTag, qName);
             } else {
-                System.out.printf("Could not find queue for consumer tag: %s", consumerTag);
+                System.out.printf("Could not find queue for consumer tag: %s\n", consumerTag);
             }
         }
     }
@@ -393,6 +393,7 @@ public class Consumer extends AgentBase implements Runnable {
                 channel.basicConsume(queueName, autoAck, consumerTag, false, false, this.consumerArguments, q);
             } else {
                 LOGGER.debug("Queue {} does not exist, it is likely unavailable, scheduling subscription.", queueName);
+                topologyRecording.recoverQueueAndBindings(channel.getConnection(), queueRecord);
                 Duration schedulingPeriod = Duration.ofSeconds(5);
                 int maxRetry = (int) (Duration.ofMinutes(10).getSeconds() / schedulingPeriod.getSeconds());
                 AtomicInteger retryCount = new AtomicInteger(0);
