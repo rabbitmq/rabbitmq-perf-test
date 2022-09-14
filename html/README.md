@@ -32,7 +32,7 @@ to the root folder of the binary distribution and run the following
 command to start the benchmark:
 
 ```bash
-bin/runjava com.rabbitmq.perf.PerfTestMulti
+java -jar com.rabbitmq.perf.PerfTestMulti
 publish-consume-spec.js publish-consume-result.js
 ```
 
@@ -46,7 +46,7 @@ which we will now use to display a graph in our HTML page.
 ## Displaying benchmark results ##
 
 Provided you have included our libraries (refer to the "Boilerplate
-HTML" section to know how to do that), the following HTML snippet will 
+HTML" section to know how to do that), the following HTML snippet will
 display the graph for the benchmark that we just ran:
 
 ```html
@@ -98,7 +98,7 @@ We support several `types` of graphs, that you can specify using the
 `data-type` attribute:
 
 - `time`: this graph can plot several variables on the y-axis while
-  plotting the time on the x-axis. For example you could compare the 
+  plotting the time on the x-axis. For example you could compare the
   send and receive rate over a period of time.
 
 In the previous section we showed how to display these kind of graphs
