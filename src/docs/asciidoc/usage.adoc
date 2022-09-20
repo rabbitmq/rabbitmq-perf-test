@@ -178,7 +178,7 @@ command below uses a shutdown timeout of 20 seconds:
 The connection closing sequence can also be skipped by setting the timeout to 0 or any negative
 value:
 
- java -jar com.rabbitmq.perf.PerfTest --shutdown-timeout -1
+ java -jar perf-test.jar --shutdown-timeout -1
 
 With the previous command, PerfTest won't even try to close AMQP connections, it will exit
 as fast as possible, freeing only the most important resources. This is perfectly
