@@ -383,16 +383,18 @@ public class Consumer extends AgentBase implements Runnable {
                                           TopologyRecording topologyRecording,
                                           String consumerTag,
                                           String queueName) throws IOException {
+        LOGGER.debug("Checking if queue {} exists before subscribing", queueName);
+        boolean queueExists = Utils.exists(channel.getConnection(), ch -> ch.queueDeclarePassive(queueName));
         if (queueMayBeDown(queueRecord, topologyRecording)) {
             // If the queue is on a cluster node that is down, basic.consume will fail with a 404.
             // This will close the channel and we can't afford it, so we check if the queue exists with a different channel,
             // and postpone the subscription if the queue does not exist
-            LOGGER.debug("Checking if queue {} exists before subscribing", queueName);
-            if (Utils.exists(channel.getConnection(), ch -> ch.queueDeclarePassive(queueName))) {
+            if (queueExists) {
                 LOGGER.debug("Queue {} does exist, subscribing", queueName);
                 channel.basicConsume(queueName, autoAck, consumerTag, false, false, this.consumerArguments, q);
             } else {
-                LOGGER.debug("Queue {} does not exist, it is likely unavailable, scheduling subscription.", queueName);
+                LOGGER.debug("Queue {} does not exist, it is likely unavailable, trying to re-create it though, "
+                    + "and scheduling subscription.", queueName);
                 topologyRecording.recoverQueueAndBindings(channel.getConnection(), queueRecord);
                 Duration schedulingPeriod = Duration.ofSeconds(5);
                 int maxRetry = (int) (Duration.ofMinutes(10).getSeconds() / schedulingPeriod.getSeconds());
@@ -420,7 +422,15 @@ public class Consumer extends AgentBase implements Runnable {
                 );
             }
         } else {
-            channel.basicConsume(queueName, autoAck, consumerTag, false, false, this.consumerArguments, q);
+            if (!queueExists) {
+                // the queue seems to have been deleted, re-creating it with its bindings
+                LOGGER.debug(
+                    "Queue {} does not exist, trying to re-create it before re-subscribing",
+                    queueName);
+                topologyRecording.recoverQueueAndBindings(channel.getConnection(), queueRecord);
+            }
+            channel.basicConsume(queueRecord == null ? queueName : queueRecord.name(), autoAck,
+                consumerTag, false, false, this.consumerArguments, q);
         }
     }
 
