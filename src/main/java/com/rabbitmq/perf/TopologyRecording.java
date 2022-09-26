@@ -169,49 +169,7 @@ public class TopologyRecording {
             Channel channel = connection.createChannel();
             for (Map.Entry<String, RecordedQueue> entry : queues.entrySet()) {
                 RecordedQueue queue = entry.getValue();
-                synchronized (queue) {
-                    String originalName = queue.name;
-                    LOGGER.debug("Connection {}, recovering queue {}", connection.getClientProvidedName(), queue);
-                    boolean redeclare = true;
-                    // the queue may still be around (e.g. a quorum queue in a cluster)
-                    // so checking if it's necessary to create it
-                    if (queue.durable && queue.serverNamed && !queue.autoDelete && !queue.exclusive) {
-                        // so in this case, the server-named queue won't be renamed
-                        try {
-                            channel.queueDeclarePassive(queue.name);
-                            // the queue exists
-                            redeclare = false;
-                        } catch (IOException e) {
-                            // the queue does not exists
-                            redeclare = true;
-                            channel = connection.createChannel();
-                        }
-                    }
-                    if (redeclare) {
-                        LOGGER.debug("Trying to re-declare queue {}", originalName);
-                        channel = reliableWrite(connection, channel, ch -> {
-                            String newName = ch.queueDeclare(
-                                    queue.serverNamed ? "" : queue.name, queue.durable, queue.exclusive,
-                                    queue.autoDelete, queue.arguments
-                            ).getQueue();
-                            LOGGER.debug("Re-declared queue {}", originalName);
-                            queue.name = newName;
-                            if (queue.serverNamed) {
-                                LOGGER.debug("Queue {} was server-named, it is now {}", originalName, newName);
-                            }
-                        }, () -> "Error while trying to re-declare queue " + originalName);
-                    }
-
-                    LOGGER.debug("Connection {}, recovered queue {}", connection.getClientProvidedName(), queue);
-
-                    // Recovering an auto-delete, server-named queue create a brand new queue, with a new name.
-                    // This is not fine with polling, as the former server-named queue is still around: no consumer
-                    // registered to it.
-                    // so we delete this former queue explicitly when polling.
-                    if (this.polling && queue.autoDelete && queue.serverNamed && !queue.exclusive) {
-                        channel = reliableWrite(connection, channel, ch -> ch.queueDelete(originalName));
-                    }
-                }
+                channel = recoverQueue(channel, queue);
             }
             for (RecordedExchange exchange : exchanges.values()) {
                 LOGGER.debug("Connection {}, recovering exchange {}", connection.getClientProvidedName(), exchange);
@@ -242,6 +200,81 @@ public class TopologyRecording {
             channel.close();
         } catch (Exception e) {
             LOGGER.warn("Error during topology recovery for connection {}: {}", connection.getClientProvidedName(), e.getMessage());
+        }
+    }
+
+    private Channel recoverQueue(Channel channel, RecordedQueue queue) throws IOException {
+        Connection connection = channel.getConnection();
+        synchronized (queue) {
+            String originalName = queue.name;
+            LOGGER.debug("Connection {}, recovering queue {}", connection.getClientProvidedName(), queue);
+            boolean redeclare = true;
+            // the queue may still be around (e.g. a quorum queue in a cluster)
+            // so checking if it's necessary to create it
+            if (queue.durable && queue.serverNamed && !queue.autoDelete && !queue.exclusive) {
+                // so in this case, the server-named queue won't be renamed
+                try {
+                    channel.queueDeclarePassive(queue.name);
+                    // the queue exists
+                    redeclare = false;
+                } catch (IOException e) {
+                    // the queue does not exist
+                    redeclare = true;
+                    channel = connection.createChannel();
+                }
+            }
+            if (redeclare) {
+                LOGGER.debug("Trying to re-declare queue {}", originalName);
+                channel = reliableWrite(connection, channel, ch -> {
+                    String newName = ch.queueDeclare(
+                        queue.serverNamed ? "" : queue.name, queue.durable, queue.exclusive,
+                        queue.autoDelete, queue.arguments
+                    ).getQueue();
+                    LOGGER.debug("Re-declared queue {}", originalName);
+                    queue.name = newName;
+                    if (queue.serverNamed) {
+                        LOGGER.debug("Queue {} was server-named, it is now {}", originalName, newName);
+                    }
+                }, () -> "Error while trying to re-declare queue " + originalName);
+            }
+
+            LOGGER.debug("Connection {}, recovered queue {}", connection.getClientProvidedName(), queue);
+
+            // Recovering an auto-delete, server-named queue creates a brand new queue, with a new name.
+            // This is not fine with polling, as the former server-named queue is still around: no consumer
+            // registered to it.
+            // so we delete this former queue explicitly when polling.
+            if (this.polling && queue.autoDelete && queue.serverNamed && !queue.exclusive) {
+                channel = reliableWrite(connection, channel, ch -> ch.queueDelete(originalName));
+            }
+        }
+        return channel;
+    }
+
+    void recoverQueueAndBindings(Connection connection, RecordedQueue queueRecord) {
+        Channel ch = null;
+        try {
+            ch = connection.createChannel();
+            // the queue name may change(server-named queue)
+            String oldQueueName = queueRecord.name();
+            ch = recoverQueue(ch, queueRecord);
+            String newQueueName = queueRecord.name();
+            Collection<TopologyRecording.RecordedBinding> bindingsForQ = getBindingsFor(oldQueueName);
+            for (TopologyRecording.RecordedBinding binding : bindingsForQ) {
+                ch.queueBind(newQueueName, binding.getExchange(), binding.routingKeyIsQueue() ? newQueueName : binding.routingKey);
+            }
+        } catch (Exception e) {
+            LOGGER.warn("Exception during Queue and Binding recovery for connection {}: {}",
+                    connection.getClientProvidedName(),
+                    e.getMessage());
+        } finally {
+            if (ch != null) {
+                try {
+                    ch.close();
+                } catch (Exception e) {
+                    // OK
+                }
+            }
         }
     }
 
@@ -321,6 +354,10 @@ public class TopologyRecording {
 
         boolean isDurable() {
             return durable;
+        }
+
+        public Map<String, Object> getArguments() {
+            return this.arguments;
         }
 
         @Override
