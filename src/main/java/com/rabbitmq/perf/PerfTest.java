@@ -785,6 +785,9 @@ public class PerfTest {
         }).map(keyValue -> {
             if ("x-dead-letter-exchange".equals(keyValue[0]) && "amq.default".equals(keyValue[1])) {
                 return new String[] {"x-dead-letter-exchange", ""};
+            }
+            else if ("x-single-active-consumer".equals(keyValue[0])) {
+                return new Object[] {"x-single-active-consumer", Boolean.parseBoolean(String.valueOf(keyValue[1]))};
             } else {
                 return keyValue;
             }
