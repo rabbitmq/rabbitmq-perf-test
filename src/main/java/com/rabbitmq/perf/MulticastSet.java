@@ -456,8 +456,9 @@ public class MulticastSet {
             Supplier<Duration> startDelaySupplier;
             if (params.getProducerRandomStartDelayInSeconds() > 0) {
                 Random random = new Random();
-                startDelaySupplier = () -> Duration.ofSeconds(
-                    random.nextInt(params.getProducerRandomStartDelayInSeconds()) + 1
+                int bound = params.getProducerRandomStartDelayInSeconds() * 1000;
+                startDelaySupplier = () -> Duration.ofMillis(
+                    random.nextInt(bound) + 1
                 );
             } else {
                 startDelaySupplier = () -> Duration.ZERO;
