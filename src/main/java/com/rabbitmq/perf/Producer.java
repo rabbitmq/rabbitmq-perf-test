@@ -19,6 +19,7 @@ import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.ConfirmListener;
 import com.rabbitmq.client.ReturnListener;
+import java.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -331,9 +332,10 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
 
     public void run() {
         if (randomStartDelay > 0) {
-            int delay = new Random().nextInt(randomStartDelay) + 1;
+            // in ms
+            int delay = new Random().nextInt(randomStartDelay * 1000) + 1;
             try {
-                Thread.sleep((long) delay * 1000);
+                Thread.sleep(delay);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 throw new RuntimeException(e);
