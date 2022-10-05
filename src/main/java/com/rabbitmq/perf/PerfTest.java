@@ -23,9 +23,11 @@ import com.rabbitmq.client.impl.ClientVersion;
 import com.rabbitmq.client.impl.DefaultExceptionHandler;
 import com.rabbitmq.client.impl.nio.NioParams;
 import com.rabbitmq.perf.Metrics.ConfigurationContext;
+import com.rabbitmq.perf.ShutdownService.CloseCallback;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
 import java.math.BigDecimal;
 import java.time.Duration;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import org.apache.commons.cli.*;
 import org.slf4j.Logger;
@@ -414,11 +416,20 @@ public class PerfTest {
 
             factory.setExceptionHandler(perfTestOptions.exceptionHandler);
 
+            AtomicBoolean statsSummaryDone = new AtomicBoolean(false);
+            Runnable statsSummary = () -> {
+                if (statsSummaryDone.compareAndSet(false, true)) {
+                    System.out.println(stopLine(completionReasons));
+                    stats.printFinal();
+                }
+            };
+            shutdownService.wrap(() -> statsSummary.run());
+
             MulticastSet set = new MulticastSet(stats, factory, p, testID, uris, completionHandler, shutdownService);
             set.run(true);
 
-            System.out.println(stopLine(completionReasons));
-            stats.printFinal();
+            statsSummary.run();
+
         } catch (ParseException exp) {
             System.err.println("Parsing failed. Reason: " + exp.getMessage());
             usage(options);
