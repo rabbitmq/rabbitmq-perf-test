@@ -60,6 +60,8 @@ public abstract class Stats {
     protected long elapsedTotal;
     protected Histogram latency = new MetricRegistry().histogram("latency");
     protected Histogram confirmLatency = new MetricRegistry().histogram("confirm-latency");
+    protected final Histogram globalLatency = new MetricRegistry().histogram("latency");
+    protected final Histogram globalConfirmLatency = new MetricRegistry().histogram("confirm-latency");
 
     public Stats(long interval) {
         this(interval, false, new SimpleMeterRegistry(), null);
@@ -149,6 +151,7 @@ public abstract class Stats {
         confirmCountInterval += numConfirms;
         for (long latency : latencies) {
             this.confirmLatency.update(latency);
+            this.globalConfirmLatency.update(latency);
             this.updateConfirmLatency.accept(latency);
         }
         report();
@@ -164,6 +167,7 @@ public abstract class Stats {
         recvCountTotal++;
         if (latency > 0) {
             this.latency.update(latency);
+            this.globalLatency.update(latency);
             this.updateLatency.accept(latency);
             minLatency = Math.min(minLatency, latency);
             maxLatency = Math.max(maxLatency, latency);
