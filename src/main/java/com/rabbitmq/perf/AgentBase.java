@@ -40,25 +40,6 @@ public abstract class AgentBase {
         return this.topologyRecording;
     }
 
-    protected void delay(long now, AgentState state) {
-        long elapsed = now - state.getLastStatsTime();
-        //example: rateLimit is 5000 msg/s,
-        //10 ms have elapsed, we have published 200 messages
-        //the 200 msgs we have actually published should have taken us
-        //200 * 1000 / 5000 = 40 ms. So we pause for 40ms - 10ms
-        float rateLimit = state.getRateLimit();
-        long pause = (long) (rateLimit <= 0.0f ?
-            0.0f : (state.getMsgCount() * 1000.0 / rateLimit - elapsed));
-        if (pause > 0) {
-            try {
-                Thread.sleep(pause);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                throw new RuntimeException(e);
-            }
-        }
-    }
-
     protected boolean isConnectionRecoveryTriggered(ShutdownSignalException e) {
         return AutorecoveringConnection.DEFAULT_CONNECTION_RECOVERY_TRIGGERING_CONDITION.test(e);
     }
@@ -105,8 +86,6 @@ public abstract class AgentBase {
     public abstract void recover(TopologyRecording topologyRecording);
 
     protected interface AgentState {
-
-        float getRateLimit();
 
         long getLastStatsTime();
 

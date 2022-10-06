@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020 VMware, Inc. or its affiliates.  All rights reserved.
+// Copyright (c) 2019-2022 VMware, Inc. or its affiliates.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 2.0 ("MPL"), the GNU General Public License version 2
@@ -52,5 +52,23 @@ interface ValueIndicator<T> {
      * @return
      */
     List<T> values();
+
+    /**
+     * Register a listener to get notified when the hinted value changes.
+     * @param listener
+     */
+    default void register(Listener<T> listener) {
+
+    }
+
+    /**
+     * Contract to get notified when the hinted value changes.
+     * @param <T>
+     */
+    interface Listener<T> {
+
+        void valueChanged(T oldValue, T newValue);
+
+    }
 
 }

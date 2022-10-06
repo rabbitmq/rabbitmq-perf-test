@@ -15,6 +15,8 @@
 
 package com.rabbitmq.perf;
 
+import static com.rabbitmq.perf.RateLimiterUtils.*;
+
 import com.rabbitmq.client.AMQP.BasicProperties;
 import com.rabbitmq.client.*;
 import com.rabbitmq.client.AMQP.Queue.DeclareOk;
@@ -93,6 +95,9 @@ public class Consumer extends AgentBase implements Runnable {
 
     private final AtomicLong epochMessageCount = new AtomicLong(0);
 
+    private final Runnable rateLimiterCallback;
+    private final boolean rateLimitation;
+
     public Consumer(ConsumerParameters parameters) {
         this.channel           = parameters.getChannel();
         this.id                = parameters.getId();
@@ -152,7 +157,14 @@ public class Consumer extends AgentBase implements Runnable {
         }
 
 
-        this.state = new ConsumerState(parameters.getRateLimit(), timestampProvider);
+        this.rateLimitation = parameters.getRateLimit() > 0;
+        if (this.rateLimitation) {
+            RateLimiter rateLimiter = RateLimiter.create(parameters.getRateLimit());
+            this.rateLimiterCallback = () -> rateLimiter.acquire(1);
+        } else {
+            this.rateLimiterCallback = () -> { };
+        }
+        this.state = new ConsumerState(timestampProvider);
         this.recoveryProcess = parameters.getRecoveryProcess();
         this.recoveryProcess.init(this);
     }
@@ -236,14 +248,12 @@ public class Consumer extends AgentBase implements Runnable {
 
     private class ConsumerImpl extends DefaultConsumer {
 
-        private final boolean rateLimitation;
         private final AtomicLong receivedMessageCount = new AtomicLong(0);
 
         private ConsumerImpl(Channel channel) {
             super(channel);
             state.setLastStatsTime(System.currentTimeMillis());
             state.setMsgCount(0);
-            this.rateLimitation = state.getRateLimit() > 0.0f;
         }
 
         @Override
@@ -269,7 +279,7 @@ public class Consumer extends AgentBase implements Runnable {
                     lastDeliveryTag = envelope.getDeliveryTag();
 
                     long now = System.currentTimeMillis();
-                    if (this.rateLimitation) {
+                    if (rateLimitation) {
                         // if rate is limited, we need to reset stats every second
                         // otherwise pausing to throttle rate will be based on the whole history
                         // which is broken when rate varies
@@ -280,7 +290,7 @@ public class Consumer extends AgentBase implements Runnable {
                             state.setLastStatsTime(now);
                             state.setMsgCount(0);
                         }
-                        delay(now, state);
+                        rateLimiterCallback.run();
                     }
                 }
             }
@@ -509,20 +519,13 @@ public class Consumer extends AgentBase implements Runnable {
 
     private static class ConsumerState implements AgentState {
 
-        private final float rateLimit;
         private volatile long  lastStatsTime;
         private volatile long lastActivityTimestamp = -1;
         private final AtomicInteger msgCount = new AtomicInteger(0);
         private final TimestampProvider timestampProvider;
 
-        protected ConsumerState(float rateLimit,
-            TimestampProvider timestampProvider) {
-            this.rateLimit = rateLimit;
+        protected ConsumerState(TimestampProvider timestampProvider) {
             this.timestampProvider = timestampProvider;
-        }
-
-        public float getRateLimit() {
-            return rateLimit;
         }
 
         public long getLastStatsTime() {

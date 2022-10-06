@@ -19,7 +19,7 @@ import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.ConfirmListener;
 import com.rabbitmq.client.ReturnListener;
-import java.time.Duration;
+import java.util.concurrent.atomic.AtomicReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,6 +42,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import static com.rabbitmq.perf.RateLimiterUtils.*;
 import static java.util.stream.Collectors.toMap;
 
 public class Producer extends AgentBase implements Runnable, ReturnListener,
@@ -101,6 +102,8 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
 
     private final ValueIndicator<Float> rateIndicator;
 
+    private final Runnable rateLimiterCallback;
+
     public Producer(ProducerParameters parameters) {
         this.channel           = parameters.getChannel();
         this.exchangeName      = parameters.getExchangeName();
@@ -148,7 +151,28 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
         this.rateIndicator = parameters.getRateIndicator();
         this.recoveryProcess = parameters.getRecoveryProcess();
         this.recoveryProcess.init(this);
-
+        if (this.rateIndicator.getValue() >= 0 && this.rateIndicator.isVariable()) {
+            RateLimiter rateLimiter = RateLimiter.create(
+                this.rateIndicator.getValue() > 0 ? this.rateIndicator.getValue() : 1
+            );
+            AtomicReference<RateLimiter> rateLimiterReference = new AtomicReference<>(rateLimiter);
+            this.rateIndicator.register((oldValue, newValue) -> {
+               if (newValue > 0) {
+                   rateLimiterReference.set(RateLimiter.create(newValue));
+               }
+            });
+            this.rateLimiterCallback = () -> rateLimiterReference.get().acquire(1);
+        } else if (this.rateIndicator.getValue() >= 0 && !this.rateIndicator.isVariable()){
+            Float rate = this.rateIndicator.getValue();
+            if (this.rateIndicator.getValue() > 0) {
+                RateLimiter rateLimiter = RateLimiter.create(this.rateIndicator.getValue());
+                this.rateLimiterCallback = () -> rateLimiter.acquire(1);
+            } else {
+                this.rateLimiterCallback = () -> { };
+            }
+        } else {
+            this.rateLimiterCallback = () -> { };
+        }
     }
 
     private Function<AMQP.BasicProperties.Builder, AMQP.BasicProperties.Builder> builderProcessorWithMessageProperties(
@@ -343,14 +367,14 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
         }
         long now;
         final long startTime;
-        startTime = now = System.currentTimeMillis();
-        ProducerState state = new ProducerState(this.rateIndicator);
+        startTime = System.currentTimeMillis();
+        ProducerState state = new ProducerState();
         state.setLastStatsTime(startTime);
         state.setMsgCount(0);
         final boolean variableRate = this.rateIndicator.isVariable();
         try {
             while (keepGoing(state)) {
-                delay(now, state);
+                rateLimiterCallback.run();
                 if (variableRate && this.rateIndicator.getValue() == 0.0f) {
                     // instructed not to publish, so waiting
                     waitForOneSecond();
@@ -437,7 +461,7 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
     public Runnable createRunnableForScheduling() {
         final AtomicBoolean initialized = new AtomicBoolean(false);
         // make the producer state thread-safe for what we use in this case
-        final ProducerState state = new ProducerState(this.rateIndicator) {
+        final ProducerState state = new ProducerState() {
             final AtomicInteger messageCount = new AtomicInteger(0);
             @Override
             protected void setMsgCount(int msgCount) {
@@ -603,17 +627,8 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
      */
     private static class ProducerState implements AgentState {
 
-        private final ValueIndicator<Float> rateIndicator;
         private long  lastStatsTime;
         private int msgCount = 0;
-
-        protected ProducerState(ValueIndicator<Float> rateIndicator) {
-            this.rateIndicator = rateIndicator;
-        }
-
-        public float getRateLimit() {
-            return rateIndicator.getValue();
-        }
 
         public long getLastStatsTime() {
             return lastStatsTime;
