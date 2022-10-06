@@ -455,12 +455,15 @@ public class MulticastSet {
             );
             Supplier<Duration> startDelaySupplier;
             if (params.getProducerRandomStartDelayInSeconds() > 0) {
+                LOGGER.debug("Using random start-up delay for producers, from 1 ms to {} s",
+                    params.getProducerRandomStartDelayInSeconds());
                 Random random = new Random();
                 int bound = params.getProducerRandomStartDelayInSeconds() * 1000;
                 startDelaySupplier = () -> Duration.ofMillis(
                     random.nextInt(bound) + 1
                 );
             } else {
+                LOGGER.debug("No start-up delay for producers, they are starting ASAP");
                 startDelaySupplier = () -> Duration.ZERO;
             }
             Duration publishingInterval = params.getPublishingInterval();
