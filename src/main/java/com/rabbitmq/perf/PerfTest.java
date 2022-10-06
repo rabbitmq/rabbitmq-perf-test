@@ -168,6 +168,12 @@ public class PerfTest {
                 }
             }
 
+            if ((!variableRates.isEmpty() || producerRateLimit >= 0 || publishingInterval != null)
+                && producerRandomStartDelayInSeconds < 0) {
+                // producer rate instructions, but no ramp-up period, so setting it to 1 second
+                producerRandomStartDelayInSeconds = 1;
+            }
+
             List<String> variableSizes = lstArg(cmd, "vs");
             if (variableSizes != null && !variableSizes.isEmpty()) {
                 for (String variableSize : variableSizes) {
