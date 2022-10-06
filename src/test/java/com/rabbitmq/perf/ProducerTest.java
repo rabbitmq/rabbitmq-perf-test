@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2020 VMware, Inc. or its affiliates.  All rights reserved.
+// Copyright (c) 2017-2022 VMware, Inc. or its affiliates.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 2.0 ("MPL"), the GNU General Public License version 2
@@ -155,7 +155,7 @@ public class ProducerTest {
                 .setMessageProperties(null).setCompletionHandler(completionHandler()).setRoutingKeyCacheSize(0)
                 .setRandomStartDelayInSeconds(-1)
                 .setRecoveryProcess(Recovery.NO_OP_RECOVERY_PROCESS)
-                .setRateIndicator(new FixedValueIndicator<>(0.0f))
+                .setRateIndicator(new FixedValueIndicator<>(-1.0f))
         );
 
         producer.run();
@@ -229,7 +229,7 @@ public class ProducerTest {
                         .setMessageProperties(messageProperties).setCompletionHandler(completionHandler()).setRoutingKeyCacheSize(0)
                         .setRandomStartDelayInSeconds(-1)
                         .setRecoveryProcess(Recovery.NO_OP_RECOVERY_PROCESS)
-                        .setRateIndicator(new FixedValueIndicator<>(0.0f))
+                        .setRateIndicator(new FixedValueIndicator<>(-1.0f))
         );
 
         producer.run();
@@ -290,7 +290,7 @@ public class ProducerTest {
                         .setMessageProperties(messageProperties).setCompletionHandler(completionHandler()).setRoutingKeyCacheSize(0)
                         .setRandomStartDelayInSeconds(-1)
                         .setRecoveryProcess(Recovery.NO_OP_RECOVERY_PROCESS)
-                        .setRateIndicator(new FixedValueIndicator<>(0.0f))
+                        .setRateIndicator(new FixedValueIndicator<>(-1.0f))
         );
 
         producer.run();
@@ -423,7 +423,7 @@ public class ProducerTest {
                 .setCompletionHandler(completionHandler()).setRoutingKeyCacheSize(0)
                 .setRandomStartDelayInSeconds(-1)
                 .setRecoveryProcess(Recovery.NO_OP_RECOVERY_PROCESS)
-                .setRateIndicator(new FixedValueIndicator<>(0.0f));
+                .setRateIndicator(new FixedValueIndicator<>(-1.0f));
     }
 
     BasicProperties props() {

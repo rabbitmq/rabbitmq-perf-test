@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020 VMware, Inc. or its affiliates.  All rights reserved.
+// Copyright (c) 2019-2022 VMware, Inc. or its affiliates.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 2.0 ("MPL"), the GNU General Public License version 2
@@ -15,6 +15,8 @@
 
 package com.rabbitmq.perf;
 
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,6 +62,8 @@ class VariableValueIndicator<T> implements ValueIndicator<T> {
 
     private final List<String> definitions;
 
+    private final Set<Listener<T>> listeners = ConcurrentHashMap.newKeySet();
+
     public VariableValueIndicator(List<String> values, ScheduledExecutorService scheduledExecutorService,
                                   Function<String, T> conversion) {
         if (values == null || values.isEmpty()) {
@@ -72,14 +76,24 @@ class VariableValueIndicator<T> implements ValueIndicator<T> {
         this.definitions = new ArrayList<>(values);
         this.intervals = intervals(values, conversion);
         this.value.set(intervals.get(0).value);
+        LOGGER.debug("Setting variable value to {}", this.value.get());
     }
 
-    static <T> void updateValueIfNecessary(List<Interval<T>> intervals, long startTime, long now, int cycleDuration, AtomicReference<T> value) {
+    static <T> void updateValueIfNecessary(List<Interval<T>> intervals, long startTime, long now, int cycleDuration, AtomicReference<T> value, Set<Listener<T>> listeners) {
         long elapsed = ((now - startTime) / NANO_TO_SECOND) % cycleDuration;
         for (Interval<T> interval : intervals) {
             if (interval.isIn(elapsed)) {
                 if (!value.get().equals(interval.value)) {
+                    LOGGER.debug("Changing value from {} to {}", value.get(), interval.value);
+                    T oldValue = value.get();
                     value.set(interval.value);
+                    listeners.forEach(l -> {
+                        try {
+                           l.valueChanged(oldValue, value.get());
+                        } catch (Exception e) {
+                           LOGGER.warn("Error while notifying variable value listener: {}", e.getMessage());
+                        }
+                    });
                 }
                 break;
             }
@@ -180,7 +194,7 @@ class VariableValueIndicator<T> implements ValueIndicator<T> {
 
         long startTime = System.nanoTime();
         scheduledExecutorService.scheduleAtFixedRate(() -> {
-            updateValueIfNecessary(intervals, startTime, System.nanoTime(), cycleDuration, this.value);
+            updateValueIfNecessary(intervals, startTime, System.nanoTime(), cycleDuration, this.value, this.listeners);
         }, 0, gcdSchedulingPeriod, TimeUnit.SECONDS);
     }
 
@@ -220,4 +234,8 @@ class VariableValueIndicator<T> implements ValueIndicator<T> {
         }
     }
 
+    @Override
+    public void register(Listener<T> listener) {
+        this.listeners.add(listener);
+    }
 }

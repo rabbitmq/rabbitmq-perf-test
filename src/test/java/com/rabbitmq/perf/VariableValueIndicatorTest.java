@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020 VMware, Inc. or its affiliates.  All rights reserved.
+// Copyright (c) 2019-2022 VMware, Inc. or its affiliates.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 2.0 ("MPL"), the GNU General Public License version 2
@@ -15,6 +15,7 @@
 
 package com.rabbitmq.perf;
 
+import java.util.Collections;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -69,7 +70,8 @@ public class VariableValueIndicatorTest {
         asList(parameters).forEach(parameter -> {
             int secondsToAdd = (int) parameter[0];
             int expectedValue = (int) parameter[1];
-            updateValueIfNecessary(intervals, startTime, addSecondsToNano(startTime, secondsToAdd), cycleDuration, value);
+            updateValueIfNecessary(intervals, startTime, addSecondsToNano(startTime, secondsToAdd), cycleDuration, value,
+                Collections.emptySet());
             assertThat(value).hasValue(expectedValue);
         });
     }
