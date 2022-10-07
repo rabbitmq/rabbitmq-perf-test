@@ -150,7 +150,6 @@ class PrintlnStats extends Stats {
                         getRate("nacked", rateNacked, sendStatsEnabled && confirmStatsEnabled) +
                         getRate("received", rateConsumed, recvStatsEnabled);
 
-        // FIXME set latency stats results for CSV rendering
         long[] consumerLatencyStats = null;
         long[] confirmLatencyStats = null;
         if (legacyMetrics && latencyCountInterval.get() > 0) {
@@ -160,14 +159,16 @@ class PrintlnStats extends Stats {
                 output += format(", %s ", LATENCY_HEADER);
             }
             if (shouldDisplayConsumerLatency()) {
-                output += "consumer latency: " + latencyReport(latency);
+                consumerLatencyStats = getStats(latency);
+                output += "consumer latency: " + formatLatency(consumerLatencyStats);
             }
             if (shouldDisplayConsumerLatency() && shouldDisplayConfirmLatency()) {
                 output += ", ";
             }
 
             if (shouldDisplayConfirmLatency()) {
-                output += "confirm latency: " + latencyReport(confirmLatency);
+                confirmLatencyStats = getStats(confirmLatency);
+                output += "confirm latency: " + formatLatency(confirmLatencyStats);
             }
         }
 
@@ -175,11 +176,16 @@ class PrintlnStats extends Stats {
             this.out.println(output);
         }
 
-        writeToCsvIfNecessary(now, ratePublished, rateReturned, rateConfirmed, rateNacked, rateConsumed, consumerLatencyStats, confirmLatencyStats);
+        writeToCsvIfNecessary(now, ratePublished, rateReturned, rateConfirmed, rateNacked,
+            rateConsumed, consumerLatencyStats, confirmLatencyStats);
     }
 
     private String latencyReport(Histogram latency) {
         long[] stats = getStats(latency);
+        return formatLatency(stats);
+    }
+
+    private String formatLatency(long [] stats) {
         return format("%d/%d/%d/%d/%d %s", stats[0], stats[1], stats[2], stats[3], stats[4],
             units);
     }

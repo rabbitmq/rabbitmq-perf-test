@@ -436,7 +436,6 @@ public class PerfTest {
                 @Override
                 public void started(int id) {
                     if (starts.add(id) && starts.size() == agentCount) {
-                        System.out.println("ALL STARTED " + starts.size());
                         stats.resetGlobals();
                     }
                 }
