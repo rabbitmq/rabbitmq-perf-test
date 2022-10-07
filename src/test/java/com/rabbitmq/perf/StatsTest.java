@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import java.time.Duration;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,7 +29,7 @@ import org.junit.jupiter.api.Test;
 
 public class StatsTest {
 
-  private static final long INTERVAL = 10;
+  private static final Duration INTERVAL = Duration.ofMillis(10);
   private final AtomicInteger reportCount = new AtomicInteger();
 
   private static void startTask(Runnable task) {
@@ -68,10 +69,10 @@ public class StatsTest {
       keepSending.set(false);
       keepConsuming.set(false);
 
-      Thread.sleep(4 * INTERVAL);
+      Thread.sleep(4 * INTERVAL.toMillis());
       // we simulate a service polling 2 times
       stats.maybeResetGauges();
-      Thread.sleep(INTERVAL);
+      Thread.sleep(INTERVAL.toMillis());
       stats.maybeResetGauges();
       assertThat(published.value()).isZero();
       assertThat(consumed.value()).isZero();
@@ -108,11 +109,11 @@ public class StatsTest {
       waitAtMost(10, () -> consumed.value() > 0);
       keepSending.set(false);
 
-      Thread.sleep(4 * INTERVAL);
+      Thread.sleep(4 * INTERVAL.toMillis());
       // we simulate a service polling 2 times
       stats.maybeResetGauges();
       // give some time to handle consuming (all stats methods are synchronized)
-      Thread.sleep(INTERVAL);
+      Thread.sleep(INTERVAL.toMillis());
       stats.maybeResetGauges();
       // the gauge is actually reset in the report calculation
       assertThat(published.value()).isZero();
@@ -126,21 +127,22 @@ public class StatsTest {
 
   private class SimpleStats extends Stats {
 
-    public SimpleStats(long interval, boolean useMs, MeterRegistry registry, String metricsPrefix) {
+    public SimpleStats(Duration interval, boolean useMs, MeterRegistry registry, String metricsPrefix) {
       super(interval, useMs, registry, metricsPrefix);
     }
 
     @Override
     protected void report(long now) {
-      double rate = rate(sendCountInterval, elapsedInterval);
+      long elapsedTime = Duration.ofNanos(elapsedInterval.get()).toMillis();
+      double rate = rate(sendCountInterval.get(), elapsedTime);
       this.published(rate);
-      rate = rate(recvCountInterval, elapsedInterval);
+      rate = rate(recvCountInterval.get(), elapsedTime);
       this.received(rate);
       reportCount.incrementAndGet();
     }
 
     private double rate(long count, long elapsed) {
-      return 1000.0 * count / elapsed;
+      return NANO_TO_SECOND * count / elapsed;
     }
   }
 }

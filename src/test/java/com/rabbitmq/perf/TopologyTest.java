@@ -20,6 +20,7 @@ import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.impl.AMQImpl;
+import java.time.Duration;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -108,7 +109,7 @@ public class TopologyTest {
 
         params = new MulticastParams();
 
-        when(stats.interval()).thenReturn(-1L);
+        when(stats.interval()).thenReturn(Duration.ofMillis(-1));
     }
 
     @AfterEach

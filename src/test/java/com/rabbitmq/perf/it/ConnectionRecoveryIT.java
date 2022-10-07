@@ -25,11 +25,11 @@ import com.rabbitmq.perf.NamedThreadFactory;
 import com.rabbitmq.perf.Stats;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
 import java.time.Duration;
+import java.util.concurrent.atomic.AtomicLong;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
-import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -44,7 +44,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -83,15 +82,15 @@ public class ConnectionRecoveryIT {
     AtomicBoolean testIsDone;
     CountDownLatch testLatch;
 
-    AtomicInteger msgPublished, msgConsumed;
+    AtomicLong msgPublished, msgConsumed;
 
   Stats stats =
-      new Stats(1000, false, new CompositeMeterRegistry(), "") {
+      new Stats(Duration.ofMillis(1000), false, new CompositeMeterRegistry(), "") {
 
         @Override
         protected void report(long now) {
-          msgPublished.set(sendCountTotal);
-          msgConsumed.set(recvCountTotal);
+          msgPublished.set(sendCountTotal.get());
+          msgConsumed.set(recvCountTotal.get());
         }
       };
 
@@ -194,8 +193,8 @@ public class ConnectionRecoveryIT {
         cf.setTopologyRecoveryEnabled(false);
         testIsDone = new AtomicBoolean(false);
         testLatch = new CountDownLatch(1);
-        msgConsumed = new AtomicInteger(0);
-        msgPublished = new AtomicInteger(0);
+        msgConsumed = new AtomicLong(0);
+        msgPublished = new AtomicLong(0);
     }
 
     @AfterEach
@@ -250,7 +249,7 @@ public class ConnectionRecoveryIT {
         MulticastSet set = new MulticastSet(stats, cf, params, "", URIS, latchCompletionHandler(1, info));
         run(set);
         waitAtMost(10, () -> msgConsumed.get() >= 3 * producerConsumerCount * RATE);
-        int messageCountBeforeClosing = msgConsumed.get();
+        long messageCountBeforeClosing = msgConsumed.get();
         closeAllConnections();
         waitAtMost(10, () -> msgConsumed.get() >= 2 * messageCountBeforeClosing);
         assertThat(testIsDone.get()).isFalse();
@@ -267,7 +266,7 @@ public class ConnectionRecoveryIT {
         MulticastSet set = new MulticastSet(stats, cf, params, "", URIS, latchCompletionHandler(1, info));
         run(set);
         waitAtMost(10, () -> msgConsumed.get() >= 3 * producerConsumerCount);
-        int messageCountBeforeClosing = msgConsumed.get();
+        long messageCountBeforeClosing = msgConsumed.get();
         closeAllConnections();
         waitAtMost(20, () -> msgConsumed.get() >= 2 * messageCountBeforeClosing);
         assertThat(testIsDone.get()).isFalse();
@@ -293,7 +292,7 @@ public class ConnectionRecoveryIT {
         MulticastSet set = new MulticastSet(stats, cf, params, "", URIS, latchCompletionHandler(1, info));
         run(set);
         waitAtMost(10, () -> msgConsumed.get() >= 3 * producerConsumerCount * RATE);
-        int messageCountBeforeClosing = msgConsumed.get();
+        long messageCountBeforeClosing = msgConsumed.get();
         closeAllConnections();
         waitAtMost(10, () -> msgConsumed.get() >= 2 * messageCountBeforeClosing);
         assertThat(testIsDone.get()).isFalse();
@@ -312,7 +311,7 @@ public class ConnectionRecoveryIT {
         );
         run(set);
         waitAtMost(10, () -> msgConsumed.get() >= 3 * producerConsumerCount * RATE);
-        int messageCountBeforeClosing = msgConsumed.get();
+        long messageCountBeforeClosing = msgConsumed.get();
         closeAllConnections();
         waitAtMost(10, () -> msgConsumed.get() >= 2 * messageCountBeforeClosing);
         assertThat(testIsDone.get()).isFalse();
@@ -344,7 +343,7 @@ public class ConnectionRecoveryIT {
             MulticastSet set = new MulticastSet(stats, cf, params, "", URIS, latchCompletionHandler(1, info));
             run(set);
             waitAtMost(10, () -> msgConsumed.get() >= 3 * producerConsumerCount * RATE);
-            int messageCountBeforeClosing = msgConsumed.get();
+            long messageCountBeforeClosing = msgConsumed.get();
             closeAllConnections();
             waitAtMost(10, () -> msgConsumed.get() >= 2 * messageCountBeforeClosing);
             assertThat(testIsDone.get()).isFalse();
@@ -379,7 +378,7 @@ public class ConnectionRecoveryIT {
             queuesDuringTest.removeAll(queuesBeforeTest);
             assertThat(queuesDuringTest).hasSize(1);
             createdQueue = queuesDuringTest.get(0);
-            int messageCountBeforeClosing = msgConsumed.get();
+            long messageCountBeforeClosing = msgConsumed.get();
             closeAllConnections();
             waitAtMost(10, () -> msgConsumed.get() >= 2 * messageCountBeforeClosing);
             assertThat(Host.listQueues()).hasSize(queuesBeforeTest.size() + 1);
@@ -412,7 +411,7 @@ public class ConnectionRecoveryIT {
             MulticastSet set = new MulticastSet(stats, cf, params, "", URIS, latchCompletionHandler(1, info));
             run(set);
             waitAtMost(10, () -> msgConsumed.get() >= 3 * producerConsumerCount * RATE);
-            int messageCountBeforeClosing = msgConsumed.get();
+            long messageCountBeforeClosing = msgConsumed.get();
             Host.stopBrokerApp();
             Thread.sleep(2000);
             Host.startBrokerApp();

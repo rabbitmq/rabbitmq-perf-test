@@ -23,7 +23,6 @@ import com.rabbitmq.client.impl.ClientVersion;
 import com.rabbitmq.client.impl.DefaultExceptionHandler;
 import com.rabbitmq.client.impl.nio.NioParams;
 import com.rabbitmq.perf.Metrics.ConfigurationContext;
-import com.rabbitmq.perf.ShutdownService.CloseCallback;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
 import java.math.BigDecimal;
 import java.time.Duration;
@@ -285,7 +284,7 @@ public class PerfTest {
 
             //setup
             PrintlnStats stats = new PrintlnStats(testID,
-                1000L * samplingInterval,
+                Duration.ofSeconds(samplingInterval),
                 producerCount > 0,
                 consumerCount > 0,
                 (flags.contains("mandatory") || flags.contains("immediate")),

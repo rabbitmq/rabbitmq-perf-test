@@ -23,13 +23,20 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.DoubleAccumulator;
 import java.util.function.Consumer;
 import java.util.function.DoubleBinaryOperator;
 
 public abstract class Stats {
 
-    protected final long interval;
+    protected static final float NANO_TO_SECOND = 1_000_000_000;
+    protected static final float MS_TO_SECOND = 1_000;
+
+    private final AtomicBoolean ongoingReport = new AtomicBoolean(false);
+
+    private final long intervalInNanoSeconds;
 
     protected final long startTime;
 
@@ -40,36 +47,40 @@ public abstract class Stats {
     private final Consumer<Long> updateLatency;
     private final Consumer<Long> updateConfirmLatency;
     // end of Micrometer's metrics
-    private int lastPublishedCount, lastReturnedCount, lastConfirmedCount, lastNackedCount, lastConsumedCount;
+    private AtomicLong lastPublishedCount = new AtomicLong(0);
+    private AtomicLong lastReturnedCount = new AtomicLong(0);
+    private AtomicLong lastConfirmedCount = new AtomicLong(0);
+    private AtomicLong lastNackedCount = new AtomicLong(0);
+    private AtomicLong lastConsumedCount = new AtomicLong(0);
 
-    protected long lastStatsTime;
-    protected int sendCountInterval;
-    protected int returnCountInterval;
-    protected int confirmCountInterval;
-    protected int nackCountInterval;
-    protected int recvCountInterval;
-    protected int sendCountTotal;
-    protected int recvCountTotal;
-    protected int latencyCountInterval;
-    protected int latencyCountTotal;
-    protected long minLatency;
-    protected long maxLatency;
-    protected long cumulativeLatencyInterval;
-    protected long cumulativeLatencyTotal;
-    protected long elapsedInterval;
-    protected long elapsedTotal;
+    protected AtomicLong lastStatsTime = new AtomicLong(0);
+    protected AtomicLong sendCountInterval = new AtomicLong(0);
+    protected AtomicLong returnCountInterval = new AtomicLong(0);
+    protected AtomicLong confirmCountInterval = new AtomicLong(0);
+    protected AtomicLong nackCountInterval = new AtomicLong(0);
+    protected AtomicLong recvCountInterval = new AtomicLong(0);
+    protected AtomicLong sendCountTotal = new AtomicLong(0);
+    protected AtomicLong recvCountTotal = new AtomicLong(0);
+    protected AtomicLong latencyCountInterval = new AtomicLong(0);
+    protected AtomicLong latencyCountTotal = new AtomicLong(0);
+    protected AtomicLong minLatency = new AtomicLong(0);
+    protected AtomicLong maxLatency = new AtomicLong(0);
+    protected AtomicLong cumulativeLatencyInterval = new AtomicLong(0);
+    protected AtomicLong cumulativeLatencyTotal = new AtomicLong(0);
+    protected AtomicLong elapsedInterval = new AtomicLong(0);
+    protected AtomicLong elapsedTotal = new AtomicLong(0);
     protected Histogram latency = new MetricRegistry().histogram("latency");
     protected Histogram confirmLatency = new MetricRegistry().histogram("confirm-latency");
     protected final Histogram globalLatency = new MetricRegistry().histogram("latency");
     protected final Histogram globalConfirmLatency = new MetricRegistry().histogram("confirm-latency");
 
-    public Stats(long interval) {
+    public Stats(Duration interval) {
         this(interval, false, new SimpleMeterRegistry(), null);
     }
 
-    public Stats(long interval, boolean useMs, MeterRegistry registry, String metricsPrefix) {
-        this.interval = interval;
-        startTime = System.currentTimeMillis();
+    public Stats(Duration interval, boolean useMs, MeterRegistry registry, String metricsPrefix) {
+        this.intervalInNanoSeconds = interval.toNanos();
+        startTime = System.nanoTime();
 
         metricsPrefix = metricsPrefix == null ? "" : metricsPrefix;
 
@@ -77,7 +88,7 @@ public abstract class Stats {
             .builder(metricsPrefix + "latency")
             .description("message latency")
             .publishPercentiles(0.5, 0.75, 0.95, 0.99)
-            .distributionStatisticExpiry(Duration.ofMillis(this.interval))
+            .distributionStatisticExpiry(Duration.ofNanos(this.intervalInNanoSeconds))
             .serviceLevelObjectives()
             .register(registry);
 
@@ -85,7 +96,7 @@ public abstract class Stats {
                 .builder(metricsPrefix + "confirm.latency")
                 .description("confirm latency")
                 .publishPercentiles(0.5, 0.75, 0.95, 0.99)
-                .distributionStatisticExpiry(Duration.ofMillis(this.interval))
+                .distributionStatisticExpiry(Duration.ofNanos(this.intervalInNanoSeconds))
                 .serviceLevelObjectives()
                 .register(registry);
 
@@ -106,49 +117,54 @@ public abstract class Stats {
     }
 
     private void reset(long t) {
-        lastStatsTime = t;
+        lastStatsTime.set(t);
 
         resetLastCounts();
 
-        sendCountInterval = 0;
-        returnCountInterval = 0;
-        confirmCountInterval = 0;
-        nackCountInterval = 0;
-        recvCountInterval = 0;
+        sendCountInterval.set(0);
+        returnCountInterval.set(0);
+        confirmCountInterval.set(0);
+        nackCountInterval.set(0);
+        recvCountInterval.set(0);
 
-        minLatency = Long.MAX_VALUE;
-        maxLatency = Long.MIN_VALUE;
-        latencyCountInterval = 0;
-        cumulativeLatencyInterval = 0L;
+        minLatency.set(Long.MAX_VALUE);
+        maxLatency.set(Long.MIN_VALUE);
+        latencyCountInterval.set(0);
+        cumulativeLatencyInterval.set(0L);
         latency = new MetricRegistry().histogram("latency");
         confirmLatency = new MetricRegistry().histogram("confirm-latency");
     }
 
     private void report() {
-        long now = System.currentTimeMillis();
-        elapsedInterval = now - lastStatsTime;
-        if (elapsedInterval >= interval) {
-            elapsedTotal += elapsedInterval;
-            report(now);
-            reset(now);
+        long now = System.nanoTime();
+        elapsedInterval.set(now - lastStatsTime.get());
+        if (elapsedInterval.get() >= intervalInNanoSeconds) {
+            elapsedTotal.addAndGet(elapsedInterval.get());
+            if (ongoingReport.compareAndSet(false, true)) {
+                synchronized (this) {
+                    report(now);
+                    reset(now);
+                }
+                ongoingReport.set(false);
+            }
         }
     }
 
     protected abstract void report(long now);
 
-    public synchronized void handleSend() {
-        sendCountInterval++;
-        sendCountTotal++;
+    public void handleSend() {
+        sendCountInterval.incrementAndGet();
+        sendCountTotal.incrementAndGet();
         report();
     }
 
-    public synchronized void handleReturn() {
-        returnCountInterval++;
+    public void handleReturn() {
+        returnCountInterval.incrementAndGet();
         report();
     }
 
-    public synchronized void handleConfirm(int numConfirms, long[] latencies) {
-        confirmCountInterval += numConfirms;
+    public void handleConfirm(int numConfirms, long[] latencies) {
+        confirmCountInterval.addAndGet(numConfirms);
         for (long latency : latencies) {
             this.confirmLatency.update(latency);
             this.globalConfirmLatency.update(latency);
@@ -157,24 +173,24 @@ public abstract class Stats {
         report();
     }
 
-    public synchronized void handleNack(int numAcks) {
-        nackCountInterval += numAcks;
+    public void handleNack(int numAcks) {
+        nackCountInterval.addAndGet(numAcks);
         report();
     }
 
-    public synchronized void handleRecv(long latency) {
-        recvCountInterval++;
-        recvCountTotal++;
+    public void handleRecv(long latency) {
+        recvCountInterval.incrementAndGet();
+        recvCountTotal.incrementAndGet();
         if (latency > 0) {
             this.latency.update(latency);
             this.globalLatency.update(latency);
             this.updateLatency.accept(latency);
-            minLatency = Math.min(minLatency, latency);
-            maxLatency = Math.max(maxLatency, latency);
-            cumulativeLatencyInterval += latency;
-            cumulativeLatencyTotal += latency;
-            latencyCountInterval++;
-            latencyCountTotal++;
+            minLatency.set(Math.min(minLatency.get(), latency));
+            maxLatency.set(Math.max(maxLatency.get(), latency));
+            cumulativeLatencyInterval.addAndGet(latency);
+            cumulativeLatencyTotal.addAndGet(latency);
+            latencyCountInterval.incrementAndGet();
+            latencyCountTotal.incrementAndGet();
         }
         report();
     }
@@ -201,10 +217,10 @@ public abstract class Stats {
 
     synchronized void maybeResetGauges() {
        if (noActivity()) {
-           long now = System.currentTimeMillis();
-           elapsedInterval = now - lastStatsTime;
+           long now = System.nanoTime();
+           elapsedInterval.set(now - lastStatsTime.get());
 
-           if (elapsedInterval >= 2 * interval) {
+           if (elapsedInterval.get() >= 2 * intervalInNanoSeconds) {
                published.accumulate(0);
                returned.accumulate(0);
                confirmed.accumulate(0);
@@ -217,22 +233,22 @@ public abstract class Stats {
     }
 
     private boolean noActivity() {
-        return lastPublishedCount == sendCountInterval &&
-            lastReturnedCount == recvCountInterval &&
-            lastConfirmedCount == confirmCountInterval &&
-            lastNackedCount == nackCountInterval &&
-            lastConsumedCount == recvCountInterval;
+        return lastPublishedCount.get() == sendCountInterval.get() &&
+            lastReturnedCount.get() == returnCountInterval.get() &&
+            lastConfirmedCount.get() == confirmCountInterval.get() &&
+            lastNackedCount.get() == nackCountInterval.get() &&
+            lastConsumedCount.get() == recvCountInterval.get();
     }
 
     private void resetLastCounts() {
-        lastPublishedCount = sendCountInterval;
-        lastReturnedCount = recvCountInterval;
-        lastConfirmedCount = confirmCountInterval;
-        lastNackedCount = nackCountInterval;
-        lastConsumedCount = recvCountInterval;
+        lastPublishedCount.set(sendCountInterval.get());
+        lastReturnedCount.set(returnCountInterval.get());
+        lastConfirmedCount.set(confirmCountInterval.get());
+        lastNackedCount.set(nackCountInterval.get());
+        lastConsumedCount.set(recvCountInterval.get());
     }
 
-    long interval() {
-        return this.interval;
+    Duration interval() {
+        return Duration.ofNanos(this.intervalInNanoSeconds);
     }
 }

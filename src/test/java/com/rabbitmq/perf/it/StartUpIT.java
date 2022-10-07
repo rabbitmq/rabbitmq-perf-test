@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020 VMware, Inc. or its affiliates.  All rights reserved.
+// Copyright (c) 2019-2022 VMware, Inc. or its affiliates.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 2.0 ("MPL"), the GNU General Public License version 2
@@ -20,6 +20,8 @@ import com.rabbitmq.perf.MulticastParams;
 import com.rabbitmq.perf.MulticastSet;
 import com.rabbitmq.perf.Stats;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
+import java.time.Duration;
+import java.util.concurrent.atomic.AtomicLong;
 import org.junit.jupiter.api.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,14 +63,14 @@ public class StartUpIT {
     AtomicBoolean testHasFailed;
     CountDownLatch testLatch;
 
-    AtomicInteger msgPublished, msgConsumed;
+    AtomicLong msgPublished, msgConsumed;
 
-    Stats stats = new Stats(1000, false, new CompositeMeterRegistry(), "") {
+    Stats stats = new Stats(Duration.ofMillis(1000), false, new CompositeMeterRegistry(), "") {
 
         @Override
         protected void report(long now) {
-            msgPublished.set(sendCountTotal);
-            msgConsumed.set(recvCountTotal);
+            msgPublished.set(sendCountTotal.get());
+            msgConsumed.set(recvCountTotal.get());
         }
     };
 
@@ -85,8 +87,8 @@ public class StartUpIT {
         testIsDone = new AtomicBoolean(false);
         testHasFailed = new AtomicBoolean(false);
         testLatch = new CountDownLatch(1);
-        msgConsumed = new AtomicInteger(0);
-        msgPublished = new AtomicInteger(0);
+        msgConsumed = new AtomicLong(0);
+        msgPublished = new AtomicLong(0);
     }
 
     @AfterEach

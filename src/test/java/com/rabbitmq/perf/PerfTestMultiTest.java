@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020 VMware, Inc. or its affiliates.  All rights reserved.
+// Copyright (c) 2019-2022 VMware, Inc. or its affiliates.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 2.0 ("MPL"), the GNU General Public License version 2
@@ -64,9 +64,9 @@ public class PerfTestMultiTest {
     public void simpleScenarioStatsJsonWriting() {
         SimpleScenarioStats stats = new SimpleScenarioStats(1000);
         stats.handleSend();
-        stats.report(System.currentTimeMillis());
+        stats.report(System.nanoTime());
         stats.handleSend();
-        stats.report(System.currentTimeMillis());
+        stats.report(System.nanoTime());
         String json = PerfTestMulti.toJson(stats.results());
         Map<String, Object> results = gson().fromJson(json, Map.class);
         assertThat(results).hasSize(5);
@@ -87,11 +87,11 @@ public class PerfTestMultiTest {
     public void varyingScenarioStatsJsonWriting() {
         VaryingScenarioStats varyingScenarioStats = new VaryingScenarioStats();
         SimpleScenarioStats stats = varyingScenarioStats.next(Arrays.asList(new MulticastValue("minMsgSize", 100)));
-        stats.report(System.currentTimeMillis());
-        stats.report(System.currentTimeMillis());
+        stats.report(System.nanoTime());
+        stats.report(System.nanoTime());
         stats = varyingScenarioStats.next(Arrays.asList(new MulticastValue("minMsgSize", 200)));
-        stats.report(System.currentTimeMillis());
-        stats.report(System.currentTimeMillis());
+        stats.report(System.nanoTime());
+        stats.report(System.nanoTime());
         String json = PerfTestMulti.toJson(varyingScenarioStats.results());
         Map<String, Object> results = gson().fromJson(json, Map.class);
         assertThat(results).hasSize(3).containsKeys("data", "dimension-values", "dimensions");
