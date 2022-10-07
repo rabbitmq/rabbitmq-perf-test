@@ -31,13 +31,14 @@ import com.rabbitmq.perf.Stats;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
+import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -58,12 +59,12 @@ public class MiscellaneousIT {
 
   AtomicBoolean testIsDone;
   CountDownLatch testLatch;
-  AtomicInteger msgConsumed;
+  AtomicLong msgConsumed;
 
-  Stats stats = new Stats(1000, false, new CompositeMeterRegistry(), "") {
+  Stats stats = new Stats(Duration.ofMillis(1000), false, new CompositeMeterRegistry(), "") {
     @Override
     protected void report(long now) {
-      msgConsumed.set(recvCountTotal);
+      msgConsumed.set(recvCountTotal.get());
     }
   };
 
@@ -74,7 +75,7 @@ public class MiscellaneousIT {
     cf = new ConnectionFactory();
     testIsDone = new AtomicBoolean(false);
     testLatch = new CountDownLatch(1);
-    msgConsumed = new AtomicInteger(0);
+    msgConsumed = new AtomicLong(0);
   }
 
   @AfterEach
@@ -157,7 +158,7 @@ public class MiscellaneousIT {
     String queue = queuesDuringTest.get(0);
 
     ConnectionFactory connectionFactory = new ConnectionFactory();
-    int messageConsumedBeforeDeletion;
+    long messageConsumedBeforeDeletion;
     try (Connection c = connectionFactory.newConnection()) {
       Channel ch = c.createChannel();
       messageConsumedBeforeDeletion = msgConsumed.get();
@@ -187,7 +188,7 @@ public class MiscellaneousIT {
     waitAtMost(10, () -> msgConsumed.get() >= 3 * rate);
 
     ConnectionFactory connectionFactory = new ConnectionFactory();
-    int messageConsumedBeforeDeletion;
+    long messageConsumedBeforeDeletion;
     try (Connection c = connectionFactory.newConnection()) {
       Channel ch = c.createChannel();
       messageConsumedBeforeDeletion = msgConsumed.get();

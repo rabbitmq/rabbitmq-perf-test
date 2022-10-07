@@ -130,7 +130,7 @@ public class MulticastSet {
         }
 
         this.connectionCreator = new ConnectionCreator(this.factory, this.uris);
-        if (stats.interval() > 0) {
+        if (stats.interval().toMillis() > 0) {
             this.threadingHandler.scheduledExecutorService("perf-test-stats-activity-check-", 1)
                 .scheduleAtFixedRate(() -> {
                     try {
@@ -138,7 +138,7 @@ public class MulticastSet {
                     } catch (Exception e) {
                         LOGGER.warn("Error while checking stats activity: {}", e.getMessage());
                     }
-                }, stats.interval() * 2, stats.interval(), TimeUnit.MILLISECONDS);
+                }, stats.interval().toMillis() * 2, stats.interval().toMillis(), TimeUnit.MILLISECONDS);
         }
     }
 

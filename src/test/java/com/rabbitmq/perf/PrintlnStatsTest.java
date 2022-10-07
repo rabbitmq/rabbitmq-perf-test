@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020 VMware, Inc. or its affiliates.  All rights reserved.
+// Copyright (c) 2018-2022 VMware, Inc. or its affiliates.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 2.0 ("MPL"), the GNU General Public License version 2
@@ -16,6 +16,7 @@
 package com.rabbitmq.perf;
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import java.time.Duration;
 import org.apache.commons.lang3.ArrayUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -145,7 +146,7 @@ public class PrintlnStatsTest {
 
     void execute(Configurator configurator) {
         PrintlnStats stats = stats(configurator);
-        stats.report(System.currentTimeMillis());
+        stats.report(System.nanoTime());
         this.output = consoleOut.toString();
     }
 
@@ -170,7 +171,7 @@ public class PrintlnStatsTest {
 
     PrintlnStats stats(Configurator configurator) {
         return new PrintlnStats(
-                "test-id", 1000L,
+                "test-id", Duration.ofMillis(1000),
                 configurator.sendStatsEnabled, configurator.recvStatsEnabled,
                 configurator.returnStatsEnabled, configurator.confirmStatsEnabled,
                 false, configurator.useMillis,

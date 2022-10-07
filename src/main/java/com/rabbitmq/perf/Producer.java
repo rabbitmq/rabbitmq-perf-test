@@ -367,7 +367,7 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
         }
         long now;
         final long startTime;
-        startTime = System.currentTimeMillis();
+        startTime = System.nanoTime();
         ProducerState state = new ProducerState();
         state.setLastStatsTime(startTime);
         state.setMsgCount(0);
@@ -381,7 +381,7 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
                 } else {
                     handlePublish(state);
                 }
-                now = System.currentTimeMillis();
+                now = System.nanoTime();
                 // if rate is variable, we need to reset producer stats every second
                 // otherwise pausing to throttle rate will be based on the whole history
                 // which is broken when rate varies
@@ -479,7 +479,7 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
         };
         return () -> {
             if (initialized.compareAndSet(false, true)) {
-                state.setLastStatsTime(System.currentTimeMillis());
+                state.setLastStatsTime(System.nanoTime());
                 state.setMsgCount(0);
             }
             try {

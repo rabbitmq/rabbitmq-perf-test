@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2020 VMware, Inc. or its affiliates.  All rights reserved.
+// Copyright (c) 2007-2022 VMware, Inc. or its affiliates.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 2.0 ("MPL"), the GNU General Public License version 2
@@ -15,6 +15,7 @@
 
 package com.rabbitmq.perf;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -28,28 +29,29 @@ class SimpleScenarioStats extends Stats implements ScenarioStats {
     private long minMsgSize;
 
     public SimpleScenarioStats(long interval) {
-        super(interval);
+        super(Duration.ofMillis(interval));
     }
 
-    protected void report(long now) {
+    protected synchronized void report(long now) {
         if (samples.size() == IGNORE_FIRST) {
-            cumulativeLatencyTotal = 0;
-            latencyCountTotal      = 0;
-            sendCountTotal         = 0;
-            recvCountTotal         = 0;
-            elapsedTotalToIgnore   = elapsedTotal;
+            cumulativeLatencyTotal.set(0);
+            latencyCountTotal.set(0);
+            sendCountTotal.set(0);
+            recvCountTotal.set(0);
+            elapsedTotalToIgnore   = elapsedTotal.get();
         }
 
-        Map<String, Object> sample = new HashMap<String, Object>();
-        sample.put("send-msg-rate", rate(sendCountInterval, elapsedInterval));
-        sample.put("send-bytes-rate", rate(sendCountInterval, elapsedInterval) * minMsgSize);
-        sample.put("recv-msg-rate", rate(recvCountInterval, elapsedInterval));
-        sample.put("recv-bytes-rate", rate(recvCountInterval, elapsedInterval) * minMsgSize);
+        Map<String, Object> sample = new HashMap<>();
+        long elapsedTime = Duration.ofNanos(elapsedInterval.get()).toMillis();
+        sample.put("send-msg-rate", rate(sendCountInterval.get(), elapsedTime));
+        sample.put("send-bytes-rate", rate(sendCountInterval.get(), elapsedTime) * minMsgSize);
+        sample.put("recv-msg-rate", rate(recvCountInterval.get(), elapsedTime));
+        sample.put("recv-bytes-rate", rate(recvCountInterval.get(), elapsedTime) * minMsgSize);
         sample.put("elapsed",   elapsedTotal);
-        if (latencyCountInterval > 0) {
+        if (latencyCountInterval.get() > 0) {
             sample.put("avg-latency", intervalAverageLatency());
-            sample.put("min-latency", minLatency / 1000L);
-            sample.put("max-latency", maxLatency / 1000L);
+            sample.put("min-latency", minLatency.get() / 1000L);
+            sample.put("max-latency", maxLatency.get() / 1000L);
         }
         samples.add(sample);
     }
@@ -60,7 +62,7 @@ class SimpleScenarioStats extends Stats implements ScenarioStats {
         map.put("send-bytes-rate", getSendRate() * minMsgSize);
         map.put("recv-msg-rate", getRecvRate());
         map.put("recv-bytes-rate", getRecvRate() * minMsgSize);
-        if (latencyCountTotal > 0) {
+        if (latencyCountTotal.get() > 0) {
             map.put("avg-latency", overallAverageLatency());
         }
         map.put("samples", samples);
@@ -72,22 +74,22 @@ class SimpleScenarioStats extends Stats implements ScenarioStats {
     }
 
     public double getSendRate() {
-        return rate(sendCountTotal, elapsedTotal - elapsedTotalToIgnore);
+        return rate(sendCountTotal.get(), elapsedTotal.get() - elapsedTotalToIgnore);
     }
 
     public double getRecvRate() {
-        return rate(recvCountTotal, elapsedTotal - elapsedTotalToIgnore);
+        return rate(recvCountTotal.get(), elapsedTotal.get() - elapsedTotalToIgnore);
     }
 
     private double rate(long count, long elapsed) {
-        return elapsed == 0 ? 0.0 : (1000.0 * count / elapsed);
+        return elapsed == 0 ? 0.0 : (NANO_TO_SECOND * count / elapsed);
     }
 
     private long overallAverageLatency() {
-        return cumulativeLatencyTotal / (1000L * latencyCountTotal);
+        return cumulativeLatencyTotal.get() / (1000L * latencyCountTotal.get());
     }
 
     private long intervalAverageLatency() {
-        return cumulativeLatencyInterval / (1000L * latencyCountInterval);
+        return cumulativeLatencyInterval.get() / (1000L * latencyCountInterval.get());
     }
 }

@@ -252,7 +252,7 @@ public class Consumer extends AgentBase implements Runnable {
 
         private ConsumerImpl(Channel channel) {
             super(channel);
-            state.setLastStatsTime(System.currentTimeMillis());
+            state.setLastStatsTime(System.nanoTime());
             state.setMsgCount(0);
         }
 
@@ -278,7 +278,7 @@ public class Consumer extends AgentBase implements Runnable {
                     commitTransactionIfNecessary(epochMessageCount.get(), ch);
                     lastDeliveryTag = envelope.getDeliveryTag();
 
-                    long now = System.currentTimeMillis();
+                    long now = System.nanoTime();
                     if (rateLimitation) {
                         // if rate is limited, we need to reset stats every second
                         // otherwise pausing to throttle rate will be based on the whole history
