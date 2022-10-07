@@ -17,6 +17,7 @@ package com.rabbitmq.perf;
 
 import com.rabbitmq.client.ShutdownSignalException;
 import com.rabbitmq.client.impl.recovery.AutorecoveringConnection;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,7 +31,18 @@ public abstract class AgentBase {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AgentBase.class);
 
+    private static final AtomicInteger AGENT_ID_SEQUENCE = new AtomicInteger(0);
+
     private volatile TopologyRecording topologyRecording;
+
+    private final int agentId;
+
+    final StartListener startListener;
+
+    protected AgentBase(StartListener startListener) {
+        this.startListener = startListener == null ? StartListener.NO_OP : startListener;
+        this.agentId = AGENT_ID_SEQUENCE.getAndIncrement();
+    }
 
     public void setTopologyRecording(TopologyRecording topologyRecording) {
         this.topologyRecording = topologyRecording;
@@ -81,6 +93,10 @@ public abstract class AgentBase {
                 throw e;
             }
         }
+    }
+
+    protected void started() {
+        this.startListener.started(this.agentId);
     }
 
     public abstract void recover(TopologyRecording topologyRecording);

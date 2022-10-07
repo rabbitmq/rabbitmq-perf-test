@@ -99,6 +99,7 @@ public class Consumer extends AgentBase implements Runnable {
     private final boolean rateLimitation;
 
     public Consumer(ConsumerParameters parameters) {
+        super(parameters.getStartListener());
         this.channel           = parameters.getChannel();
         this.id                = parameters.getId();
         this.txSize            = parameters.getTxSize();
@@ -186,6 +187,7 @@ public class Consumer extends AgentBase implements Runnable {
             List<String> queues = this.queueNames.get();
             Channel ch = this.channel;
             Connection connection = this.channel.getConnection();
+            started();
             while (!completed.get() && !Thread.interrupted()) {
                 // queue name can change between recoveries, we refresh only if necessary
                 if (queueNamesVersion != this.queueNamesVersion.get()) {
@@ -233,6 +235,7 @@ public class Consumer extends AgentBase implements Runnable {
     }
 
     private void registerAsynchronousConsumer() {
+        started();
         try {
             q = new ConsumerImpl(channel);
             for (String qName : queueNames.get()) {

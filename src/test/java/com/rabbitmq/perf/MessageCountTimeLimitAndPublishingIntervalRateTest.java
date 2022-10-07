@@ -60,6 +60,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
     MulticastSet.CompletionHandler completionHandler;
     Stats stats = new NoOpStats();
     MulticastParams params;
+    AtomicInteger agentStartedCount = new AtomicInteger(0);
     ExecutorService executorService;
     MulticastSet.ThreadingHandler th;
     volatile AtomicBoolean testIsDone;
@@ -131,6 +132,8 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         testDurationInMs = -1;
         params = new MulticastParams();
         params.setPredeclared(true);
+        agentStartedCount.set(0);
+        params.setStartListener(id -> agentStartedCount.incrementAndGet());
         runStartedLatch = new CountDownLatch(1);
         shutdownReasons = new ConcurrentHashMap<>();
         LOGGER.info("Done initializing {} {}", info.getTestMethod().get().getName(), info.getDisplayName());
@@ -260,6 +263,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
                 .containsKey(Producer.STOP_REASON_PRODUCER_MESSAGE_LIMIT)
                 .containsValue(producersCount * channelsCount);
 
+        assertThat(agentStartedCount).hasValue(producersCount * channelsCount + 1);
     }
 
     // --cmessages 10 -y n -Y m
@@ -313,6 +317,8 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
                 .hasSize(1)
                 .containsKey(com.rabbitmq.perf.Consumer.STOP_REASON_CONSUMER_REACHED_MESSAGE_LIMIT)
                 .containsValue(consumersCount * channelsCount);
+
+        assertThat(agentStartedCount).hasValue(consumersCount * channelsCount + 1);
     }
 
     @ParameterizedTest
@@ -626,9 +632,10 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
     @Test
     public void publishingInterval() throws InterruptedException {
+        int producerCount = 3;
         countsAndTimeLimit(0, 0, 6);
         params.setPublishingInterval(Duration.ofSeconds(1));
-        params.setProducerCount(3);
+        params.setProducerCount(producerCount);
 
         AtomicInteger publishedMessageCount = new AtomicInteger();
         Channel channel = proxy(Channel.class,
@@ -655,6 +662,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
                 .isLessThan(3 * 2 * 8); //  but they don't publish too much
         assertThat(testDurationInMs).isGreaterThan(5000L);
         assertThat(shutdownReasons).hasSize(1).containsKey(MulticastSet.STOP_REASON_REACHED_TIME_LIMIT);
+        assertThat(agentStartedCount).hasValue(producerCount + 1);
     }
 
     @Test
@@ -823,6 +831,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
                 .hasSize(1)
                 .containsKey(com.rabbitmq.perf.Consumer.STOP_REASON_CONSUMER_REACHED_MESSAGE_LIMIT)
                 .containsValue(consumersCount * channelsCount);
+        assertThat(agentStartedCount).hasValue(consumersCount * channelsCount + 1);
     }
 
     // -x 0 -y 1 --polling --polling-interval 10
