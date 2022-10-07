@@ -105,6 +105,7 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
     private final Runnable rateLimiterCallback;
 
     public Producer(ProducerParameters parameters) {
+        super(parameters.getStartListener());
         this.channel           = parameters.getChannel();
         this.exchangeName      = parameters.getExchangeName();
         this.id                = parameters.getId();
@@ -372,6 +373,7 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
         state.setLastStatsTime(startTime);
         state.setMsgCount(0);
         final boolean variableRate = this.rateIndicator.isVariable();
+        started();
         try {
             while (keepGoing(state)) {
                 rateLimiterCallback.run();
@@ -481,6 +483,7 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
             if (initialized.compareAndSet(false, true)) {
                 state.setLastStatsTime(System.nanoTime());
                 state.setMsgCount(0);
+                started();
             }
             try {
                 maybeHandlePublish(state);

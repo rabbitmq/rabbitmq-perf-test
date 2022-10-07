@@ -122,7 +122,6 @@ class PrintlnStats extends Stats {
         long elapsedTime = Duration.ofNanos(elapsedInterval.get()).toMillis();
 
         if (sendStatsEnabled) {
-            System.out.println(sendCountInterval.get() + " " + elapsedTime);
             ratePublished = rate(sendCountInterval.get(), elapsedTime);
             published(ratePublished);
         }
@@ -263,25 +262,27 @@ class PrintlnStats extends Stats {
     public void printFinal() {
         if (printFinalOnGoingOrDone.compareAndSet(false, true)) {
             long now = System.nanoTime();
+            long st = this.startTimeForGlobals.get();
+            long elapsed = Duration.ofNanos(now - st).toMillis();
+            System.out.println(sendCountTotal.get() + " " + elapsed);
             String lineSeparator = System.getProperty("line.separator");
             StringBuilder summary = new StringBuilder("id: " + testID + ", sending rate avg: " +
-                    formatRate(sendCountTotal.get() * NANO_TO_SECOND / (now - startTime)) +
+                    formatRate(sendCountTotal.get() * MS_TO_SECOND / elapsed) +
                     " " + MESSAGE_RATE_LABEL);
             summary.append(lineSeparator);
 
-            long elapsed = now - startTime;
             if (elapsed > 0) {
                 summary.append("id: " + testID + ", receiving rate avg: " +
-                        formatRate(recvCountTotal.get() * NANO_TO_SECOND / elapsed) +
+                        formatRate(recvCountTotal.get() * MS_TO_SECOND / elapsed) +
                         " " + MESSAGE_RATE_LABEL).append(lineSeparator);
                 if (shouldDisplayConsumerLatency()) {
                     summary.append(format("id: %s, consumer latency %s %s",
-                        testID, LATENCY_HEADER, latencyReport(this.globalLatency)
+                        testID, LATENCY_HEADER, latencyReport(this.globalLatency.get())
                     )).append(lineSeparator);
                 }
                 if (shouldDisplayConfirmLatency()) {
                     summary.append(format("id: %s, confirm latency %s %s",
-                        testID, LATENCY_HEADER, latencyReport(this.globalConfirmLatency)
+                        testID, LATENCY_HEADER, latencyReport(this.globalConfirmLatency.get())
                     )).append(lineSeparator);
                 }
                 System.out.print(summary);

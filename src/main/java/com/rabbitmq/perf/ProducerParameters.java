@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020 VMware, Inc. or its affiliates.  All rights reserved.
+// Copyright (c) 2018-2022 VMware, Inc. or its affiliates.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 2.0 ("MPL"), the GNU General Public License version 2
@@ -43,6 +43,7 @@ public class ProducerParameters {
     private int randomStartDelayInSeconds;
     private Recovery.RecoveryProcess recoveryProcess;
     private ValueIndicator<Float> rateIndicator;
+    private StartListener startListener = StartListener.NO_OP;
 
     public Channel getChannel() {
         return channel;
@@ -203,6 +204,15 @@ public class ProducerParameters {
 
     public ProducerParameters setRateIndicator(ValueIndicator<Float> rateIndicator) {
         this.rateIndicator = rateIndicator;
+        return this;
+    }
+
+    public StartListener getStartListener() {
+        return startListener;
+    }
+
+    public ProducerParameters setStartListener(StartListener startListener) {
+        this.startListener = startListener;
         return this;
     }
 }

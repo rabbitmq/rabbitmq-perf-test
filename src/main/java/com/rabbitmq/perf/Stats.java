@@ -25,6 +25,7 @@ import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.DoubleAccumulator;
 import java.util.function.Consumer;
 import java.util.function.DoubleBinaryOperator;
@@ -39,6 +40,7 @@ public abstract class Stats {
     private final long intervalInNanoSeconds;
 
     protected final long startTime;
+    protected final AtomicLong startTimeForGlobals = new AtomicLong(0);
 
     // Micrometer's metrics
     // instant rates
@@ -71,8 +73,10 @@ public abstract class Stats {
     protected AtomicLong elapsedTotal = new AtomicLong(0);
     protected Histogram latency = new MetricRegistry().histogram("latency");
     protected Histogram confirmLatency = new MetricRegistry().histogram("confirm-latency");
-    protected final Histogram globalLatency = new MetricRegistry().histogram("latency");
-    protected final Histogram globalConfirmLatency = new MetricRegistry().histogram("confirm-latency");
+    protected final AtomicReference<Histogram> globalLatency = new AtomicReference<>(
+        new MetricRegistry().histogram("latency"));
+    protected final AtomicReference<Histogram> globalConfirmLatency = new AtomicReference<>(
+        new MetricRegistry().histogram("confirm-latency"));
 
     public Stats(Duration interval) {
         this(interval, false, new SimpleMeterRegistry(), null);
@@ -81,6 +85,7 @@ public abstract class Stats {
     public Stats(Duration interval, boolean useMs, MeterRegistry registry, String metricsPrefix) {
         this.intervalInNanoSeconds = interval.toNanos();
         startTime = System.nanoTime();
+        this.startTimeForGlobals.set(startTime);
 
         metricsPrefix = metricsPrefix == null ? "" : metricsPrefix;
 
@@ -167,7 +172,7 @@ public abstract class Stats {
         confirmCountInterval.addAndGet(numConfirms);
         for (long latency : latencies) {
             this.confirmLatency.update(latency);
-            this.globalConfirmLatency.update(latency);
+            this.globalConfirmLatency.get().update(latency);
             this.updateConfirmLatency.accept(latency);
         }
         report();
@@ -183,7 +188,7 @@ public abstract class Stats {
         recvCountTotal.incrementAndGet();
         if (latency > 0) {
             this.latency.update(latency);
-            this.globalLatency.update(latency);
+            this.globalLatency.get().update(latency);
             this.updateLatency.accept(latency);
             minLatency.set(Math.min(minLatency.get(), latency));
             maxLatency.set(Math.max(maxLatency.get(), latency));
@@ -246,6 +251,12 @@ public abstract class Stats {
         lastConfirmedCount.set(confirmCountInterval.get());
         lastNackedCount.set(nackCountInterval.get());
         lastConsumedCount.set(recvCountInterval.get());
+    }
+
+    void resetGlobals() {
+        this.sendCountTotal.set(0);
+        this.recvCountTotal.set(0);
+        this.startTimeForGlobals.set(System.nanoTime());
     }
 
     Duration interval() {

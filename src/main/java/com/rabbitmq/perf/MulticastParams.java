@@ -130,6 +130,8 @@ public class MulticastParams {
 
     private boolean cluster = false;
 
+    private StartListener startListener;
+
     public void setExchangeType(String exchangeType) {
         this.exchangeType = exchangeType;
     }
@@ -477,6 +479,10 @@ public class MulticastParams {
         this.queuesInSequence = queuesInSequence;
     }
 
+    public void setStartListener(StartListener startListener) {
+        this.startListener = startListener;
+    }
+
     public Producer createProducer(Connection connection, Stats stats, MulticastSet.CompletionHandler completionHandler,
                                    ValueIndicator<Float> rateIndicator, ValueIndicator<Integer> messageSizeIndicator) throws IOException {
         Channel channel = connection.createChannel(); //NOSONAR
@@ -515,6 +521,7 @@ public class MulticastParams {
             .setRandomStartDelayInSeconds(this.producerRandomStartDelayInSeconds)
             .setRecoveryProcess(recoveryProcess)
             .setRateIndicator(rateIndicator)
+            .setStartListener(this.startListener)
         );
         channel.addReturnListener(producer);
         channel.addConfirmListener(producer);
@@ -568,6 +575,7 @@ public class MulticastParams {
                 .setConsumerArguments(this.consumerArguments)
                 .setExitWhen(this.exitWhen)
                 .setTopologyRecoveryScheduledExecutorService(topologyRecordingScheduledExecutorService)
+                .setStartListener(this.startListener)
         );
         this.topologyHandler.next();
         return consumer;

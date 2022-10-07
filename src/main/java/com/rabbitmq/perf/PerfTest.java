@@ -430,6 +430,18 @@ public class PerfTest {
             };
             shutdownService.wrap(() -> statsSummary.run());
 
+            int agentCount = p.getProducerThreadCount() + p.getConsumerThreadCount();
+            p.setStartListener(new StartListener() {
+                Set<Integer> starts = ConcurrentHashMap.newKeySet(agentCount);
+                @Override
+                public void started(int id) {
+                    if (starts.add(id) && starts.size() == agentCount) {
+                        System.out.println("ALL STARTED " + starts.size());
+                        stats.resetGlobals();
+                    }
+                }
+            });
+
             MulticastSet set = new MulticastSet(stats, factory, p, testID, uris, completionHandler, shutdownService);
             set.run(true);
 

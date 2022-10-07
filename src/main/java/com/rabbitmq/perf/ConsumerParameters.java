@@ -55,6 +55,8 @@ public class ConsumerParameters {
 
     private ScheduledExecutorService topologyRecoveryScheduledExecutorService;
 
+    private StartListener startListener = StartListener.NO_OP;
+
     public Channel getChannel() {
         return channel;
     }
@@ -243,5 +245,14 @@ public class ConsumerParameters {
 
     public ScheduledExecutorService getTopologyRecoveryScheduledExecutorService() {
         return topologyRecoveryScheduledExecutorService;
+    }
+
+    public StartListener getStartListener() {
+        return startListener;
+    }
+
+    public ConsumerParameters setStartListener(StartListener startListener) {
+        this.startListener = startListener;
+        return this;
     }
 }
