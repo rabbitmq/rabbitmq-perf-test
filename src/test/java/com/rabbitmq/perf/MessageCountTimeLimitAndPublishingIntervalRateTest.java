@@ -60,6 +60,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MessageCountTimeLimitAndPublishingIntervalRateTest.class);
+    private static final Duration SECONDS_1 = Duration.ofSeconds(1);
+    private static final Duration SECONDS_3 = Duration.ofSeconds(3);
+    private static final Duration SECONDS_5 = Duration.ofSeconds(5);
     static Set<String> THREADS = new LinkedHashSet<>();
     MulticastSet.CompletionHandler completionHandler;
     Stats stats = new NoOpStats();
@@ -68,7 +71,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
     ExecutorService executorService;
     MulticastSet.ThreadingHandler th;
     volatile AtomicBoolean testIsDone;
-    volatile long testDurationInMs;
+    volatile Duration testDurationInMs;
     CountDownLatch runStartedLatch;
     ConcurrentMap<String, Integer> shutdownReasons;
 
@@ -133,7 +136,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         testIsDone = new AtomicBoolean(false);
         executorService = Executors.newCachedThreadPool(threadFactory(info));
         th = new MulticastSet.DefaultThreadingHandler();
-        testDurationInMs = -1;
+        testDurationInMs = ofSeconds(-1);
         params = new MulticastParams();
         params.setPredeclared(true);
         agentStartedCount.set(0);
@@ -223,7 +226,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         waitAtMost(15, () -> testIsDone.get());
 
-        assertThat(testDurationInMs).isGreaterThanOrEqualTo(3000L);
+        assertThat(testDurationInMs).isGreaterThanOrEqualTo(SECONDS_3);
         assertThat(closeCount.get()).isEqualTo(4); // the configuration connection is actually closed twice
         assertThat(shutdownReasons).hasSize(1).containsKey(MulticastSet.STOP_REASON_REACHED_TIME_LIMIT);
     }
@@ -273,7 +276,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
     @ParameterizedTest
     @CsvSource({"PT2S", "PT0S"})
     void consumerStartDelayIsEnforced(Duration consumerStartDelay) throws Exception {
-        countsAndTimeLimit(0, 0, (int) consumerStartDelay.plus(Duration.ofSeconds(1)).getSeconds());
+        countsAndTimeLimit(0, 0, (int) consumerStartDelay.plus(SECONDS_1).getSeconds());
         params.setConsumerStartDelay(consumerStartDelay);
         params.setQueueNames(asList("queue"));
 
@@ -527,7 +530,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         assertThat(testIsDone.get()).isFalse();
 
         waitAtMost(20, () -> testIsDone.get());
-        assertThat(testDurationInMs).isGreaterThanOrEqualTo(5000L);
+        assertThat(testDurationInMs).isGreaterThanOrEqualTo(SECONDS_5);
         assertThat(shutdownReasons)
                 .hasSize(2) // time limit + publisher message limit, but no consumer message limit
                 .containsKeys(MulticastSet.STOP_REASON_REACHED_TIME_LIMIT, Producer.STOP_REASON_PRODUCER_MESSAGE_LIMIT);
@@ -646,7 +649,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
 
         waitAtMost(30, () -> testIsDone.get());
         assertThat(publishedMessageCount.get()).isGreaterThan(0).isLessThan(3 * 100 * 8 * 2); // not too many messages)
-        assertThat(testDurationInMs).isGreaterThan(5000L);
+        assertThat(testDurationInMs).isGreaterThan(SECONDS_5);
         assertThat(shutdownReasons).hasSize(1).containsKey(MulticastSet.STOP_REASON_REACHED_TIME_LIMIT);
     }
 
@@ -707,7 +710,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         assertThat(publishedMessageCount.get())
                 .isGreaterThanOrEqualTo(3 * 2)  // 3 publishers should publish at least a couple of times
                 .isLessThan(3 * 2 * 8); //  but they don't publish too much
-        assertThat(testDurationInMs).isGreaterThan(5000L);
+        assertThat(testDurationInMs).isGreaterThan(SECONDS_5);
         assertThat(shutdownReasons).hasSize(1).containsKey(MulticastSet.STOP_REASON_REACHED_TIME_LIMIT);
         assertThat(agentStartedCount).hasValue(producerCount + 1);
     }
@@ -741,7 +744,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         assertThat(publishedMessageCount.get())
             .isGreaterThanOrEqualTo(3 * 2 * 5)  // 3 publishers should publish at least a couple of times
             .isLessThan(3 * 2 * 5 * 8); //  but they don't publish too much
-        assertThat(testDurationInMs).isGreaterThan(5000L);
+        assertThat(testDurationInMs).isGreaterThan(SECONDS_5);
         assertThat(shutdownReasons).hasSize(1).containsKey(MulticastSet.STOP_REASON_REACHED_TIME_LIMIT);
     }
 
@@ -1077,7 +1080,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
             try {
                 long start = System.nanoTime();
                 multicastSet.run();
-                testDurationInMs = (System.nanoTime() - start) / 1_000_000;
+                testDurationInMs = Duration.ofNanos(System.nanoTime() - start);
                 testIsDone.set(true);
             } catch (InterruptedException e) {
                 // one of the tests stops the execution, no need to be noisy
