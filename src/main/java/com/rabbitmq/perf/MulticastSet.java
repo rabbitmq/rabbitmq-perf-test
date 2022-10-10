@@ -430,13 +430,35 @@ public class MulticastSet {
     }
 
     private void startConsumers(Runnable[] consumerRunnables) throws InterruptedException {
-        this.consumerLatencyIndicator.start();
-        for (Runnable runnable : consumerRunnables) {
-            runnable.run();
-            if (params.getConsumerSlowStart()) {
-                System.out.println("Delaying start by 1 second because -S/--slow-start was requested");
-                Thread.sleep(1000);
+        if (this.params.getConsumerStartDelay().getSeconds() <= 0) {
+            this.consumerLatencyIndicator.start();
+            for (Runnable runnable : consumerRunnables) {
+                runnable.run();
+                if (params.getConsumerSlowStart()) {
+                    System.out.println("Delaying start by 1 second because -S/--slow-start was requested");
+                    Thread.sleep(1000);
+                }
             }
+        } else {
+            this.threadingHandler.scheduledExecutorService("consumer-start-delay-", 0).schedule(
+                () -> {
+                    this.consumerLatencyIndicator.start();
+                    for (Runnable runnable : consumerRunnables) {
+                        runnable.run();
+                        if (params.getConsumerSlowStart()) {
+                            System.out.println("Delaying start by 1 second because -S/--slow-start was requested");
+                            try {
+                                Thread.sleep(1000);
+                            } catch (InterruptedException e) {
+                                Thread.currentThread().interrupt();
+                                return;
+                            }
+                        }
+                    }
+                },
+                params.getConsumerStartDelay().getSeconds(),
+                TimeUnit.SECONDS
+            );
         }
     }
 

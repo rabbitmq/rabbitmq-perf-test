@@ -243,6 +243,7 @@ public class PerfTest {
             } else {
                 exitWhen = EXIT_WHEN.NEVER;
             }
+            Duration consumerStartDelay = Duration.ofSeconds(intArg(cmd, "csd", -1));
 
             ConnectionFactory factory = new ConnectionFactory();
             if (disableConnectionRecovery) {
@@ -414,6 +415,7 @@ public class PerfTest {
             p.setQueuesInSequence(queueFile != null);
             p.setExitWhen(exitWhen);
             p.setCluster(uris.size() > 0);
+            p.setConsumerStartDelay(consumerStartDelay);
 
             ConcurrentMap<String, Integer> completionReasons = new ConcurrentHashMap<>();
 
@@ -759,6 +761,7 @@ public class PerfTest {
         options.addOption(new Option("sni", "server-name-indication", true, "server names for Server Name Indication TLS parameter, separated by commas"));
         options.addOption(new Option("qq", "quorum-queue", false,"create quorum queue(s)"));
         options.addOption(new Option("ew", "exit-when", true, "exit when queue(s) empty or consumer(s) idle for 1 second, valid values are empty or idle"));
+        options.addOption(new Option("csd", "consumer-start-delay", true, "fixed delay before starting consumers in seconds"));
         return options;
     }
 

@@ -29,6 +29,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.slf4j.Logger;
@@ -46,6 +47,9 @@ import static com.rabbitmq.perf.MockUtils.*;
 import static com.rabbitmq.perf.TestUtils.threadFactory;
 import static com.rabbitmq.perf.TestUtils.waitAtMost;
 import static java.lang.String.format;
+import static java.time.Duration.ofMillis;
+import static java.time.Duration.ofNanos;
+import static java.time.Duration.ofSeconds;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -264,6 +268,49 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
                 .containsValue(producersCount * channelsCount);
 
         assertThat(agentStartedCount).hasValue(producersCount * channelsCount + 1);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"PT2S", "PT0S"})
+    void consumerStartDelayIsEnforced(Duration consumerStartDelay) throws Exception {
+        countsAndTimeLimit(0, 0, (int) consumerStartDelay.plus(Duration.ofSeconds(1)).getSeconds());
+        params.setConsumerStartDelay(consumerStartDelay);
+        params.setQueueNames(asList("queue"));
+
+        CountDownLatch consumersLatch = new CountDownLatch(1);
+        AtomicInteger consumerTagCounter = new AtomicInteger(0);
+        AtomicLong basicConsumeTime = new AtomicLong();
+        Channel channel = proxy(Channel.class,
+            callback("basicConsume", (proxy, method, args) -> {
+                basicConsumeTime.set(System.nanoTime());
+                consumersLatch.countDown();
+                return consumerTagCounter.getAndIncrement() + "";
+            })
+        );
+
+        Connection connection = proxy(Connection.class,
+            callback("createChannel", (proxy, method, args) -> channel)
+        );
+
+        MulticastSet multicastSet = getMulticastSet(connectionFactoryThatReturns(connection));
+        long start = System.nanoTime();
+        run(multicastSet);
+
+        waitForRunToStart();
+
+        assertThat(consumersLatch.await(5, SECONDS))
+            .as("consumer should have been registered by now")
+            .isTrue();
+
+        assertThat(ofNanos(basicConsumeTime.get() - start)).isCloseTo(
+           consumerStartDelay, ofMillis(500)
+        );
+
+        waitAtMost(20, () -> testIsDone.get());
+        assertThat(shutdownReasons)
+            .hasSize(1)
+            .containsKey(MulticastSet.STOP_REASON_REACHED_TIME_LIMIT);
+
     }
 
     // --cmessages 10 -y n -Y m
@@ -634,7 +681,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
     public void publishingInterval() throws InterruptedException {
         int producerCount = 3;
         countsAndTimeLimit(0, 0, 6);
-        params.setPublishingInterval(Duration.ofSeconds(1));
+        params.setPublishingInterval(ofSeconds(1));
         params.setProducerCount(producerCount);
 
         AtomicInteger publishedMessageCount = new AtomicInteger();

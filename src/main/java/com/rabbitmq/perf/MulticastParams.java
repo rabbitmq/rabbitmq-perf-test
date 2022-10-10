@@ -124,6 +124,7 @@ public class MulticastParams {
     private Map<String, Object> consumerArguments = null;
 
     private EXIT_WHEN exitWhen = EXIT_WHEN.NEVER;
+    private Duration consumerStartDelay = Duration.ofSeconds(-1);
 
     // for random JSON body generation
     private AtomicReference<MessageBodySource> messageBodySourceReference = new AtomicReference<>();
@@ -302,6 +303,10 @@ public class MulticastParams {
         this.cluster = cluster;
     }
 
+    void setConsumerStartDelay(Duration csd) {
+        this.consumerStartDelay = csd;
+    }
+
     public int getConsumerCount() {
         return consumerCount;
     }
@@ -441,6 +446,10 @@ public class MulticastParams {
 
     public EXIT_WHEN getExitWhen() {
         return exitWhen;
+    }
+
+    public Duration getConsumerStartDelay() {
+        return consumerStartDelay;
     }
 
     public void setPolling(boolean polling) {

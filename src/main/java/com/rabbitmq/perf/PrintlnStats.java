@@ -270,7 +270,6 @@ class PrintlnStats extends Stats {
             long now = System.nanoTime();
             long st = this.startTimeForGlobals.get();
             long elapsed = Duration.ofNanos(now - st).toMillis();
-            System.out.println(sendCountTotal.get() + " " + elapsed);
             String lineSeparator = System.getProperty("line.separator");
             StringBuilder summary = new StringBuilder("id: " + testID + ", sending rate avg: " +
                     formatRate(sendCountTotal.get() * MS_TO_SECOND / elapsed) +
