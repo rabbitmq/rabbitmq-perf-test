@@ -28,6 +28,7 @@ import com.rabbitmq.client.Recoverable;
 import com.rabbitmq.client.RecoveryListener;
 import com.rabbitmq.client.impl.recovery.AutorecoveringConnection;
 import com.rabbitmq.perf.PerfTest.EXIT_WHEN;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.security.KeyManagementException;
@@ -76,18 +77,23 @@ public class MulticastSet {
     private final ValueIndicator<Integer> messageSizeIndicator;
     private final ValueIndicator<Long> consumerLatencyIndicator;
     private final ConnectionCreator connectionCreator;
+    private final ExpectedMetrics expectedMetrics;
 
     public MulticastSet(Stats stats, ConnectionFactory factory,
         MulticastParams params, List<String> uris, CompletionHandler completionHandler) {
-        this(stats, factory, params, "perftest", uris, completionHandler, new ShutdownService());
+        this(stats, factory, params, "perftest", uris, completionHandler);
     }
 
     public MulticastSet(Stats stats, ConnectionFactory factory,
                         MulticastParams params, String testID, List<String> uris, CompletionHandler completionHandler) {
-        this(stats, factory, params, testID, uris, completionHandler, new ShutdownService());
+        this(stats, factory, params, testID, uris, completionHandler, new ShutdownService(),
+            new ExpectedMetrics(params, new SimpleMeterRegistry(), "perftest_", Collections.emptyMap()));
     }
+
     public MulticastSet(Stats stats, ConnectionFactory factory,
-        MulticastParams params, String testID, List<String> uris, CompletionHandler completionHandler, ShutdownService shutdownService) {
+        MulticastParams params, String testID, List<String> uris,
+        CompletionHandler completionHandler, ShutdownService shutdownService,
+        ExpectedMetrics expectedMetrics) {
         this.stats = stats;
         this.factory = factory;
         this.params = params;
@@ -140,6 +146,7 @@ public class MulticastSet {
                     }
                 }, stats.interval().toMillis() * 2, stats.interval().toMillis(), TimeUnit.MILLISECONDS);
         }
+        this.expectedMetrics = expectedMetrics;
     }
 
     protected static int nbThreadsForConsumer(MulticastParams params) {
@@ -471,6 +478,7 @@ public class MulticastSet {
                 + "falling back to scheduling with {} ms as publishing interval", calculatedPublishingInterval.toMillis());
             params.setPublishingInterval(calculatedPublishingInterval);
         }
+        expectedMetrics.register(rateIndicator, params.getPublishingInterval());
         if (params.getPublishingInterval() != null) {
             ScheduledExecutorService producersExecutorService = this.threadingHandler.scheduledExecutorService(
                     PRODUCER_THREAD_PREFIX, nbThreadsForProducerScheduledExecutorService(params)

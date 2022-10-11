@@ -125,6 +125,7 @@ public class MulticastParams {
 
     private EXIT_WHEN exitWhen = EXIT_WHEN.NEVER;
     private Duration consumerStartDelay = Duration.ofSeconds(-1);
+    private Map<String, Number> exposedMetrics = Collections.emptyMap();
 
     // for random JSON body generation
     private AtomicReference<MessageBodySource> messageBodySourceReference = new AtomicReference<>();
@@ -398,6 +399,10 @@ public class MulticastParams {
 
     public int getTimeLimit() {
         return timeLimit;
+    }
+
+    public float getConsumerRateLimit() {
+        return consumerRateLimit;
     }
 
     public int getProducerMsgCount() {

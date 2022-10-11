@@ -96,8 +96,10 @@ public abstract class AgentBase {
     }
 
     protected void started() {
-        this.startListener.started(this.agentId);
+        this.startListener.started(this.agentId, type());
     }
+
+    protected abstract StartListener.Type type();
 
     public abstract void recover(TopologyRecording topologyRecording);
 

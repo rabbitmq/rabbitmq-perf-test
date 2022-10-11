@@ -21,6 +21,7 @@ import com.rabbitmq.client.AMQP.BasicProperties;
 import com.rabbitmq.client.*;
 import com.rabbitmq.client.AMQP.Queue.DeclareOk;
 import com.rabbitmq.perf.PerfTest.EXIT_WHEN;
+import com.rabbitmq.perf.StartListener.Type;
 import com.rabbitmq.perf.TopologyRecording.RecordedQueue;
 import java.time.Duration;
 import java.util.concurrent.Callable;
@@ -168,6 +169,11 @@ public class Consumer extends AgentBase implements Runnable {
         this.state = new ConsumerState(timestampProvider);
         this.recoveryProcess = parameters.getRecoveryProcess();
         this.recoveryProcess.init(this);
+    }
+
+    @Override
+    protected Type type() {
+        return Type.CONSUMER;
     }
 
     public void run() {

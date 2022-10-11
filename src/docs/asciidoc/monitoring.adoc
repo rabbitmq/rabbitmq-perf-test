@@ -114,3 +114,26 @@ java -jar perf-test.jar --metrics-prometheus \
     --metrics-prometheus-port 8090 --metrics-prometheus-endpoint perf-test-metrics
 ```
 
+=== Expected and Exposed Metrics
+
+PerfTest automatically exposes 2 `expected_published` and `expected_consumed` metrics that represent the theoretical published and consumed rates, respectively.
+PertTest calculates the values and exposes the metrics as soon as rate instructions are provided (e.g. with `--rate` or `--consumer-rate`).
+
+These expected metrics aim at helping external monitoring tools to trigger alerts if the actual rates are different from the expected rates.
+PerfTest does its best to calculate and update the expected rates, but it may be wrong or just cannot figure out the correct values.
+It is then possible to override the metrics values thanks to the `--exposed-metrics` option (`-em` for short):
+
+```
+java -jar perf-test.jar --metrics-prometheus \
+    --exposed-metrics expected_published=50000,expected_consumed=50000
+```
+
+Note PerfTest adds the metrics prefix to the provided name automatically (`perftest_` by default).
+
+It is also possible to expose any metrics, e.g. setting an expected value for the publisher confirm latency so the external monitoring system could trigger an alert if the actual latency is higher:
+
+```
+java -jar perf-test.jar --metrics-prometheus --rate 1000 \
+    --exposed-metrics expected_confirm_latency=0.1
+```
+

@@ -19,6 +19,7 @@ import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.ConfirmListener;
 import com.rabbitmq.client.ReturnListener;
+import com.rabbitmq.perf.StartListener.Type;
 import java.util.concurrent.atomic.AtomicReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -164,7 +165,6 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
             });
             this.rateLimiterCallback = () -> rateLimiterReference.get().acquire(1);
         } else if (this.rateIndicator.getValue() >= 0 && !this.rateIndicator.isVariable()){
-            Float rate = this.rateIndicator.getValue();
             if (this.rateIndicator.getValue() > 0) {
                 RateLimiter rateLimiter = RateLimiter.create(this.rateIndicator.getValue());
                 this.rateLimiterCallback = () -> rateLimiter.acquire(1);
@@ -255,6 +255,11 @@ public class Producer extends AgentBase implements Runnable, ReturnListener,
         }
 
         return builderProcessor;
+    }
+
+    @Override
+    protected Type type() {
+        return Type.PRODUCER;
     }
 
     private static final Collection<String> MESSAGE_PROPERTIES_KEYS = Arrays.asList(

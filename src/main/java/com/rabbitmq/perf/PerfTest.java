@@ -432,18 +432,19 @@ public class PerfTest {
             };
             shutdownService.wrap(() -> statsSummary.run());
 
+            Map<String, Object> exposedMetrics = convertKeyValuePairs(strArg(cmd, "em", null));
+            ExpectedMetrics expectedMetrics = new ExpectedMetrics(p, registry, metricsPrefix, exposedMetrics);
             int agentCount = p.getProducerThreadCount() + p.getConsumerThreadCount();
-            p.setStartListener(new StartListener() {
-                Set<Integer> starts = ConcurrentHashMap.newKeySet(agentCount);
-                @Override
-                public void started(int id) {
-                    if (starts.add(id) && starts.size() == agentCount) {
-                        stats.resetGlobals();
-                    }
+            Set<Integer> starts = ConcurrentHashMap.newKeySet(agentCount);
+            p.setStartListener((id, type) -> {
+                if (starts.add(id) && starts.size() == agentCount) {
+                    stats.resetGlobals();
                 }
+                expectedMetrics.agentStarted(type);
             });
 
-            MulticastSet set = new MulticastSet(stats, factory, p, testID, uris, completionHandler, shutdownService);
+            MulticastSet set = new MulticastSet(stats, factory, p, testID, uris, completionHandler,
+                shutdownService, expectedMetrics);
             set.run(true);
 
             statsSummary.run();
@@ -752,7 +753,7 @@ public class PerfTest {
                 "Use with --json-body. Default is 1000."));
         options.addOption(new Option("bc", "body-count", true, "number of pre-generated message bodies. " +
                 "Use with --json-body. Default is 100."));
-        options.addOption(new Option("ca", "consumer-args", true, "consumer arguments as key/values pairs, separated by commas, "
+        options.addOption(new Option("ca", "consumer-args", true, "consumer arguments as key/value pairs, separated by commas, "
                 + "e.g. x-priority=10"));
         options.addOption(new Option("cri", "connection-recovery-interval", true, "connection recovery interval in seconds. Default is 5 seconds. "
                 + "Interval syntax, e.g. 30-60, is supported to specify an random interval between 2 values between each attempt."));
@@ -762,6 +763,8 @@ public class PerfTest {
         options.addOption(new Option("qq", "quorum-queue", false,"create quorum queue(s)"));
         options.addOption(new Option("ew", "exit-when", true, "exit when queue(s) empty or consumer(s) idle for 1 second, valid values are empty or idle"));
         options.addOption(new Option("csd", "consumer-start-delay", true, "fixed delay before starting consumers in seconds"));
+        options.addOption(new Option("em", "exposed-metrics", true, "metrics to be exposed as key/value pairs, separated by commas, "
+            + "e.g. expected_published=50000"));
         return options;
     }
 

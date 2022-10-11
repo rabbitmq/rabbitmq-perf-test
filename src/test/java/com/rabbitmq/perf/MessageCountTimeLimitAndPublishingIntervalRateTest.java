@@ -140,7 +140,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         params = new MulticastParams();
         params.setPredeclared(true);
         agentStartedCount.set(0);
-        params.setStartListener(id -> agentStartedCount.incrementAndGet());
+        params.setStartListener((id, type) -> agentStartedCount.incrementAndGet());
         runStartedLatch = new CountDownLatch(1);
         shutdownReasons = new ConcurrentHashMap<>();
         LOGGER.info("Done initializing {} {}", info.getTestMethod().get().getName(), info.getDisplayName());
