@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020 VMware, Inc. or its affiliates.  All rights reserved.
+// Copyright (c) 2018-2022 VMware, Inc. or its affiliates.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 2.0 ("MPL"), the GNU General Public License version 2
@@ -15,6 +15,7 @@
 
 package com.rabbitmq.perf;
 
+import java.util.Collections;
 import org.apache.commons.cli.*;
 import org.junit.jupiter.api.Test;
 
@@ -22,6 +23,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -65,6 +67,20 @@ public class CommandLineProxyTest {
         assertTrue(
             cmd.hasOption('p')
         );
+    }
+
+    @Test
+    void queueArgumentsCanHaveSeveralValues() throws Exception {
+        String line = "-qa x-max-length=10,x-dead-letter-exchange=some.exchange.name";
+        CommandLineProxy cmd = getCommandLineProxy(line);
+        String[] values = cmd.getOptionValues("qa");
+        assertThat(values).hasSize(1).singleElement().isEqualTo(line.replace("-qa ", ""));
+        line = "-qa x-max-length=10,x-dead-letter-exchange=some.exchange.name -qa x-queue-version=2";
+        cmd = getCommandLineProxy(line);
+        values = cmd.getOptionValues("qa");
+        assertThat(values).hasSize(2);
+        assertThat(values[0]).isEqualTo("x-max-length=10,x-dead-letter-exchange=some.exchange.name");
+        assertThat(values[1]).isEqualTo("x-queue-version=2");
     }
 
     @Test
@@ -128,7 +144,11 @@ public class CommandLineProxyTest {
         );
     }
 
-    private CommandLineProxy getCommandLineProxy(Map<String, String> env, String line) throws ParseException {
+    private static CommandLineProxy getCommandLineProxy(String line) throws ParseException {
+        return getCommandLineProxy(Collections.emptyMap(), line);
+    }
+
+    private static CommandLineProxy getCommandLineProxy(Map<String, String> env, String line) throws ParseException {
         Function<String, String> envLookup = variable -> env.get(variable);
         Options options = PerfTest.getOptions();
         CommandLineParser parser = new DefaultParser();
