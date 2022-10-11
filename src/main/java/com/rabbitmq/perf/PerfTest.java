@@ -128,7 +128,7 @@ public class PerfTest {
             boolean autoDelete       = boolArg(cmd, "ad", true);
             boolean useMillis        = hasOption(cmd,"ms");
             boolean saslExternal     = hasOption(cmd, "se");
-            String queueArgs         = strArg(cmd, "qa", null);
+            List<String> queueArgs   = lstArg(cmd, "qa");
             int consumerLatencyInMicroseconds = intArg(cmd, 'L', 0);
             int heartbeatSenderThreads = intArg(cmd, "hst", -1);
             String messageProperties = strArg(cmd, "mp", null);
@@ -674,8 +674,10 @@ public class PerfTest {
         options.addOption(new Option("ad", "auto-delete",           true, "should the queue be auto-deleted, default is true"));
         options.addOption(new Option("ms", "use-millis",            false,"should latency be collected in milliseconds, default is false. "
                                                                                                     + "Set to true if producers and consumers run on different machines."));
-        options.addOption(new Option("qa", "queue-args",            true, "queue arguments as key/value pairs, separated by commas, "
-                                                                                                    + "e.g. x-max-length=10"));
+        Option queueArgumentsOption = new Option("qa", "queue-args",            true, "queue arguments as key/value pairs, separated by commas, "
+            + "e.g. x-max-length=10");
+        queueArgumentsOption.setArgs(Option.UNLIMITED_VALUES);
+        options.addOption(queueArgumentsOption);
         options.addOption(new Option("L", "consumer-latency",       true, "consumer latency in microseconds"));
 
         options.addOption(new Option("udsc", "use-default-ssl-context", false, "use JVM default SSL context"));
@@ -800,6 +802,21 @@ public class PerfTest {
         return cmd.hasOption(opt);
     }
 
+    static Map<String, Object> convertKeyValuePairs(List<String> args) {
+        if (args == null || args.isEmpty()) {
+            return Collections.emptyMap();
+        } else {
+            LinkedHashMap result = new LinkedHashMap();
+            for (String arg : args) {
+                Map<String, Object> intermediaryArgs = convertKeyValuePairs(arg);
+                if (intermediaryArgs != null) {
+                    result.putAll(intermediaryArgs);
+                }
+            }
+            return result;
+        }
+    }
+
     static Map<String, Object> convertKeyValuePairs(String arg) {
         if (arg == null || arg.trim().isEmpty()) {
             return null;
@@ -824,7 +841,8 @@ public class PerfTest {
             } else {
                 return keyValue;
             }
-        }).collect(Collectors.toMap(keyEntry -> keyEntry[0].toString(), keyEntry -> keyEntry[1]));
+        }).collect(Collectors.toMap(entry -> entry[0].toString(), entry -> entry[1],
+                (o1, o2) -> o2, LinkedHashMap::new));
     }
 
     private static String getExchangeName(CommandLineProxy cmd, String def) {

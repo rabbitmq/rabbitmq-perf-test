@@ -15,6 +15,7 @@
 
 package com.rabbitmq.perf;
 
+import java.util.Arrays;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
@@ -25,6 +26,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import static com.rabbitmq.perf.PerfTest.convertKeyValuePairs;
 import static com.rabbitmq.perf.PerfTest.parsePublishingInterval;
+import static java.util.Arrays.asList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.*;
@@ -117,6 +119,34 @@ public class PerfTestTest {
             .hasSize(2)
             .containsEntry("x-dead-letter-exchange", "")
             .containsEntry("x-queue-type", "quorum");
+        assertThat(convertKeyValuePairs("max-length-bytes=5,x-queue-type=quorum,max-length-bytes=10"))
+            .hasSize(2)
+            .containsEntry("x-queue-type", "quorum")
+            .containsEntry("max-length-bytes", 10L);
+    }
+
+    @Test
+    void convertPostProcessKeyValuePairsWithList() {
+        assertThat(convertKeyValuePairs(asList("x-queue-type=quorum","max-length-bytes=100000")))
+            .hasSize(2)
+            .containsEntry("x-queue-type", "quorum")
+            .containsEntry("max-length-bytes", 100000L);
+        assertThat(convertKeyValuePairs(asList("x-dead-letter-exchange=","x-queue-type=quorum")))
+            .hasSize(2)
+            .containsEntry("x-dead-letter-exchange", "")
+            .containsEntry("x-queue-type", "quorum");
+        assertThat(convertKeyValuePairs(asList("x-dead-letter-exchange=amq.default","x-queue-type=quorum")))
+            .hasSize(2)
+            .containsEntry("x-dead-letter-exchange", "")
+            .containsEntry("x-queue-type", "quorum");
+        assertThat(convertKeyValuePairs(asList("max-length-bytes=5","x-queue-type=quorum","max-length-bytes=10")))
+            .hasSize(2)
+            .containsEntry("x-queue-type", "quorum")
+            .containsEntry("max-length-bytes", 10L);
+        assertThat(convertKeyValuePairs(asList("max-length-bytes=5,x-queue-type=quorum","max-length-bytes=10")))
+            .hasSize(2)
+            .containsEntry("x-queue-type", "quorum")
+            .containsEntry("max-length-bytes", 10L);
     }
 
     @ParameterizedTest
