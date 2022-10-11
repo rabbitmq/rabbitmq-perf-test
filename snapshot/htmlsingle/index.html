@@ -573,6 +573,7 @@ table.CodeRay td.code{padding:0 0 0 .75em}
 <li><a href="#supported-metrics">Supported Metrics</a></li>
 <li><a href="#tags">Tags</a></li>
 <li><a href="#supported-monitoring-systems">Supported Monitoring Systems</a></li>
+<li><a href="#expected-and-exposed-metrics">Expected and Exposed Metrics</a></li>
 </ul>
 </li>
 </ul>
@@ -1869,13 +1870,43 @@ can be changed:</p>
 </div>
 </div>
 </div>
+<div class="sect2">
+<h3 id="expected-and-exposed-metrics"><a class="anchor" href="#expected-and-exposed-metrics"></a>Expected and Exposed Metrics</h3>
+<div class="paragraph">
+<p>PerfTest automatically exposes 2 <code>expected_published</code> and <code>expected_consumed</code> metrics that represent the theoretical published and consumed rates, respectively.
+PertTest calculates the values and exposes the metrics as soon as rate instructions are provided (e.g. with <code>--rate</code> or <code>--consumer-rate</code>).</p>
+</div>
+<div class="paragraph">
+<p>These expected metrics aim at helping external monitoring tools to trigger alerts if the actual rates are different from the expected rates.
+PerfTest does its best to calculate and update the expected rates, but it may be wrong or just cannot figure out the correct values.
+It is then possible to override the metrics values thanks to the <code>--exposed-metrics</code> option (<code>-em</code> for short):</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>java -jar perf-test.jar --metrics-prometheus \
+    --exposed-metrics expected_published=50000,expected_consumed=50000</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Note PerfTest adds the metrics prefix to the provided name automatically (<code>perftest_</code> by default).</p>
+</div>
+<div class="paragraph">
+<p>It is also possible to expose any metrics, e.g. setting an expected value for the publisher confirm latency so the external monitoring system could trigger an alert if the actual latency is higher:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>java -jar perf-test.jar --metrics-prometheus --rate 1000 \
+    --exposed-metrics expected_confirm_latency=0.1</code></pre>
+</div>
+</div>
+</div>
 </div>
 </div>
 </div>
 <div id="footer">
 <div id="footer-text">
 Version 2.19.0-SNAPSHOT<br>
-Last updated 2022-10-11 06:05:01 UTC
+Last updated 2022-10-11 11:23:20 UTC
 </div>
 </div>
 </body>
