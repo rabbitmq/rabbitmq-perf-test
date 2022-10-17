@@ -23,7 +23,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -33,7 +32,6 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.mockito.MockitoAnnotations.initMocks;
 import static org.mockito.MockitoAnnotations.openMocks;
 
 /**
@@ -48,7 +46,7 @@ public class ConsumerSharingThreadsTest {
     @Mock
     Channel ch;
     @Mock
-    Stats stats;
+    PerformanceMetrics performanceMetrics;
     @Mock
     MulticastSet.ThreadingHandler threadingHandler;
     @Mock
@@ -119,7 +117,7 @@ public class ConsumerSharingThreadsTest {
 
     private MulticastSet getMulticastSet() {
         MulticastSet set = new MulticastSet(
-            stats, cf, params, singletonList("amqp://localhost"), new MulticastSet.CompletionHandler() {
+            performanceMetrics, cf, params, singletonList("amqp://localhost"), new MulticastSet.CompletionHandler() {
 
             @Override
             public void waitForCompletion() {

@@ -21,7 +21,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-class SimpleScenarioStats extends Stats implements ScenarioStats {
+class SimpleScenarioStats extends Stats implements ScenarioStats, PerformanceMetrics {
     private static final int IGNORE_FIRST = 3;
 
     private final List<Map<String, Object>> samples = new ArrayList<>();
@@ -91,5 +91,50 @@ class SimpleScenarioStats extends Stats implements ScenarioStats {
 
     private long intervalAverageLatency() {
         return cumulativeLatencyInterval.get() / (1000L * latencyCountInterval.get());
+    }
+
+    @Override
+    public void start() {
+
+    }
+
+    @Override
+    public void published() {
+        this.handleSend();
+    }
+
+    @Override
+    public void confirmed(int count, long[] latencies) {
+        this.handleConfirm(count, latencies);
+    }
+
+    @Override
+    public void nacked(int count) {
+        this.handleNack(count);
+    }
+
+    @Override
+    public void returned() {
+        this.handleReturn();
+    }
+
+    @Override
+    public void received(long latency) {
+        this.handleRecv(latency);
+    }
+
+    @Override
+    public Duration interval() {
+        return this.interval();
+    }
+
+    @Override
+    public void maybeResetGauges() {
+        super.maybeResetGauges();
+    }
+
+    @Override
+    public void resetGlobals() {
+        super.resetGlobals();
     }
 }

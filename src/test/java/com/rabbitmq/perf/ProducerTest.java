@@ -151,7 +151,7 @@ public class ProducerTest {
                 .setConfirm(-1).setConfirmTimeout(30)
                 .setMessageBodySource(new TimeSequenceMessageBodySource(new TimestampProvider(true, true), 1000))
                 .setTsp(new TimestampProvider(true, true))
-                .setStats(stats())
+                .setPerformanceMetrics(performanceMetrics())
                 .setMessageProperties(null).setCompletionHandler(completionHandler()).setRoutingKeyCacheSize(0)
                 .setRandomStartDelayInSeconds(-1)
                 .setRecoveryProcess(Recovery.NO_OP_RECOVERY_PROCESS)
@@ -225,7 +225,7 @@ public class ProducerTest {
                         .setConfirm(-1).setConfirmTimeout(30)
                         .setMessageBodySource((sequence) -> new MessageBodySource.MessageEnvelope("".getBytes(), "application/json", 0L))
                         .setTsp(new TimestampProvider(true, true))
-                        .setStats(stats())
+                        .setPerformanceMetrics(performanceMetrics())
                         .setMessageProperties(messageProperties).setCompletionHandler(completionHandler()).setRoutingKeyCacheSize(0)
                         .setRandomStartDelayInSeconds(-1)
                         .setRecoveryProcess(Recovery.NO_OP_RECOVERY_PROCESS)
@@ -286,7 +286,7 @@ public class ProducerTest {
                         .setConfirm(-1).setConfirmTimeout(30)
                         .setMessageBodySource(new TimeSequenceMessageBodySource(new TimestampProvider(true, true), 1000))
                         .setTsp(new TimestampProvider(true, true))
-                        .setStats(stats())
+                        .setPerformanceMetrics(performanceMetrics())
                         .setMessageProperties(messageProperties).setCompletionHandler(completionHandler()).setRoutingKeyCacheSize(0)
                         .setRandomStartDelayInSeconds(-1)
                         .setRecoveryProcess(Recovery.NO_OP_RECOVERY_PROCESS)
@@ -419,7 +419,7 @@ public class ProducerTest {
                 .setConfirm(-1).setConfirmTimeout(30)
                 .setMessageBodySource(new TimeSequenceMessageBodySource(new TimestampProvider(false, false), 1000))
                 .setTsp(new TimestampProvider(false, false))
-                .setStats(stats())
+                .setPerformanceMetrics(performanceMetrics())
                 .setCompletionHandler(completionHandler()).setRoutingKeyCacheSize(0)
                 .setRandomStartDelayInSeconds(-1)
                 .setRecoveryProcess(Recovery.NO_OP_RECOVERY_PROCESS)
@@ -430,8 +430,8 @@ public class ProducerTest {
         return propertiesCaptor.getValue();
     }
 
-    private Stats stats() {
-        return new NoOpStats();
+    private PerformanceMetrics performanceMetrics() {
+        return PerformanceMetrics.NO_OP;
     }
 
     private MulticastSet.CompletionHandler completionHandler() {

@@ -70,7 +70,7 @@ public class TopologyTest {
     @Mock
     Channel ch;
     @Mock
-    Stats stats;
+    PerformanceMetrics performanceMetrics;
 
     MulticastParams params;
 
@@ -109,7 +109,7 @@ public class TopologyTest {
 
         params = new MulticastParams();
 
-        when(stats.interval()).thenReturn(Duration.ofMillis(-1));
+        when(performanceMetrics.interval()).thenReturn(Duration.ofMillis(-1));
     }
 
     @AfterEach
@@ -805,7 +805,7 @@ public class TopologyTest {
 
     private MulticastSet getMulticastSet(MulticastSet.ThreadingHandler threadingHandler, ConnectionFactory connectionFactory, List<String> uris) {
         MulticastSet set = new MulticastSet(
-                stats, connectionFactory, params, uris, new MulticastSet.CompletionHandler() {
+                performanceMetrics, connectionFactory, params, uris, new MulticastSet.CompletionHandler() {
 
             @Override
             public void waitForCompletion() {
@@ -823,7 +823,7 @@ public class TopologyTest {
 
     private MulticastSet getMulticastSet(MulticastSet.ThreadingHandler threadingHandler, CountDownLatch completionLatch) {
         MulticastSet set = new MulticastSet(
-                stats, cf, params, singletonList("amqp://localhost"), new MulticastSet.CompletionHandler() {
+                performanceMetrics, cf, params, singletonList("amqp://localhost"), new MulticastSet.CompletionHandler() {
 
             @Override
             public void waitForCompletion() throws InterruptedException {

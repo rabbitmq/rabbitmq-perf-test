@@ -22,8 +22,8 @@ import com.rabbitmq.client.impl.nio.NioParams;
 import com.rabbitmq.perf.MulticastParams;
 import com.rabbitmq.perf.MulticastSet;
 import com.rabbitmq.perf.NamedThreadFactory;
-import com.rabbitmq.perf.Stats;
-import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
+import com.rabbitmq.perf.PerformanceMetrics;
+import com.rabbitmq.perf.PerformanceMetricsAdapter;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicLong;
 import org.junit.jupiter.api.AfterEach;
@@ -84,15 +84,22 @@ public class ConnectionRecoveryIT {
 
     AtomicLong msgPublished, msgConsumed;
 
-  Stats stats =
-      new Stats(Duration.ofMillis(1000), false, new CompositeMeterRegistry(), "") {
+  PerformanceMetrics performanceMetrics = new PerformanceMetricsAdapter() {
+    @Override
+    public void published() {
+      msgPublished.incrementAndGet();
+    }
 
-        @Override
-        protected void report(long now) {
-          msgPublished.set(sendCountTotal.get());
-          msgConsumed.set(recvCountTotal.get());
-        }
-      };
+    @Override
+    public void received(long latency) {
+      msgConsumed.incrementAndGet();
+    }
+
+    @Override
+    public Duration interval() {
+      return Duration.ofSeconds(1);
+    }
+  };
 
     static Stream<Arguments> configurationArguments() {
         return Stream.of(blockingIoAndNio(multicastParamsConfigurers()));
@@ -214,7 +221,7 @@ public class ConnectionRecoveryIT {
         configurer.accept(params);
         cfConfigurer.accept(cf);
         int producerConsumerCount = params.getProducerCount();
-        MulticastSet set = new MulticastSet(stats, cf, params, "", URIS, latchCompletionHandler(1, info));
+        MulticastSet set = new MulticastSet(performanceMetrics, cf, params, "", URIS, latchCompletionHandler(1, info));
         run(set);
         waitAtMost(10, () -> msgConsumed.get() >= 3 * producerConsumerCount * RATE);
         closeAllConnections();
@@ -232,7 +239,7 @@ public class ConnectionRecoveryIT {
         params.setPublishingInterval(Duration.ofSeconds(1));
         int producerConsumerCount = params.getProducerCount();
 
-        MulticastSet set = new MulticastSet(stats, cf, params, "", URIS, latchCompletionHandler(1, info));
+        MulticastSet set = new MulticastSet(performanceMetrics, cf, params, "", URIS, latchCompletionHandler(1, info));
         run(set);
         waitAtMost(10, () -> msgConsumed.get() >= 3 * producerConsumerCount);
         closeAllConnections();
@@ -246,7 +253,7 @@ public class ConnectionRecoveryIT {
         configurer.accept(params);
         cfConfigurer.accept(cf);
         int producerConsumerCount = params.getProducerCount();
-        MulticastSet set = new MulticastSet(stats, cf, params, "", URIS, latchCompletionHandler(1, info));
+        MulticastSet set = new MulticastSet(performanceMetrics, cf, params, "", URIS, latchCompletionHandler(1, info));
         run(set);
         waitAtMost(10, () -> msgConsumed.get() >= 3 * producerConsumerCount * RATE);
         long messageCountBeforeClosing = msgConsumed.get();
@@ -263,7 +270,7 @@ public class ConnectionRecoveryIT {
         configurer.accept(params);
         cfConfigurer.accept(cf);
         int producerConsumerCount = params.getProducerCount();
-        MulticastSet set = new MulticastSet(stats, cf, params, "", URIS, latchCompletionHandler(1, info));
+        MulticastSet set = new MulticastSet(performanceMetrics, cf, params, "", URIS, latchCompletionHandler(1, info));
         run(set);
         waitAtMost(10, () -> msgConsumed.get() >= 3 * producerConsumerCount);
         long messageCountBeforeClosing = msgConsumed.get();
@@ -289,7 +296,7 @@ public class ConnectionRecoveryIT {
                 ))
         );
         int producerConsumerCount = params.getProducerCount();
-        MulticastSet set = new MulticastSet(stats, cf, params, "", URIS, latchCompletionHandler(1, info));
+        MulticastSet set = new MulticastSet(performanceMetrics, cf, params, "", URIS, latchCompletionHandler(1, info));
         run(set);
         waitAtMost(10, () -> msgConsumed.get() >= 3 * producerConsumerCount * RATE);
         long messageCountBeforeClosing = msgConsumed.get();
@@ -305,7 +312,7 @@ public class ConnectionRecoveryIT {
         configurer.accept(params);
         int producerConsumerCount = params.getProducerCount();
         MulticastSet set = new MulticastSet(
-                stats, cf, params, "",
+                performanceMetrics, cf, params, "",
                 IntStream.range(0, 3).mapToObj(ignored -> URI).collect(toList()),
                 latchCompletionHandler(1, info)
         );
@@ -340,7 +347,7 @@ public class ConnectionRecoveryIT {
 
         try {
             int producerConsumerCount = params.getProducerCount();
-            MulticastSet set = new MulticastSet(stats, cf, params, "", URIS, latchCompletionHandler(1, info));
+            MulticastSet set = new MulticastSet(performanceMetrics, cf, params, "", URIS, latchCompletionHandler(1, info));
             run(set);
             waitAtMost(10, () -> msgConsumed.get() >= 3 * producerConsumerCount * RATE);
             long messageCountBeforeClosing = msgConsumed.get();
@@ -370,7 +377,7 @@ public class ConnectionRecoveryIT {
         String createdQueue = null;
         try {
             int producerConsumerCount = params.getProducerCount();
-            MulticastSet set = new MulticastSet(stats, cf, params, "", URIS, completionHandler);
+            MulticastSet set = new MulticastSet(performanceMetrics, cf, params, "", URIS, completionHandler);
             run(set);
             waitAtMost(10, () -> msgConsumed.get() >= 3 * producerConsumerCount * RATE);
             List<String> queuesDuringTest = Host.listQueues();
@@ -408,7 +415,7 @@ public class ConnectionRecoveryIT {
 
         int producerConsumerCount = params.getProducerCount();
         try {
-            MulticastSet set = new MulticastSet(stats, cf, params, "", URIS, latchCompletionHandler(1, info));
+            MulticastSet set = new MulticastSet(performanceMetrics, cf, params, "", URIS, latchCompletionHandler(1, info));
             run(set);
             waitAtMost(10, () -> msgConsumed.get() >= 3 * producerConsumerCount * RATE);
             long messageCountBeforeClosing = msgConsumed.get();
