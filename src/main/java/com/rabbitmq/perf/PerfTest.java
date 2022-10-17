@@ -124,7 +124,6 @@ public class PerfTest {
             String bodyFiles         = strArg(cmd, 'B', null);
             String bodyContentType   = strArg(cmd, 'T', null);
             boolean predeclared      = hasOption(cmd, "p");
-            boolean legacyMetrics    = hasOption(cmd, "l");
             boolean autoDelete       = boolArg(cmd, "ad", true);
             boolean useMillis        = hasOption(cmd,"ms");
             boolean saslExternal     = hasOption(cmd, "se");
@@ -441,18 +440,6 @@ public class PerfTest {
                 registry, metricsPrefix, metricsFormatter);
             shutdownService.wrap(() -> performanceMetrics.close());
 
-            /*
-            //setup
-            PrintlnStats stats = new PrintlnStats(testID,
-                Duration.ofSeconds(samplingInterval),
-                producerCount > 0,
-                consumerCount > 0,
-                (flags.contains("mandatory") || flags.contains("immediate")),
-                confirm != -1, legacyMetrics, useMillis, output, registry, metricsPrefix,
-                PerformanceMetrics.NO_OP);
-
-             */
-
             AtomicBoolean statsSummaryDone = new AtomicBoolean(false);
             Runnable statsSummary = () -> {
                 if (statsSummaryDone.compareAndSet(false, true)) {
@@ -699,7 +686,6 @@ public class PerfTest {
         options.addOption(new Option("p", "predeclared",            false,"allow use of predeclared objects"));
         options.addOption(new Option("B", "body",                   true, "comma-separated list of files to use in message bodies"));
         options.addOption(new Option("T", "body-content-type",      true, "body content-type"));
-        options.addOption(new Option("l", "legacy-metrics",         false,"display legacy metrics (min/avg/max latency)"));
         options.addOption(new Option("o", "output-file",            true, "output file for timing results"));
         options.addOption(new Option("ad", "auto-delete",           true, "should the queue be auto-deleted, default is true"));
         options.addOption(new Option("ms", "use-millis",            false,"should latency be collected in milliseconds, default is false. "
