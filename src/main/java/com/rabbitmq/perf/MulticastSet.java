@@ -65,7 +65,7 @@ public class MulticastSet {
     private static final Logger LOGGER = LoggerFactory.getLogger(MulticastSet.class);
     private static final String PRODUCER_THREAD_PREFIX = "perf-test-producer-";
     static final String STOP_REASON_REACHED_TIME_LIMIT = "Reached time limit";
-    private final Stats stats;
+    private final PerformanceMetrics performanceMetrics;
     private final ConnectionFactory factory;
     private final MulticastParams params;
     private final String testID;
@@ -79,22 +79,22 @@ public class MulticastSet {
     private final ConnectionCreator connectionCreator;
     private final ExpectedMetrics expectedMetrics;
 
-    public MulticastSet(Stats stats, ConnectionFactory factory,
+    public MulticastSet(PerformanceMetrics performanceMetrics, ConnectionFactory factory,
         MulticastParams params, List<String> uris, CompletionHandler completionHandler) {
-        this(stats, factory, params, "perftest", uris, completionHandler);
+        this(performanceMetrics, factory, params, "perftest", uris, completionHandler);
     }
 
-    public MulticastSet(Stats stats, ConnectionFactory factory,
+    public MulticastSet(PerformanceMetrics performanceMetrics, ConnectionFactory factory,
                         MulticastParams params, String testID, List<String> uris, CompletionHandler completionHandler) {
-        this(stats, factory, params, testID, uris, completionHandler, new ShutdownService(),
+        this(performanceMetrics, factory, params, testID, uris, completionHandler, new ShutdownService(),
             new ExpectedMetrics(params, new SimpleMeterRegistry(), "perftest_", Collections.emptyMap()));
     }
 
-    public MulticastSet(Stats stats, ConnectionFactory factory,
+    public MulticastSet(PerformanceMetrics performanceMetrics, ConnectionFactory factory,
         MulticastParams params, String testID, List<String> uris,
         CompletionHandler completionHandler, ShutdownService shutdownService,
         ExpectedMetrics expectedMetrics) {
-        this.stats = stats;
+        this.performanceMetrics = performanceMetrics;
         this.factory = factory;
         this.params = params;
         this.testID = testID;
@@ -136,15 +136,16 @@ public class MulticastSet {
         }
 
         this.connectionCreator = new ConnectionCreator(this.factory, this.uris);
-        if (stats.interval().toMillis() > 0) {
+        if (this.performanceMetrics.interval().toMillis() > 0) {
             this.threadingHandler.scheduledExecutorService("perf-test-stats-activity-check-", 1)
                 .scheduleAtFixedRate(() -> {
                     try {
-                        stats.maybeResetGauges();
+                        this.performanceMetrics.maybeResetGauges();
                     } catch (Exception e) {
                         LOGGER.warn("Error while checking stats activity: {}", e.getMessage());
                     }
-                }, stats.interval().toMillis() * 2, stats.interval().toMillis(), TimeUnit.MILLISECONDS);
+                }, this.performanceMetrics.interval().toMillis() * 2,
+                    this.performanceMetrics.interval().toMillis(), TimeUnit.MILLISECONDS);
         }
         this.expectedMetrics = expectedMetrics;
     }
@@ -309,6 +310,7 @@ public class MulticastSet {
                 shutdownSequence = () -> { };
             }
 
+            this.performanceMetrics.start();
             this.completionHandler.waitForCompletion();
 
             try {
@@ -406,7 +408,7 @@ public class MulticastSet {
                 if (announceStartup) {
                     System.out.println("id: " + testID + ", starting consumer #" + i + ", channel #" + j);
                 }
-                Consumer consumer = params.createConsumer(consumerConnection, stats,
+                Consumer consumer = params.createConsumer(consumerConnection, performanceMetrics,
                     this.consumerLatencyIndicator, this.completionHandler, executorService,
                     topologyRecordingScheduledExecutorService);
                 consumerRunnables[(i * params.getConsumerChannelCount()) + j] = consumer;
@@ -428,7 +430,7 @@ public class MulticastSet {
                 }
                 AgentState agentState = new AgentState();
                 agentState.runnable = params.createProducer(
-                        producerConnection, stats,
+                        producerConnection, performanceMetrics,
                         this.completionHandler, this.rateIndicator, this.messageSizeIndicator
                 );
                 producerStates[(i * params.getProducerChannelCount()) + j] = agentState;

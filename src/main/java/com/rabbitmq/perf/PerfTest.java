@@ -283,14 +283,6 @@ public class PerfTest {
                 uris = singletonList(uri);
             }
 
-            //setup
-            PrintlnStats stats = new PrintlnStats(testID,
-                Duration.ofSeconds(samplingInterval),
-                producerCount > 0,
-                consumerCount > 0,
-                (flags.contains("mandatory") || flags.contains("immediate")),
-                confirm != -1, legacyMetrics, useMillis, output, registry, metricsPrefix);
-
             SSLContext sslContext = perfTestOptions.skipSslContextConfiguration ? null :
                 getSslContextIfNecessary(cmd, System.getProperties());
 
@@ -423,11 +415,49 @@ public class PerfTest {
 
             factory.setExceptionHandler(perfTestOptions.exceptionHandler);
 
+            TimeUnit latencyCollectionTimeUnit = useMillis ? TimeUnit.MILLISECONDS : TimeUnit.NANOSECONDS;
+            MetricsFormatter metricsFormatter = new DefaultPrintStreamMetricsFormatter(
+                System.out,
+                testID,
+                producerCount > 0,
+                consumerCount > 0,
+                (flags.contains("mandatory") || flags.contains("immediate")),
+                confirm != -1,
+                latencyCollectionTimeUnit
+            );
+            if (output != null) {
+                metricsFormatter = new CompositeMetricsFormatter(
+                    metricsFormatter,
+                    new CsvMetricsFormatter(output, testID, producerCount > 0,
+                        consumerCount > 0,
+                        (flags.contains("mandatory") || flags.contains("immediate")),
+                        confirm != -1,
+                        latencyCollectionTimeUnit)
+                );
+            }
+            DefaultPerformanceMetrics performanceMetrics = new DefaultPerformanceMetrics(
+                Duration.ofSeconds(samplingInterval),
+                latencyCollectionTimeUnit,
+                registry, metricsPrefix, metricsFormatter);
+            shutdownService.wrap(() -> performanceMetrics.close());
+
+            /*
+            //setup
+            PrintlnStats stats = new PrintlnStats(testID,
+                Duration.ofSeconds(samplingInterval),
+                producerCount > 0,
+                consumerCount > 0,
+                (flags.contains("mandatory") || flags.contains("immediate")),
+                confirm != -1, legacyMetrics, useMillis, output, registry, metricsPrefix,
+                PerformanceMetrics.NO_OP);
+
+             */
+
             AtomicBoolean statsSummaryDone = new AtomicBoolean(false);
             Runnable statsSummary = () -> {
                 if (statsSummaryDone.compareAndSet(false, true)) {
                     System.out.println(stopLine(completionReasons));
-                    stats.printFinal();
+                    performanceMetrics.close();
                 }
             };
             shutdownService.wrap(() -> statsSummary.run());
@@ -438,12 +468,12 @@ public class PerfTest {
             Set<Integer> starts = ConcurrentHashMap.newKeySet(agentCount);
             p.setStartListener((id, type) -> {
                 if (starts.add(id) && starts.size() == agentCount) {
-                    stats.resetGlobals();
+                    performanceMetrics.resetGlobals();
                 }
                 expectedMetrics.agentStarted(type);
             });
 
-            MulticastSet set = new MulticastSet(stats, factory, p, testID, uris, completionHandler,
+            MulticastSet set = new MulticastSet(performanceMetrics, factory, p, testID, uris, completionHandler,
                 shutdownService, expectedMetrics);
             set.run(true);
 
@@ -804,9 +834,9 @@ public class PerfTest {
 
     static Map<String, Object> convertKeyValuePairs(List<String> args) {
         if (args == null || args.isEmpty()) {
-            return Collections.emptyMap();
+            return new LinkedHashMap<>();
         } else {
-            LinkedHashMap result = new LinkedHashMap();
+            LinkedHashMap<String, Object> result = new LinkedHashMap<>();
             for (String arg : args) {
                 Map<String, Object> intermediaryArgs = convertKeyValuePairs(arg);
                 if (intermediaryArgs != null) {

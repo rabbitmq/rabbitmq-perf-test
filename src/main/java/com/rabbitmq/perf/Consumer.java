@@ -61,7 +61,7 @@ public class Consumer extends AgentBase implements Runnable {
     private final boolean               autoAck;
     private final int                   multiAckEvery;
     private final boolean               requeue;
-    private final Stats                 stats;
+    private final PerformanceMetrics    performanceMetrics;
     private final int                   msgLimit;
     private final Map<String, String>   consumerTagBranchMap = Collections.synchronizedMap(new HashMap<>());
     private final ConsumerLatency       consumerLatency;
@@ -107,7 +107,7 @@ public class Consumer extends AgentBase implements Runnable {
         this.autoAck           = parameters.isAutoAck();
         this.multiAckEvery     = parameters.getMultiAckEvery();
         this.requeue           = parameters.isRequeue();
-        this.stats             = parameters.getStats();
+        this.performanceMetrics = parameters.getPerformanceMetrics();
         this.msgLimit          = parameters.getMsgLimit();
         this.timestampProvider = parameters.getTimestampProvider();
         this.completionHandler = parameters.getCompletionHandler();
@@ -273,14 +273,14 @@ public class Consumer extends AgentBase implements Runnable {
         void handleMessage(Envelope envelope, BasicProperties properties, byte[] body, Channel ch) throws IOException {
             receivedMessageCount.incrementAndGet();
             epochMessageCount.incrementAndGet();
-            int currentMessageCount = state.incrementMessageCount();
+            state.incrementMessageCount();
             long nowTimestamp = timestampProvider.getCurrentTime();
             state.setLastActivityTimestamp(nowTimestamp);
             if (msgLimit == 0 || receivedMessageCount.get() <= msgLimit) {
                 long messageTimestamp = timestampExtractor.apply(properties, body);
                 long diff_time = timestampProvider.getDifference(nowTimestamp, messageTimestamp);
 
-                stats.handleRecv(id.equals(envelope.getRoutingKey()) ? diff_time : 0L);
+                performanceMetrics.received(id.equals(envelope.getRoutingKey()) ? diff_time : 0L);
 
                 if (consumerLatency.simulateLatency()) {
                     ackIfNecessary(envelope, epochMessageCount.get(), ch);

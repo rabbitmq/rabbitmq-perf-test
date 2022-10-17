@@ -18,8 +18,8 @@ package com.rabbitmq.perf.it;
 import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.perf.MulticastParams;
 import com.rabbitmq.perf.MulticastSet;
-import com.rabbitmq.perf.Stats;
-import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
+import com.rabbitmq.perf.PerformanceMetrics;
+import com.rabbitmq.perf.PerformanceMetricsAdapter;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicLong;
 import org.junit.jupiter.api.*;
@@ -65,15 +65,22 @@ public class StartUpIT {
 
     AtomicLong msgPublished, msgConsumed;
 
-    Stats stats = new Stats(Duration.ofMillis(1000), false, new CompositeMeterRegistry(), "") {
+    PerformanceMetrics performanceMetrics = new PerformanceMetricsAdapter() {
+        @Override
+        public void published() {
+            msgPublished.incrementAndGet();
+        }
 
         @Override
-        protected void report(long now) {
-            msgPublished.set(sendCountTotal.get());
-            msgConsumed.set(recvCountTotal.get());
+        public void received(long latency) {
+            msgConsumed.incrementAndGet();
+        }
+
+        @Override
+        public Duration interval() {
+            return Duration.ofSeconds(1);
         }
     };
-
 
     @BeforeEach
     public void init(TestInfo info) throws IOException {
@@ -103,7 +110,7 @@ public class StartUpIT {
 
     @Test
     public void shouldFailByDefaultIfBrokerIsDownAtStartup(TestInfo info) throws Exception {
-        MulticastSet set = new MulticastSet(stats, cf, params, "", URIS, latchCompletionHandler(1, info));
+        MulticastSet set = new MulticastSet(performanceMetrics, cf, params, "", URIS, latchCompletionHandler(1, info));
         run(set);
         waitAtMost(10, () -> testHasFailed.get());
     }
@@ -127,7 +134,7 @@ public class StartUpIT {
         };
         params.setServersStartUpTimeout(10);
         MulticastSet.CompletionHandler completionHandler = latchCompletionHandler(1, info);
-        MulticastSet set = new MulticastSet(stats, factory, params, "", URIS, completionHandler);
+        MulticastSet set = new MulticastSet(performanceMetrics, factory, params, "", URIS, completionHandler);
         run(set);
         waitAtMost(10, () -> msgConsumed.get() > 10);
         completionHandler.countDown("");
@@ -138,7 +145,7 @@ public class StartUpIT {
     public void shouldStopGracefullyIfStartUpRetryTimesout(TestInfo info) throws Exception {
         Host.stopBrokerApp();
         params.setServersStartUpTimeout(3);
-        MulticastSet set = new MulticastSet(stats, cf, params, "", URIS, latchCompletionHandler(1, info));
+        MulticastSet set = new MulticastSet(performanceMetrics, cf, params, "", URIS, latchCompletionHandler(1, info));
         run(set);
         waitAtMost(10, () -> testIsDone.get());
     }

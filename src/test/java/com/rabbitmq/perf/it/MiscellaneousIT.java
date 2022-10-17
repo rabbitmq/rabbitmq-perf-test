@@ -27,8 +27,8 @@ import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.perf.MulticastParams;
 import com.rabbitmq.perf.MulticastSet;
-import com.rabbitmq.perf.Stats;
-import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
+import com.rabbitmq.perf.PerformanceMetrics;
+import com.rabbitmq.perf.PerformanceMetricsAdapter;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.time.Duration;
@@ -60,11 +60,15 @@ public class MiscellaneousIT {
   AtomicBoolean testIsDone;
   CountDownLatch testLatch;
   AtomicLong msgConsumed;
-
-  Stats stats = new Stats(Duration.ofMillis(1000), false, new CompositeMeterRegistry(), "") {
+  PerformanceMetrics performanceMetrics = new PerformanceMetricsAdapter() {
     @Override
-    protected void report(long now) {
-      msgConsumed.set(recvCountTotal.get());
+    public void received(long latency) {
+      msgConsumed.incrementAndGet();
+    }
+
+    @Override
+    public Duration interval() {
+      return Duration.ofSeconds(1);
     }
   };
 
@@ -125,7 +129,7 @@ public class MiscellaneousIT {
     params.setConsumerPrefetch(10);
 
     try {
-      MulticastSet set = new MulticastSet(stats, cf, params, "", URIS,
+      MulticastSet set = new MulticastSet(performanceMetrics, cf, params, "", URIS,
           latchCompletionHandler(1, info));
       run(set);
 
@@ -148,7 +152,7 @@ public class MiscellaneousIT {
     List<String> queuesBeforeTest = Host.listQueues();
 
     MulticastSet.CompletionHandler completionHandler = latchCompletionHandler(1, info);
-    MulticastSet set = new MulticastSet(stats, cf, params, "", URIS, completionHandler);
+    MulticastSet set = new MulticastSet(performanceMetrics, cf, params, "", URIS, completionHandler);
     run(set);
 
     waitAtMost(10, () -> msgConsumed.get() >= 3 * rate);
@@ -182,7 +186,7 @@ public class MiscellaneousIT {
     params.setQueueNames(singletonList(queue));
 
     MulticastSet.CompletionHandler completionHandler = latchCompletionHandler(1, info);
-    MulticastSet set = new MulticastSet(stats, cf, params, "", URIS, completionHandler);
+    MulticastSet set = new MulticastSet(performanceMetrics, cf, params, "", URIS, completionHandler);
     run(set);
 
     waitAtMost(10, () -> msgConsumed.get() >= 3 * rate);

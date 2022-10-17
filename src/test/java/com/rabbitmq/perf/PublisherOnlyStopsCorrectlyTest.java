@@ -45,7 +45,7 @@ public class PublisherOnlyStopsCorrectlyTest {
 
     MulticastParams params;
 
-    Stats stats = new NoOpStats();
+    PerformanceMetrics performanceMetrics = PerformanceMetrics.NO_OP;
 
     ExecutorService executorService;
 
@@ -113,7 +113,7 @@ public class PublisherOnlyStopsCorrectlyTest {
 
     private MulticastSet getMulticastSet(ConnectionFactory connectionFactory) {
         MulticastSet set = new MulticastSet(
-                stats, connectionFactory, params, singletonList("amqp://localhost"),
+                performanceMetrics, connectionFactory, params, singletonList("amqp://localhost"),
                 PerfTest.getCompletionHandler(params, new ConcurrentHashMap<>())
         );
         set.setThreadingHandler(new MulticastSet.DefaultThreadingHandler());

@@ -68,7 +68,7 @@ public class ConnectionRecoveryTest {
   @Mock ConnectionFactory cf;
   @Mock AutorecoveringConnection c;
   @Mock Channel ch;
-  @Mock Stats stats;
+  @Mock PerformanceMetrics performanceMetrics;
   @Mock MulticastSet.ThreadingHandler threadingHandler;
   @Mock ExecutorService executorService;
   @Mock ScheduledExecutorService scheduledExecutorService;
@@ -208,7 +208,7 @@ public class ConnectionRecoveryTest {
       CountDownLatch runStartedLatch, CountDownLatch completionLatch) {
     MulticastSet set =
         new MulticastSet(
-            stats,
+            performanceMetrics,
             cf,
             params,
             Arrays.asList("amqp://localhost", "amqp://localhost", "amqp://localhost"),

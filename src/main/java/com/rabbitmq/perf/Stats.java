@@ -33,7 +33,6 @@ import java.util.function.DoubleBinaryOperator;
 public abstract class Stats {
 
     protected static final float NANO_TO_SECOND = 1_000_000_000;
-    protected static final float MS_TO_SECOND = 1_000;
 
     private final AtomicBoolean ongoingReport = new AtomicBoolean(false);
 
@@ -77,15 +76,23 @@ public abstract class Stats {
         new MetricRegistry().histogram("latency"));
     protected final AtomicReference<Histogram> globalConfirmLatency = new AtomicReference<>(
         new MetricRegistry().histogram("confirm-latency"));
+    private final PerformanceMetrics performanceMetrics;
 
     public Stats(Duration interval) {
-        this(interval, false, new SimpleMeterRegistry(), null);
+        this(interval, false, new SimpleMeterRegistry(), null, PerformanceMetrics.NO_OP);
     }
 
     public Stats(Duration interval, boolean useMs, MeterRegistry registry, String metricsPrefix) {
+        this(interval, useMs, registry, metricsPrefix, PerformanceMetrics.NO_OP);
+    }
+
+    public Stats(Duration interval, boolean useMs, MeterRegistry registry, String metricsPrefix,
+        PerformanceMetrics performanceMetrics) {
         this.intervalInNanoSeconds = interval.toNanos();
         startTime = System.nanoTime();
         this.startTimeForGlobals.set(startTime);
+        this.performanceMetrics = performanceMetrics;
+        this.performanceMetrics.start();
 
         metricsPrefix = metricsPrefix == null ? "" : metricsPrefix;
 
@@ -158,6 +165,7 @@ public abstract class Stats {
     protected abstract void report(long now);
 
     public void handleSend() {
+        this.performanceMetrics.published();
         sendCountInterval.incrementAndGet();
         sendCountTotal.incrementAndGet();
         report();

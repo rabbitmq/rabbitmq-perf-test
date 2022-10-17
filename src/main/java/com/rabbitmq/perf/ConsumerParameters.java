@@ -35,7 +35,7 @@ public class ConsumerParameters {
     private int txSize;
     private boolean autoAck;
     private int multiAckEvery;
-    private Stats stats;
+    private PerformanceMetrics performanceMetrics;
     private float rateLimit;
     private int msgLimit;
     private ValueIndicator<Long> consumerLatenciesIndicator;
@@ -111,12 +111,12 @@ public class ConsumerParameters {
         return this;
     }
 
-    public Stats getStats() {
-        return stats;
+    public PerformanceMetrics getPerformanceMetrics() {
+        return performanceMetrics;
     }
 
-    public ConsumerParameters setStats(Stats stats) {
-        this.stats = stats;
+    public ConsumerParameters setPerformanceMetrics(PerformanceMetrics performanceMetrics) {
+        this.performanceMetrics = performanceMetrics;
         return this;
     }
 

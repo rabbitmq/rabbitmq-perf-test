@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020 VMware, Inc. or its affiliates.  All rights reserved.
+// Copyright (c) 2018-2022 VMware, Inc. or its affiliates.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 2.0 ("MPL"), the GNU General Public License version 2
@@ -143,7 +143,7 @@ public class MessageCustomizationTest {
 
     private MulticastSet getMulticastSet(ConnectionFactory cf, CountDownLatch completionLatch, TestInfo info) {
         MulticastSet set = new MulticastSet(
-                new NoOpStats(), cf, params, singletonList("amqp://localhost"), new MulticastSet.CompletionHandler() {
+                PerformanceMetrics.NO_OP, cf, params, singletonList("amqp://localhost"), new MulticastSet.CompletionHandler() {
 
             @Override
             public void waitForCompletion() throws InterruptedException {
