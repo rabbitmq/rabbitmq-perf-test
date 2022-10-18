@@ -13,7 +13,7 @@
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
 
-package com.rabbitmq.perf;
+package com.rabbitmq.perf.metrics;
 
 import static org.apache.commons.lang3.StringUtils.countMatches;
 import static org.apache.commons.lang3.StringUtils.splitByWholeSeparatorPreserveAllTokens;
@@ -25,6 +25,7 @@ import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -35,9 +36,10 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 public class DefaultPerformanceMetricsTest {
 
+  static final String LATENCY_HEADER = "min/median/75th/95th/99th";
   StringWriter csvOut;
-  ByteArrayOutputStream consoleOut;
-  String output;
+  ByteArrayOutputStream defaultConsoleOut, compactConsoleOut;
+  String defaultOutput, compactOutput;
 
   static Configurator configure() {
     return new Configurator();
@@ -134,7 +136,8 @@ public class DefaultPerformanceMetricsTest {
   @BeforeEach
   public void init() {
     csvOut = new StringWriter();
-    consoleOut = new ByteArrayOutputStream();
+    defaultConsoleOut = new ByteArrayOutputStream();
+    compactConsoleOut = new ByteArrayOutputStream();
   }
 
   @ParameterizedTest
@@ -142,26 +145,55 @@ public class DefaultPerformanceMetricsTest {
   public void stats(TestConfiguration testConfiguration) {
     execute(testConfiguration.configurator);
     checkCsv(testConfiguration.unit());
-    assertThat(output.split(",")).hasSize(testConfiguration.expectedSubstringInOutput.length);
-    assertThatOutputContains(testConfiguration.expectedSubstringInOutput);
-    assertThatOutputDoesNotContains(testConfiguration.nonExpectedSubstringInOutput);
-    assertThat(countMatches(output, "0/0/0/0/0 " + testConfiguration.unit().name)).isEqualTo(
+    assertThat(defaultOutput.split(",")).hasSize(
+        testConfiguration.expectedSubstringInOutput.length);
+    assertThatDefaultOutputContains(testConfiguration.expectedSubstringInOutput);
+    assertThatDefaultOutputDoesNotContain(testConfiguration.nonExpectedSubstringInOutput);
+    assertThat(countMatches(defaultOutput, "0/0/0/0/0 " + testConfiguration.unit().name)).isEqualTo(
+        testConfiguration.unitOccurrences);
+
+    String[] lines = compactOutput.split(System.getProperty("line.separator"));
+    assertThat(lines).hasSize(2);
+    assertThat(Arrays.stream(lines[0].split("  ")) // several spaces between fields
+        .map(String::trim)
+        .filter(s -> !s.isEmpty())) // remove fields that are empty because of the space split
+        .hasSize(testConfiguration.expectedSubstringInOutput.length - 1); // no test ID
+    assertThatCompactOutputContains(testConfiguration.expectedSubstringInOutput);
+    assertThatCompactOutputDoesNotContain(testConfiguration.nonExpectedSubstringInOutput);
+    assertThat(countMatches(compactOutput, "0/0/0/0/0 " + testConfiguration.unit().name)).isEqualTo(
         testConfiguration.unitOccurrences);
   }
 
   void execute(Configurator configurator) {
     DefaultPerformanceMetrics metrics = metrics(configurator);
     metrics.metrics(System.nanoTime());
-    this.output = consoleOut.toString();
+    this.defaultOutput = defaultConsoleOut.toString();
+    this.compactOutput = compactConsoleOut.toString();
   }
 
-  void assertThatOutputContains(String... substrings) {
-    assertThat(output).contains(substrings);
+  void assertThatDefaultOutputContains(String... substrings) {
+    assertThat(defaultOutput).contains(substrings);
   }
 
-  void assertThatOutputDoesNotContains(String... substrings) {
+  void assertThatCompactOutputContains(String... substrings) {
+    // compact formatter contains less info, so we relax the expectations
+    String[] relaxedSubstrings = new String[substrings.length];
+    for (int i = 0; i < substrings.length; i++) {
+      relaxedSubstrings[i] = substrings[i].replace(LATENCY_HEADER, "").trim();
+    }
+    assertThat(compactOutput).contains(Arrays.stream(relaxedSubstrings)
+        .filter(s -> !"id".equals(s)).filter(s -> !"test".equals(s)).collect(Collectors.toList()));
+  }
+
+  void assertThatDefaultOutputDoesNotContain(String... substrings) {
     if (substrings != null && substrings.length > 0) {
-      assertThat(output).doesNotContain(substrings);
+      assertThat(defaultOutput).doesNotContain(substrings);
+    }
+  }
+
+  void assertThatCompactOutputDoesNotContain(String... substrings) {
+    if (substrings != null && substrings.length > 0) {
+      assertThat(compactOutput).doesNotContain(substrings);
     }
   }
 
@@ -179,7 +211,11 @@ public class DefaultPerformanceMetricsTest {
         Duration.ofMillis(1000),
         TimeUnit.NANOSECONDS, new SimpleMeterRegistry(), "metrics-prefix",
         new CompositeMetricsFormatter(
-            new DefaultPrintStreamMetricsFormatter(new PrintStream(consoleOut), "test-id",
+            new DefaultPrintStreamMetricsFormatter(new PrintStream(defaultConsoleOut), "test-id",
+                configurator.sendStatsEnabled, configurator.recvStatsEnabled,
+                configurator.returnStatsEnabled, configurator.confirmStatsEnabled,
+                configurator.useMillis ? TimeUnit.MILLISECONDS : TimeUnit.NANOSECONDS),
+            new CompactPrintStreamMetricsFormatter(new PrintStream(compactConsoleOut),
                 configurator.sendStatsEnabled, configurator.recvStatsEnabled,
                 configurator.returnStatsEnabled, configurator.confirmStatsEnabled,
                 configurator.useMillis ? TimeUnit.MILLISECONDS : TimeUnit.NANOSECONDS),
@@ -191,7 +227,6 @@ public class DefaultPerformanceMetricsTest {
         )
     );
   }
-
 
   enum Unit {
 

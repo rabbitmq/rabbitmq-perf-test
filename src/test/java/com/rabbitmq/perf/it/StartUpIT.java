@@ -18,7 +18,7 @@ package com.rabbitmq.perf.it;
 import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.perf.MulticastParams;
 import com.rabbitmq.perf.MulticastSet;
-import com.rabbitmq.perf.PerformanceMetrics;
+import com.rabbitmq.perf.metrics.PerformanceMetrics;
 import com.rabbitmq.perf.PerformanceMetricsAdapter;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicLong;

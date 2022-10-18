@@ -13,9 +13,9 @@
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
 
-package com.rabbitmq.perf;
+package com.rabbitmq.perf.metrics;
 
-import static java.lang.String.format;
+import static com.rabbitmq.perf.metrics.MetricsFormatterUtils.formatTime;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
@@ -28,47 +28,29 @@ import java.util.concurrent.TimeUnit;
  *
  * @since 2.19.0
  */
-class CsvMetricsFormatter implements MetricsFormatter {
+public class CsvMetricsFormatter extends BaseMetricsFormatter implements MetricsFormatter {
 
-  private static final float NANO_TO_SECOND = 1_000_000_000;
   private final PrintWriter out;
-  private final boolean publishedEnabled, receivedEnabled,
-      returnedEnabled, confirmedEnabled;
   private final String testId;
-  private final String units;
+  private final String unit;
 
-  CsvMetricsFormatter(PrintWriter out, String testId, boolean publishedEnabled,
+  public CsvMetricsFormatter(PrintWriter out, String testId, boolean publishedEnabled,
       boolean receivedEnabled,
       boolean returnedEnabled, boolean confirmedEnabled,
       TimeUnit latencyCollectionTimeUnit) {
+    super(publishedEnabled, receivedEnabled, returnedEnabled, confirmedEnabled);
     if (latencyCollectionTimeUnit != MILLISECONDS && latencyCollectionTimeUnit != NANOSECONDS) {
       throw new IllegalArgumentException(
           "Latency collection unit must be ms or ns, not " + latencyCollectionTimeUnit);
     }
-    this.units = latencyCollectionTimeUnit == MILLISECONDS ? "ms" : "µs";
+    this.unit = latencyCollectionTimeUnit == MILLISECONDS ? "ms" : "µs";
     this.out = out;
     this.testId = testId;
-    this.publishedEnabled = publishedEnabled;
-    this.receivedEnabled = receivedEnabled;
-    this.returnedEnabled = returnedEnabled;
-    this.confirmedEnabled = confirmedEnabled;
-  }
-
-  private static String formatRate(double rate) {
-    if (rate == 0.0) {
-      return format("%d", (long) rate);
-    } else if (rate < 1) {
-      return format("%1.2f", rate);
-    } else if (rate < 10) {
-      return format("%1.1f", rate);
-    } else {
-      return format("%d", (long) rate);
-    }
   }
 
   private static String rate(double rate, boolean display) {
     if (display) {
-      return formatRate(rate);
+      return MetricsFormatterUtils.formatRate(rate);
     } else {
       return "";
     }
@@ -83,7 +65,7 @@ class CsvMetricsFormatter implements MetricsFormatter {
             +
             "min confirm latency (%s),median confirm latency (%s)," +
             "75th p. confirm latency (%s),95th p. confirm latency (%s),99th p. confirm latency (%s)%n",
-        units, units, units, units, units, units, units, units, units, units);
+        unit, unit, unit, unit, unit, unit, unit, unit, unit, unit);
   }
 
   @Override
@@ -92,7 +74,7 @@ class CsvMetricsFormatter implements MetricsFormatter {
       long[] consumerLatencyStats) {
 
     this.out.println(
-        testId + "," + format("%.3f", durationSinceStart.toNanos() / NANO_TO_SECOND) + "," +
+        testId + "," + formatTime(durationSinceStart) + "," +
             rate(publishedRate, publishedEnabled) + "," +
             rate(returnedRate, publishedEnabled && returnedEnabled) + "," +
             rate(confirmedRate, publishedEnabled && confirmedEnabled) + "," +
@@ -114,14 +96,6 @@ class CsvMetricsFormatter implements MetricsFormatter {
                 : ",,,,")
 
     );
-  }
-
-  private boolean shouldDisplayConsumerLatency() {
-    return receivedEnabled;
-  }
-
-  boolean shouldDisplayConfirmLatency() {
-    return publishedEnabled && confirmedEnabled;
   }
 
   @Override

@@ -13,7 +13,7 @@
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
 
-package com.rabbitmq.perf;
+package com.rabbitmq.perf.metrics;
 
 import java.time.Duration;
 
@@ -22,7 +22,7 @@ import java.time.Duration;
  *
  * @since 2.19.0
  */
-interface MetricsFormatter {
+public interface MetricsFormatter {
 
   void header();
 

@@ -15,6 +15,7 @@
 
 package com.rabbitmq.perf;
 
+import com.rabbitmq.perf.metrics.PerformanceMetrics;
 import java.time.Duration;
 
 /**

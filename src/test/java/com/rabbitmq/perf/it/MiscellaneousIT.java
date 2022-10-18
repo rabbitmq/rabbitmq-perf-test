@@ -27,7 +27,7 @@ import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.perf.MulticastParams;
 import com.rabbitmq.perf.MulticastSet;
-import com.rabbitmq.perf.PerformanceMetrics;
+import com.rabbitmq.perf.metrics.PerformanceMetrics;
 import com.rabbitmq.perf.PerformanceMetricsAdapter;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;

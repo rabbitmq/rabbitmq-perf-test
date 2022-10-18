@@ -511,3 +511,26 @@ benchmark specs, and the tool will take care of running the benchmark,
 collecting results and displaying them in an HTML page. Learn more
 https://github.com/rabbitmq/rabbitmq-perf-test/blob/main/html/README.md[here].
 
+== Console Output Format
+
+PerfTest default console output format is explicit as each line contains a label for each value:
+
+.The `default` output format
+[source,bash,indent=0]
+--------
+id: test-101517-299, time 1.000 s, sent: 188898 msg/s, received: 85309 msg/s, min/median/75th/95th/99th consumer latency: 24/234/364/462/474 ms
+id: test-101517-299, time 2.000 s, sent: 101939 msg/s, received: 117152 msg/s, min/median/75th/95th/99th consumer latency: 483/759/830/896/907 ms
+id: test-101517-299, time 3.000 s, sent: 137450 msg/s, received: 118324 msg/s, min/median/75th/95th/99th consumer latency: 691/816/854/893/909 ms
+--------
+
+Advanced users who prefer a more compact format can use the `--metrics-format compact` option (`-mf compact` for short).
+The output looks like the following then:
+
+.The `compact` output format
+[source,bash,indent=0]
+--------
+time               sent     received       consumer latency
+1.000s     173920 msg/s  84405 msg/s    1/25/189/312/331 ms
+2.000s     133044 msg/s 117703 msg/s 329/728/814/887/897 ms
+3.000s     103736 msg/s 117134 msg/s 705/804/846/892/920 ms
+--------

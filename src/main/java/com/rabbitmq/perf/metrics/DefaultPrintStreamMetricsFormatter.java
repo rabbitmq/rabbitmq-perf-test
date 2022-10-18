@@ -13,8 +13,11 @@
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
 
-package com.rabbitmq.perf;
+package com.rabbitmq.perf.metrics;
 
+import static com.rabbitmq.perf.metrics.MetricsFormatterUtils.LATENCY_HEADER;
+import static com.rabbitmq.perf.metrics.MetricsFormatterUtils.MESSAGE_RATE_LABEL;
+import static com.rabbitmq.perf.metrics.MetricsFormatterUtils.formatTime;
 import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
@@ -29,21 +32,20 @@ import java.util.concurrent.TimeUnit;
  *
  * @since 2.19.0
  */
-class DefaultPrintStreamMetricsFormatter implements MetricsFormatter {
+class DefaultPrintStreamMetricsFormatter extends BaseMetricsFormatter implements
+    MetricsFormatter {
 
-  public static final String MESSAGE_RATE_LABEL = "msg/s";
-  private static final float NANO_TO_SECOND = 1_000_000_000;
-  private static final String LATENCY_HEADER = "min/median/75th/95th/99th";
   private final PrintStream out;
   private final String testId;
-  private final boolean publishedEnabled, receivedEnabled,
-      returnedEnabled, confirmedEnabled;
+
   private final TimeUnit latencyCollectionTimeUnit;
 
-  DefaultPrintStreamMetricsFormatter(PrintStream out, String testId, boolean publishedEnabled,
+  DefaultPrintStreamMetricsFormatter(PrintStream out, String testId,
+      boolean publishedEnabled,
       boolean receivedEnabled,
       boolean returnedEnabled, boolean confirmedEnabled,
       TimeUnit latencyCollectionTimeUnit) {
+    super(publishedEnabled, receivedEnabled, returnedEnabled, confirmedEnabled);
     if (latencyCollectionTimeUnit != MILLISECONDS && latencyCollectionTimeUnit != NANOSECONDS) {
       throw new IllegalArgumentException(
           "Latency collection unit must be ms or ns, not " + latencyCollectionTimeUnit);
@@ -51,34 +53,10 @@ class DefaultPrintStreamMetricsFormatter implements MetricsFormatter {
     this.latencyCollectionTimeUnit = latencyCollectionTimeUnit;
     this.out = out;
     this.testId = testId;
-    this.publishedEnabled = publishedEnabled;
-    this.receivedEnabled = receivedEnabled;
-    this.returnedEnabled = returnedEnabled;
-    this.confirmedEnabled = confirmedEnabled;
-  }
-
-  private static String unit(TimeUnit latencyCollectionTimeUnit) {
-    if (latencyCollectionTimeUnit == MILLISECONDS) {
-      return "ms";
-    } else {
-      return "µs";
-    }
-  }
-
-  private static String formatRate(double rate) {
-    if (rate == 0.0) {
-      return format("%d", (long) rate);
-    } else if (rate < 1) {
-      return format("%1.2f", rate);
-    } else if (rate < 10) {
-      return format("%1.1f", rate);
-    } else {
-      return format("%d", (long) rate);
-    }
   }
 
   private static String formatRate(String label, double rate) {
-    return ", " + label + ": " + formatRate(rate) + " " + MESSAGE_RATE_LABEL;
+    return ", " + label + ": " + MetricsFormatterUtils.formatRate(rate) + " " + MESSAGE_RATE_LABEL;
   }
 
   @Override
@@ -91,8 +69,8 @@ class DefaultPrintStreamMetricsFormatter implements MetricsFormatter {
       double nackedRate, double returnedRate, double receivedRate, long[] confirmedLatencyStats,
       long[] consumerLatencyStats) {
     StringBuilder builder = new StringBuilder()
-        .append(
-            format("id: %s, time %.3f s", testId, durationSinceStart.toNanos() / NANO_TO_SECOND));
+        .append(format("id: %s, ", testId))
+        .append(format("time %s s", formatTime(durationSinceStart)));
     if (this.publishedEnabled) {
       builder.append(formatRate("sent", publishedRate));
     }
@@ -102,10 +80,8 @@ class DefaultPrintStreamMetricsFormatter implements MetricsFormatter {
     }
 
     if (this.publishedEnabled && this.confirmedEnabled) {
-      builder.append(
-          formatRate("confirmed", confirmedRate));
-      builder.append(
-          formatRate("nacked", nackedRate));
+      builder.append(formatRate("confirmed", confirmedRate));
+      builder.append(formatRate("nacked", nackedRate));
     }
 
     if (this.receivedEnabled) {
@@ -133,41 +109,14 @@ class DefaultPrintStreamMetricsFormatter implements MetricsFormatter {
   public void summary(Duration elapsed, double ratePublished, double rateReceived,
       long[] consumedLatencyTotal,
       long[] confirmedLatencyTotal) {
-    String lineSeparator = System.getProperty("line.separator");
-    StringBuilder summary = new StringBuilder("id: " + this.testId + ", sending rate avg: " +
-        formatRate(ratePublished) +
-        " " + MESSAGE_RATE_LABEL);
-    summary.append(lineSeparator);
-
-    if (elapsed.toMillis() > 0) {
-      summary.append("id: " + this.testId + ", receiving rate avg: " +
-          formatRate(rateReceived) +
-          " " + MESSAGE_RATE_LABEL).append(lineSeparator);
-      if (shouldDisplayConsumerLatency()) {
-        summary.append(format("id: %s, consumer latency %s %s",
-            this.testId, LATENCY_HEADER, formatLatency(consumedLatencyTotal))
-        ).append(lineSeparator);
-      }
-      if (shouldDisplayConfirmLatency()) {
-        summary.append(format("id: %s, confirm latency %s %s",
-            this.testId, LATENCY_HEADER, formatLatency(confirmedLatencyTotal)
-        )).append(lineSeparator);
-      }
-    }
-    this.out.print(summary);
+    this.out.print(
+        summary(elapsed, ratePublished, rateReceived, consumedLatencyTotal, confirmedLatencyTotal,
+            this.testId, this.latencyCollectionTimeUnit));
   }
 
   private String formatLatency(long[] stats) {
-    return format("%d/%d/%d/%d/%d %s", stats[0], stats[1], stats[2], stats[3], stats[4],
-        unit(this.latencyCollectionTimeUnit));
+    return MetricsFormatterUtils.formatLatency(stats, this.latencyCollectionTimeUnit);
   }
 
-  private boolean shouldDisplayConsumerLatency() {
-    return receivedEnabled;
-  }
-
-  boolean shouldDisplayConfirmLatency() {
-    return publishedEnabled && confirmedEnabled;
-  }
 
 }

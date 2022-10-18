@@ -13,13 +13,14 @@
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
 
-package com.rabbitmq.perf;
+package com.rabbitmq.perf.metrics;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
 import com.codahale.metrics.ExponentiallyDecayingReservoir;
 import com.codahale.metrics.Histogram;
+import com.rabbitmq.perf.NamedThreadFactory;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import java.time.Duration;
@@ -39,7 +40,7 @@ import org.slf4j.LoggerFactory;
  *
  * @since 2.19.0
  */
-final class DefaultPerformanceMetrics implements PerformanceMetrics, AutoCloseable {
+public final class DefaultPerformanceMetrics implements PerformanceMetrics, AutoCloseable {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(DefaultPerformanceMetrics.class);
   private static final float MS_TO_SECOND = 1_000;
@@ -82,7 +83,7 @@ final class DefaultPerformanceMetrics implements PerformanceMetrics, AutoCloseab
   private final AtomicReference<Histogram> consumedLatency, confirmedLatency;
   private final MetricsFormatter formatter;
 
-  DefaultPerformanceMetrics(Duration interval,
+  public DefaultPerformanceMetrics(Duration interval,
       TimeUnit latencyCollectionTimeUnit,
       MeterRegistry registry,
       String metricsPrefix, MetricsFormatter formatter) {
