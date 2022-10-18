@@ -23,6 +23,12 @@ import com.rabbitmq.client.impl.ClientVersion;
 import com.rabbitmq.client.impl.DefaultExceptionHandler;
 import com.rabbitmq.client.impl.nio.NioParams;
 import com.rabbitmq.perf.Metrics.ConfigurationContext;
+import com.rabbitmq.perf.metrics.CompositeMetricsFormatter;
+import com.rabbitmq.perf.metrics.CsvMetricsFormatter;
+import com.rabbitmq.perf.metrics.DefaultPerformanceMetrics;
+import com.rabbitmq.perf.metrics.MetricsFormatter;
+import com.rabbitmq.perf.metrics.MetricsFormatterFactory;
+import com.rabbitmq.perf.metrics.MetricsFormatterFactory.Context;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
 import java.math.BigDecimal;
 import java.time.Duration;
@@ -153,6 +159,7 @@ public class PerfTest {
             int serversStartUpTimeout = intArg(cmd, "sst", -1);
             int serversUpLimit = intArg(cmd, "sul", -1);
             String consumerArgs = strArg(cmd, "ca", null);
+            String metricsFormat = strArg(cmd, "mf", "default");
 
             List<String> variableRates = lstArg(cmd, "vr");
             if (variableRates != null && !variableRates.isEmpty()) {
@@ -415,15 +422,23 @@ public class PerfTest {
             factory.setExceptionHandler(perfTestOptions.exceptionHandler);
 
             TimeUnit latencyCollectionTimeUnit = useMillis ? TimeUnit.MILLISECONDS : TimeUnit.NANOSECONDS;
-            MetricsFormatter metricsFormatter = new DefaultPrintStreamMetricsFormatter(
-                System.out,
-                testID,
-                producerCount > 0,
-                consumerCount > 0,
-                (flags.contains("mandatory") || flags.contains("immediate")),
-                confirm != -1,
-                latencyCollectionTimeUnit
-            );
+
+            MetricsFormatter metricsFormatter = null;
+            try {
+                metricsFormatter = MetricsFormatterFactory.create(metricsFormat,
+                    new Context(System.out,
+                        testID,
+                        producerCount > 0,
+                        consumerCount > 0,
+                        (flags.contains("mandatory") || flags.contains("immediate")),
+                        confirm != -1,
+                        latencyCollectionTimeUnit)
+                );
+            } catch (IllegalArgumentException e) {
+                System.err.println(e.getMessage());
+                systemExiter.exit(1);
+            }
+
             if (output != null) {
                 metricsFormatter = new CompositeMetricsFormatter(
                     metricsFormatter,
@@ -783,6 +798,8 @@ public class PerfTest {
         options.addOption(new Option("csd", "consumer-start-delay", true, "fixed delay before starting consumers in seconds"));
         options.addOption(new Option("em", "exposed-metrics", true, "metrics to be exposed as key/value pairs, separated by commas, "
             + "e.g. expected_published=50000"));
+        options.addOption(new Option("mf", "metrics-format", true, "metrics format to use on the console, possible values are "
+            + MetricsFormatterFactory.types().stream().collect(Collectors.joining(", "))));
         return options;
     }
 

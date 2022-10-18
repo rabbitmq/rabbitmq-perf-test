@@ -23,6 +23,7 @@ import com.rabbitmq.client.AMQP.Queue.DeclareOk;
 import com.rabbitmq.perf.PerfTest.EXIT_WHEN;
 import com.rabbitmq.perf.StartListener.Type;
 import com.rabbitmq.perf.TopologyRecording.RecordedQueue;
+import com.rabbitmq.perf.metrics.PerformanceMetrics;
 import java.time.Duration;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ScheduledExecutorService;
@@ -61,7 +62,7 @@ public class Consumer extends AgentBase implements Runnable {
     private final boolean               autoAck;
     private final int                   multiAckEvery;
     private final boolean               requeue;
-    private final PerformanceMetrics    performanceMetrics;
+    private final PerformanceMetrics performanceMetrics;
     private final int                   msgLimit;
     private final Map<String, String>   consumerTagBranchMap = Collections.synchronizedMap(new HashMap<>());
     private final ConsumerLatency       consumerLatency;

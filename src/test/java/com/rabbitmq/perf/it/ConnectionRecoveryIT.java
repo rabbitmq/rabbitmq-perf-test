@@ -22,7 +22,7 @@ import com.rabbitmq.client.impl.nio.NioParams;
 import com.rabbitmq.perf.MulticastParams;
 import com.rabbitmq.perf.MulticastSet;
 import com.rabbitmq.perf.NamedThreadFactory;
-import com.rabbitmq.perf.PerformanceMetrics;
+import com.rabbitmq.perf.metrics.PerformanceMetrics;
 import com.rabbitmq.perf.PerformanceMetricsAdapter;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicLong;

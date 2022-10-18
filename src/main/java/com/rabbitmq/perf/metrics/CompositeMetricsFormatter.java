@@ -13,7 +13,7 @@
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
 
-package com.rabbitmq.perf;
+package com.rabbitmq.perf.metrics;
 
 import java.time.Duration;
 import java.util.Arrays;
@@ -30,12 +30,12 @@ import org.slf4j.LoggerFactory;
  *
  * @since 2.19.0
  */
-class CompositeMetricsFormatter implements MetricsFormatter {
+public class CompositeMetricsFormatter implements MetricsFormatter {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(CompositeMetricsFormatter.class);
   private final List<MetricsFormatter> delegates = new CopyOnWriteArrayList<>();
 
-  CompositeMetricsFormatter(MetricsFormatter... formatters) {
+  public CompositeMetricsFormatter(MetricsFormatter... formatters) {
     this.delegates.addAll(Arrays.asList(formatters));
   }
 

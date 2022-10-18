@@ -18,6 +18,7 @@ package com.rabbitmq.perf;
 import com.rabbitmq.client.Channel;
 
 import com.rabbitmq.perf.PerfTest.EXIT_WHEN;
+import com.rabbitmq.perf.metrics.PerformanceMetrics;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
