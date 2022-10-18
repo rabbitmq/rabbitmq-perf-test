@@ -137,17 +137,6 @@ public class MulticastSet {
         }
 
         this.connectionCreator = new ConnectionCreator(this.factory, this.uris);
-        if (this.performanceMetrics.interval().toMillis() > 0) {
-            this.threadingHandler.scheduledExecutorService("perf-test-stats-activity-check-", 1)
-                .scheduleAtFixedRate(() -> {
-                    try {
-                        this.performanceMetrics.maybeResetGauges();
-                    } catch (Exception e) {
-                        LOGGER.warn("Error while checking stats activity: {}", e.getMessage());
-                    }
-                }, this.performanceMetrics.interval().toMillis() * 2,
-                    this.performanceMetrics.interval().toMillis(), TimeUnit.MILLISECONDS);
-        }
         this.expectedMetrics = expectedMetrics;
     }
 

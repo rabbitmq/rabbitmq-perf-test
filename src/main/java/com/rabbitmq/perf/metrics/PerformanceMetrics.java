@@ -61,11 +61,6 @@ public interface PerformanceMetrics {
     }
 
     @Override
-    public void maybeResetGauges() {
-
-    }
-
-    @Override
     public void resetGlobals() {
 
     }
@@ -84,8 +79,6 @@ public interface PerformanceMetrics {
   void received(long latency);
 
   Duration interval();
-
-  void maybeResetGauges();
 
   void resetGlobals();
 }

@@ -59,12 +59,6 @@ public final class DefaultPerformanceMetrics implements PerformanceMetrics, Auto
   private final AtomicLong lastNacked = new AtomicLong(0);
   private final AtomicLong lastReturned = new AtomicLong(0);
   private final AtomicLong lastReceived = new AtomicLong(0);
-  // to check activity
-  private final AtomicLong activityPublished = new AtomicLong(0);
-  private final AtomicLong activityConfirmed = new AtomicLong(0);
-  private final AtomicLong activityNacked = new AtomicLong(0);
-  private final AtomicLong activityReturned = new AtomicLong(0);
-  private final AtomicLong activityReceived = new AtomicLong(0);
   // for the summary
   private final AtomicLong startTimeForTotal = new AtomicLong(-1);
   private final AtomicLong publishedTotal = new AtomicLong(0);
@@ -176,7 +170,17 @@ public final class DefaultPerformanceMetrics implements PerformanceMetrics, Auto
       if (this.closed.get()) {
         return;
       }
-      metrics(System.nanoTime());
+      if (noActivity()) {
+        this.publishedRate.accumulate(0);
+        this.confirmedRate.accumulate(0);
+        this.nackedRate.accumulate(0);
+        this.returnedRate.accumulate(0);
+        this.receivedRate.accumulate(0);
+        this.confirmedLatency.set(histogram());
+        this.consumedLatency.set(histogram());
+      } else {
+        metrics(System.nanoTime());
+      }
 
     }), interval.getSeconds(), interval.getSeconds(), TimeUnit.SECONDS);
   }
@@ -206,7 +210,6 @@ public final class DefaultPerformanceMetrics implements PerformanceMetrics, Auto
 
     this.confirmedLatency.set(histogram());
     this.consumedLatency.set(histogram());
-    resetActivityCounters();
 
     if (!this.closed.get()) {
       if (this.firstReport.compareAndSet(false, true)) {
@@ -281,35 +284,12 @@ public final class DefaultPerformanceMetrics implements PerformanceMetrics, Auto
     return interval;
   }
 
-  @Override
-  public void maybeResetGauges() {
-    // see https://github.com/rabbitmq/rabbitmq-perf-test/issues/293
-    // the gauge must be emptied after some inactivity, otherwise they
-    // keep their count, even e.g. when a queue has been emptied by PerfTest consumers
-    // and they don't get any messages
-    if (noActivity()) {
-      long now = System.nanoTime();
-      Duration elapsed = Duration.ofNanos(now - lastTick.get());
-      if (elapsed.multipliedBy(2).compareTo(interval) > 0) {
-        publishedRate.accumulate(0);
-        confirmedRate.accumulate(0);
-      }
-    } else {
-      resetActivityCounters();
-    }
-  }
-
-  private void resetActivityCounters() {
-    this.activityPublished.set(this.lastPublished.get());
-    this.activityConfirmed.set(this.lastConfirmed.get());
-    this.activityNacked.set(this.lastNacked.get());
-    this.activityReturned.set(this.lastReturned.get());
-    this.activityReceived.set(this.lastReceived.get());
-  }
-
   private boolean noActivity() {
-    return this.activityPublished.get() == this.lastPublished.get() &&
-        this.activityConfirmed.get() == this.lastConfirmed.get();
+    return this.published.get() == this.lastPublished.get() &&
+        this.confirmed.get() == this.lastConfirmed.get() &&
+        this.nacked.get() == this.lastNacked.get() &&
+        this.returned.get() == this.lastReturned.get() &&
+        this.received.get() == this.lastReceived.get();
   }
 
   private void printFinal() {

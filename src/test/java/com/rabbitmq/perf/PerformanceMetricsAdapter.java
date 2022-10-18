@@ -59,11 +59,6 @@ public class PerformanceMetricsAdapter implements PerformanceMetrics {
   }
 
   @Override
-  public void maybeResetGauges() {
-
-  }
-
-  @Override
   public void resetGlobals() {
 
   }
