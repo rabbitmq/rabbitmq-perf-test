@@ -568,6 +568,7 @@ table.CodeRay td.code{padding:0 0 0 .75em}
 <li><a href="#using-environment-variables-as-options">Using Environment Variables as Options</a></li>
 <li><a href="#native-executable">Native Executable</a></li>
 <li><a href="#result-reporting-in-html">Result Reporting in HTML</a></li>
+<li><a href="#console-output-format">Console Output Format</a></li>
 <li><a href="#monitoring">Monitoring</a>
 <ul class="sectlevel2">
 <li><a href="#supported-metrics">Supported Metrics</a></li>
@@ -1706,6 +1707,35 @@ collecting results and displaying them in an HTML page. Learn more
 </div>
 </div>
 <div class="sect1">
+<h2 id="console-output-format"><a class="anchor" href="#console-output-format"></a>Console Output Format</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>PerfTest default console output format is explicit as each line contains a label for each value:</p>
+</div>
+<div class="listingblock">
+<div class="title">The <code>default</code> output format</div>
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="bash">id: test-101517-299, time 1.000 s, sent: 188898 msg/s, received: 85309 msg/s, min/median/75th/95th/99th consumer latency: 24/234/364/462/474 ms
+id: test-101517-299, time 2.000 s, sent: 101939 msg/s, received: 117152 msg/s, min/median/75th/95th/99th consumer latency: 483/759/830/896/907 ms
+id: test-101517-299, time 3.000 s, sent: 137450 msg/s, received: 118324 msg/s, min/median/75th/95th/99th consumer latency: 691/816/854/893/909 ms</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Advanced users who prefer a more compact format can use the <code>--metrics-format compact</code> option (<code>-mf compact</code> for short).
+The output looks like the following then:</p>
+</div>
+<div class="listingblock">
+<div class="title">The <code>compact</code> output format</div>
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="bash">time               sent     received       consumer latency
+1.000s     173920 msg/s  84405 msg/s    1/25/189/312/331 ms
+2.000s     133044 msg/s 117703 msg/s 329/728/814/887/897 ms
+3.000s     103736 msg/s 117134 msg/s 705/804/846/892/920 ms</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
 <h2 id="monitoring"><a class="anchor" href="#monitoring"></a>Monitoring</h2>
 <div class="sectionbody">
 <div class="paragraph">
@@ -1906,7 +1936,7 @@ It is then possible to override the metrics values thanks to the <code>--exposed
 <div id="footer">
 <div id="footer-text">
 Version 2.19.0-SNAPSHOT<br>
-Last updated 2022-10-17 12:43:02 UTC
+Last updated 2022-10-18 08:57:17 UTC
 </div>
 </div>
 </body>
