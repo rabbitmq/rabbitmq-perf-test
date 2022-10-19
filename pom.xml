@@ -97,7 +97,7 @@
     <asciidoctorj.version>2.5.6</asciidoctorj.version>
     <jruby.version>9.3.4.0</jruby.version>
     <!-- For GraalVM native image -->
-    <graal-sdk.version>22.2.0.1</graal-sdk.version>
+    <graal-sdk.version>22.3.0</graal-sdk.version>
     <build-helper-maven-plugin.version>3.3.0</build-helper-maven-plugin.version>
 
     <maven.javadoc.skip>true</maven.javadoc.skip>
