@@ -250,11 +250,13 @@ public class PerfTest {
                 exitWhen = EXIT_WHEN.NEVER;
             }
             Duration consumerStartDelay = Duration.ofSeconds(intArg(cmd, "csd", -1));
+            int consumerWorkServiceBlockSize = intArg(cmd, "cwsbs", -1);
 
             ConnectionFactory factory = new ConnectionFactory();
             if (disableConnectionRecovery) {
                 factory.setAutomaticRecoveryEnabled(false);
             }
+            factory.setConsumerWorkServiceBlockSize(consumerWorkServiceBlockSize);
 
             factory.setTopologyRecoveryEnabled(false);
 
@@ -800,6 +802,7 @@ public class PerfTest {
             + "e.g. expected_published=50000"));
         options.addOption(new Option("mf", "metrics-format", true, "metrics format to use on the console, possible values are "
             + MetricsFormatterFactory.types().stream().collect(Collectors.joining(", "))));
+        options.addOption(new Option("cwsbs", "consumer-work-service-block-size", true, "maximum block size of the consumer work service"));
         return options;
     }
 
