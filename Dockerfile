@@ -1,4 +1,4 @@
-FROM ubuntu:22.04 as builder
+FROM ubuntu:22.10 as builder
 
 ARG perf_test_binary="target/perf-test.jar"
 
@@ -42,7 +42,7 @@ ADD $perf_test_binary /
 RUN mkdir $PERF_TEST_HOME; \
     mv /*.jar "$PERF_TEST_HOME/perf-test.jar"
 
-FROM ubuntu:22.04
+FROM ubuntu:22.10
 
 # we need locales support for characters like µ to show up correctly in the console
 RUN set -eux; \
