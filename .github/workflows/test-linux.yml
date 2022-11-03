@@ -14,12 +14,12 @@ jobs:
 
     services:
       rabbitmq:
-        image: rabbitmq:3.10
+        image: rabbitmq:3.11
         ports:
           - 5672:5672
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Set up JDK
         uses: actions/setup-java@v3
