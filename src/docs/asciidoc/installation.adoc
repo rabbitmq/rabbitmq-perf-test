@@ -10,6 +10,9 @@ It is also available on https://search.maven.org/#search%7Cga%7C1%7Cg%3A%22com.r
 
 Milestone releases or release candidates are available from https://github.com/rabbitmq/rabbitmq-perf-test/releases[GitHub releases].
 
+https://github.com/rabbitmq/rabbitmq-java-tools-binaries-dev/releases?q=rabbitmq-perf-test[Snapshots] are also available.
+The https://github.com/rabbitmq/rabbitmq-java-tools-binaries-dev/releases/download/v-rabbitmq-perf-test-latest/perf-test-latest.jar[latest snapshot] is available at a stable URL (useful for automation).
+
 To verify a PerfTest installation, use:
 
  java -jar perf-test.jar --help
