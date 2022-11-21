@@ -858,6 +858,10 @@ public class PerfTest {
             String [] keyValue = entry.split("=");
             if (keyValue.length == 1) {
                 return new Object[] {keyValue[0], ""};
+            } else if ("true".equals(keyValue[1])) {
+                return new Object[] {keyValue[0], true};
+            } else if ("false".equals(keyValue[1])) {
+                return new Object[] {keyValue[0], false};
             } else {
                 try {
                     return new Object[] {keyValue[0], Long.parseLong(keyValue[1])};

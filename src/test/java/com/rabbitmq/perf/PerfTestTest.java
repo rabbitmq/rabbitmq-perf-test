@@ -123,6 +123,14 @@ public class PerfTestTest {
             .hasSize(2)
             .containsEntry("x-queue-type", "quorum")
             .containsEntry("max-length-bytes", 10L);
+       assertThat(convertKeyValuePairs("x-cancel-on-ha-failover=true,x-priority=10"))
+            .hasSize(2)
+            .containsEntry("x-cancel-on-ha-failover", true)
+            .containsEntry("x-priority", 10L);
+       assertThat(convertKeyValuePairs("x-cancel-on-ha-failover=false,x-priority=10"))
+            .hasSize(2)
+            .containsEntry("x-cancel-on-ha-failover", false)
+            .containsEntry("x-priority", 10L);
     }
 
     @Test
