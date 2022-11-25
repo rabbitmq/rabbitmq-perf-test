@@ -95,7 +95,6 @@
     <uberJarFinalName>perf-test</uberJarFinalName>
     <asciidoctor.maven.plugin.version>2.2.2</asciidoctor.maven.plugin.version>
     <asciidoctorj.version>2.5.7</asciidoctorj.version>
-    <jruby.version>9.3.4.0</jruby.version>
     <!-- For GraalVM native image -->
     <graal-sdk.version>22.3.0</graal-sdk.version>
     <build-helper-maven-plugin.version>3.3.0</build-helper-maven-plugin.version>
@@ -401,11 +400,6 @@
         <artifactId>asciidoctor-maven-plugin</artifactId>
         <version>${asciidoctor.maven.plugin.version}</version>
         <dependencies>
-          <dependency>
-            <groupId>org.jruby</groupId>
-            <artifactId>jruby-complete</artifactId>
-            <version>${jruby.version}</version>
-          </dependency>
           <dependency>
             <groupId>org.asciidoctor</groupId>
             <artifactId>asciidoctorj</artifactId>
