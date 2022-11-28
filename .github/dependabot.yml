@@ -10,3 +10,5 @@ updates:
    ignore:
      - dependency-name: "ch.qos.logback:logback-classic"
        versions: [ "[1.4,)" ]
+     - dependency-name: "org.springframework.boot:spring-boot-maven-plugin"
+       versions: [ "[2.7,)" ]
