@@ -88,28 +88,19 @@ jobs:
         run: |
           rm -rf target/generated-docs
           make doc
-          mkdir documentation-output
-          cp target/generated-docs/index.html documentation-output
       - name: Publish documentation to GitHub Pages
         run: |
           git config user.name "rabbitmq-ci"
           git config user.email "rabbitmq-ci@users.noreply.github.com"
           ci/publish-documentation-to-github-pages.sh
-      - name: Generate worker configuration file
+      - name: Prepare worker
         run: |
-          tee wrangler.toml <<EOF
-          name = "perftest-dev"
-          type = "webpack"
-          workers_dev = true
-          routes = ["https://perftest-dev.rabbitmq.com/*"]
-          compatibility_date = "2021-12-06"
-          
-          [site]
-          bucket = "./documentation-output"
-          EOF
+          mkdir ci/worker/public
+          cp target/generated-docs/index.html ci/worker/public
       - name: Publish documentation to Cloudflare
         uses: cloudflare/wrangler-action@2.0.0
         with:
-          apiToken: ${{ secrets.CF_API_TOKEN }}
-          wranglerVersion: '1.20.0'
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          preCommands: npm i -D @cloudflare/kv-asset-handler
           command: publish
+          workingDirectory: 'ci/worker'

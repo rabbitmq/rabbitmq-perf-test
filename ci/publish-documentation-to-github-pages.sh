@@ -7,7 +7,7 @@ git remote set-branches origin 'gh-pages'
 git fetch -v
 git checkout gh-pages
 mkdir -p snapshot/htmlsingle
-cp documentation-output/index.html snapshot/htmlsingle
+cp target/generated-docs/index.html snapshot/htmlsingle
 if [ -z "$(git status --porcelain)" ];
 then
   echo "Nothing to commit"
