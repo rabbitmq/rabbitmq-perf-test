@@ -21,6 +21,11 @@ jobs:
           make doc
           mkdir documentation-output
           cp target/generated-docs/index.html documentation-output
+      - name: Publish documentation to GitHub Pages
+        run: |
+          git config user.name "rabbitmq-ci"
+          git config user.email "rabbitmq-ci@users.noreply.github.com"
+          ci/publish-documentation-to-github-pages.sh
       - name: Generate worker configuration file
         run: |
           tee wrangler.toml <<EOF
@@ -39,8 +44,3 @@ jobs:
           apiToken: ${{ secrets.CF_API_TOKEN }}
           wranglerVersion: '1.20.0'
           command: publish
-      - name: Publish documentation to GitHub Pages
-        run: |
-          git config user.name "rabbitmq-ci"
-          git config user.email "rabbitmq-ci@users.noreply.github.com"
-          ci/publish-documentation-to-github-pages.sh
