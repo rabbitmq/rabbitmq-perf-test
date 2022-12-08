@@ -98,7 +98,7 @@ jobs:
       - name: Generate worker configuration file
         run: |
           tee wrangler.toml <<EOF
-          name = "$SITE_NAME"
+          name = "perftest-dev"
           type = "webpack"
           workers_dev = true
           routes = ["https://perftest-dev.rabbitmq.com/*"]
