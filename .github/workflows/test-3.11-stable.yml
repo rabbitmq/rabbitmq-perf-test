@@ -30,7 +30,7 @@ jobs:
       - name: Start broker
         run: ci/start-broker.sh
       - name: Test
-        run: ./mvnw test -Drabbitmqctl.bin=DOCKER:rabbitmq --no-transfer-progress -Dtest=MetricsTest
+        run: ./mvnw verify -Drabbitmqctl.bin=DOCKER:rabbitmq --no-transfer-progress
       - name: Stop broker
         run: docker stop rabbitmq && docker rm rabbitmq
       - name: Publish snapshot
