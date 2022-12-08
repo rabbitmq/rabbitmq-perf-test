@@ -1,0 +1,46 @@
+name: Publish documentation
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up JDK
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'maven'
+      - name: Generate documentation
+        run: |
+          rm -rf target/generated-docs
+          make doc
+          mkdir documentation-output
+          cp target/generated-docs/index.html documentation-output
+      - name: Publish documentation to GitHub Pages
+        run: |
+          git config user.name "rabbitmq-ci"
+          git config user.email "rabbitmq-ci@users.noreply.github.com"
+          ci/publish-documentation-to-github-pages.sh
+      - name: Generate worker configuration file
+        run: |
+          tee wrangler.toml <<EOF
+          name = "perftest-dev"
+          type = "webpack"
+          workers_dev = true
+          routes = ["https://perftest-dev.rabbitmq.com/*"]
+          compatibility_date = "2021-12-06"
+          
+          [site]
+          bucket = "./documentation-output"
+          EOF
+      - name: Publish documentation to Cloudflare
+        uses: cloudflare/wrangler-action@2.0.0
+        with:
+          apiToken: ${{ secrets.CF_API_TOKEN }}
+          wranglerVersion: '1.20.0'
+          command: publish

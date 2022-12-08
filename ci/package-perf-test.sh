@@ -13,7 +13,7 @@ cp target/$FINAL_NAME-*.* packages
 cp target/$FINAL_NAME-*.* packages-latest
 
 UBER_JAR_FINAL_NAME="perf-test-$RELEASE_VERSION"
-./mvnw clean package -Dmaven.test.skip -P uber-jar -DuberJarFinalName=$UBER_JAR_FINAL_NAME
+./mvnw clean package -Dmaven.test.skip -P uber-jar -DuberJarFinalName=$UBER_JAR_FINAL_NAME --no-transfer-progress
 
 rm -f target/*.original
 

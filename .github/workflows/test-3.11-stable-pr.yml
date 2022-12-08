@@ -1,0 +1,30 @@
+name: Test against RabbitMQ 3.11 stable (PR)
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  RABBITMQ_IMAGE_TAG: 3.11
+  RABBITMQ_IMAGE: rabbitmq
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up JDK
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'maven'
+      - name: Start broker
+        run: ci/start-broker.sh
+      - name: Test
+        run: ./mvnw verify -Drabbitmqctl.bin=DOCKER:rabbitmq --no-transfer-progress
+      - name: Stop broker
+        run: docker stop rabbitmq && docker rm rabbitmq
