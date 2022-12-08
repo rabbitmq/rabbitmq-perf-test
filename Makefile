@@ -104,4 +104,4 @@ signed-binary: clean ## Build a GPG signed binary
 
 .PHONY: doc
 doc: ## Generate PerfTest documentation
-	@mvnw asciidoctor:process-asciidoc
+	@mvnw asciidoctor:process-asciidoc --no-transfer-progress

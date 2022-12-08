@@ -34,7 +34,7 @@ jobs:
       - name: Stop broker
         run: docker stop rabbitmq && docker rm rabbitmq
       - name: Publish snapshot
-        run: ./mvnw clean deploy -Psnapshots -DskipITs -DskipTests
+        run: ./mvnw clean deploy -Psnapshots -DskipITs -DskipTests --no-transfer-progress
         env:
           MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
           MAVEN_PASSWORD: ${{ secrets.OSSRH_TOKEN }}
@@ -84,8 +84,30 @@ jobs:
           client-payload: >-
             {"archive_url" : "https://github.com/rabbitmq/rabbitmq-java-tools-binaries-dev/releases/download/${{ env.tag_name }}/perf-test-${{ env.release_version}}.jar",
              "tags": "pivotalrabbitmq/perf-test:dev,pivotalrabbitmq/perf-test:dev-${{ env.tag_name }}"}
-      - name: Publish Documentation
+      - name: Generate documentation
+        run: |
+          rm -rf target/generated-docs
+          make doc
+          mkdir documentation-output
+          cp target/generated-docs/index.html documentation-output
+      - name: Publish documentation to GitHub Pages
         run: |
           git config user.name "rabbitmq-ci"
           git config user.email "rabbitmq-ci@users.noreply.github.com"
           ci/publish-documentation-to-github-pages.sh
+      - name: Generate worker configuration file
+        run: |
+          tee wrangler.toml <<EOF
+          name = "$SITE_NAME"
+          type = "webpack"
+          workers_dev = true
+          routes = ["https://perftest-dev.rabbitmq.com/*"]
+          compatibility_date = "2021-12-06"
+          
+          [site]
+          bucket = "./documentation-output"
+          EOF
+      - name: Publish documentation to Cloudflare
+        uses: cloudflare/wrangler-action@2.0.0
+        with:
+          apiToken: ${{ secrets.CF_API_TOKEN }}
