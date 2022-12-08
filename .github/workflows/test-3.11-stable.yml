@@ -112,3 +112,4 @@ jobs:
         with:
           apiToken: ${{ secrets.CF_API_TOKEN }}
           wranglerVersion: '1.20.0'
+          command: publish
