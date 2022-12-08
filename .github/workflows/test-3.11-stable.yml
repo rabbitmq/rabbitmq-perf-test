@@ -1,0 +1,91 @@
+name: Test against RabbitMQ 3.11 stable
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  RABBITMQ_IMAGE_TAG: 3.11
+  RABBITMQ_IMAGE: rabbitmq
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up JDK
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'maven'
+          server-id: ossrh
+          server-username: MAVEN_USERNAME
+          server-password: MAVEN_PASSWORD
+          gpg-private-key: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
+          gpg-passphrase: MAVEN_GPG_PASSPHRASE
+      - name: Start broker
+        run: ci/start-broker.sh
+      - name: Test
+        run: ./mvnw test -Drabbitmqctl.bin=DOCKER:rabbitmq --no-transfer-progress -Dtest=MetricsTest
+      - name: Stop broker
+        run: docker stop rabbitmq && docker rm rabbitmq
+      - name: Publish snapshot
+        run: ./mvnw clean deploy -Psnapshots -DskipITs -DskipTests
+        env:
+          MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
+          MAVEN_PASSWORD: ${{ secrets.OSSRH_TOKEN }}
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
+      - name: Package Perf Test
+        run: ci/package-perf-test.sh
+        env:
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
+      - name: Delete old releases
+        uses: docker://pivotalrabbitmq/delete-release-action:latest
+        with:
+          repository: rabbitmq/rabbitmq-java-tools-binaries-dev
+          token: ${{ secrets.CI_GITHUB_TOKEN }}
+          tag-filter: '^v-rabbitmq-perf-test-.*-[0-9]{8}-[0-9]{6}$'
+          keep-last-n: 2
+      - name: Push to GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: packages/*
+          name: ${{ env.release_name }}
+          tag_name: ${{ env.tag_name }}
+          target_commitish: main
+          prerelease: true
+          token: ${{ secrets.CI_GITHUB_TOKEN }}
+          repository: rabbitmq/rabbitmq-java-tools-binaries-dev
+      - name: Delete latest release
+        uses: docker://pivotalrabbitmq/delete-release-action:latest
+        with:
+          repository: rabbitmq/rabbitmq-java-tools-binaries-dev
+          token: ${{ secrets.CI_GITHUB_TOKEN }}
+          tag-filter: '^v-rabbitmq-perf-test-latest$'
+          keep-last-n: 0
+      - name: Push to GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: packages-latest/*
+          name: rabbitmq-perf-test-latest
+          tag_name: v-rabbitmq-perf-test-latest
+          target_commitish: main
+          prerelease: true
+          token: ${{ secrets.CI_GITHUB_TOKEN }}
+          repository: rabbitmq/rabbitmq-java-tools-binaries-dev
+      - name: Trigger Perf Test Docker image build
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          event-type: new_snapshot
+          client-payload: >-
+            {"archive_url" : "https://github.com/rabbitmq/rabbitmq-java-tools-binaries-dev/releases/download/${{ env.tag_name }}/perf-test-${{ env.release_version}}.jar",
+             "tags": "pivotalrabbitmq/perf-test:dev,pivotalrabbitmq/perf-test:dev-${{ env.tag_name }}"}
+      - name: Publish Documentation
+        run: |
+          git config user.name "rabbitmq-ci"
+          git config user.email "rabbitmq-ci@users.noreply.github.com"
+          ci/publish-documentation-to-github-pages.sh
