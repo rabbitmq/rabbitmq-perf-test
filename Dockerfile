@@ -35,6 +35,8 @@ RUN set -eux; \
 
 RUN rm jdk.tar.gz
 
+RUN wget --progress=bar:force:noscroll https://raw.githubusercontent.com/rabbitmq/rabbitmq-server/main/deps/rabbitmq_management/bin/rabbitmqadmin -O /usr/local/bin/rabbitmqadmin
+
 ENV PERF_TEST_HOME="/perf_test"
 ENV PERF_TEST_PATH="/usr/local/src/perf-test"
 
@@ -50,7 +52,7 @@ RUN set -eux; \
 	apt-get update; \
 	apt-get -y upgrade; \
 	apt-get install -y --no-install-recommends \
-		locales \
+		locales python3 \
 	; \
 	rm -rf /var/lib/apt/lists/*; \
 	locale-gen en_US.UTF-8
@@ -75,6 +77,9 @@ RUN set -eux; \
 RUN set -eux; \
     if [ "$(uname -m)" = "x86_64" ] ; then java -jar /perf_test/perf-test.jar --help ; \
 	  fi
+
+COPY --from=builder /usr/local/bin/rabbitmqadmin /usr/local/bin/rabbitmqadmin
+RUN chmod 755 /usr/local/bin/rabbitmqadmin
 
 RUN groupadd --gid 1000 perf-test;\
     useradd --uid 1000 --gid perf-test --comment "perf-test user" perf-test; \
