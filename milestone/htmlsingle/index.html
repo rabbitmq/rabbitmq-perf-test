@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="generator" content="Asciidoctor 2.0.17">
+<meta name="generator" content="Asciidoctor 2.0.18">
 <title>RabbitMQ PerfTest</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:300,300italic,400,400italic,600,600italic%7CNoto+Serif:400,400italic,700,700italic%7CDroid+Sans+Mono:400,700">
 <style>
@@ -84,10 +84,10 @@ code{font-family:"Droid Sans Mono","DejaVu Sans Mono",monospace;font-weight:400;
 ul,ol,dl{line-height:1.6;margin-bottom:1.25em;list-style-position:outside;font-family:inherit}
 ul,ol{margin-left:1.5em}
 ul li ul,ul li ol{margin-left:1.25em;margin-bottom:0}
-ul.square li ul,ul.circle li ul,ul.disc li ul{list-style:inherit}
-ul.square{list-style-type:square}
 ul.circle{list-style-type:circle}
 ul.disc{list-style-type:disc}
+ul.square{list-style-type:square}
+ul.circle ul:not([class]),ul.disc ul:not([class]),ul.square ul:not([class]){list-style:inherit}
 ol li ul,ol li ol{margin-left:1.25em;margin-bottom:0}
 dl dt{margin-bottom:.3125em;font-weight:bold}
 dl dd{margin-bottom:1.25em}
@@ -531,7 +531,7 @@ table.CodeRay td.code{padding:0 0 0 .75em}
 <div id="header">
 <h1>RabbitMQ PerfTest</h1>
 <div class="details">
-<span id="revnumber">version 2.19.0.RC1</span>
+<span id="revnumber">version 2.19.0.RC2</span>
 </div>
 <div id="toc" class="toc2">
 <div id="toctitle">Table of Contents</div>
@@ -568,11 +568,13 @@ table.CodeRay td.code{padding:0 0 0 .75em}
 <li><a href="#using-environment-variables-as-options">Using Environment Variables as Options</a></li>
 <li><a href="#native-executable">Native Executable</a></li>
 <li><a href="#result-reporting-in-html">Result Reporting in HTML</a></li>
+<li><a href="#console-output-format">Console Output Format</a></li>
 <li><a href="#monitoring">Monitoring</a>
 <ul class="sectlevel2">
 <li><a href="#supported-metrics">Supported Metrics</a></li>
 <li><a href="#tags">Tags</a></li>
 <li><a href="#supported-monitoring-systems">Supported Monitoring Systems</a></li>
+<li><a href="#expected-and-exposed-metrics">Expected and Exposed Metrics</a></li>
 </ul>
 </li>
 </ul>
@@ -624,7 +626,8 @@ Use <a href="https://rabbitmq.github.io/rabbitmq-stream-java-client/stable/htmls
 <i class="fa icon-warning" title="Warning"></i>
 </td>
 <td class="content">
-The <code>tar.gz</code> and <code>zip</code> archives are deprecated and will be removed in PerfTest 3.0. Use the uber JAR file instead.
+The <code>tar.gz</code> and <code>zip</code> archives are deprecated and will be removed in PerfTest 3.0.
+Use the uber JAR file instead.
 </td>
 </tr>
 </table>
@@ -634,6 +637,10 @@ The <code>tar.gz</code> and <code>zip</code> archives are deprecated and will be
 </div>
 <div class="paragraph">
 <p>Milestone releases or release candidates are available from <a href="https://github.com/rabbitmq/rabbitmq-perf-test/releases">GitHub releases</a>.</p>
+</div>
+<div class="paragraph">
+<p><a href="https://github.com/rabbitmq/rabbitmq-java-tools-binaries-dev/releases?q=rabbitmq-perf-test">Snapshots</a> are also available.
+The <a href="https://github.com/rabbitmq/rabbitmq-java-tools-binaries-dev/releases/download/v-rabbitmq-perf-test-latest/perf-test-latest.jar">latest snapshot</a> is available at a stable URL (useful for automation).</p>
 </div>
 <div class="paragraph">
 <p>To verify a PerfTest installation, use:</p>
@@ -646,6 +653,19 @@ The <code>tar.gz</code> and <code>zip</code> archives are deprecated and will be
 </div>
 <div class="sect2">
 <h3 id="from-native-executable"><a class="anchor" href="#from-native-executable"></a>From Native Executable</h3>
+<div class="admonitionblock warning">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-warning" title="Warning"></i>
+</td>
+<td class="content">
+The native executable binary is deprecated and will be removed in PerfTest 3.0.
+Use the uber JAR file instead.
+</td>
+</tr>
+</table>
+</div>
 <div class="paragraph">
 <p>PerfTest is also distributed as a native executable binary. This is an experimental feature, see the <a href="#native-executable">dedicated section</a> for more information.</p>
 </div>
@@ -971,7 +991,7 @@ value:</p>
 </div>
 <div class="literalblock">
 <div class="content">
-<pre>java -jar com.rabbitmq.perf.PerfTest --shutdown-timeout -1</pre>
+<pre>java -jar perf-test.jar --shutdown-timeout -1</pre>
 </div>
 </div>
 <div class="paragraph">
@@ -1552,8 +1572,7 @@ it typically keeps a thread busy for polling in the application, and it intrinsi
 <h2 id="tls-support"><a class="anchor" href="#tls-support"></a>TLS Support</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>PerfTest can use TLS to connect to a node that is
-<a href="https://www.rabbitmq.com/ssl.html">configured to accept TLS connections</a>.
+<p>PerfTest can use TLS to connect to a node that is <a href="https://www.rabbitmq.com/ssl.html">configured to accept TLS connections</a>.
 To enable TLS, simply specify a URI that uses the <code>amqps</code> schema:</p>
 </div>
 <div class="literalblock">
@@ -1562,33 +1581,37 @@ To enable TLS, simply specify a URI that uses the <code>amqps</code> schema:</p>
 </div>
 </div>
 <div class="paragraph">
-<p>By default PerfTest automatically trusts the server
-and doesn&#8217;t present any client certificate (a warning
-shows up in the console). In many benchmarking or load testing scenarios this may be sufficient.
-If peer verification is necessary, it is possible to use the
-<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/jsse/JSSERefGuide.html#InstallationAndCustomization">appropriate
+<p>By default, PerfTest automatically trusts the server and doesn&#8217;t present any client certificate (a warning
+shows up in the console).
+In many benchmarking or load testing scenarios this may be sufficient.
+If peer verification is necessary, it is possible to use the <a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/jsse/JSSERefGuide.html#InstallationAndCustomization">appropriate
 JVM properties</a> on the command line to override the default <code>SSLContext</code>.
 For example, to trust a given server:</p>
 </div>
 <div class="literalblock">
 <div class="content">
-<pre>JAVA_OPTS="-Djavax.net.ssl.trustStore=/path/to/server_key.p12 -Djavax.net.ssl.trustStorePassword=bunnies -Djavax.net.ssl.trustStoreType=PKCS12" \
-  java -jar perf-test.jar -h amqps://localhost:5671</pre>
+<pre>java -Djavax.net.ssl.trustStore=/path/to/server_key.p12 \
+     -Djavax.net.ssl.trustStorePassword=bunnies \
+     -Djavax.net.ssl.trustStoreType=PKCS12 \
+     -jar perf-test.jar -h amqps://localhost:5671</pre>
 </div>
 </div>
 <div class="paragraph">
-<p>The previous snippet uses a one-liner to define the <code>JAVA_OPTS</code> environment variable
-while running PerfTest. Please refer to the
-<a href="https://www.rabbitmq.com/ssl.html">TLS guide</a> to learn about how to set up RabbitMQ with TLS.
-A convenient way to generate a CA and some self-signed certificate/key pairs for development and QA environments
-is with <a href="https://github.com/michaelklishin/tls-gen/"><code>tls-gen</code></a>.
-`tls-gen&#8217;s basic profile is a good starting point. How to run PerfTest with
-a certificate/key pair generated by the aforementioned profile:</p>
+<p>The previous snippet defines appropriate system properties to locate the trust store to use.
+Please refer to the <a href="https://www.rabbitmq.com/ssl.html">TLS guide</a> to learn about how to set up RabbitMQ with TLS.
+A convenient way to generate a CA and some self-signed certificate/key pairs for development and QA environments is with <a href="https://github.com/rabbitmq/tls-gen"><code>tls-gen</code></a>.
+<code>tls-gen</code> basic profile is a good starting point.
+Here is how to run PerfTest with a certificate/key pair generated by the aforementioned profile:</p>
 </div>
 <div class="literalblock">
 <div class="content">
-<pre>JAVA_OPTS="-Djavax.net.ssl.trustStore=/path/to/server_key.p12 -Djavax.net.ssl.trustStorePassword=bunnies -Djavax.net.ssl.trustStoreType=PKCS12 -Djavax.net.ssl.keyStore=/path/to/client_key.p12 -Djavax.net.ssl.keyStorePassword=bunnies -Djavax.net.ssl.keyStoreType=PKCS12" \
-  java -jar perf-test.jar -h amqps://localhost:5671</pre>
+<pre>java -Djavax.net.ssl.trustStore=/path/to/server_key.p12 \
+     -Djavax.net.ssl.trustStorePassword=bunnies \
+     -Djavax.net.ssl.trustStoreType=PKCS12 \
+     -Djavax.net.ssl.keyStore=/path/to/client_key.p12 \
+     -Djavax.net.ssl.keyStorePassword=bunnies \
+     -Djavax.net.ssl.keyStoreType=PKCS12 \
+     -jar perf-test.jar -h amqps://localhost:5671</pre>
 </div>
 </div>
 </div>
@@ -1651,6 +1674,19 @@ the <code>PERF_TEST_CONFIRM_TIMEOUT</code> environment variable, not only <code>
 <div class="sect1">
 <h2 id="native-executable"><a class="anchor" href="#native-executable"></a>Native Executable</h2>
 <div class="sectionbody">
+<div class="admonitionblock warning">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-warning" title="Warning"></i>
+</td>
+<td class="content">
+The native executable binary is deprecated and will be removed in PerfTest 3.0.
+Use the uber JAR file instead.
+</td>
+</tr>
+</table>
+</div>
 <div class="paragraph">
 <p>PerfTest is also distributed as a <a href="https://www.graalvm.org/22.1/reference-manual/native-image/">native executable</a>
 built with <a href="https://www.graalvm.org/">GraalVM</a>. The native executable has the following
@@ -1701,6 +1737,35 @@ that can help you run automated benchmarks by wrapping around PerfTest. You can 
 benchmark specs, and the tool will take care of running the benchmark,
 collecting results and displaying them in an HTML page. Learn more
 <a href="https://github.com/rabbitmq/rabbitmq-perf-test/blob/main/html/README.md">here</a>.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="console-output-format"><a class="anchor" href="#console-output-format"></a>Console Output Format</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>PerfTest default console output format is explicit as each line contains a label for each value:</p>
+</div>
+<div class="listingblock">
+<div class="title">The <code>default</code> output format</div>
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="bash">id: test-101517-299, time 1.000 s, sent: 188898 msg/s, received: 85309 msg/s, min/median/75th/95th/99th consumer latency: 24/234/364/462/474 ms
+id: test-101517-299, time 2.000 s, sent: 101939 msg/s, received: 117152 msg/s, min/median/75th/95th/99th consumer latency: 483/759/830/896/907 ms
+id: test-101517-299, time 3.000 s, sent: 137450 msg/s, received: 118324 msg/s, min/median/75th/95th/99th consumer latency: 691/816/854/893/909 ms</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Advanced users who prefer a more compact format can use the <code>--metrics-format compact</code> option (<code>-mf compact</code> for short).
+The output looks like the following then:</p>
+</div>
+<div class="listingblock">
+<div class="title">The <code>compact</code> output format</div>
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="bash">time               sent     received       consumer latency
+1.000s     173920 msg/s  84405 msg/s    1/25/189/312/331 ms
+2.000s     133044 msg/s 117703 msg/s 329/728/814/887/897 ms
+3.000s     103736 msg/s 117134 msg/s 705/804/846/892/920 ms</code></pre>
+</div>
 </div>
 </div>
 </div>
@@ -1869,13 +1934,43 @@ can be changed:</p>
 </div>
 </div>
 </div>
+<div class="sect2">
+<h3 id="expected-and-exposed-metrics"><a class="anchor" href="#expected-and-exposed-metrics"></a>Expected and Exposed Metrics</h3>
+<div class="paragraph">
+<p>PerfTest automatically exposes 2 <code>expected_published</code> and <code>expected_consumed</code> metrics that represent the theoretical published and consumed rates, respectively.
+PertTest calculates the values and exposes the metrics as soon as rate instructions are provided (e.g. with <code>--rate</code> or <code>--consumer-rate</code>).</p>
+</div>
+<div class="paragraph">
+<p>These expected metrics aim at helping external monitoring tools to trigger alerts if the actual rates are different from the expected rates.
+PerfTest does its best to calculate and update the expected rates, but it may be wrong or just cannot figure out the correct values.
+It is then possible to override the metrics values thanks to the <code>--exposed-metrics</code> option (<code>-em</code> for short):</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>java -jar perf-test.jar --metrics-prometheus \
+    --exposed-metrics expected_published=50000,expected_consumed=50000</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Note PerfTest adds the metrics prefix to the provided name automatically (<code>perftest_</code> by default).</p>
+</div>
+<div class="paragraph">
+<p>It is also possible to expose any metrics, e.g. setting an expected value for the publisher confirm latency so the external monitoring system could trigger an alert if the actual latency is higher:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>java -jar perf-test.jar --metrics-prometheus --rate 1000 \
+    --exposed-metrics expected_confirm_latency=0.1</code></pre>
+</div>
+</div>
+</div>
 </div>
 </div>
 </div>
 <div id="footer">
 <div id="footer-text">
-Version 2.19.0.RC1<br>
-Last updated 2022-09-09 08:41:43 UTC
+Version 2.19.0.RC2<br>
+Last updated 2022-12-15 15:30:24 UTC
 </div>
 </div>
 </body>
