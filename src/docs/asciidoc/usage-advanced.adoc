@@ -486,29 +486,6 @@ with the `RABBITMQ_PERF_TEST_ENV_PREFIX` environment variable, e.g.:
 With `RABBITMQ_PERF_TEST_ENV_PREFIX="PERF_TEST_"` defined, PerfTest will for example look for
 the `PERF_TEST_CONFIRM_TIMEOUT` environment variable, not only `CONFIRM_TIMEOUT`.
 
-[#native-executable]
-== Native Executable
-
-WARNING: The native executable binary is deprecated and will be removed in PerfTest 3.0.
-Use the uber JAR file instead.
-
-PerfTest is also distributed as a https://www.graalvm.org/22.1/reference-manual/native-image/[native executable]
-built with https://www.graalvm.org/[GraalVM]. The native executable has the following
-advantages: it doesn't need a JVM to run, it has faster startup time
-and lower runtime memory overhead compared to a Java VM.
-
-PerfTest native executable has also some limitations:
-
- * <<monitoring.adoc#supported-metrics, JVM metrics>> are not supported
- * it is not possible to configure logging
- * TLS is not supported (this is likely to be fixed someday)
- * IPv6 only hosts are not supported (this is likely to be fixed someday)
-
-[WARNING]
-====
-The native executable is considered an experimental feature.
-====
-
 == Result Reporting in HTML
 
 The `PerfTest HTML extension` are a set of tools

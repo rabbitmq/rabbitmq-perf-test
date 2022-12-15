@@ -23,8 +23,8 @@ package com.rabbitmq.perf;
 public class NativePerfTest {
 
     public static void main(String[] args) throws Exception {
-        System.out.println("WARNING: The native executable is experimental and has limitations: " +
-                "https://rabbitmq.github.io/rabbitmq-perf-test/stable/htmlsingle/#native-executable");
+        System.out.println("WARNING: The native executable is deprecated, please use the uber JAR instead: " +
+                "https://perftest.rabbitmq.com/#from-binary.");
         PerfTest.main(args);
     }
 

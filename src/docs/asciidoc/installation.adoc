@@ -18,13 +18,6 @@ To verify a PerfTest installation, use:
 
  java -jar perf-test.jar --help
 
-=== From Native Executable
-
-WARNING: The native executable binary is deprecated and will be removed in PerfTest 3.0.
-Use the uber JAR file instead.
-
-PerfTest is also distributed as a native executable binary. This is an experimental feature, see the <<native-executable,dedicated section>> for more information.
-
 === From Docker Image
 
 PerfTest has a https://hub.docker.com/r/pivotalrabbitmq/perf-test/[Docker image] as well.
