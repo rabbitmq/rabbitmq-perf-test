@@ -489,6 +489,9 @@ the `PERF_TEST_CONFIRM_TIMEOUT` environment variable, not only `CONFIRM_TIMEOUT`
 [#native-executable]
 == Native Executable
 
+WARNING: The native executable binary is deprecated and will be removed in PerfTest 3.0.
+Use the uber JAR file instead.
+
 PerfTest is also distributed as a https://www.graalvm.org/22.1/reference-manual/native-image/[native executable]
 built with https://www.graalvm.org/[GraalVM]. The native executable has the following
 advantages: it doesn't need a JVM to run, it has faster startup time

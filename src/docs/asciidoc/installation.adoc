@@ -4,7 +4,8 @@
 
 PerfTest is distributed as an uber JAR from https://github.com/rabbitmq/rabbitmq-perf-test/releases[GitHub releases].
 
-WARNING: The `tar.gz` and `zip` archives are deprecated and will be removed in PerfTest 3.0. Use the uber JAR file instead.
+WARNING: The `tar.gz` and `zip` archives are deprecated and will be removed in PerfTest 3.0.
+Use the uber JAR file instead.
 
 It is also available on https://search.maven.org/#search%7Cga%7C1%7Cg%3A%22com.rabbitmq%22%20AND%20a%3A%22perf-test%22[Maven Central] if one needs to use it as library.
 
@@ -18,6 +19,9 @@ To verify a PerfTest installation, use:
  java -jar perf-test.jar --help
 
 === From Native Executable
+
+WARNING: The native executable binary is deprecated and will be removed in PerfTest 3.0.
+Use the uber JAR file instead.
 
 PerfTest is also distributed as a native executable binary. This is an experimental feature, see the <<native-executable,dedicated section>> for more information.
 
