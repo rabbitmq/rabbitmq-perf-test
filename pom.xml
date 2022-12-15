@@ -98,6 +98,7 @@
     <!-- For GraalVM native image -->
     <graal-sdk.version>22.3.0</graal-sdk.version>
     <build-helper-maven-plugin.version>3.3.0</build-helper-maven-plugin.version>
+    <hdr-histogram.version>2.1.12</hdr-histogram.version>
 
     <maven.javadoc.skip>true</maven.javadoc.skip>
     <gpg.skip>true</gpg.skip>
@@ -719,6 +720,12 @@
           <groupId>org.slf4j</groupId>
           <artifactId>slf4j-simple</artifactId>
           <version>${slf4j.version}</version>
+        </dependency>
+
+        <dependency>
+          <groupId>org.hdrhistogram</groupId>
+          <artifactId>HdrHistogram</artifactId>
+          <version>${hdr-histogram.version}</version>
         </dependency>
 
       </dependencies>
