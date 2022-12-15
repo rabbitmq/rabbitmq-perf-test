@@ -68,7 +68,7 @@ public class MulticastParams {
     private boolean randomRoutingKey = false;
     private boolean skipBindingQueues = false;
 
-    private List<?> flags = new ArrayList<>();
+    private List<String> flags = new ArrayList<>();
 
     private int multiAckEvery = 0;
     private boolean autoAck = false;
@@ -253,12 +253,20 @@ public class MulticastParams {
         setConsumerMsgCount(msgCount);
     }
 
-    public void setFlags(List<?> flags) {
+    public void setFlags(List<String> flags) {
         this.flags = flags;
+    }
+
+    List<String> getFlags() {
+        return flags;
     }
 
     public void setAutoDelete(boolean autoDelete) {
         this.autoDelete = autoDelete;
+    }
+
+    boolean isAutoDelete() {
+        return autoDelete;
     }
 
     public void setPredeclared(boolean predeclared) {
@@ -355,6 +363,10 @@ public class MulticastParams {
 
     List<String> getBodyFiles() {
         return Collections.unmodifiableList(this.bodyFiles);
+    }
+
+    Map<String, Object> getQueueArguments() {
+        return queueArguments;
     }
 
     public void setBodyContentType(String bodyContentType) {

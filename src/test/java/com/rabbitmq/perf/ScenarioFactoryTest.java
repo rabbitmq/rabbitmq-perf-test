@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020 VMware, Inc. or its affiliates.  All rights reserved.
+// Copyright (c) 2019-2022 VMware, Inc. or its affiliates.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 2.0 ("MPL"), the GNU General Public License version 2
@@ -32,7 +32,10 @@ public class ScenarioFactoryTest {
                 "[{'time-limit': 30, 'producer-count': 4, 'consumer-count': 2, " +
                 "  'rate': 10, 'exclusive': true, " +
                 "  'confirm': 10, " +
-                "  'body': ['file1.json','file2.json'], 'body-content-type' : 'application/json'}]}]";
+                "  'queue-arguments': 'x-max-length=10,x-dead-letter-exchange=some.exchange.name,x-single-active-consumer=true', " +
+                "  'flags': 'persistent,mandatory', " +
+                "  'auto-delete': 'false', " +
+            "  'body': ['file1.json','file2.json'], 'body-content-type' : 'application/json'}]}]";
         List<Map> scenariosJson = new Gson().fromJson(spec, List.class);
         Map scenario = scenariosJson.get(0);
         MulticastParams params = ScenarioFactory.paramsFromJSON((Map) ((List) scenario.get("params")).get(0));
@@ -45,6 +48,12 @@ public class ScenarioFactoryTest {
         assertThat(params.getBodyFiles()).hasSize(2);
         assertThat(params.getBodyFiles()).contains("file1.json", "file2.json");
         assertThat(params.getBodyContentType()).isEqualTo("application/json");
+        assertThat(params.getQueueArguments()).hasSize(3)
+            .containsEntry("x-max-length", 10L)
+            .containsEntry("x-dead-letter-exchange", "some.exchange.name")
+            .containsEntry("x-single-active-consumer", true);
+        assertThat(params.getFlags()).hasSize(2).containsExactly("persistent", "mandatory");
+        assertThat(params.isAutoDelete()).isFalse();
     }
 
 }

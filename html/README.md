@@ -329,9 +329,38 @@ The following parameters can be specified for a scenario:
 - consumer-msg-count: number of messages to be consumed by the consumer. Defaults to `0`.
 - msg-count: single flag to set the previous two counts to the same value.
 - flags: flags to pass to the producer, like `"mandatory"`,
-  or `"persistent"`. Defaults to an empty list.
+  or `"persistent"`, separated by commas. Defaults to an empty list.
 - predeclared: tells the benchmark tool if the exchange/queue name
   provided already exists in the broker. Defaults to `false`.
+- queue-arguments: key/value pairs separated by commas, e.g. `x-max-length=10,x-dead-letter-exchange=some.exchange.name`.
+
+### Using Quorum Queues
+
+PerfTestMulti requires several parameters to declare [quorum queues](https://rabbitmq.com/quorum-queues.html).
+The queue type argument must be set to `quorum`, the `persistent` flag must be used,
+`auto-delete` must be set to `false`, and the queue name(s) must be specified because quorum queues cannot have server-generated names.
+
+Here is an example of a specification file that tells PerfTestMulti to use a quorum queue:
+
+```json
+[
+  {
+    "name": "consume",
+    "type": "simple",
+    "params": [
+      {
+        "time-limit": 30,
+        "producer-count": 1,
+        "consumer-count": 1,
+        "queue-arguments": "x-queue-type=quorum",
+        "flags": "persistent",
+        "auto-delete": "false",
+        "queue-names": "my-queue"
+      }
+    ]
+  }
+]
+```
 
 ## Starting a web server to display the results ##
 

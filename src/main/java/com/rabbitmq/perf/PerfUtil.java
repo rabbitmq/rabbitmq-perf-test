@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2020 VMware, Inc. or its affiliates.  All rights reserved.
+// Copyright (c) 2007-2022 VMware, Inc. or its affiliates.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 2.0 ("MPL"), the GNU General Public License version 2
@@ -17,6 +17,9 @@ package com.rabbitmq.perf;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 
 public class PerfUtil {
     public static void setValue(Object obj, Object name, Object value) {
@@ -67,9 +70,19 @@ public class PerfUtil {
                 } else {
                     return Long.valueOf(value.toString());
                 }
+            } else if (isBoolean(targetType)) {
+                return Boolean.valueOf(value.toString());
+            } else if (isMap(targetType)) {
+               return PerfTest.convertKeyValuePairs(value.toString());
+            } else if (isList(targetType)) {
+               return Arrays.asList(value.toString().split(","));
             }
         }
         return value;
+    }
+
+    private static boolean isBoolean(Class<?> targetType) {
+        return (targetType.equals(Boolean.class) || "boolean".equals(targetType.getSimpleName()));
     }
 
     private static boolean isInt(Class<?> targetType) {
@@ -82,5 +95,13 @@ public class PerfUtil {
 
     private static boolean isLong(Class<?> targetType) {
         return (targetType.equals(Long.class) || "long".equals(targetType.getSimpleName()));
+    }
+
+    private static boolean isMap(Class<?> targetType) {
+        return targetType.isAssignableFrom(Map.class);
+    }
+
+    private static boolean isList(Class<?> targetType) {
+        return targetType.isAssignableFrom(List.class);
     }
 }
