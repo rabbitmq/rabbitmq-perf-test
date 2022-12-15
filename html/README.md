@@ -32,8 +32,9 @@ to the root folder of the binary distribution and run the following
 command to start the benchmark:
 
 ```bash
-java -jar com.rabbitmq.perf.PerfTestMulti
-publish-consume-spec.js publish-consume-result.js
+java -cp perf-test.jar -Dloader.main=com.rabbitmq.perf.PerfTestMulti \
+  org.springframework.boot.loader.PropertiesLauncher \
+  publish-consume-spec.js publish-consume-result.js
 ```
 
 This command will start a benchmark scenario where four producers
