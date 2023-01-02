@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2022 VMware, Inc. or its affiliates.  All rights reserved.
+// Copyright (c) 2007-2023 VMware, Inc. or its affiliates.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 2.0 ("MPL"), the GNU General Public License version 2
@@ -48,7 +48,7 @@ class SimpleScenarioStats extends Stats implements ScenarioStats, PerformanceMet
         sample.put("send-bytes-rate", rate(sendCountInterval.get(), elapsedTime) * minMsgSize);
         sample.put("recv-msg-rate", rate(recvCountInterval.get(), elapsedTime));
         sample.put("recv-bytes-rate", rate(recvCountInterval.get(), elapsedTime) * minMsgSize);
-        sample.put("elapsed",   elapsedTotal);
+        sample.put("elapsed",   elapsedTotal.get() / 1_000_000); // nano to ms
         if (latencyCountInterval.get() > 0) {
             sample.put("avg-latency", intervalAverageLatency());
             sample.put("min-latency", minLatency.get() / 1000L);
