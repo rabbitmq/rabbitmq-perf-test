@@ -531,7 +531,7 @@ table.CodeRay td.code{padding:0 0 0 .75em}
 <div id="header">
 <h1>RabbitMQ PerfTest</h1>
 <div class="details">
-<span id="revnumber">version 2.19.0.RC2</span>
+<span id="revnumber">version 2.19.0.RC3</span>
 </div>
 <div id="toc" class="toc2">
 <div id="toctitle">Table of Contents</div>
@@ -540,7 +540,6 @@ table.CodeRay td.code{padding:0 0 0 .75em}
 <li><a href="#installation">Installation</a>
 <ul class="sectlevel2">
 <li><a href="#from-binary">From Binary</a></li>
-<li><a href="#from-native-executable">From Native Executable</a></li>
 <li><a href="#from-docker-image">From Docker Image</a></li>
 <li><a href="#for-cloud-foundry">For Cloud Foundry</a></li>
 </ul>
@@ -566,7 +565,6 @@ table.CodeRay td.code{padding:0 0 0 .75em}
 <li><a href="#asynchronous-consumers-vs-synchronous-consumers">Asynchronous Consumers vs Synchronous Consumers</a></li>
 <li><a href="#tls-support">TLS Support</a></li>
 <li><a href="#using-environment-variables-as-options">Using Environment Variables as Options</a></li>
-<li><a href="#native-executable">Native Executable</a></li>
 <li><a href="#result-reporting-in-html">Result Reporting in HTML</a></li>
 <li><a href="#console-output-format">Console Output Format</a></li>
 <li><a href="#monitoring">Monitoring</a>
@@ -649,25 +647,6 @@ The <a href="https://github.com/rabbitmq/rabbitmq-java-tools-binaries-dev/releas
 <div class="content">
 <pre>java -jar perf-test.jar --help</pre>
 </div>
-</div>
-</div>
-<div class="sect2">
-<h3 id="from-native-executable"><a class="anchor" href="#from-native-executable"></a>From Native Executable</h3>
-<div class="admonitionblock warning">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-warning" title="Warning"></i>
-</td>
-<td class="content">
-The native executable binary is deprecated and will be removed in PerfTest 3.0.
-Use the uber JAR file instead.
-</td>
-</tr>
-</table>
-</div>
-<div class="paragraph">
-<p>PerfTest is also distributed as a native executable binary. This is an experimental feature, see the <a href="#native-executable">dedicated section</a> for more information.</p>
 </div>
 </div>
 <div class="sect2">
@@ -1672,63 +1651,6 @@ the <code>PERF_TEST_CONFIRM_TIMEOUT</code> environment variable, not only <code>
 </div>
 </div>
 <div class="sect1">
-<h2 id="native-executable"><a class="anchor" href="#native-executable"></a>Native Executable</h2>
-<div class="sectionbody">
-<div class="admonitionblock warning">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-warning" title="Warning"></i>
-</td>
-<td class="content">
-The native executable binary is deprecated and will be removed in PerfTest 3.0.
-Use the uber JAR file instead.
-</td>
-</tr>
-</table>
-</div>
-<div class="paragraph">
-<p>PerfTest is also distributed as a <a href="https://www.graalvm.org/22.1/reference-manual/native-image/">native executable</a>
-built with <a href="https://www.graalvm.org/">GraalVM</a>. The native executable has the following
-advantages: it doesn&#8217;t need a JVM to run, it has faster startup time
-and lower runtime memory overhead compared to a Java VM.</p>
-</div>
-<div class="paragraph">
-<p>PerfTest native executable has also some limitations:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p><a href="#supported-metrics">JVM metrics</a> are not supported</p>
-</li>
-<li>
-<p>it is not possible to configure logging</p>
-</li>
-<li>
-<p>TLS is not supported (this is likely to be fixed someday)</p>
-</li>
-<li>
-<p>IPv6 only hosts are not supported (this is likely to be fixed someday)</p>
-</li>
-</ul>
-</div>
-<div class="admonitionblock warning">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-warning" title="Warning"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>The native executable is considered an experimental feature.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-</div>
-</div>
-<div class="sect1">
 <h2 id="result-reporting-in-html"><a class="anchor" href="#result-reporting-in-html"></a>Result Reporting in HTML</h2>
 <div class="sectionbody">
 <div class="paragraph">
@@ -1969,8 +1891,8 @@ It is then possible to override the metrics values thanks to the <code>--exposed
 </div>
 <div id="footer">
 <div id="footer-text">
-Version 2.19.0.RC2<br>
-Last updated 2022-12-15 15:30:24 UTC
+Version 2.19.0.RC3<br>
+Last updated 2023-01-02 14:36:19 UTC
 </div>
 </div>
 </body>
