@@ -73,7 +73,7 @@ public final class DefaultPerformanceMetrics implements PerformanceMetrics, Auto
   private final Duration interval;
   private final TimeUnit latencyCollectionTimeUnit;
   private final AtomicBoolean firstReport = new AtomicBoolean(false);
-  private final AtomicBoolean closed = new AtomicBoolean(false);
+  private final AtomicBoolean started = new AtomicBoolean(false);
   private final AtomicReference<Histogram> consumedLatency, confirmedLatency;
   private final MetricsFormatter formatter;
 
@@ -162,27 +162,29 @@ public final class DefaultPerformanceMetrics implements PerformanceMetrics, Auto
 
   @Override
   public void start() {
-    startTime.set(System.nanoTime());
-    lastTick.set(startTime.get());
-    startTimeForTotal.set(startTime.get());
+    if (this.started.compareAndSet(false, true)) {
+      startTime.set(System.nanoTime());
+      lastTick.set(startTime.get());
+      startTimeForTotal.set(startTime.get());
 
-    scheduledExecutorService.scheduleAtFixedRate(wrapInCatch(() -> {
-      if (this.closed.get()) {
-        return;
-      }
-      if (noActivity()) {
-        this.publishedRate.accumulate(0);
-        this.confirmedRate.accumulate(0);
-        this.nackedRate.accumulate(0);
-        this.returnedRate.accumulate(0);
-        this.receivedRate.accumulate(0);
-        this.confirmedLatency.set(histogram());
-        this.consumedLatency.set(histogram());
-      } else {
-        metrics(System.nanoTime());
-      }
+      scheduledExecutorService.scheduleAtFixedRate(wrapInCatch(() -> {
+        if (!this.started.get()) {
+          return;
+        }
+        if (noActivity()) {
+          this.publishedRate.accumulate(0);
+          this.confirmedRate.accumulate(0);
+          this.nackedRate.accumulate(0);
+          this.returnedRate.accumulate(0);
+          this.receivedRate.accumulate(0);
+          this.confirmedLatency.set(histogram());
+          this.consumedLatency.set(histogram());
+        } else {
+          metrics(System.nanoTime());
+        }
 
-    }), interval.getSeconds(), interval.getSeconds(), TimeUnit.SECONDS);
+      }), interval.getSeconds(), interval.getSeconds(), TimeUnit.SECONDS);
+    }
   }
 
   void metrics(long currentTime) {
@@ -211,7 +213,7 @@ public final class DefaultPerformanceMetrics implements PerformanceMetrics, Auto
     this.confirmedLatency.set(histogram());
     this.consumedLatency.set(histogram());
 
-    if (!this.closed.get()) {
+    if (this.started.get()) {
       if (this.firstReport.compareAndSet(false, true)) {
         this.formatter.header();
       }
@@ -320,9 +322,15 @@ public final class DefaultPerformanceMetrics implements PerformanceMetrics, Auto
 
   @Override
   public void close() {
-    if (this.closed.compareAndSet(false, true)) {
+    if (this.started.compareAndSet(false, true)) {
       this.scheduledExecutorService.shutdownNow();
       printFinal();
     }
   }
+
+  // for testing
+  void started(boolean value) {
+    this.started.set(value);
+  }
+
 }

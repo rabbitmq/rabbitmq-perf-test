@@ -236,6 +236,8 @@ public class MulticastSet {
 
             createProducers(announceStartup, producerStates, producerConnections);
 
+            this.performanceMetrics.start();
+
             startConsumers(consumerRunnables);
             startProducers(producerStates);
 
@@ -300,7 +302,6 @@ public class MulticastSet {
                 shutdownSequence = () -> { };
             }
 
-            this.performanceMetrics.start();
             this.completionHandler.waitForCompletion();
 
             try {
@@ -432,7 +433,9 @@ public class MulticastSet {
         if (this.params.getConsumerStartDelay().getSeconds() <= 0) {
             this.consumerLatencyIndicator.start();
             for (Runnable runnable : consumerRunnables) {
+                LOGGER.debug("Starting consumer runnable...");
                 runnable.run();
+                LOGGER.debug("Consumer runnable started");
                 if (params.getConsumerSlowStart()) {
                     System.out.println("Delaying start by 1 second because -S/--slow-start was requested");
                     Thread.sleep(1000);
