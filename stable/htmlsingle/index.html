@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="generator" content="Asciidoctor 2.0.17">
+<meta name="generator" content="Asciidoctor 2.0.18">
 <title>RabbitMQ PerfTest</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:300,300italic,400,400italic,600,600italic%7CNoto+Serif:400,400italic,700,700italic%7CDroid+Sans+Mono:400,700">
 <style>
@@ -84,10 +84,10 @@ code{font-family:"Droid Sans Mono","DejaVu Sans Mono",monospace;font-weight:400;
 ul,ol,dl{line-height:1.6;margin-bottom:1.25em;list-style-position:outside;font-family:inherit}
 ul,ol{margin-left:1.5em}
 ul li ul,ul li ol{margin-left:1.25em;margin-bottom:0}
-ul.square li ul,ul.circle li ul,ul.disc li ul{list-style:inherit}
-ul.square{list-style-type:square}
 ul.circle{list-style-type:circle}
 ul.disc{list-style-type:disc}
+ul.square{list-style-type:square}
+ul.circle ul:not([class]),ul.disc ul:not([class]),ul.square ul:not([class]){list-style:inherit}
 ol li ul,ol li ol{margin-left:1.25em;margin-bottom:0}
 dl dt{margin-bottom:.3125em;font-weight:bold}
 dl dd{margin-bottom:1.25em}
@@ -531,7 +531,7 @@ table.CodeRay td.code{padding:0 0 0 .75em}
 <div id="header">
 <h1>RabbitMQ PerfTest</h1>
 <div class="details">
-<span id="revnumber">version 2.18.0</span>
+<span id="revnumber">version 2.19.0</span>
 </div>
 <div id="toc" class="toc2">
 <div id="toctitle">Table of Contents</div>
@@ -540,7 +540,6 @@ table.CodeRay td.code{padding:0 0 0 .75em}
 <li><a href="#installation">Installation</a>
 <ul class="sectlevel2">
 <li><a href="#from-binary">From Binary</a></li>
-<li><a href="#from-native-executable">From Native Executable</a></li>
 <li><a href="#from-docker-image">From Docker Image</a></li>
 <li><a href="#for-cloud-foundry">For Cloud Foundry</a></li>
 </ul>
@@ -561,18 +560,19 @@ table.CodeRay td.code{padding:0 0 0 .75em}
 <li><a href="#setting-and-varying-consumer-latency">Setting and varying consumer latency</a></li>
 <li><a href="#working-with-many-queues">Working With Many Queues</a></li>
 <li><a href="#simulating-high-loads">Simulating High Loads</a></li>
-<li><a href="#workloads_with_a_large_number_of_clients">Workloads With a Large Number of Clients</a></li>
+<li><a href="#workloads-with-a-large-number-of-clients">Workloads With a Large Number of Clients</a></li>
 <li><a href="#running-producers-and-consumers-on-different-machines">Running Producers and Consumers on Different Machines</a></li>
 <li><a href="#asynchronous-consumers-vs-synchronous-consumers">Asynchronous Consumers vs Synchronous Consumers</a></li>
 <li><a href="#tls-support">TLS Support</a></li>
 <li><a href="#using-environment-variables-as-options">Using Environment Variables as Options</a></li>
-<li><a href="#native-executable">Native Executable</a></li>
 <li><a href="#result-reporting-in-html">Result Reporting in HTML</a></li>
+<li><a href="#console-output-format">Console Output Format</a></li>
 <li><a href="#monitoring">Monitoring</a>
 <ul class="sectlevel2">
 <li><a href="#supported-metrics">Supported Metrics</a></li>
 <li><a href="#tags">Tags</a></li>
 <li><a href="#supported-monitoring-systems">Supported Monitoring Systems</a></li>
+<li><a href="#expected-and-exposed-metrics">Expected and Exposed Metrics</a></li>
 </ul>
 </li>
 </ul>
@@ -615,38 +615,38 @@ Use <a href="https://rabbitmq.github.io/rabbitmq-stream-java-client/stable/htmls
 <div class="sect2">
 <h3 id="from-binary"><a class="anchor" href="#from-binary"></a>From Binary</h3>
 <div class="paragraph">
-<p>PerfTest is distributed as a binary build archive
-from <a href="https://github.com/rabbitmq/rabbitmq-perf-test/releases">GitHub releases</a>.</p>
+<p>PerfTest is distributed as an uber JAR from <a href="https://github.com/rabbitmq/rabbitmq-perf-test/releases">GitHub releases</a>.</p>
+</div>
+<div class="admonitionblock warning">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-warning" title="Warning"></i>
+</td>
+<td class="content">
+The <code>tar.gz</code> and <code>zip</code> archives are deprecated and will be removed in PerfTest 3.0.
+Use the uber JAR file instead.
+</td>
+</tr>
+</table>
 </div>
 <div class="paragraph">
-<p>It is also available on
-<a href="https://search.maven.org/#search%7Cga%7C1%7Cg%3A%22com.rabbitmq%22%20AND%20a%3A%22perf-test%22">Maven Central</a>
-if one needs to use it as library.</p>
+<p>It is also available on <a href="https://search.maven.org/#search%7Cga%7C1%7Cg%3A%22com.rabbitmq%22%20AND%20a%3A%22perf-test%22">Maven Central</a> if one needs to use it as library.</p>
 </div>
 <div class="paragraph">
-<p>Milestone releases or release candidates are available from
-<a href="https://github.com/rabbitmq/rabbitmq-perf-test/releases">GitHub releases</a>.</p>
+<p>Milestone releases or release candidates are available from <a href="https://github.com/rabbitmq/rabbitmq-perf-test/releases">GitHub releases</a>.</p>
 </div>
 <div class="paragraph">
-<p>The distribution contains a script (<code>bin/runjava</code> or <code>bin/runjava.bat</code>)
-to run Java with the class path correctly configured, e.g.
-<code>java -jar com.rabbitmq.perf.PerfTest</code> runs
-the <code>PerfTest</code> Java class.</p>
+<p><a href="https://github.com/rabbitmq/rabbitmq-java-tools-binaries-dev/releases?q=rabbitmq-perf-test">Snapshots</a> are also available.
+The <a href="https://github.com/rabbitmq/rabbitmq-java-tools-binaries-dev/releases/download/v-rabbitmq-perf-test-latest/perf-test-latest.jar">latest snapshot</a> is available at a stable URL (useful for automation).</p>
 </div>
 <div class="paragraph">
 <p>To verify a PerfTest installation, use:</p>
 </div>
 <div class="literalblock">
 <div class="content">
-<pre>java -jar com.rabbitmq.perf.PerfTest --help</pre>
+<pre>java -jar perf-test.jar --help</pre>
 </div>
-</div>
-</div>
-<div class="sect2">
-<h3 id="from-native-executable"><a class="anchor" href="#from-native-executable"></a>From Native Executable</h3>
-<div class="paragraph">
-<p>PerfTest is also distributed as a native executable binary. This is an experimental
-feature, see the <a href="#native-executable">dedicated section</a> for more information.</p>
 </div>
 </div>
 <div class="sect2">
@@ -716,7 +716,7 @@ identification and comparison:</p>
 </div>
 <div class="literalblock">
 <div class="content">
-<pre>java -jar com.rabbitmq.perf.PerfTest -x 1 -y 2 -u "throughput-test-1" -a --id "test 1"</pre>
+<pre>java -jar perf-test.jar -x 1 -y 2 -u "throughput-test-1" -a --id "test 1"</pre>
 </div>
 </div>
 <div class="paragraph">
@@ -726,7 +726,7 @@ on the machine and RabbitMQ nodes:</p>
 </div>
 <div class="literalblock">
 <div class="content">
-<pre>java -jar com.rabbitmq.perf.PerfTest -x 2 -y 4 -u "throughput-test-2" -a --id "test 2"</pre>
+<pre>java -jar perf-test.jar -x 2 -y 4 -u "throughput-test-2" -a --id "test 2"</pre>
 </div>
 </div>
 <div class="paragraph">
@@ -734,7 +734,7 @@ on the machine and RabbitMQ nodes:</p>
 </div>
 <div class="literalblock">
 <div class="content">
-<pre>java -jar com.rabbitmq.perf.PerfTest -x 1 -y 2 -u "throughput-test-3" --id "test 3"</pre>
+<pre>java -jar perf-test.jar -x 1 -y 2 -u "throughput-test-3" --id "test 3"</pre>
 </div>
 </div>
 <div class="paragraph">
@@ -742,7 +742,7 @@ on the machine and RabbitMQ nodes:</p>
 </div>
 <div class="literalblock">
 <div class="content">
-<pre>java -jar com.rabbitmq.perf.PerfTest -x 1 -y 2 -u "throughput-test-4" --id "test 4" -s 4000</pre>
+<pre>java -jar perf-test.jar -x 1 -y 2 -u "throughput-test-4" --id "test 4" -s 4000</pre>
 </div>
 </div>
 <div class="paragraph">
@@ -750,7 +750,7 @@ on the machine and RabbitMQ nodes:</p>
 </div>
 <div class="literalblock">
 <div class="content">
-<pre>java -jar com.rabbitmq.perf.PerfTest -x 1 -y 2 -u "throughput-test-5" --id "test-5" -f persistent</pre>
+<pre>java -jar perf-test.jar -x 1 -y 2 -u "throughput-test-5" --id "test-5" -f persistent</pre>
 </div>
 </div>
 <div class="paragraph">
@@ -774,7 +774,7 @@ important to monitor.</p>
 </div>
 <div class="literalblock">
 <div class="content">
-<pre>java -jar com.rabbitmq.perf.PerfTest -x 1 -y 2 -u "throughput-test-6" --id "test-6" \
+<pre>java -jar perf-test.jar -x 1 -y 2 -u "throughput-test-6" --id "test-6" \
   -f persistent --multi-ack-every 100</pre>
 </div>
 </div>
@@ -784,7 +784,7 @@ important to monitor.</p>
 </div>
 <div class="literalblock">
 <div class="content">
-<pre>java -jar com.rabbitmq.perf.PerfTest -x 1 -y 2 -u "throughput-test-7" --id "test-7" \
+<pre>java -jar perf-test.jar -x 1 -y 2 -u "throughput-test-7" --id "test-7" \
   -f persistent --multi-ack-every 200 -q 500</pre>
 </div>
 </div>
@@ -793,7 +793,7 @@ important to monitor.</p>
 </div>
 <div class="literalblock">
 <div class="content">
-<pre>java -jar com.rabbitmq.perf.PerfTest -x 1 -y 2 -u "throughput-test-8" --id "test-8" \
+<pre>java -jar perf-test.jar -x 1 -y 2 -u "throughput-test-8" --id "test-8" \
   -f persistent -q 500 -c 500</pre>
 </div>
 </div>
@@ -802,7 +802,7 @@ important to monitor.</p>
 </div>
 <div class="literalblock">
 <div class="content">
-<pre>java -jar com.rabbitmq.perf.PerfTest -x 1 -y 2 -u "throughput-test-10" --id "test-10" \
+<pre>java -jar perf-test.jar -x 1 -y 2 -u "throughput-test-10" --id "test-10" \
   -f persistent -q 500 -pmessages 100000</pre>
 </div>
 </div>
@@ -811,7 +811,7 @@ important to monitor.</p>
 </div>
 <div class="literalblock">
 <div class="content">
-<pre>java -jar com.rabbitmq.perf.PerfTest -x 1 -y 2 -u "throughput-test-11" --id "test-11" \
+<pre>java -jar perf-test.jar -x 1 -y 2 -u "throughput-test-11" --id "test-11" \
   -f persistent -q 500 --rate 5000</pre>
 </div>
 </div>
@@ -820,7 +820,7 @@ important to monitor.</p>
 </div>
 <div class="literalblock">
 <div class="content">
-<pre>java -jar com.rabbitmq.perf.PerfTest -x 1 -y 2 -u "throughput-test-12" --id "test-12" \
+<pre>java -jar perf-test.jar -x 1 -y 2 -u "throughput-test-12" --id "test-12" \
   -f persistent --rate 5000 --consumer-rate 2000</pre>
 </div>
 </div>
@@ -837,7 +837,7 @@ deliveries/second.</p>
 </td>
 <td class="content">
 <div class="paragraph">
-<p>PerfTest automatically converts low publishing rates (between 1 and 10 messages / second) to <a href="#workloads_with_a_large_number_of_clients">publishing intervals</a>.
+<p>PerfTest automatically converts low publishing rates (between 1 and 10 messages / second) to <a href="#workloads-with-a-large-number-of-clients">publishing intervals</a>.
 This makes the simulation more accurate when simulating many slow publishers.</p>
 </div>
 </td>
@@ -850,7 +850,7 @@ This makes the simulation more accurate when simulating many slow publishers.</p
 </div>
 <div class="literalblock">
 <div class="content">
-<pre>java -jar com.rabbitmq.perf.PerfTest -x 1 -y 2 -u "throughput-test-13" --id "test-13" \
+<pre>java -jar perf-test.jar -x 1 -y 2 -u "throughput-test-13" --id "test-13" \
   -f persistent -z 30</pre>
 </div>
 </div>
@@ -861,7 +861,7 @@ of messages can be used to pre-populate a queue, e.g. with
 </div>
 <div class="literalblock">
 <div class="content">
-<pre>java -jar com.rabbitmq.perf.PerfTest -y0 -p -u "throughput-test-14" \
+<pre>java -jar perf-test.jar -y0 -p -u "throughput-test-14" \
   -s 1000 -C 1000000 --id "test-14" -f persistent</pre>
 </div>
 </div>
@@ -880,7 +880,7 @@ use</p>
 </div>
 <div class="literalblock">
 <div class="content">
-<pre>java -jar com.rabbitmq.perf.PerfTest -x0 -y10 -p -u "throughput-test-14" --id "test-15"</pre>
+<pre>java -jar perf-test.jar -x0 -y10 -p -u "throughput-test-14" --id "test-15"</pre>
 </div>
 </div>
 <div class="paragraph">
@@ -920,7 +920,7 @@ number of consumers), while each consumer will be receiving
 messages from only one queue.</p>
 </div>
 <div class="paragraph">
-<p>Note it is possible to <a href="#customising-queues-and-messages">customise</a>
+<p>Note it is possible to <a href="#customising-queues">customise</a>
 the queue and to work against <a href="#working-with-many-queues">several queues</a> as well.</p>
 </div>
 </div>
@@ -961,7 +961,7 @@ command below uses a shutdown timeout of 20 seconds:</p>
 </div>
 <div class="literalblock">
 <div class="content">
-<pre>java -jar com.rabbitmq.perf.PerfTest --shutdown-timeout 20</pre>
+<pre>java -jar perf-test.jar --shutdown-timeout 20</pre>
 </div>
 </div>
 <div class="paragraph">
@@ -970,7 +970,7 @@ value:</p>
 </div>
 <div class="literalblock">
 <div class="content">
-<pre>java -jar com.rabbitmq.perf.PerfTest --shutdown-timeout -1</pre>
+<pre>java -jar perf-test.jar --shutdown-timeout -1</pre>
 </div>
 </div>
 <div class="paragraph">
@@ -988,7 +988,7 @@ acceptable when performing runs on a test environment.</p>
 </div>
 <div class="literalblock">
 <div class="content">
-<pre>java -jar com.rabbitmq.perf.PerfTest --queue-args x-max-length=10</pre>
+<pre>java -jar perf-test.jar --queue-args x-max-length=10</pre>
 </div>
 </div>
 <div class="paragraph">
@@ -998,7 +998,7 @@ key/value pairs with commas:</p>
 </div>
 <div class="literalblock">
 <div class="content">
-<pre>java -jar com.rabbitmq.perf.PerfTest \
+<pre>java -jar perf-test.jar \
   --queue-args x-max-length=10,x-dead-letter-exchange=some.exchange.name</pre>
 </div>
 </div>
@@ -1009,7 +1009,7 @@ a <code>--quorum-queue</code> flag to do that:</p>
 </div>
 <div class="literalblock">
 <div class="content">
-<pre>java -jar com.rabbitmq.perf.PerfTest \
+<pre>java -jar perf-test.jar \
   --quorum-queue --queue name</pre>
 </div>
 </div>
@@ -1034,7 +1034,7 @@ with messages that real consumers will process.</p>
 </div>
 <div class="literalblock">
 <div class="content">
-<pre>java -jar com.rabbitmq.perf.PerfTest \
+<pre>java -jar perf-test.jar \
   --message-properties priority=5,timestamp=2007-12-03T10:15:30+01:00</pre>
 </div>
 </div>
@@ -1047,7 +1047,7 @@ as headers (arbitrary key/value pairs):</p>
 </div>
 <div class="literalblock">
 <div class="content">
-<pre>java -jar com.rabbitmq.perf.PerfTest \
+<pre>java -jar perf-test.jar \
   --message-properties priority=10,header1=value1,header2=value2</pre>
 </div>
 </div>
@@ -1062,7 +1062,7 @@ the content-type can be specified:</p>
 </div>
 <div class="literalblock">
 <div class="content">
-<pre>java -jar com.rabbitmq.perf.PerfTest --consumers 0 \
+<pre>java -jar perf-test.jar --consumers 0 \
   --body content1.json,content2.json --body-content-type application/json</pre>
 </div>
 </div>
@@ -1077,7 +1077,7 @@ the size in bytes:</p>
 </div>
 <div class="literalblock">
 <div class="content">
-<pre>java -jar com.rabbitmq.perf.PerfTest --json-body --size 16000</pre>
+<pre>java -jar perf-test.jar --json-body --size 16000</pre>
 </div>
 </div>
 <div class="paragraph">
@@ -1128,7 +1128,7 @@ publishing at most 100 messages per second for the whole run:</p>
 </div>
 <div class="literalblock">
 <div class="content">
-<pre>java -jar com.rabbitmq.perf.PerfTest --rate 100</pre>
+<pre>java -jar perf-test.jar --rate 100</pre>
 </div>
 </div>
 <div class="paragraph">
@@ -1137,7 +1137,7 @@ for a duration, e.g.:</p>
 </div>
 <div class="literalblock">
 <div class="content">
-<pre>java -jar com.rabbitmq.perf.PerfTest \
+<pre>java -jar perf-test.jar \
   --variable-rate 100:60 --variable-rate 1000:10 --variable-rate 500:15</pre>
 </div>
 </div>
@@ -1166,7 +1166,7 @@ some data in the message to calculate latency on the consumer side).</p>
 </div>
 <div class="literalblock">
 <div class="content">
-<pre>java -jar com.rabbitmq.perf.PerfTest --size 4000</pre>
+<pre>java -jar perf-test.jar --size 4000</pre>
 </div>
 </div>
 <div class="paragraph">
@@ -1175,7 +1175,7 @@ for periods of time, e.g.:</p>
 </div>
 <div class="literalblock">
 <div class="content">
-<pre>java -jar com.rabbitmq.perf.PerfTest \
+<pre>java -jar perf-test.jar \
   --variable-size 1000:30 --variable-size 10000:20 --variable-size 5000:45</pre>
 </div>
 </div>
@@ -1199,7 +1199,7 @@ below a 1 ms latency is set:</p>
 </div>
 <div class="literalblock">
 <div class="content">
-<pre>java -jar com.rabbitmq.perf.PerfTest --consumer-latency 1000</pre>
+<pre>java -jar perf-test.jar --consumer-latency 1000</pre>
 </div>
 </div>
 <div class="paragraph">
@@ -1208,7 +1208,7 @@ set to 1 ms for 60 seconds then 1 second for 30 seconds:</p>
 </div>
 <div class="literalblock">
 <div class="content">
-<pre>java -jar com.rabbitmq.perf.PerfTest --variable-latency 1000:60 --variable-latency 1000000:30</pre>
+<pre>java -jar perf-test.jar --variable-latency 1000:60 --variable-latency 1000000:30</pre>
 </div>
 </div>
 </div>
@@ -1223,7 +1223,7 @@ across a sequence of queues, e.g.:</p>
 <div class="listingblock">
 <div class="title">Using a sequence of queues</div>
 <div class="content">
-<pre class="CodeRay highlight"><code data-lang="bash">java -jar com.rabbitmq.perf.PerfTest --queue-pattern 'perf-test-%d' \
+<pre class="CodeRay highlight"><code data-lang="bash">java -jar perf-test.jar --queue-pattern 'perf-test-%d' \
   --queue-pattern-from 1 --queue-pattern-to 10 \
   --producers 100 --consumers 100</code></pre>
 </div>
@@ -1238,7 +1238,7 @@ This way each queue will have 10 consumers and 10 producers sending messages to 
 </div>
 <div class="literalblock">
 <div class="content">
-<pre>java -jar com.rabbitmq.perf.PerfTest --queue-pattern 'perf-test-%d' \
+<pre>java -jar perf-test.jar --queue-pattern 'perf-test-%d' \
   --queue-pattern-from 1 --queue-pattern-to 10 \
   --producers 15 --consumers 30</pre>
 </div>
@@ -1276,7 +1276,7 @@ Each queue will have 3 consumers and 1 producer sending messages to it:</p>
 <div class="listingblock">
 <div class="title">Creating a first set of 500 queues</div>
 <div class="content">
-<pre class="CodeRay highlight"><code data-lang="bash">java -jar com.rabbitmq.perf.PerfTest --queue-pattern 'perf-test-%d' \
+<pre class="CodeRay highlight"><code data-lang="bash">java -jar perf-test.jar --queue-pattern 'perf-test-%d' \
   --queue-pattern-from 1 --queue-pattern-to 500 \
   --producers 500 --consumers 1500</code></pre>
 </div>
@@ -1289,7 +1289,7 @@ Each queue will have 3 consumers and 1 producer sending messages to it:</p>
 <div class="listingblock">
 <div class="title">Creating a second set of 500 queues</div>
 <div class="content">
-<pre class="CodeRay highlight"><code data-lang="bash">java -jar com.rabbitmq.perf.PerfTest --queue-pattern 'perf-test-%d' \
+<pre class="CodeRay highlight"><code data-lang="bash">java -jar perf-test.jar --queue-pattern 'perf-test-%d' \
  --queue-pattern-from 501 --queue-pattern-to 1000 \
  --producers 500 --consumers 1500</code></pre>
 </div>
@@ -1307,7 +1307,7 @@ PerfTest uses with the <code>--heartbeat-sender-threads</code> option:</p>
 <div class="listingblock">
 <div class="title">Using <code>--heartbeat-sender-threads</code> to reduce the number of threads</div>
 <div class="content">
-<pre class="CodeRay highlight"><code data-lang="bash">java -jar com.rabbitmq.perf.PerfTest --queue-pattern 'perf-test-%d' \
+<pre class="CodeRay highlight"><code data-lang="bash">java -jar perf-test.jar --queue-pattern 'perf-test-%d' \
   --queue-pattern-from 1 --queue-pattern-to 1000 \
   --producers 1000 --consumers 3000 --heartbeat-sender-threads 10</code></pre>
 </div>
@@ -1331,7 +1331,7 @@ can refer to our <a href="https://www.rabbitmq.com/networking.html#os-tuning">ne
 </div>
 </div>
 <div class="sect1">
-<h2 id="workloads_with_a_large_number_of_clients"><a class="anchor" href="#workloads_with_a_large_number_of_clients"></a>Workloads With a Large Number of Clients</h2>
+<h2 id="workloads-with-a-large-number-of-clients"><a class="anchor" href="#workloads-with-a-large-number-of-clients"></a>Workloads With a Large Number of Clients</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>A typical connected device workload (a.k.a "IoT workload") involves
@@ -1350,7 +1350,7 @@ flag instead of the <code>--rate</code> one. For example:</p>
 <div class="listingblock">
 <div class="title">Using <code>--publishing-interval</code> for low-throughput workloads</div>
 <div class="content">
-<pre class="CodeRay highlight"><code data-lang="bash">java -jar com.rabbitmq.perf.PerfTest --publishing-interval 5</code></pre>
+<pre class="CodeRay highlight"><code data-lang="bash">java -jar perf-test.jar --publishing-interval 5</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -1361,7 +1361,7 @@ many queues:</p>
 <div class="listingblock">
 <div class="title">Simulating 2000 clients on 1000 queues</div>
 <div class="content">
-<pre class="CodeRay highlight"><code data-lang="bash">java -jar com.rabbitmq.perf.PerfTest --queue-pattern 'perf-test-%d' \
+<pre class="CodeRay highlight"><code data-lang="bash">java -jar perf-test.jar --queue-pattern 'perf-test-%d' \
   --queue-pattern-from 1 --queue-pattern-to 1000 \
   --producers 1000 --consumers 1000 \
   --heartbeat-sender-threads 10 \
@@ -1395,7 +1395,7 @@ delay before the first published message:</p>
 <div class="listingblock">
 <div class="title">Using <code>--producer-random-start-delay</code> to spread publishing in a random way</div>
 <div class="content">
-<pre class="CodeRay highlight"><code data-lang="bash">java -jar com.rabbitmq.perf.PerfTest --queue-pattern 'perf-test-%d' \
+<pre class="CodeRay highlight"><code data-lang="bash">java -jar perf-test.jar --queue-pattern 'perf-test-%d' \
   --queue-pattern-from 1 --queue-pattern-to 1000 \
   --producers 1000 --consumers 1000 \
   --heartbeat-sender-threads 10 \
@@ -1416,7 +1416,7 @@ Set your own value if the default value is not appropriate for some reasons:</p>
 <div class="listingblock">
 <div class="title">Using <code>--producer-scheduler-threads</code> to set the number of publishing threads</div>
 <div class="content">
-<pre class="CodeRay highlight"><code data-lang="bash">java -jar com.rabbitmq.perf.PerfTest --queue-pattern 'perf-test-%d' \
+<pre class="CodeRay highlight"><code data-lang="bash">java -jar perf-test.jar --queue-pattern 'perf-test-%d' \
   --queue-pattern-from 1 --queue-pattern-to 1000 \
   --producers 1000 --consumers 1000 \
   --heartbeat-sender-threads 10 \
@@ -1441,7 +1441,7 @@ to use with <code>--consumers-thread-pools</code> and they will be shared by the
 <div class="listingblock">
 <div class="title">Using <code>--consumers-thread-pools</code> to reduce the number of consumer threads</div>
 <div class="content">
-<pre class="CodeRay highlight"><code data-lang="bash">java -jar com.rabbitmq.perf.PerfTest --queue-pattern 'perf-test-%d' \
+<pre class="CodeRay highlight"><code data-lang="bash">java -jar perf-test.jar --queue-pattern 'perf-test-%d' \
   --queue-pattern-from 1 --queue-pattern-to 1000 \
   --producers 1000 --consumers 1000 \
   --heartbeat-sender-threads 10 \
@@ -1468,7 +1468,7 @@ to handle the I/O. That&#8217;s what the
 <div class="listingblock">
 <div class="title">Reducing the number of IO threads by enabling the NIO mode with <code>--nio-threads</code></div>
 <div class="content">
-<pre class="CodeRay highlight"><code data-lang="bash">java -jar com.rabbitmq.perf.PerfTest --queue-pattern 'perf-test-%d' \
+<pre class="CodeRay highlight"><code data-lang="bash">java -jar perf-test.jar --queue-pattern 'perf-test-%d' \
   --queue-pattern-from 1 --queue-pattern-to 1000 \
   --producers 1000 --consumers 1000 \
   --heartbeat-sender-threads 10 \
@@ -1503,7 +1503,7 @@ from one host:</p>
 </div>
 <div class="literalblock">
 <div class="content">
-<pre>java -jar com.rabbitmq.perf.PerfTest --producers 1 --consumers 0 \
+<pre>java -jar perf-test.jar --producers 1 --consumers 0 \
   --predeclared --routing-key rk --queue q --use-millis</pre>
 </div>
 </div>
@@ -1512,7 +1512,7 @@ from one host:</p>
 </div>
 <div class="literalblock">
 <div class="content">
-<pre>java -jar com.rabbitmq.perf.PerfTest --producers 0 --consumers 1 \
+<pre>java -jar perf-test.jar --producers 0 --consumers 1 \
   --predeclared --routing-key rk --queue q --use-millis</pre>
 </div>
 </div>
@@ -1551,43 +1551,46 @@ it typically keeps a thread busy for polling in the application, and it intrinsi
 <h2 id="tls-support"><a class="anchor" href="#tls-support"></a>TLS Support</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>PerfTest can use TLS to connect to a node that is
-<a href="https://www.rabbitmq.com/ssl.html">configured to accept TLS connections</a>.
+<p>PerfTest can use TLS to connect to a node that is <a href="https://www.rabbitmq.com/ssl.html">configured to accept TLS connections</a>.
 To enable TLS, simply specify a URI that uses the <code>amqps</code> schema:</p>
 </div>
 <div class="literalblock">
 <div class="content">
-<pre>java -jar com.rabbitmq.perf.PerfTest -h amqps://localhost:5671</pre>
+<pre>java -jar perf-test.jar -h amqps://localhost:5671</pre>
 </div>
 </div>
 <div class="paragraph">
-<p>By default PerfTest automatically trusts the server
-and doesn&#8217;t present any client certificate (a warning
-shows up in the console). In many benchmarking or load testing scenarios this may be sufficient.
-If peer verification is necessary, it is possible to use the
-<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/jsse/JSSERefGuide.html#InstallationAndCustomization">appropriate
+<p>By default, PerfTest automatically trusts the server and doesn&#8217;t present any client certificate (a warning
+shows up in the console).
+In many benchmarking or load testing scenarios this may be sufficient.
+If peer verification is necessary, it is possible to use the <a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/jsse/JSSERefGuide.html#InstallationAndCustomization">appropriate
 JVM properties</a> on the command line to override the default <code>SSLContext</code>.
 For example, to trust a given server:</p>
 </div>
 <div class="literalblock">
 <div class="content">
-<pre>JAVA_OPTS="-Djavax.net.ssl.trustStore=/path/to/server_key.p12 -Djavax.net.ssl.trustStorePassword=bunnies -Djavax.net.ssl.trustStoreType=PKCS12" \
-  java -jar com.rabbitmq.perf.PerfTest -h amqps://localhost:5671</pre>
+<pre>java -Djavax.net.ssl.trustStore=/path/to/server_key.p12 \
+     -Djavax.net.ssl.trustStorePassword=bunnies \
+     -Djavax.net.ssl.trustStoreType=PKCS12 \
+     -jar perf-test.jar -h amqps://localhost:5671</pre>
 </div>
 </div>
 <div class="paragraph">
-<p>The previous snippet uses a one-liner to define the <code>JAVA_OPTS</code> environment variable
-while running PerfTest. Please refer to the
-<a href="https://www.rabbitmq.com/ssl.html">TLS guide</a> to learn about how to set up RabbitMQ with TLS.
-A convenient way to generate a CA and some self-signed certificate/key pairs for development and QA environments
-is with <a href="https://github.com/michaelklishin/tls-gen/"><code>tls-gen</code></a>.
-`tls-gen&#8217;s basic profile is a good starting point. How to run PerfTest with
-a certificate/key pair generated by the aforementioned profile:</p>
+<p>The previous snippet defines appropriate system properties to locate the trust store to use.
+Please refer to the <a href="https://www.rabbitmq.com/ssl.html">TLS guide</a> to learn about how to set up RabbitMQ with TLS.
+A convenient way to generate a CA and some self-signed certificate/key pairs for development and QA environments is with <a href="https://github.com/rabbitmq/tls-gen"><code>tls-gen</code></a>.
+<code>tls-gen</code> basic profile is a good starting point.
+Here is how to run PerfTest with a certificate/key pair generated by the aforementioned profile:</p>
 </div>
 <div class="literalblock">
 <div class="content">
-<pre>JAVA_OPTS="-Djavax.net.ssl.trustStore=/path/to/server_key.p12 -Djavax.net.ssl.trustStorePassword=bunnies -Djavax.net.ssl.trustStoreType=PKCS12 -Djavax.net.ssl.keyStore=/path/to/client_key.p12 -Djavax.net.ssl.keyStorePassword=bunnies -Djavax.net.ssl.keyStoreType=PKCS12" \
-  java -jar com.rabbitmq.perf.PerfTest -h amqps://localhost:5671</pre>
+<pre>java -Djavax.net.ssl.trustStore=/path/to/server_key.p12 \
+     -Djavax.net.ssl.trustStorePassword=bunnies \
+     -Djavax.net.ssl.trustStoreType=PKCS12 \
+     -Djavax.net.ssl.keyStore=/path/to/client_key.p12 \
+     -Djavax.net.ssl.keyStorePassword=bunnies \
+     -Djavax.net.ssl.keyStoreType=PKCS12 \
+     -jar perf-test.jar -h amqps://localhost:5671</pre>
 </div>
 </div>
 </div>
@@ -1610,7 +1613,7 @@ for the <code>--confirm-timeout</code> option, but only if the environment varia
 </div>
 <div class="literalblock">
 <div class="content">
-<pre>java -jar com.rabbitmq.perf.PerfTest --env</pre>
+<pre>java -jar perf-test.jar --env</pre>
 </div>
 </div>
 <div class="paragraph">
@@ -1618,7 +1621,7 @@ for the <code>--confirm-timeout</code> option, but only if the environment varia
 </div>
 <div class="literalblock">
 <div class="content">
-<pre>java -jar com.rabbitmq.perf.PerfTest \
+<pre>java -jar perf-test.jar \
   --variable-rate 100:60 --variable-rate 1000:10 --variable-rate 500:15</pre>
 </div>
 </div>
@@ -1648,50 +1651,6 @@ the <code>PERF_TEST_CONFIRM_TIMEOUT</code> environment variable, not only <code>
 </div>
 </div>
 <div class="sect1">
-<h2 id="native-executable"><a class="anchor" href="#native-executable"></a>Native Executable</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>PerfTest is also distributed as a <a href="https://www.graalvm.org/22.1/reference-manual/native-image/">native executable</a>
-built with <a href="https://www.graalvm.org/">GraalVM</a>. The native executable has the following
-advantages: it doesn&#8217;t need a JVM to run, it has faster startup time
-and lower runtime memory overhead compared to a Java VM.</p>
-</div>
-<div class="paragraph">
-<p>PerfTest native executable has also some limitations:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p><a href="#supported-metrics">JVM metrics</a> are not supported</p>
-</li>
-<li>
-<p>it is not possible to configure logging</p>
-</li>
-<li>
-<p>TLS is not supported (this is likely to be fixed someday)</p>
-</li>
-<li>
-<p>IPv6 only hosts are not supported (this is likely to be fixed someday)</p>
-</li>
-</ul>
-</div>
-<div class="admonitionblock warning">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-warning" title="Warning"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>The native executable is considered an experimental feature.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-</div>
-</div>
-<div class="sect1">
 <h2 id="result-reporting-in-html"><a class="anchor" href="#result-reporting-in-html"></a>Result Reporting in HTML</h2>
 <div class="sectionbody">
 <div class="paragraph">
@@ -1700,6 +1659,35 @@ that can help you run automated benchmarks by wrapping around PerfTest. You can 
 benchmark specs, and the tool will take care of running the benchmark,
 collecting results and displaying them in an HTML page. Learn more
 <a href="https://github.com/rabbitmq/rabbitmq-perf-test/blob/main/html/README.md">here</a>.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="console-output-format"><a class="anchor" href="#console-output-format"></a>Console Output Format</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>PerfTest default console output format is explicit as each line contains a label for each value:</p>
+</div>
+<div class="listingblock">
+<div class="title">The <code>default</code> output format</div>
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="bash">id: test-101517-299, time 1.000 s, sent: 188898 msg/s, received: 85309 msg/s, min/median/75th/95th/99th consumer latency: 24/234/364/462/474 ms
+id: test-101517-299, time 2.000 s, sent: 101939 msg/s, received: 117152 msg/s, min/median/75th/95th/99th consumer latency: 483/759/830/896/907 ms
+id: test-101517-299, time 3.000 s, sent: 137450 msg/s, received: 118324 msg/s, min/median/75th/95th/99th consumer latency: 691/816/854/893/909 ms</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Advanced users who prefer a more compact format can use the <code>--metrics-format compact</code> option (<code>-mf compact</code> for short).
+The output looks like the following then:</p>
+</div>
+<div class="listingblock">
+<div class="title">The <code>compact</code> output format</div>
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="bash">time               sent     received       consumer latency
+1.000s     173920 msg/s  84405 msg/s    1/25/189/312/331 ms
+2.000s     133044 msg/s 117703 msg/s 329/728/814/887/897 ms
+3.000s     103736 msg/s 117134 msg/s 705/804/846/892/920 ms</code></pre>
+</div>
 </div>
 </div>
 </div>
@@ -1717,7 +1705,7 @@ as OS process and JVM metrics (memory, CPU usage, garbage collection, JVM heap, 
 </div>
 <div class="listingblock">
 <div class="content">
-<pre>./runjava com.rabbitmq.perf.PerfTest --metrics-help</pre>
+<pre>java -jar perf-test.jar --metrics-help</pre>
 </div>
 </div>
 <div class="paragraph">
@@ -1819,7 +1807,7 @@ Don&#8217;t hesitate to
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>./runjava com.rabbitmq.perf.PerfTest --metrics-datadog-api-key YOUR_API_KEY</code></pre>
+<pre class="CodeRay highlight"><code>java -jar perf-test.jar --metrics-datadog-api-key YOUR_API_KEY</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -1828,7 +1816,7 @@ Don&#8217;t hesitate to
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>./runjava com.rabbitmq.perf.PerfTest --metrics-datadog-api-key YOUR_API_KEY \
+<pre class="CodeRay highlight"><code>java -jar perf-test.jar --metrics-datadog-api-key YOUR_API_KEY \
     --metrics-datadog-step-size 20</code></pre>
 </div>
 </div>
@@ -1841,7 +1829,7 @@ export metrics to JMX:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>./runjava com.rabbitmq.perf.PerfTest --metrics-jmx</code></pre>
+<pre class="CodeRay highlight"><code>java -jar perf-test.jar --metrics-jmx</code></pre>
 </div>
 </div>
 </div>
@@ -1852,7 +1840,7 @@ export metrics to JMX:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>./runjava com.rabbitmq.perf.PerfTest --metrics-prometheus</code></pre>
+<pre class="CodeRay highlight"><code>java -jar perf-test.jar --metrics-prometheus</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -1862,9 +1850,39 @@ can be changed:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>./runjava com.rabbitmq.perf.PerfTest --metrics-prometheus \
+<pre class="CodeRay highlight"><code>java -jar perf-test.jar --metrics-prometheus \
     --metrics-prometheus-port 8090 --metrics-prometheus-endpoint perf-test-metrics</code></pre>
 </div>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="expected-and-exposed-metrics"><a class="anchor" href="#expected-and-exposed-metrics"></a>Expected and Exposed Metrics</h3>
+<div class="paragraph">
+<p>PerfTest automatically exposes 2 <code>expected_published</code> and <code>expected_consumed</code> metrics that represent the theoretical published and consumed rates, respectively.
+PertTest calculates the values and exposes the metrics as soon as rate instructions are provided (e.g. with <code>--rate</code> or <code>--consumer-rate</code>).</p>
+</div>
+<div class="paragraph">
+<p>These expected metrics aim at helping external monitoring tools to trigger alerts if the actual rates are different from the expected rates.
+PerfTest does its best to calculate and update the expected rates, but it may be wrong or just cannot figure out the correct values.
+It is then possible to override the metrics values thanks to the <code>--exposed-metrics</code> option (<code>-em</code> for short):</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>java -jar perf-test.jar --metrics-prometheus \
+    --exposed-metrics expected_published=50000,expected_consumed=50000</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Note PerfTest adds the metrics prefix to the provided name automatically (<code>perftest_</code> by default).</p>
+</div>
+<div class="paragraph">
+<p>It is also possible to expose any metrics, e.g. setting an expected value for the publisher confirm latency so the external monitoring system could trigger an alert if the actual latency is higher:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code>java -jar perf-test.jar --metrics-prometheus --rate 1000 \
+    --exposed-metrics expected_confirm_latency=0.1</code></pre>
 </div>
 </div>
 </div>
@@ -1873,8 +1891,8 @@ can be changed:</p>
 </div>
 <div id="footer">
 <div id="footer-text">
-Version 2.18.0<br>
-Last updated 2022-07-01 08:49:24 UTC
+Version 2.19.0<br>
+Last updated 2023-01-04 08:03:27 UTC
 </div>
 </div>
 </body>
