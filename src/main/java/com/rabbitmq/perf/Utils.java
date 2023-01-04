@@ -189,7 +189,7 @@ abstract class Utils {
     if ("".equals(exchange) || exchange.startsWith("amq.")) {
       LOGGER.info("Skipping creation of exchange {}", exchange);
     }
-    channel.exchangeDeclare(exchange, type);
+    channel.exchangeDeclare(exchange, type, true);
   }
 
   interface Checker {
