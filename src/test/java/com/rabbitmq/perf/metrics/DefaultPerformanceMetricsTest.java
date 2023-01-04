@@ -166,7 +166,6 @@ public class DefaultPerformanceMetricsTest {
 
   void execute(Configurator configurator) {
     DefaultPerformanceMetrics metrics = metrics(configurator);
-    metrics.started(true);
     metrics.metrics(System.nanoTime());
     this.defaultOutput = defaultConsoleOut.toString();
     this.compactOutput = compactConsoleOut.toString();
