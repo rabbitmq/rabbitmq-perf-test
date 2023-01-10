@@ -147,7 +147,7 @@ public class Consumer extends AgentBase implements Runnable {
                     d.readInt(); // read sequence number
                     return d.readLong();
                 } catch (IOException e) {
-                    throw new RuntimeException("Error while extracting timestamp from body");
+                    return Long.MAX_VALUE;
                 }
 
             };
