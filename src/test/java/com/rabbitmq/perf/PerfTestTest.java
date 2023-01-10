@@ -15,7 +15,6 @@
 
 package com.rabbitmq.perf;
 
-import java.util.Arrays;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
