@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2022 VMware, Inc. or its affiliates.  All rights reserved.
+// Copyright (c) 2007-2023 VMware, Inc. or its affiliates.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 2.0 ("MPL"), the GNU General Public License version 2
@@ -1038,5 +1038,14 @@ public class MulticastParams {
         public void reset() {
             index = 0;
         }
+    }
+
+    int getConsumerPrefetch() {
+        return consumerPrefetch;
+    }
+
+    Map<String, Object> getConsumerArguments() {
+        return this.consumerArguments == null ? Collections.emptyMap() :
+            Collections.unmodifiableMap(consumerArguments);
     }
 }

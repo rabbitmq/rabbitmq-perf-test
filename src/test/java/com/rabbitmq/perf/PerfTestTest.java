@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2022 VMware, Inc. or its affiliates.  All rights reserved.
+// Copyright (c) 2018-2023 VMware, Inc. or its affiliates.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 2.0 ("MPL"), the GNU General Public License version 2
@@ -15,6 +15,17 @@
 
 package com.rabbitmq.perf;
 
+import com.rabbitmq.perf.PerfTest.PerfTestOptions;
+import com.rabbitmq.perf.PerfTest.SystemExiter;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
+import java.util.Collections;
+import java.util.Date;
+import java.util.concurrent.atomic.AtomicInteger;
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.Options;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
@@ -23,7 +34,11 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import static com.rabbitmq.perf.PerfTest.ENVIRONMENT_VARIABLE_LOOKUP;
+import static com.rabbitmq.perf.PerfTest.ENVIRONMENT_VARIABLE_PREFIX;
+import static com.rabbitmq.perf.PerfTest.LONG_OPTION_TO_ENVIRONMENT_VARIABLE;
 import static com.rabbitmq.perf.PerfTest.convertKeyValuePairs;
+import static com.rabbitmq.perf.PerfTest.getParser;
 import static com.rabbitmq.perf.PerfTest.parsePublishingInterval;
 import static java.util.Arrays.asList;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -34,6 +49,17 @@ import static org.junit.jupiter.api.Assertions.*;
  *
  */
 public class PerfTestTest {
+
+    ByteArrayOutputStream out, err;
+    RecordingSystemExiter systemExiter;
+
+    @BeforeEach
+    void init() {
+        out = new ByteArrayOutputStream();
+        err = new ByteArrayOutputStream();
+        systemExiter = new RecordingSystemExiter();
+    }
+
 
     @Test
     void getNioNbThreadsAndExecutorSize() {
@@ -75,7 +101,7 @@ public class PerfTestTest {
         for (String[] parameter : parameters) {
             assertEquals(
                     parameter[1],
-                    PerfTest.LONG_OPTION_TO_ENVIRONMENT_VARIABLE.apply(parameter[0])
+                    LONG_OPTION_TO_ENVIRONMENT_VARIABLE.apply(parameter[0])
             );
         }
     }
@@ -178,5 +204,229 @@ public class PerfTestTest {
     void parsePublishingIntervalKO(String input) {
         assertThatThrownBy(() -> parsePublishingInterval(input))
             .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void multicastParamsNoArgumentShouldPass() throws Exception {
+        multicastParams("");
+        assertThat(systemExiter.notCalled()).isTrue();
+        assertThat(out.toString()).isBlank();
+        assertThat(err.toString()).isBlank();
+    }
+
+    @Test
+    void multicastParamsQuorumOrStreamNotBoth() throws Exception {
+        multicastParams("--stream-queue --quorum-queue");
+        assertThat(systemExiter.status()).isEqualTo(1);
+        assertThat(out.toString()).isBlank();
+        assertThat(err.toString()).isNotBlank();
+    }
+
+    @Test
+    void multicastParamsQuorumQueueFlagSetAppropriateArgumentsAndFlags() throws Exception {
+        MulticastParams p = multicastParams("--quorum-queue");
+        assertThat(systemExiter.notCalled()).isTrue();
+        assertThat(p.getFlags()).isNotNull().contains("persistent");
+        assertThat(p.getQueueArguments()).isNotNull().containsEntry("x-queue-type", "quorum");
+        assertThat(p.isAutoDelete()).isFalse();
+
+        assertThat(out.toString()).isBlank();
+        assertThat(err.toString()).isBlank();
+    }
+
+    @Test
+    void multicastParamsStreamQueueFlagSetAppropriateArgumentsAndFlags() throws Exception {
+        MulticastParams p = multicastParams("--stream-queue");
+        assertThat(systemExiter.notCalled()).isTrue();
+        assertThat(p.getFlags()).isNotNull().contains("persistent");
+        assertThat(p.getQueueArguments()).isNotNull().containsEntry("x-queue-type", "stream");
+        assertThat(p.isAutoDelete()).isFalse();
+        assertThat(p.getConsumerPrefetch()).isEqualTo(200);
+        assertThat(p.getQueueArguments()).containsEntry("x-max-length-bytes", 20_000_000_000L);
+        assertThat(p.getQueueArguments()).containsEntry("x-stream-max-segment-size-bytes", 500_000_000L);
+
+        assertThat(out.toString()).isBlank();
+        assertThat(err.toString()).isBlank();
+    }
+
+    @Test
+    void multicastParamsMaxLengthBytesOk() throws Exception {
+        MulticastParams p = multicastParams("--max-length-bytes 10gb");
+        assertThat(p.getQueueArguments()).containsEntry("x-max-length-bytes", 10_000_000_000L);
+        assertThat(systemExiter.notCalled()).isTrue();
+        assertThat(out.toString()).isBlank();
+        assertThat(err.toString()).isBlank();
+    }
+
+    @Test
+    void multicastParamsMaxLengthBytesOverridesDefaultFromStreamFlag() throws Exception {
+        MulticastParams p = multicastParams("--stream-queue --max-length-bytes 10gb");
+        assertThat(p.getQueueArguments()).isNotNull().containsEntry("x-queue-type", "stream");
+        assertThat(p.getQueueArguments()).containsEntry("x-max-length-bytes", 10_000_000_000L);
+        assertThat(systemExiter.notCalled()).isTrue();
+        assertThat(out.toString()).isBlank();
+        assertThat(err.toString()).isBlank();
+    }
+
+    @Test
+    void multicastParamsMaxLengthBytesSetToZeroMeansNoLimit() throws Exception {
+        MulticastParams p = multicastParams("--max-length-bytes 0");
+        assertThat(p.getQueueArguments()).doesNotContainKey("x-max-length-bytes");
+        assertThat(systemExiter.notCalled()).isTrue();
+        assertThat(out.toString()).isBlank();
+        assertThat(err.toString()).isBlank();
+    }
+
+    @Test
+    void multicastParamsMaxLengthBytesSetToZeroMeansNoLimitEvenWithStreamFlag() throws Exception {
+        MulticastParams p = multicastParams("--stream-queue --max-length-bytes 0");
+        assertThat(p.getQueueArguments()).isNotNull().containsEntry("x-queue-type", "stream");
+        assertThat(p.getQueueArguments()).doesNotContainKey("x-max-length-bytes");
+        assertThat(systemExiter.notCalled()).isTrue();
+        assertThat(out.toString()).isBlank();
+        assertThat(err.toString()).isBlank();
+    }
+
+    @Test
+    void multicastParamsStreamMaxSegmentSizeBytesOk() throws Exception {
+        MulticastParams p = multicastParams("--stream-max-segment-size-bytes 200mb");
+        assertThat(p.getQueueArguments()).containsEntry("x-stream-max-segment-size-bytes", 200_000_000L);
+        assertThat(systemExiter.notCalled()).isTrue();
+        assertThat(out.toString()).isBlank();
+        assertThat(err.toString()).isBlank();
+    }
+
+    @Test
+    void multicastParamsStreamMaxSegmentSizeBytesOverridesDefaultFromStreamFlag() throws Exception {
+        MulticastParams p = multicastParams("--stream-queue --stream-max-segment-size-bytes 200mb");
+        assertThat(p.getQueueArguments()).isNotNull().containsEntry("x-queue-type", "stream");
+        assertThat(p.getQueueArguments()).containsEntry("x-stream-max-segment-size-bytes", 200_000_000L);
+        assertThat(systemExiter.notCalled()).isTrue();
+        assertThat(out.toString()).isBlank();
+        assertThat(err.toString()).isBlank();
+    }
+
+    @Test
+    void multicastParamsQueueLeaderLocatorBalancedOk() throws Exception {
+        MulticastParams p = multicastParams("--leader-locator balanced");
+        assertThat(systemExiter.notCalled()).isTrue();
+        assertThat(p.getQueueArguments()).isNotNull().containsEntry("x-queue-leader-locator", "balanced");
+        assertThat(out.toString()).isBlank();
+        assertThat(err.toString()).isBlank();
+    }
+
+    @Test
+    void multicastParamsQueueLeaderLocatorClientLocalOk() throws Exception {
+        MulticastParams p = multicastParams("--leader-locator client-local");
+        assertThat(systemExiter.notCalled()).isTrue();
+        assertThat(p.getQueueArguments()).isNotNull().containsEntry("x-queue-leader-locator", "client-local");
+        assertThat(out.toString()).isBlank();
+        assertThat(err.toString()).isBlank();
+    }
+
+    @Test
+    void multicastParamsQueueLeaderLocatorInvalidValueFails() throws Exception {
+        multicastParams("--leader-locator foo");
+        assertThat(systemExiter.notCalled()).isFalse();
+        assertThat(systemExiter.status()).isEqualTo(1);
+        assertThat(out.toString()).isBlank();
+        assertThat(err.toString()).isNotBlank();
+    }
+
+    @Test
+    void multicastParamsMaxAgeValidShouldSetQueueArgumentInSeconds() throws Exception {
+        MulticastParams p = multicastParams("--max-age P5DT8H");
+        assertThat(systemExiter.notCalled()).isTrue();
+        assertThat(p.getQueueArguments()).isNotNull()
+            .containsEntry("x-max-age", (5 * 24 * 60 * 60 + 8 * 60 * 60) + "s");
+
+        assertThat(out.toString()).isBlank();
+        assertThat(err.toString()).isBlank();
+    }
+
+    @Test
+    void multicastParamsMaxAgeInvalidShouldExit() throws Exception {
+        multicastParams("--max-age foo");
+
+        assertThat(systemExiter.notCalled()).isFalse();
+        assertThat(systemExiter.status()).isEqualTo(1);
+        assertThat(out.toString()).isBlank();
+        assertThat(err.toString()).isNotBlank();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"first", "last", "next"})
+    void multicastParamsStreamConsumerOffsetFixedValuesOk(String offset) throws Exception {
+        MulticastParams p = multicastParams("--stream-consumer-offset " + offset);
+        assertThat(systemExiter.notCalled()).isTrue();
+        assertThat(p.getConsumerArguments()).isNotNull()
+            .containsEntry("x-stream-offset", offset);
+        assertThat(out.toString()).isBlank();
+        assertThat(err.toString()).isBlank();
+    }
+
+    @Test
+    void multicastParamsStreamConsumerOffsetLongForOffset() throws Exception {
+        MulticastParams p = multicastParams("--stream-consumer-offset 42");
+        assertThat(systemExiter.notCalled()).isTrue();
+        assertThat(p.getConsumerArguments()).isNotNull()
+            .containsEntry("x-stream-offset", 42L);
+        assertThat(out.toString()).isBlank();
+        assertThat(err.toString()).isBlank();
+    }
+
+    @Test
+    void multicastParamsStreamConsumerOffsetTimestamp() throws Exception {
+        MulticastParams p = multicastParams("--stream-consumer-offset 2020-06-03T07:45:54Z");
+        assertThat(systemExiter.notCalled()).isTrue();
+        assertThat(p.getConsumerArguments()).isNotNull()
+            .containsEntry("x-stream-offset", new Date(1591170354000L));
+        assertThat(out.toString()).isBlank();
+        assertThat(err.toString()).isBlank();
+    }
+
+    @Test
+    void multicastParamsStreamConsumerOffsetInvalidValueShouldFail() throws Exception {
+        multicastParams("--stream-consumer-offset foo");
+        assertThat(systemExiter.notCalled()).isFalse();
+        assertThat(systemExiter.status()).isEqualTo(1);
+        assertThat(out.toString()).isBlank();
+        assertThat(err.toString()).isNotBlank();
+    }
+
+    private MulticastParams multicastParams(String args) throws Exception {
+        PerfTestOptions perfTestOptions = new PerfTestOptions();
+        perfTestOptions.setConsoleOut(new PrintStream(out));
+        perfTestOptions.setConsoleErr(new PrintStream(err));
+        perfTestOptions.setSystemExiter(systemExiter);
+        Options options = PerfTest.getOptions();
+        CommandLineParser parser = getParser();
+        CommandLine rawCmd = parser.parse(options, args.split(" "));
+        CommandLineProxy cmd = new CommandLineProxy(options, rawCmd, LONG_OPTION_TO_ENVIRONMENT_VARIABLE
+            .andThen(ENVIRONMENT_VARIABLE_PREFIX)
+            .andThen(ENVIRONMENT_VARIABLE_LOOKUP));
+        return PerfTest.multicastParams(cmd, Collections.emptyList(),
+            perfTestOptions);
+    }
+
+    private static class RecordingSystemExiter implements SystemExiter {
+
+        private AtomicInteger exitCount = new AtomicInteger(0);
+        private AtomicInteger lastStatus = new AtomicInteger(-1);
+
+        @Override
+        public void exit(int status) {
+            exitCount.incrementAndGet();
+            lastStatus.set(status);
+        }
+
+        boolean notCalled() {
+            return exitCount.get() == 0;
+        }
+
+        int status() {
+            return lastStatus.get();
+        }
+
     }
 }
