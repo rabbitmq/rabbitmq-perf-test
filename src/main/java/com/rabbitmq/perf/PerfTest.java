@@ -400,9 +400,11 @@ public class PerfTest {
             queueArguments.put("x-queue-type", type);
         }
 
+        ByteCapacity maxLengthByteCapacity = null;
         if (streamQueue) {
             consumerPrefetch = 200;
-            queueArguments.put("x-max-length-bytes", ByteCapacity.from("20gb").toBytes());
+            maxLengthByteCapacity = ByteCapacity.GB(20);
+            queueArguments.put("x-max-length-bytes", maxLengthByteCapacity.toBytes());
             queueArguments.put("x-stream-max-segment-size-bytes", ByteCapacity.from("500mb").toBytes());
         }
 
@@ -462,12 +464,15 @@ public class PerfTest {
                 long bytes = byteCapacity.toBytes();
                 if (bytes == 0) {
                     queueArguments.remove("x-max-length-bytes");
+                    maxLengthByteCapacity = null;
                 } else {
                     queueArguments.put("x-max-length-bytes", bytes);
+                    maxLengthByteCapacity = byteCapacity;
                 }
             }
         }
         String streamMaxSegmentSize = strArg(cmd, "smssb", null);
+        ByteCapacity streamMaxSegmentByteCapacity = null;
         if (streamMaxSegmentSize != null) {
             ByteCapacity byteCapacity = validateByteCapacity(streamMaxSegmentSize, systemExiter, consoleErr);
             if (byteCapacity != null) {
@@ -476,7 +481,7 @@ public class PerfTest {
                     systemExiter, consoleErr);
                 long bytes = byteCapacity.toBytes();
                 queueArguments.put("x-stream-max-segment-size-bytes", bytes);
-
+                streamMaxSegmentByteCapacity = byteCapacity;
             }
         }
         String maxAge = strArg(cmd, "ma", null);
@@ -506,6 +511,13 @@ public class PerfTest {
                 consumerArguments = consumerArguments == null ? new LinkedHashMap<>() :
                     consumerArguments;
                 consumerArguments.put("x-stream-offset", offset);
+            }
+        }
+
+        if (maxLengthByteCapacity != null && streamMaxSegmentByteCapacity != null) {
+            if (maxLengthByteCapacity.compareTo(streamMaxSegmentByteCapacity) <= 0) {
+                validate(() -> Boolean.FALSE, "Max length bytes must be greather than "
+                    + "stream max segment size", systemExiter, consoleErr);
             }
         }
 

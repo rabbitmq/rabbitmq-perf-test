@@ -307,6 +307,16 @@ public class PerfTestTest {
     }
 
     @Test
+    void multicastParamsMaxLengthBytesMustBeGreatherThanStreamMaxSegmentSize() throws Exception {
+        multicastParams("--max-length-bytes 1gb " +
+            "--stream-max-segment-size-bytes 2gb");
+        assertThat(systemExiter.notCalled()).isFalse();
+        assertThat(systemExiter.status()).isEqualTo(1);
+        assertThat(out.toString()).isBlank();
+        assertThat(err.toString()).isNotBlank();
+    }
+
+    @Test
     void multicastParamsQueueLeaderLocatorBalancedOk() throws Exception {
         MulticastParams p = multicastParams("--leader-locator balanced");
         assertThat(systemExiter.notCalled()).isTrue();
