@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2022 VMware, Inc. or its affiliates.  All rights reserved.
+// Copyright (c) 2007-2023 VMware, Inc. or its affiliates.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 2.0 ("MPL"), the GNU General Public License version 2
@@ -32,7 +32,12 @@ import com.rabbitmq.perf.metrics.MetricsFormatterFactory.Context;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
 import java.math.BigDecimal;
 import java.time.Duration;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.time.temporal.TemporalAccessor;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.BooleanSupplier;
 import java.util.stream.Collectors;
 import org.apache.commons.cli.*;
 import org.slf4j.Logger;
@@ -60,6 +65,8 @@ public class PerfTest {
     public static void main(String [] args, PerfTestOptions perfTestOptions) {
         SystemExiter systemExiter = perfTestOptions.systemExiter;
         ShutdownService shutdownService = perfTestOptions.shutdownService;
+        PrintStream consoleOut = perfTestOptions.consoleOut;
+        PrintStream consoleErr = perfTestOptions.consoleErr;
         Options options = getOptions();
         CommandLineParser parser = getParser();
         CompositeMetrics metrics = new CompositeMetrics();
@@ -67,6 +74,7 @@ public class PerfTest {
         Options metricsOptions = metrics.options();
         forEach(metricsOptions, option -> options.addOption(option));
         int exitStatus = 0;
+
         try {
             CommandLine rawCmd = parser.parse(options, args);
             CommandLineProxy cmd = new CommandLineProxy(options, rawCmd, perfTestOptions.argumentLookup);
@@ -98,185 +106,20 @@ public class PerfTest {
             String testID = new SimpleDateFormat("HHmmss-SSS").format(Calendar.
                 getInstance().getTime());
             testID                   = strArg(cmd, 'd', "test-"+testID);
-            String exchangeType      = strArg(cmd, 't', "direct");
-            String exchangeName      = getExchangeName(cmd, exchangeType);
-            String queueNames        = strArg(cmd, 'u', null);
-            String routingKey        = strArg(cmd, 'k', null);
-            boolean randomRoutingKey = hasOption(cmd, "K");
-            boolean skipBindingQueues= hasOption(cmd,"sb");
-            int samplingInterval     = intArg(cmd, 'i', 1);
-            float producerRateLimit  = floatArg(cmd, 'r', -1.0f);
-            float consumerRateLimit  = floatArg(cmd, 'R', -1.0f);
-            int producerCount        = intArg(cmd, 'x', 1);
-            int consumerCount        = intArg(cmd, 'y', 1);
-            int producerChannelCount = intArg(cmd, 'X', 1);
-            int consumerChannelCount = intArg(cmd, 'Y', 1);
-            int producerTxSize       = intArg(cmd, 'm', 0);
-            int consumerTxSize       = intArg(cmd, 'n', 0);
-            long confirm             = intArg(cmd, 'c', -1);
-            int confirmTimeout       = intArg(cmd, "ct", 30);
-            boolean autoAck          = hasOption(cmd,"a");
-            int multiAckEvery        = intArg(cmd, 'A', 0);
-            int channelPrefetch      = intArg(cmd, 'Q', 0);
-            int consumerPrefetch     = intArg(cmd, 'q', 0);
-            int minMsgSize           = intArg(cmd, 's', 0);
-            boolean slowStart        = hasOption(cmd, "S");
-            int timeLimit            = intArg(cmd, 'z', 0);
-            int producerMsgCount     = intArg(cmd, 'C', 0);
-            int consumerMsgCount     = intArg(cmd, 'D', 0);
-            List<String> flags       = lstArg(cmd, 'f');
-            int frameMax             = intArg(cmd, 'M', 0);
-            int heartbeat            = intArg(cmd, 'b', 0);
-            String bodyFiles         = strArg(cmd, 'B', null);
-            String bodyContentType   = strArg(cmd, 'T', null);
-            boolean predeclared      = hasOption(cmd, "p");
-            boolean autoDelete       = boolArg(cmd, "ad", true);
-            boolean useMillis        = hasOption(cmd,"ms");
             boolean saslExternal     = hasOption(cmd, "se");
-            List<String> queueArgs   = lstArg(cmd, "qa");
-            int consumerLatencyInMicroseconds = intArg(cmd, 'L', 0);
-            int heartbeatSenderThreads = intArg(cmd, "hst", -1);
-            String messageProperties = strArg(cmd, "mp", null);
-            int routingKeyCacheSize  = intArg(cmd, "rkcs", 0);
-            boolean exclusive = hasOption(cmd, "E");
-            Duration publishingInterval = null;
-            String publishingIntervalArg = strArg(cmd, "P", null);
-            if (publishingIntervalArg != null) {
-                try {
-                    publishingInterval = parsePublishingInterval(publishingIntervalArg);
-                } catch (IllegalArgumentException e) {
-                    System.out.println("Invalid value for --publishing-interval: " + e.getMessage());
-                    systemExiter.exit(1);
-                }
-            }
-            int producerRandomStartDelayInSeconds = intArg(cmd, "prsd", -1);
-            int producerSchedulingThreads = intArg(cmd, "pst", -1);
-
             boolean disableConnectionRecovery = hasOption(cmd, "dcr");
-            int consumersThreadPools = intArg(cmd, "ctp", -1);
-            int shutdownTimeout = intArg(cmd, "st", 5);
-
-            int serversStartUpTimeout = intArg(cmd, "sst", -1);
-            int serversUpLimit = intArg(cmd, "sul", -1);
-            String consumerArgs = strArg(cmd, "ca", null);
-            String metricsFormat = strArg(cmd, "mf", "default");
-
-            List<String> variableRates = lstArg(cmd, "vr");
-            if (variableRates != null && !variableRates.isEmpty()) {
-                for (String variableRate : variableRates) {
-                    try {
-                        VariableValueIndicator.validate(variableRate);
-                    } catch (IllegalArgumentException e) {
-                        System.out.println(e.getMessage());
-                        systemExiter.exit(1);
-                    }
-                }
-            }
-
-            if ((!variableRates.isEmpty() || producerRateLimit >= 0 || publishingInterval != null)
-                && producerRandomStartDelayInSeconds < 0) {
-                // producer rate instructions, but no ramp-up period, so setting it to 1 second
-                producerRandomStartDelayInSeconds = 1;
-            }
-
-            List<String> variableSizes = lstArg(cmd, "vs");
-            if (variableSizes != null && !variableSizes.isEmpty()) {
-                for (String variableSize : variableSizes) {
-                    try {
-                        VariableValueIndicator.validate(variableSize);
-                    } catch (IllegalArgumentException e) {
-                        System.out.println(e.getMessage());
-                        systemExiter.exit(1);
-                    }
-                }
-            }
-
-            List<String> variableConsumerLatencies = lstArg(cmd, "vl");
-            if (variableConsumerLatencies != null && !variableConsumerLatencies.isEmpty()) {
-                for (String variableConsumerLatency : variableConsumerLatencies) {
-                    try {
-                        VariableValueIndicator.validate(variableConsumerLatency);
-                    } catch (IllegalArgumentException e) {
-                        System.out.println(e.getMessage());
-                        systemExiter.exit(1);
-                    }
-                }
-            }
-
-            boolean polling = hasOption(cmd, "po");
-            int pollingInterval = intArg(cmd, "pi", -1);
-
-            boolean nack = hasOption(cmd, "na");
-            boolean requeue = boolArg(cmd, "re", true);
-
-            boolean jsonBody = hasOption(cmd, "jb");
-            int bodyFieldCount = intArg(cmd, "bfc", 1000);
-            if (bodyFieldCount < 0) {
-                System.out.println("Body field count should greater than 0.");
-                systemExiter.exit(1);
-            }
-            int bodyCount = intArg(cmd, "bc", 100);
-            if (bodyCount < 0) {
-                System.out.println("Number of pre-generated message bodies should be greater than 0.");
-                systemExiter.exit(1);
-            }
-
             String uri               = strArg(cmd, 'h', "amqp://localhost");
             String urisParameter     = strArg(cmd, 'H', null);
+            int frameMax             = intArg(cmd, 'M', 0);
+            int heartbeat            = intArg(cmd, 'b', 0);
+            boolean useMillis        = hasOption(cmd,"ms");
+            int samplingInterval     = intArg(cmd, 'i', 1);
+            String metricsFormat = strArg(cmd, "mf", "default");
             String outputFile        = strArg(cmd, 'o', null);
-
-            Map<String, Object> queueArguments = convertKeyValuePairs(queueArgs);
-            boolean quorumQueue = hasOption(cmd,"qq");
-
-            if (quorumQueue) {
-                if (!flags.contains("persistent")) {
-                    flags = new ArrayList<>(flags);
-                    flags.add("persistent");
-                }
-                autoDelete = false;
-                queueArguments = queueArguments == null ? new HashMap<>() : queueArguments;
-                queueArguments.put("x-queue-type", "quorum");
-            }
-
-            String exitWhenParameter = strArg(cmd, "ew", null);
-            EXIT_WHEN exitWhen;
-            if (exitWhenParameter != null) {
-                if (!"empty".equals(exitWhenParameter) && !"idle".equals(exitWhenParameter)) {
-                    System.out.println("--exit-when must be 'empty' or 'idle'.");
-                    systemExiter.exit(1);
-                }
-                exitWhen = EXIT_WHEN.valueOf(exitWhenParameter.toUpperCase(Locale.ENGLISH));
-            } else {
-                exitWhen = EXIT_WHEN.NEVER;
-            }
-            Duration consumerStartDelay = Duration.ofSeconds(intArg(cmd, "csd", -1));
-
-            ConnectionFactory factory = new ConnectionFactory();
-            if (disableConnectionRecovery) {
-                factory.setAutomaticRecoveryEnabled(false);
-            }
-
-            factory.setTopologyRecoveryEnabled(false);
-
-            RecoveryDelayHandler recoveryDelayHandler = Utils.getRecoveryDelayHandler(
-                strArg(cmd, "cri", null));
-            if (recoveryDelayHandler != null) {
-                factory.setRecoveryDelayHandler(recoveryDelayHandler);
-            }
+            String metricsPrefix = strArg(cmd, "mpx", "perftest_");
 
             CompositeMeterRegistry registry = new CompositeMeterRegistry();
             shutdownService.wrap(() -> registry.close());
-
-            String metricsPrefix = strArg(cmd, "mpx", "perftest_");
-            metrics.configure(new ConfigurationContext(cmd, registry, factory, args,
-                metricsPrefix, metricsOptions));
-
-            PrintWriter output;
-            if (outputFile != null) {
-                output = openCsvFileForWriting(outputFile, shutdownService);
-            } else {
-                output = null;
-            }
 
             List<String> uris;
             if(urisParameter != null) {
@@ -288,10 +131,18 @@ public class PerfTest {
             } else {
                 uris = singletonList(uri);
             }
-
+            ConnectionFactory factory = new ConnectionFactory();
+            factory.setTopologyRecoveryEnabled(false);
+            if (disableConnectionRecovery) {
+                factory.setAutomaticRecoveryEnabled(false);
+            }
+            RecoveryDelayHandler recoveryDelayHandler = Utils.getRecoveryDelayHandler(
+                strArg(cmd, "cri", null));
+            if (recoveryDelayHandler != null) {
+                factory.setRecoveryDelayHandler(recoveryDelayHandler);
+            }
             SSLContext sslContext = perfTestOptions.skipSslContextConfiguration ? null :
                 getSslContextIfNecessary(cmd, System.getProperties());
-
 
             if (sslContext != null) {
                 factory.useSslProtocol(sslContext);
@@ -303,43 +154,6 @@ public class PerfTest {
             factory.setUri(uris.get(0));
             factory.setRequestedFrameMax(frameMax);
             factory.setRequestedHeartbeat(heartbeat);
-
-            String queuePattern        = strArg(cmd, "qp", null);
-            int from                   = intArg(cmd, "qpf", -1);
-            int to                     = intArg(cmd, "qpt", -1);
-
-            if (queuePattern != null || from >= 0 || to >= 0) {
-                if (queuePattern == null || from < 0 || to < 0) {
-                    System.err.println("Queue pattern, from, and to options should all be set or none should be set");
-                    systemExiter.exit(1);
-                }
-                if (from > to) {
-                    System.err.println("'To' option should be more than or equals to 'from' option");
-                    systemExiter.exit(1);
-                }
-            }
-
-            List<String> queues = queueNames == null ? null : asList(queueNames.split(","));
-
-            String queueFile = strArg(cmd, "qf", null);
-            if (queueFile != null && queuePattern != null && queueNames != null) {
-                System.err.println("Too many ways to list queues, use only the queue file argument");
-                systemExiter.exit(1);
-            } else if (queueFile != null) {
-                File file = new File(queueFile);
-                if (!file.exists() || !file.canRead()) {
-                    System.err.println("Queue file " + queueFile + " does not exist or is not readable");
-                    systemExiter.exit(1);
-                }
-                try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
-                    queues = new ArrayList<>();
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        queues.add(line.trim());
-                    }
-                }
-            }
-
             factory = configureNioIfRequested(cmd, factory);
             if (factory.getNioParams().getNioExecutor() != null) {
                 ExecutorService nioExecutor = factory.getNioParams().getNioExecutor();
@@ -348,72 +162,13 @@ public class PerfTest {
 
             factory.setSocketConfigurator(Utils.socketConfigurator(cmd));
             if (factory.getNioParams() != null) {
-               factory.getNioParams().setSslEngineConfigurator(Utils.sslEngineConfigurator(cmd));
+                factory.getNioParams().setSslEngineConfigurator(Utils.sslEngineConfigurator(cmd));
             }
 
-            MulticastParams p = new MulticastParams();
-            p.setAutoAck(               autoAck);
-            p.setAutoDelete(            autoDelete);
-            p.setConfirm(               confirm);
-            p.setConfirmTimeout(        confirmTimeout);
-            p.setConsumerCount(         consumerCount);
-            p.setConsumerChannelCount(  consumerChannelCount);
-            p.setConsumerMsgCount(      consumerMsgCount);
-            p.setConsumerRateLimit(     consumerRateLimit);
-            p.setConsumerTxSize(        consumerTxSize);
-            p.setConsumerSlowStart(     slowStart);
-            p.setExchangeName(          exchangeName);
-            p.setExchangeType(          exchangeType);
-            p.setFlags(                 flags);
-            p.setMultiAckEvery(         multiAckEvery);
-            p.setMinMsgSize(            minMsgSize);
-            p.setPredeclared(           predeclared);
-            p.setConsumerPrefetch(      consumerPrefetch);
-            p.setChannelPrefetch(       channelPrefetch);
-            p.setProducerCount(         producerCount);
-            p.setProducerChannelCount(  producerChannelCount);
-            p.setProducerMsgCount(      producerMsgCount);
-            p.setProducerTxSize(        producerTxSize);
-            p.setQueueNames(            queues);
-            p.setRoutingKey(            routingKey);
-            p.setSkipBindingQueues(     skipBindingQueues);
-            p.setRandomRoutingKey(      randomRoutingKey);
-            p.setProducerRateLimit(     producerRateLimit);
-            p.setTimeLimit(             timeLimit);
-            p.setUseMillis(             useMillis);
-            p.setBodyFiles(             bodyFiles == null ? null : asList(bodyFiles.split(",")));
-            p.setBodyContentType(       bodyContentType);
-            p.setQueueArguments(queueArguments);
-            p.setConsumerLatencyInMicroseconds(consumerLatencyInMicroseconds);
-            p.setConsumerLatencies(variableConsumerLatencies);
-            p.setQueuePattern(queuePattern);
-            p.setQueueSequenceFrom(from);
-            p.setQueueSequenceTo(to);
-            p.setHeartbeatSenderThreads(heartbeatSenderThreads);
-            p.setMessageProperties(convertKeyValuePairs(messageProperties));
-            p.setRoutingKeyCacheSize(routingKeyCacheSize);
-            p.setExclusive(exclusive);
-            p.setPublishingInterval(publishingInterval);
-            p.setProducerRandomStartDelayInSeconds(producerRandomStartDelayInSeconds);
-            p.setProducerSchedulerThreadCount(producerSchedulingThreads);
-            p.setConsumersThreadPools(consumersThreadPools);
-            p.setShutdownTimeout(shutdownTimeout);
-            p.setServersStartUpTimeout(serversStartUpTimeout);
-            p.setServersUpLimit(serversUpLimit);
-            p.setPublishingRates(variableRates);
-            p.setMessageSizes(variableSizes);
-            p.setPolling(polling);
-            p.setPollingInterval(pollingInterval);
-            p.setNack(nack);
-            p.setRequeue(requeue);
-            p.setJsonBody(jsonBody);
-            p.setBodyFieldCount(bodyFieldCount);
-            p.setBodyCount(bodyCount);
-            p.setConsumerArguments(convertKeyValuePairs(consumerArgs));
-            p.setQueuesInSequence(queueFile != null);
-            p.setExitWhen(exitWhen);
-            p.setCluster(uris.size() > 0);
-            p.setConsumerStartDelay(consumerStartDelay);
+            metrics.configure(new ConfigurationContext(cmd, registry, factory, args,
+                metricsPrefix, metricsOptions));
+
+            MulticastParams p = multicastParams(cmd, uris, perfTestOptions);
 
             ConcurrentMap<String, Integer> completionReasons = new ConcurrentHashMap<>();
 
@@ -423,6 +178,10 @@ public class PerfTest {
 
             TimeUnit latencyCollectionTimeUnit = useMillis ? TimeUnit.MILLISECONDS : TimeUnit.NANOSECONDS;
 
+            int producerCount = p.getProducerCount();
+            int consumerCount = p.getConsumerCount();
+            long confirm = p.getConfirm();
+            List<String> flags = p.getFlags();
             MetricsFormatter metricsFormatter = null;
             try {
                 metricsFormatter = MetricsFormatterFactory.create(metricsFormat,
@@ -435,10 +194,16 @@ public class PerfTest {
                         latencyCollectionTimeUnit)
                 );
             } catch (IllegalArgumentException e) {
-                System.err.println(e.getMessage());
+                consoleErr.println(e.getMessage());
                 systemExiter.exit(1);
             }
 
+            PrintWriter output;
+            if (outputFile != null) {
+                output = openCsvFileForWriting(outputFile, shutdownService);
+            } else {
+                output = null;
+            }
             if (output != null) {
                 metricsFormatter = new CompositeMetricsFormatter(
                     metricsFormatter,
@@ -458,7 +223,7 @@ public class PerfTest {
             AtomicBoolean statsSummaryDone = new AtomicBoolean(false);
             Runnable statsSummary = () -> {
                 if (statsSummaryDone.compareAndSet(false, true)) {
-                    System.out.println(stopLine(completionReasons));
+                    consoleOut.println(stopLine(completionReasons));
                     performanceMetrics.close();
                 }
             };
@@ -480,12 +245,11 @@ public class PerfTest {
             set.run(true);
 
             statsSummary.run();
-
         } catch (ParseException exp) {
-            System.err.println("Parsing failed. Reason: " + exp.getMessage());
+            consoleErr.println("Parsing failed. Reason: " + exp.getMessage());
             usage(options);
         } catch (Exception e) {
-            System.err.println("Main thread caught exception: " + e);
+            consoleErr.println("Main thread caught exception: " + e);
             LOGGER.error("Main thread caught exception", e);
             exitStatus = 1;
         } finally {
@@ -493,6 +257,322 @@ public class PerfTest {
         }
         // we need to exit explicitly, without waiting alive threads (e.g. when using --shutdown-timeout 0)
         systemExiter.exit(exitStatus);
+    }
+
+    static MulticastParams multicastParams(CommandLineProxy cmd, List<String> uris, PerfTestOptions perfTestOptions) throws Exception {
+        SystemExiter systemExiter = perfTestOptions.systemExiter;
+        PrintStream consoleErr = perfTestOptions.consoleErr;
+
+        String exchangeType      = strArg(cmd, 't', "direct");
+        String exchangeName      = getExchangeName(cmd, exchangeType);
+        String queueNames        = strArg(cmd, 'u', null);
+        String routingKey        = strArg(cmd, 'k', null);
+        boolean randomRoutingKey = hasOption(cmd, "K");
+        boolean skipBindingQueues= hasOption(cmd,"sb");
+        float producerRateLimit  = floatArg(cmd, 'r', -1.0f);
+        float consumerRateLimit  = floatArg(cmd, 'R', -1.0f);
+        int producerCount        = intArg(cmd, 'x', 1);
+        int consumerCount        = intArg(cmd, 'y', 1);
+        int producerChannelCount = intArg(cmd, 'X', 1);
+        int consumerChannelCount = intArg(cmd, 'Y', 1);
+        int producerTxSize       = intArg(cmd, 'm', 0);
+        int consumerTxSize       = intArg(cmd, 'n', 0);
+        long confirm             = intArg(cmd, 'c', -1);
+        int confirmTimeout       = intArg(cmd, "ct", 30);
+        boolean autoAck          = hasOption(cmd,"a");
+        int multiAckEvery        = intArg(cmd, 'A', 0);
+        int channelPrefetch      = intArg(cmd, 'Q', 0);
+        int consumerPrefetch     = intArg(cmd, 'q', 0);
+        int minMsgSize           = intArg(cmd, 's', 0);
+        boolean slowStart        = hasOption(cmd, "S");
+        int timeLimit            = intArg(cmd, 'z', 0);
+        int producerMsgCount     = intArg(cmd, 'C', 0);
+        int consumerMsgCount     = intArg(cmd, 'D', 0);
+        List<String> flags       = lstArg(cmd, 'f');
+        String bodyFiles         = strArg(cmd, 'B', null);
+        String bodyContentType   = strArg(cmd, 'T', null);
+        boolean predeclared      = hasOption(cmd, "p");
+        boolean autoDelete       = boolArg(cmd, "ad", true);
+        boolean useMillis        = hasOption(cmd,"ms");
+        List<String> queueArgs   = lstArg(cmd, "qa");
+        int consumerLatencyInMicroseconds = intArg(cmd, 'L', 0);
+        int heartbeatSenderThreads = intArg(cmd, "hst", -1);
+        String messageProperties = strArg(cmd, "mp", null);
+        int routingKeyCacheSize  = intArg(cmd, "rkcs", 0);
+        boolean exclusive = hasOption(cmd, "E");
+        Duration publishingInterval = null;
+        String publishingIntervalArg = strArg(cmd, "P", null);
+        if (publishingIntervalArg != null) {
+            try {
+                publishingInterval = parsePublishingInterval(publishingIntervalArg);
+            } catch (IllegalArgumentException e) {
+                consoleErr.println("Invalid value for --publishing-interval: " + e.getMessage());
+                systemExiter.exit(1);
+            }
+        }
+        int producerRandomStartDelayInSeconds = intArg(cmd, "prsd", -1);
+        int producerSchedulingThreads = intArg(cmd, "pst", -1);
+
+        int consumersThreadPools = intArg(cmd, "ctp", -1);
+        int shutdownTimeout = intArg(cmd, "st", 5);
+
+        int serversStartUpTimeout = intArg(cmd, "sst", -1);
+        int serversUpLimit = intArg(cmd, "sul", -1);
+        String consumerArgs = strArg(cmd, "ca", null);
+
+        List<String> variableRates = lstArg(cmd, "vr");
+        if (variableRates != null && !variableRates.isEmpty()) {
+            for (String variableRate : variableRates) {
+                try {
+                    VariableValueIndicator.validate(variableRate);
+                } catch (IllegalArgumentException e) {
+                    consoleErr.println(e.getMessage());
+                    systemExiter.exit(1);
+                }
+            }
+        }
+
+        if ((!variableRates.isEmpty() || producerRateLimit >= 0 || publishingInterval != null)
+            && producerRandomStartDelayInSeconds < 0) {
+            // producer rate instructions, but no ramp-up period, so setting it to 1 second
+            producerRandomStartDelayInSeconds = 1;
+        }
+
+        List<String> variableSizes = lstArg(cmd, "vs");
+        if (variableSizes != null && !variableSizes.isEmpty()) {
+            for (String variableSize : variableSizes) {
+                try {
+                    VariableValueIndicator.validate(variableSize);
+                } catch (IllegalArgumentException e) {
+                    consoleErr.println(e.getMessage());
+                    systemExiter.exit(1);
+                }
+            }
+        }
+
+        List<String> variableConsumerLatencies = lstArg(cmd, "vl");
+        if (variableConsumerLatencies != null && !variableConsumerLatencies.isEmpty()) {
+            for (String variableConsumerLatency : variableConsumerLatencies) {
+                try {
+                    VariableValueIndicator.validate(variableConsumerLatency);
+                } catch (IllegalArgumentException e) {
+                    consoleErr.println(e.getMessage());
+                    systemExiter.exit(1);
+                }
+            }
+        }
+
+        boolean polling = hasOption(cmd, "po");
+        int pollingInterval = intArg(cmd, "pi", -1);
+
+        boolean nack = hasOption(cmd, "na");
+        boolean requeue = boolArg(cmd, "re", true);
+
+        boolean jsonBody = hasOption(cmd, "jb");
+        int bodyFieldCount = intArg(cmd, "bfc", 1000);
+        if (bodyFieldCount < 0) {
+            consoleErr.println("Body field count should greater than 0.");
+            systemExiter.exit(1);
+        }
+        int bodyCount = intArg(cmd, "bc", 100);
+        if (bodyCount < 0) {
+            consoleErr.println("Number of pre-generated message bodies should be greater than 0.");
+            systemExiter.exit(1);
+        }
+
+        Map<String, Object> queueArguments = convertKeyValuePairs(queueArgs);
+        queueArguments = queueArguments == null ? new LinkedHashMap<>() : queueArguments;
+        boolean quorumQueue = hasOption(cmd,"qq");
+        boolean streamQueue = hasOption(cmd,"sq");
+
+        validate(() -> !(quorumQueue && streamQueue),
+            "Use quorum queues or stream queues, not both.",
+            systemExiter,
+            consoleErr);
+
+        if (quorumQueue || streamQueue) {
+            if (!flags.contains("persistent")) {
+                flags = new ArrayList<>(flags);
+                flags.add("persistent");
+            }
+            autoDelete = false;
+            String type = quorumQueue ? "quorum" : "stream";
+            queueArguments.put("x-queue-type", type);
+        }
+
+        if (streamQueue) {
+            consumerPrefetch = 200;
+            queueArguments.put("x-max-length-bytes", ByteCapacity.from("20gb").toBytes());
+            queueArguments.put("x-stream-max-segment-size-bytes", ByteCapacity.from("500mb").toBytes());
+        }
+
+        String exitWhenParameter = strArg(cmd, "ew", null);
+        EXIT_WHEN exitWhen;
+        if (exitWhenParameter != null) {
+            if (!"empty".equals(exitWhenParameter) && !"idle".equals(exitWhenParameter)) {
+                consoleErr.println("--exit-when must be 'empty' or 'idle'.");
+                systemExiter.exit(1);
+            }
+            exitWhen = EXIT_WHEN.valueOf(exitWhenParameter.toUpperCase(Locale.ENGLISH));
+        } else {
+            exitWhen = EXIT_WHEN.NEVER;
+        }
+        Duration consumerStartDelay = Duration.ofSeconds(intArg(cmd, "csd", -1));
+
+        String queuePattern        = strArg(cmd, "qp", null);
+        int from                   = intArg(cmd, "qpf", -1);
+        int to                     = intArg(cmd, "qpt", -1);
+
+        if (queuePattern != null || from >= 0 || to >= 0) {
+            if (queuePattern == null || from < 0 || to < 0) {
+                consoleErr.println("Queue pattern, from, and to options should all be set or none should be set");
+                systemExiter.exit(1);
+            }
+            if (from > to) {
+                consoleErr.println("'To' option should be more than or equals to 'from' option");
+                systemExiter.exit(1);
+            }
+        }
+
+        List<String> queues = queueNames == null ? null : asList(queueNames.split(","));
+
+        String queueFile = strArg(cmd, "qf", null);
+        if (queueFile != null && queuePattern != null && queueNames != null) {
+            consoleErr.println("Too many ways to list queues, use only the queue file argument");
+            systemExiter.exit(1);
+        } else if (queueFile != null) {
+            File file = new File(queueFile);
+            if (!file.exists() || !file.canRead()) {
+                consoleErr.println("Queue file " + queueFile + " does not exist or is not readable");
+                systemExiter.exit(1);
+            }
+            try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+                queues = new ArrayList<>();
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    queues.add(line.trim());
+                }
+            }
+        }
+
+        String maxLengthBytes = strArg(cmd, "mlb", null);
+        if (maxLengthBytes != null) {
+            ByteCapacity byteCapacity = validateByteCapacity(maxLengthBytes, systemExiter, consoleErr);
+            if (byteCapacity != null) {
+                long bytes = byteCapacity.toBytes();
+                if (bytes == 0) {
+                    queueArguments.remove("x-max-length-bytes");
+                } else {
+                    queueArguments.put("x-max-length-bytes", bytes);
+                }
+            }
+        }
+        String streamMaxSegmentSize = strArg(cmd, "smssb", null);
+        if (streamMaxSegmentSize != null) {
+            ByteCapacity byteCapacity = validateByteCapacity(streamMaxSegmentSize, systemExiter, consoleErr);
+            if (byteCapacity != null) {
+                validate(() -> byteCapacity.compareTo(ByteCapacity.GB(3)) <= 0,
+                    "The maximum segment size cannot be more than 3 GB",
+                    systemExiter, consoleErr);
+                long bytes = byteCapacity.toBytes();
+                queueArguments.put("x-stream-max-segment-size-bytes", bytes);
+
+            }
+        }
+        String maxAge = strArg(cmd, "ma", null);
+        if (maxAge != null) {
+           Duration duration = validateDuration(maxAge, systemExiter, consoleErr);
+           if (duration != null) {
+              queueArguments.put("x-max-age", duration.getSeconds() + "s");
+           }
+        }
+
+        String queueLeaderLocator = strArg(cmd, "ll", null);
+        if (queueLeaderLocator != null) {
+            validate(() -> "client-local".equals(queueLeaderLocator) || "balanced".equals(queueLeaderLocator),
+                "'" + queueLeaderLocator + "' is not a valid queue leader locator strategy. "
+                    + "Valid values are client-local and balanced.",
+                systemExiter, consoleErr);
+            queueArguments.put("x-queue-leader-locator", queueLeaderLocator);
+        }
+
+        Map<String, Object> consumerArguments = convertKeyValuePairs(consumerArgs);
+
+        String streamConsumerOffset = strArg(cmd, "sco", null);
+        if (streamConsumerOffset != null) {
+            Object offset = validateStreamConsumerOffset(streamConsumerOffset,
+                systemExiter, consoleErr);
+            if (offset != null) {
+                consumerArguments = consumerArguments == null ? new LinkedHashMap<>() :
+                    consumerArguments;
+                consumerArguments.put("x-stream-offset", offset);
+            }
+        }
+
+        MulticastParams p = new MulticastParams();
+        p.setAutoAck(               autoAck);
+        p.setAutoDelete(            autoDelete);
+        p.setConfirm(               confirm);
+        p.setConfirmTimeout(        confirmTimeout);
+        p.setConsumerCount(         consumerCount);
+        p.setConsumerChannelCount(  consumerChannelCount);
+        p.setConsumerMsgCount(      consumerMsgCount);
+        p.setConsumerRateLimit(     consumerRateLimit);
+        p.setConsumerTxSize(        consumerTxSize);
+        p.setConsumerSlowStart(     slowStart);
+        p.setExchangeName(          exchangeName);
+        p.setExchangeType(          exchangeType);
+        p.setFlags(                 flags);
+        p.setMultiAckEvery(         multiAckEvery);
+        p.setMinMsgSize(            minMsgSize);
+        p.setPredeclared(           predeclared);
+        p.setConsumerPrefetch(      consumerPrefetch);
+        p.setChannelPrefetch(       channelPrefetch);
+        p.setProducerCount(         producerCount);
+        p.setProducerChannelCount(  producerChannelCount);
+        p.setProducerMsgCount(      producerMsgCount);
+        p.setProducerTxSize(        producerTxSize);
+        p.setQueueNames(            queues);
+        p.setRoutingKey(            routingKey);
+        p.setSkipBindingQueues(     skipBindingQueues);
+        p.setRandomRoutingKey(      randomRoutingKey);
+        p.setProducerRateLimit(     producerRateLimit);
+        p.setTimeLimit(             timeLimit);
+        p.setUseMillis(             useMillis);
+        p.setBodyFiles(             bodyFiles == null ? null : asList(bodyFiles.split(",")));
+        p.setBodyContentType(       bodyContentType);
+        p.setQueueArguments(queueArguments);
+        p.setConsumerLatencyInMicroseconds(consumerLatencyInMicroseconds);
+        p.setConsumerLatencies(variableConsumerLatencies);
+        p.setQueuePattern(queuePattern);
+        p.setQueueSequenceFrom(from);
+        p.setQueueSequenceTo(to);
+        p.setHeartbeatSenderThreads(heartbeatSenderThreads);
+        p.setMessageProperties(convertKeyValuePairs(messageProperties));
+        p.setRoutingKeyCacheSize(routingKeyCacheSize);
+        p.setExclusive(exclusive);
+        p.setPublishingInterval(publishingInterval);
+        p.setProducerRandomStartDelayInSeconds(producerRandomStartDelayInSeconds);
+        p.setProducerSchedulerThreadCount(producerSchedulingThreads);
+        p.setConsumersThreadPools(consumersThreadPools);
+        p.setShutdownTimeout(shutdownTimeout);
+        p.setServersStartUpTimeout(serversStartUpTimeout);
+        p.setServersUpLimit(serversUpLimit);
+        p.setPublishingRates(variableRates);
+        p.setMessageSizes(variableSizes);
+        p.setPolling(polling);
+        p.setPollingInterval(pollingInterval);
+        p.setNack(nack);
+        p.setRequeue(requeue);
+        p.setJsonBody(jsonBody);
+        p.setBodyFieldCount(bodyFieldCount);
+        p.setBodyCount(bodyCount);
+        p.setConsumerArguments(consumerArguments);
+        p.setQueuesInSequence(queueFile != null);
+        p.setExitWhen(exitWhen);
+        p.setCluster(uris.size() > 0);
+        p.setConsumerStartDelay(consumerStartDelay);
+        return p;
     }
 
     static String stopLine(Map<String, Integer> reasons) {
@@ -653,7 +733,7 @@ public class PerfTest {
         return new DefaultParser();
     }
 
-    public static Options getOptions() {
+    static Options getOptions() {
         Options options = new Options();
         options.addOption(new Option("?", "help",                   false,"show usage"));
         options.addOption(new Option("d", "id",                     true, "test ID"));
@@ -794,12 +874,25 @@ public class PerfTest {
         options.addOption(new Option("qf", "queue-file", true, "file to look up queue names from"));
         options.addOption(new Option("sni", "server-name-indication", true, "server names for Server Name Indication TLS parameter, separated by commas"));
         options.addOption(new Option("qq", "quorum-queue", false,"create quorum queue(s)"));
+        options.addOption(new Option("sq", "stream-queue", false,"create stream queue(s)"));
         options.addOption(new Option("ew", "exit-when", true, "exit when queue(s) empty or consumer(s) idle for 1 second, valid values are empty or idle"));
         options.addOption(new Option("csd", "consumer-start-delay", true, "fixed delay before starting consumers in seconds"));
         options.addOption(new Option("em", "exposed-metrics", true, "metrics to be exposed as key/value pairs, separated by commas, "
             + "e.g. expected_published=50000"));
         options.addOption(new Option("mf", "metrics-format", true, "metrics format to use on the console, possible values are "
             + MetricsFormatterFactory.types().stream().collect(Collectors.joining(", "))));
+
+        options.addOption(new Option("mlb", "max-length-bytes", true, "max size of created queues, use 0 for no limit"));
+        options.addOption(new Option("smssb", "stream-max-segment-size-bytes", true, "max size of stream segments when streams are in use"));
+        options.addOption(new Option("ll", "leader-locator", true, "leader locator strategy for created quorum queues and streams. "
+                    + "Possible values: client-local, balanced."));
+        options.addOption(new Option("ma", "max-age", true,
+            "max age of stream segments using the ISO 8601 duration format, "
+            + "e.g. PT10M30S for 10 minutes 30 seconds, P5DT8H for 5 days 8 hours."));
+        options.addOption(new Option("sco", "stream-consumer-offset", true,
+            "stream offset to start listening from. "
+            + "Valid values are 'first', 'last', 'next', an unsigned long, "
+            + "or an ISO 8601 formatted timestamp (eg. 2022-06-03T07:45:54Z)."));
         return options;
     }
 
@@ -945,6 +1038,10 @@ public class PerfTest {
 
         private ExceptionHandler exceptionHandler = new DefaultExceptionHandler();
 
+        private PrintStream consoleOut = System.out;
+
+        private PrintStream consoleErr = System.err;
+
         private Function<String, String> argumentLookup = LONG_OPTION_TO_ENVIRONMENT_VARIABLE
             .andThen(ENVIRONMENT_VARIABLE_PREFIX)
             .andThen(ENVIRONMENT_VARIABLE_LOOKUP);
@@ -973,6 +1070,17 @@ public class PerfTest {
             this.exceptionHandler = exceptionHandler;
             return this;
         }
+
+        public PerfTestOptions setConsoleOut(PrintStream consoleOut) {
+            this.consoleOut = consoleOut;
+            return this;
+        }
+
+        public PerfTestOptions setConsoleErr(PrintStream consoleErr) {
+            this.consoleErr = consoleErr;
+            return this;
+        }
+
     }
 
     /**
@@ -1013,9 +1121,68 @@ public class PerfTest {
         }
     };
 
-    private static final Function<String, String> ENVIRONMENT_VARIABLE_LOOKUP = name -> System.getenv(name);
+    static final Function<String, String> ENVIRONMENT_VARIABLE_LOOKUP = name -> System.getenv(name);
 
     enum EXIT_WHEN {
         NEVER, EMPTY, IDLE
+    }
+
+    private static ByteCapacity validateByteCapacity(String value, SystemExiter exiter, PrintStream output) {
+        try {
+           return ByteCapacity.from(value);
+        } catch (IllegalArgumentException e) {
+           validate(() -> Boolean.FALSE,
+               "'" + value + "' is not a valid byte capacity, valid example values: 100gb, 50mb",
+               exiter, output);
+           return null;
+        }
+    }
+
+    private static Duration validateDuration(String value, SystemExiter exiter, PrintStream output) {
+        try {
+            Duration duration = Duration.parse(value);
+            if (duration.isNegative() || duration.isZero()) {
+                validate(() -> Boolean.FALSE,
+                    "'" + value + "' is not a valid duration, it must be positive",
+                    exiter, output);
+            }
+            return duration;
+        } catch (DateTimeParseException e) {
+            validate(() -> Boolean.FALSE,
+                "'" + value + "' is not a valid duration, valid example values: PT15M, PT10H",
+                exiter, output);
+            return null;
+        }
+    }
+
+    private static Object validateStreamConsumerOffset(String value, SystemExiter exiter, PrintStream output) {
+        // literal specification
+        if ("first".equalsIgnoreCase(value) || "last".equalsIgnoreCase(value)
+            || "next".equalsIgnoreCase(value)) {
+            return value.toLowerCase();
+        }
+        // offset (unsigned long)
+        try {
+            return Long.parseUnsignedLong(value);
+        } catch (NumberFormatException e) {
+            // OK, continue to try
+        }
+        try {
+            TemporalAccessor accessor = DateTimeFormatter.ISO_OFFSET_DATE_TIME.parse(value);
+            return new Date(Instant.from(accessor).toEpochMilli());
+        } catch (DateTimeParseException e) {
+            // OK
+        }
+        validate(() -> Boolean.FALSE, "'" + value + "' is not a valid stream offset value."
+            + "" , exiter, output);
+        return null;
+    }
+
+    private static void validate(BooleanSupplier condition, String message, SystemExiter exiter,
+        PrintStream output) {
+        if (condition.getAsBoolean() == false) {
+            output.println(message);
+            exiter.exit(1);
+        }
     }
 }
