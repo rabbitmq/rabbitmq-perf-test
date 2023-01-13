@@ -547,7 +547,12 @@ table.CodeRay td.code{padding:0 0 0 .75em}
 <li><a href="#basic-usage">Basic Usage</a></li>
 <li><a href="#how-it-works">How It Works</a></li>
 <li><a href="#stopping-perftest">Stopping PerfTest</a></li>
-<li><a href="#customising-queues">Customising queues</a></li>
+<li><a href="#customising-queues">Customising queues</a>
+<ul class="sectlevel2">
+<li><a href="#quorum-queue-support">Quorum Queue Support</a></li>
+<li><a href="#stream-support">Stream Support</a></li>
+</ul>
+</li>
 <li><a href="#customising-messages">Customising messages</a>
 <ul class="sectlevel2">
 <li><a href="#message-properties">Message Properties</a></li>
@@ -563,6 +568,7 @@ table.CodeRay td.code{padding:0 0 0 .75em}
 <li><a href="#workloads-with-a-large-number-of-clients">Workloads With a Large Number of Clients</a></li>
 <li><a href="#running-producers-and-consumers-on-different-machines">Running Producers and Consumers on Different Machines</a></li>
 <li><a href="#asynchronous-consumers-vs-synchronous-consumers">Asynchronous Consumers vs Synchronous Consumers</a></li>
+<li><a href="#consuming-from-streams">Consuming From Streams</a></li>
 <li><a href="#tls-support">TLS Support</a></li>
 <li><a href="#using-environment-variables-as-options">Using Environment Variables as Options</a></li>
 <li><a href="#result-reporting-in-html">Result Reporting in HTML</a></li>
@@ -605,7 +611,7 @@ node or a cluster of nodes.</p>
 </div>
 <div class="paragraph">
 <p>PerfTest uses the <a href="https://www.rabbitmq.com/tutorials/amqp-concepts.html">AMQP 0.9.1 protocol</a> to communicate with a RabbitMQ cluster.
-Use <a href="https://rabbitmq.github.io/rabbitmq-stream-java-client/stable/htmlsingle/#the-performance-tool">Stream PerfTest</a> if you want to test <a href="https://rabbitmq.com/streams.html">RabbitMQ Streams</a> with the <a href="https://github.com/rabbitmq/rabbitmq-server/blob/master/deps/rabbitmq_stream/docs/PROTOCOL.adoc">stream protocol</a>.</p>
+Use <a href="https://rabbitmq.github.io/rabbitmq-stream-java-client/stable/htmlsingle/#the-performance-tool">Stream PerfTest</a> if you want to test <a href="https://rabbitmq.com/streams.html">RabbitMQ Streams</a> with the <a href="https://github.com/rabbitmq/rabbitmq-server/blob/main/deps/rabbitmq_stream/docs/PROTOCOL.adoc">stream protocol</a>.</p>
 </div>
 </div>
 </div>
@@ -984,7 +990,7 @@ acceptable when performing runs on a test environment.</p>
 <h2 id="customising-queues"><a class="anchor" href="#customising-queues"></a>Customising queues</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>PerfTest can create queues using provided queue arguments:</p>
+<p>PerfTest can create queues using provided <a href="https://rabbitmq.com/queues.html#optional-arguments">queue arguments</a>:</p>
 </div>
 <div class="literalblock">
 <div class="content">
@@ -1003,19 +1009,84 @@ key/value pairs with commas:</p>
 </div>
 </div>
 <div class="paragraph">
-<p>It is possible to use several arguments to
-create <a href="https://rabbitmq.com/quorum-queues.html">quorum queues</a>, but PerfTest provides
-a <code>--quorum-queue</code> flag to do that:</p>
+<p>Some commonly supported queue arguments are available thanks to dedicated flags:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><code>--max-length-bytes</code>: <a href="https://rabbitmq.com/maxlength.html">maximum size</a> of created queues</p>
+</li>
+<li>
+<p><code>--leader-locator</code>: leader location strategy for <a href="https://www.rabbitmq.com/quorum-queues.html#leader-placement">quorum queues</a> and <a href="https://www.rabbitmq.com/streams.html#leader-election">streams</a>, supported values are <code>client-local</code> and <code>balanced</code></p>
+</li>
+</ul>
+</div>
+<div class="sect2">
+<h3 id="quorum-queue-support"><a class="anchor" href="#quorum-queue-support"></a>Quorum Queue Support</h3>
+<div class="paragraph">
+<p>It is possible to use several arguments to create <a href="https://rabbitmq.com/quorum-queues.html">quorum queues</a>, but PerfTest provides a <code>--quorum-queue</code> flag to do that:</p>
 </div>
 <div class="literalblock">
 <div class="content">
 <pre>java -jar perf-test.jar \
-  --quorum-queue --queue name</pre>
+  --quorum-queue --queue qq</pre>
 </div>
 </div>
 <div class="paragraph">
-<p><code>--quorum-queue</code> is a shortcut for <code>--flag persistent --queue-args x-queue-type=quorum --auto-delete false</code>. Note a quorum queue cannot have a server-generated name, so the
-<code>--queue</code> argument must be used to specify the name of the queue(s).</p>
+<p><code>--quorum-queue</code> is a shortcut for <code>--flag persistent --queue-args x-queue-type=quorum --auto-delete false</code>.
+Note a quorum queue cannot have a server-generated name, so the <code>--queue</code> argument must be used to specify the name of the queue(s).</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="stream-support"><a class="anchor" href="#stream-support"></a>Stream Support</h3>
+<div class="paragraph">
+<p>PerfTest provides flags and options to configure <a href="https://rabbitmq.com/streams.html">streams</a> and use them on top of the AMQP 0.9.1 protocol.
+Use the <code>--stream-queue</code> flag to create streams instead of classic queues:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>java -jar perf-test.jar \
+  --stream-queue --queue sq</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Note a stream cannot have a server-generated name, so the <code>--queue</code> argument must be used to specify the name of the stream(s).</p>
+</div>
+<div class="paragraph">
+<p><code>--stream-queue</code> automatically sets the <code>--qos</code> flag to 200.</p>
+</div>
+<div class="paragraph">
+<p>The following stream-related flags are also available, the defaults applied by <code>--stream-queue</code> are mentioned in parentheses (if any):</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><code>--max-length-bytes</code>: <a href="https://rabbitmq.com/streams.html#retention">maximum size</a> of created streams, use 0 for no limit (<code>20gb</code>)</p>
+</li>
+<li>
+<p><code>--stream-max-segment-size-bytes</code>: <a href="https://rabbitmq.com/streams.html#retention">maximum size</a> of stream segments (<code>500mb</code>)</p>
+</li>
+<li>
+<p><code>--max-age</code>: <a href="https://rabbitmq.com/streams.html#retention">maximum age</a> of stream segments using the <a href="https://en.wikipedia.org/wiki/ISO_8601#Durations">ISO 8601 duration format</a>, e.g. PT10M30S for 10 minutes 30 seconds, P5DT8H for 5 days 8 hours</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>See the <a href="#consuming-from-streams">stream consumer section</a> for details on how to consume from a stream.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+PerfTest uses the AMQP 0.9.1 protocol.
+Use <a href="https://rabbitmq.github.io/rabbitmq-stream-java-client/stable/htmlsingle/#the-performance-tool">Stream PerfTest</a> if you want to test <a href="https://rabbitmq.com/streams.html">RabbitMQ Streams</a> with the <a href="https://github.com/rabbitmq/rabbitmq-server/blob/main/deps/rabbitmq_stream/docs/PROTOCOL.adoc">stream protocol</a>.
+</td>
+</tr>
+</table>
+</div>
 </div>
 </div>
 </div>
@@ -1548,6 +1619,53 @@ it typically keeps a thread busy for polling in the application, and it intrinsi
 </div>
 </div>
 <div class="sect1">
+<h2 id="consuming-from-streams"><a class="anchor" href="#consuming-from-streams"></a>Consuming From Streams</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>RabbitMQ streams model an append-only log with non-destructive consumer semantics.
+PerfTest uses the AMQP 0.9.1 protocol to interact with streams.
+The <a href="#stream-support">queue customisation section</a> covers how to declare streams with PerfTest.</p>
+</div>
+<div class="paragraph">
+<p>Acknowledgments and <a href="https://www.rabbitmq.com/confirms.html#channel-qos-prefetch">consumer prefetch</a> are mandatory when consuming from a stream, so the <code>--qos</code> flag must be specified.
+The following example sets up a consume-only run from the already-existing <code>invoices</code> stream with consumer prefetch so to 200:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>java -jar perf-test.jar -x 0 -y 1 --predeclared \
+   --queue invoices --qos 200</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Note a consumer attaches to the end of a stream by default (<code>next</code> <a href="https://rabbitmq.com/streams.html#consuming">offset</a>).
+This means the consumer does not get any messages if no publishers add messages to the stream at that time.
+Use the <code>--stream-consumer-offset</code> flag to change the default, for example <code>first</code> to start at the beginning of the stream:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>java -jar perf-test.jar -x 0 -y 1 --predeclared \
+   --queue invoices --qos 200 --stream-consumer-offset first</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Valid values for <code>--stream-consumer-offset</code> are <code>first</code>, <code>last</code>, <code>next</code>, an unsigned long for the absolute offset in the stream, or an <a href="https://en.wikipedia.org/wiki/ISO_8601#Combined_date_and_time_representations">ISO 8601 formatted timestamp</a> (eg. <code>2022-06-03T07:45:54Z</code>) to attach to a point in time.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+PerfTest uses the AMQP 0.9.1 protocol.
+Use <a href="https://rabbitmq.github.io/rabbitmq-stream-java-client/stable/htmlsingle/#the-performance-tool">Stream PerfTest</a> if you want to test <a href="https://rabbitmq.com/streams.html">RabbitMQ Streams</a> with the <a href="https://github.com/rabbitmq/rabbitmq-server/blob/main/deps/rabbitmq_stream/docs/PROTOCOL.adoc">stream protocol</a>.
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+<div class="sect1">
 <h2 id="tls-support"><a class="anchor" href="#tls-support"></a>TLS Support</h2>
 <div class="sectionbody">
 <div class="paragraph">
@@ -1892,7 +2010,7 @@ It is then possible to override the metrics values thanks to the <code>--exposed
 <div id="footer">
 <div id="footer-text">
 Version 2.20.0-SNAPSHOT<br>
-Last updated 2023-01-11 13:45:27 UTC
+Last updated 2023-01-13 14:57:19 UTC
 </div>
 </div>
 </body>
