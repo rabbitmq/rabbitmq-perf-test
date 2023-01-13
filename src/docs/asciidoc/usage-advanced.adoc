@@ -1,7 +1,7 @@
 [[customising-queues]]
 == Customising queues
 
-PerfTest can create queues using provided queue arguments:
+PerfTest can create queues using provided https://rabbitmq.com/queues.html#optional-arguments[queue arguments]:
 
  java -jar perf-test.jar --queue-args x-max-length=10
 
@@ -12,15 +12,44 @@ key/value pairs with commas:
  java -jar perf-test.jar \
    --queue-args x-max-length=10,x-dead-letter-exchange=some.exchange.name
 
-It is possible to use several arguments to
-create https://rabbitmq.com/quorum-queues.html[quorum queues], but PerfTest provides
-a `--quorum-queue` flag to do that:
+Some commonly supported queue arguments are available thanks to dedicated flags:
+
+* `--max-length-bytes`: https://rabbitmq.com/maxlength.html[maximum size] of created queues
+* `--leader-locator`: leader location strategy for https://www.rabbitmq.com/quorum-queues.html#leader-placement[quorum queues] and https://www.rabbitmq.com/streams.html#leader-election[streams], supported values are `client-local` and `balanced`
+
+=== Quorum Queue Support
+
+It is possible to use several arguments to create https://rabbitmq.com/quorum-queues.html[quorum queues], but PerfTest provides a `--quorum-queue` flag to do that:
 
  java -jar perf-test.jar \
-   --quorum-queue --queue name
+   --quorum-queue --queue qq
 
-`--quorum-queue` is a shortcut for `--flag persistent --queue-args x-queue-type=quorum --auto-delete false`. Note a quorum queue cannot have a server-generated name, so the
-`--queue` argument must be used to specify the name of the queue(s).
+`--quorum-queue` is a shortcut for `--flag persistent --queue-args x-queue-type=quorum --auto-delete false`.
+Note a quorum queue cannot have a server-generated name, so the `--queue` argument must be used to specify the name of the queue(s).
+
+[[stream-support]]
+=== Stream Support
+
+PerfTest provides flags and options to configure https://rabbitmq.com/streams.html[streams] and use them on top of the AMQP 0.9.1 protocol.
+Use the `--stream-queue` flag to create streams instead of classic queues:
+
+ java -jar perf-test.jar \
+   --stream-queue --queue sq
+
+Note a stream cannot have a server-generated name, so the `--queue` argument must be used to specify the name of the stream(s).
+
+`--stream-queue` automatically sets the `--qos` flag to 200.
+
+The following stream-related flags are also available, the defaults applied by `--stream-queue` are mentioned in parentheses (if any):
+
+* `--max-length-bytes`: https://rabbitmq.com/streams.html#retention[maximum size] of created streams, use 0 for no limit (`20gb`)
+* `--stream-max-segment-size-bytes`: https://rabbitmq.com/streams.html#retention[maximum size] of stream segments (`500mb`)
+* `--max-age`: https://rabbitmq.com/streams.html#retention[maximum age] of stream segments using the https://en.wikipedia.org/wiki/ISO_8601#Durations[ISO 8601 duration format], e.g. PT10M30S for 10 minutes 30 seconds, P5DT8H for 5 days 8 hours
+
+See the <<usage-advanced.adoc#consuming-from-streams, stream consumer section>> for details on how to consume from a stream.
+
+NOTE: PerfTest uses the AMQP 0.9.1 protocol.
+Use https://rabbitmq.github.io/rabbitmq-stream-java-client/stable/htmlsingle/#the-performance-tool[Stream PerfTest] if you want to test https://rabbitmq.com/streams.html[RabbitMQ Streams] with the https://github.com/rabbitmq/rabbitmq-server/blob/main/deps/rabbitmq_stream/docs/PROTOCOL.adoc[stream protocol].
 
 == Customising messages
 
@@ -419,6 +448,31 @@ with the AMQP `basic.get` method. These options are available to evaluate the pe
 of `basic.get`, but real applications should avoid using `basic.get` as much as possible because
 it has several drawbacks compared to asynchronous consumers: it needs a network round trip for each message,
 it typically keeps a thread busy for polling in the application, and it intrinsically increases latency.
+
+[[consuming-from-streams]]
+== Consuming From Streams
+
+RabbitMQ streams model an append-only log with non-destructive consumer semantics.
+PerfTest uses the AMQP 0.9.1 protocol to interact with streams.
+The <<usage-advanced.adoc#stream-support, queue customisation section>> covers how to declare streams with PerfTest.
+
+Acknowledgments and https://www.rabbitmq.com/confirms.html#channel-qos-prefetch[consumer prefetch] are mandatory when consuming from a stream, so the `--qos` flag must be specified.
+The following example sets up a consume-only run from the already-existing `invoices` stream with consumer prefetch so to 200:
+
+ java -jar perf-test.jar -x 0 -y 1 --predeclared \
+    --queue invoices --qos 200
+
+Note a consumer attaches to the end of a stream by default (`next` https://rabbitmq.com/streams.html#consuming[offset]).
+This means the consumer does not get any messages if no publishers add messages to the stream at that time.
+Use the `--stream-consumer-offset` flag to change the default, for example `first` to start at the beginning of the stream:
+
+ java -jar perf-test.jar -x 0 -y 1 --predeclared \
+    --queue invoices --qos 200 --stream-consumer-offset first
+
+Valid values for `--stream-consumer-offset` are `first`, `last`, `next`, an unsigned long for the absolute offset in the stream, or an https://en.wikipedia.org/wiki/ISO_8601#Combined_date_and_time_representations[ISO 8601 formatted timestamp] (eg. `2022-06-03T07:45:54Z`) to attach to a point in time.
+
+NOTE: PerfTest uses the AMQP 0.9.1 protocol.
+Use https://rabbitmq.github.io/rabbitmq-stream-java-client/stable/htmlsingle/#the-performance-tool[Stream PerfTest] if you want to test https://rabbitmq.com/streams.html[RabbitMQ Streams] with the https://github.com/rabbitmq/rabbitmq-server/blob/main/deps/rabbitmq_stream/docs/PROTOCOL.adoc[stream protocol].
 
 == TLS Support
 

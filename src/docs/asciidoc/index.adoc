@@ -22,7 +22,7 @@ and consume. PerfTest can demonstrate baseline performance of a
 node or a cluster of nodes.
 
 PerfTest uses the https://www.rabbitmq.com/tutorials/amqp-concepts.html[AMQP 0.9.1 protocol] to communicate with a RabbitMQ cluster.
-Use https://rabbitmq.github.io/rabbitmq-stream-java-client/stable/htmlsingle/#the-performance-tool[Stream PerfTest] if you want to test https://rabbitmq.com/streams.html[RabbitMQ Streams] with the https://github.com/rabbitmq/rabbitmq-server/blob/master/deps/rabbitmq_stream/docs/PROTOCOL.adoc[stream protocol].
+Use https://rabbitmq.github.io/rabbitmq-stream-java-client/stable/htmlsingle/#the-performance-tool[Stream PerfTest] if you want to test https://rabbitmq.com/streams.html[RabbitMQ Streams] with the https://github.com/rabbitmq/rabbitmq-server/blob/main/deps/rabbitmq_stream/docs/PROTOCOL.adoc[stream protocol].
 
 include::installation.adoc[]
 include::usage.adoc[]

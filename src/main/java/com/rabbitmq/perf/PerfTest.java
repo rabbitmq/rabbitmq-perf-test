@@ -892,7 +892,7 @@ public class PerfTest {
         options.addOption(new Option("sco", "stream-consumer-offset", true,
             "stream offset to start listening from. "
             + "Valid values are 'first', 'last', 'next', an unsigned long, "
-            + "or an ISO 8601 formatted timestamp (eg. 2020-06-03T07:45:54Z)."));
+            + "or an ISO 8601 formatted timestamp (eg. 2022-06-03T07:45:54Z)."));
         return options;
     }
 
