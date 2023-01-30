@@ -1,4 +1,4 @@
-// Copyright (c) 2022 VMware, Inc. or its affiliates.  All rights reserved.
+// Copyright (c) 2023 VMware, Inc. or its affiliates.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 2.0 ("MPL"), the GNU General Public License version 2
@@ -322,7 +322,7 @@ public final class DefaultPerformanceMetrics implements PerformanceMetrics, Auto
 
   @Override
   public void close() {
-    if (this.started.compareAndSet(false, true)) {
+    if (this.started.compareAndSet(true, false)) {
       this.scheduledExecutorService.shutdownNow();
       printFinal();
     }
