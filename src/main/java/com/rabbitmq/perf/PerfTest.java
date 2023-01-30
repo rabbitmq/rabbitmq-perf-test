@@ -185,7 +185,7 @@ public class PerfTest {
             MetricsFormatter metricsFormatter = null;
             try {
                 metricsFormatter = MetricsFormatterFactory.create(metricsFormat,
-                    new Context(System.out,
+                    new Context(consoleOut,
                         testID,
                         producerCount > 0,
                         consumerCount > 0,
@@ -218,13 +218,13 @@ public class PerfTest {
                 Duration.ofSeconds(samplingInterval),
                 latencyCollectionTimeUnit,
                 registry, metricsPrefix, metricsFormatter);
-            shutdownService.wrap(() -> performanceMetrics.close());
 
             AtomicBoolean statsSummaryDone = new AtomicBoolean(false);
             Runnable statsSummary = () -> {
                 if (statsSummaryDone.compareAndSet(false, true)) {
                     consoleOut.println(stopLine(completionReasons));
                     performanceMetrics.close();
+                    consoleOut.flush();
                 }
             };
             shutdownService.wrap(() -> statsSummary.run());
