@@ -169,6 +169,11 @@
       <version>${logback.version}</version>
       <optional>true</optional>
     </dependency>
+    <dependency>
+      <groupId>org.jgroups</groupId>
+      <artifactId>jgroups</artifactId>
+      <version>5.2.12.Final</version>
+    </dependency>
 
     <dependency>
       <groupId>org.junit.jupiter</groupId>
