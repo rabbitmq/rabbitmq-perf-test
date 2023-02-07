@@ -240,11 +240,63 @@ public class MulticastSet {
 
             createProducers(announceStartup, producerStates, producerConnections);
 
+            AutoCloseable shutdownSequence;
+            int shutdownTimeout = this.params.getShutdownTimeout();
+            if (shutdownTimeout > 0) {
+                shutdownSequence = this.shutdownService.wrap(
+                    () -> {
+                        CountDownLatch latch = new CountDownLatch(1);
+                        Thread shutdownThread = new Thread(() -> {
+                            if (this.params.isPolling()) {
+                                Connection connection = null;
+                                try {
+                                    connection = createConnection("perf-test-queue-deletion");
+                                    this.params.deleteAutoDeleteQueuesIfNecessary(connection);
+                                } catch (Exception e) {
+                                    LOGGER.warn("Error while trying to delete auto-delete queues");
+                                } finally {
+                                    if (connection != null) {
+                                        dispose(connection);
+                                    }
+                                }
+                            }
+                            if (Thread.interrupted()) {
+                                return;
+                            }
+                            try {
+                                shutdown(configurationConnections, consumerConnections, producerStates, producerConnections);
+                            } finally {
+                                latch.countDown();
+                            }
+                        });
+                        shutdownThread.start();
+                        boolean done = latch.await(shutdownTimeout, TimeUnit.SECONDS);
+                        if (!done) {
+                            LOGGER.debug("Shutdown not completed in {} second(s), aborting.", shutdownTimeout);
+                            shutdownThread.interrupt();
+                        }
+                    }
+                );
+            } else {
+                // no closing timeout, we don't do anything
+                shutdownSequence = () -> { };
+            }
+
+            Runnable executeShutdownSequence = () -> {
+                try {
+                    shutdownSequence.close();
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            };
+
             try {
                 this.instanceSynchronization.synchronize();
             } catch (PerfTestException e) {
+                executeShutdownSequence.run();
                 throw e;
             } catch (Exception e) {
+                executeShutdownSequence.run();
                 throw new PerfTestException("Error while waiting for instance synchronization", e);
             }
 
@@ -272,55 +324,11 @@ public class MulticastSet {
                     TimeUnit.SECONDS);
             }
 
-            AutoCloseable shutdownSequence;
-            int shutdownTimeout = this.params.getShutdownTimeout();
-            if (shutdownTimeout > 0) {
-                shutdownSequence = this.shutdownService.wrap(
-                        () -> {
-                            CountDownLatch latch = new CountDownLatch(1);
-                            Thread shutdownThread = new Thread(() -> {
-                                if (this.params.isPolling()) {
-                                    Connection connection = null;
-                                    try {
-                                        connection = createConnection("perf-test-queue-deletion");
-                                        this.params.deleteAutoDeleteQueuesIfNecessary(connection);
-                                    } catch (Exception e) {
-                                        LOGGER.warn("Error while trying to delete auto-delete queues");
-                                    } finally {
-                                        if (connection != null) {
-                                            dispose(connection);
-                                        }
-                                    }
-                                }
-                                if (Thread.interrupted()) {
-                                    return;
-                                }
-                                try {
-                                    shutdown(configurationConnections, consumerConnections, producerStates, producerConnections);
-                                } finally {
-                                    latch.countDown();
-                                }
-                            });
-                            shutdownThread.start();
-                            boolean done = latch.await(shutdownTimeout, TimeUnit.SECONDS);
-                            if (!done) {
-                                LOGGER.debug("Shutdown not completed in {} second(s), aborting.", shutdownTimeout);
-                                shutdownThread.interrupt();
-                            }
-                        }
-                );
-            } else {
-                // no closing timeout, we don't do anything
-                shutdownSequence = () -> { };
-            }
+
 
             this.completionHandler.waitForCompletion();
 
-            try {
-                shutdownSequence.close();
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
+            executeShutdownSequence.run();
         } else {
             System.out.println("Could not connect to broker(s) in " + params.getServersStartUpTimeout() + " second(s), exiting.");
         }
