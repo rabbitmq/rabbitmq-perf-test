@@ -15,6 +15,11 @@
 
 package com.rabbitmq.perf;
 
+import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import org.assertj.core.api.Condition;
 import org.junit.jupiter.api.TestInfo;
 
 import java.io.IOException;
@@ -62,4 +67,16 @@ public abstract class TestUtils {
         return info.getTestMethod().get().getName() + "-" + info.getDisplayName() + "-";
     }
 
+  static Condition<String> validXml() {
+      return new Condition<>(xml -> {
+          try {
+              DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+              DocumentBuilder builder = factory.newDocumentBuilder();
+              builder.parse(new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8)));
+              return true;
+          } catch (Exception e) {
+              return false;
+          }
+      }, "Not a valid XML document");
+  }
 }

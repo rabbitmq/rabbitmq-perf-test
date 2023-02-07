@@ -15,11 +15,8 @@
 
 package com.rabbitmq.perf;
 
-import org.assertj.core.api.Condition;
 import org.junit.jupiter.api.Test;
 
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -50,32 +47,19 @@ public class LogTest {
         return new ByteArrayInputStream(XML.getBytes(StandardCharsets.UTF_8));
     }
 
-    private static Condition<String> validXml() {
-        return new Condition<>(xml -> {
-            try {
-                DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-                DocumentBuilder builder = factory.newDocumentBuilder();
-                builder.parse(new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8)));
-                return true;
-            } catch (Exception e) {
-                return false;
-            }
-        }, "Not a valid XML document");
-    }
-
     @Test
     void processConfigurationFileNoLoggers() throws Exception {
         assertThat(Log.processConfigurationFile(xml(), null))
-                .isEqualTo(XML.replace("${loggers}", "")).is(validXml());
+                .isEqualTo(XML.replace("${loggers}", "")).is(TestUtils.validXml());
         assertThat(Log.processConfigurationFile(xml(), new HashMap<>()))
-                .isEqualTo(XML.replace("${loggers}", "")).is(validXml());
+                .isEqualTo(XML.replace("${loggers}", "")).is(TestUtils.validXml());
     }
 
     @Test
     void processConfigurationFileOneLogger() throws IOException {
         assertThat(Log.processConfigurationFile(xml(), Collections.singletonMap("com.rabbitmq.perf", "info")))
                 .contains("<logger name=\"com.rabbitmq.perf\" level=\"info\"")
-                .is(validXml());
+                .is(TestUtils.validXml());
     }
 
     @Test
@@ -86,7 +70,7 @@ public class LogTest {
         assertThat(Log.processConfigurationFile(xml(), loggers))
                 .contains("<logger name=\"com.rabbitmq.perf\" level=\"debug\"")
                 .contains("<logger name=\"com.rabbitmq.perf.Producer\" level=\"info\"")
-                .is(validXml());
+                .is(TestUtils.validXml());
     }
 
 }

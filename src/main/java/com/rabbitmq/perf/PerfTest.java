@@ -37,15 +37,9 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.TemporalAccessor;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BooleanSupplier;
 import java.util.stream.Collectors;
 import org.apache.commons.cli.*;
-import org.jgroups.JChannel;
-import org.jgroups.Message;
-import org.jgroups.Receiver;
-import org.jgroups.View;
-import org.jgroups.util.Util;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -109,7 +103,15 @@ public class PerfTest {
                 systemExiter.exit(0);
             }
 
-            String testID = new SimpleDateFormat("HHmmss-SSS").format(Calendar.
+            int expectedInstances = intArg(cmd, "ei", 0);
+            String testID                   = strArg(cmd, 'd', null);
+            if (expectedInstances >= 2 && testID == null) {
+               validate(() -> false, "A test ID is mandatory when "
+                       + "instance synchronization is activated",
+                   systemExiter, consoleErr);
+            }
+
+            testID = new SimpleDateFormat("HHmmss-SSS").format(Calendar.
                 getInstance().getTime());
             testID                   = strArg(cmd, 'd', "test-"+testID);
             boolean saslExternal     = hasOption(cmd, "se");
@@ -246,63 +248,12 @@ public class PerfTest {
                 expectedMetrics.agentStarted(type);
             });
 
-            int expectedInstances = intArg(cmd, "ei", 0);
-            if (expectedInstances >= 2) {
-                long start = System.nanoTime();
-                try (JChannel channel = new JChannel(PerfTest.class.getResourceAsStream("/jgroups-perf-test.xml"))) {
-                    LOGGER.debug("Instance start synchronization...");
-                    LOGGER.debug("Expected instance count for cluster '{}': {}", testID, expectedInstances);
-                    AtomicInteger instanceCount = new AtomicInteger(0);
-                    CountDownLatch expectedInstanceCountReached = new CountDownLatch(1);
-
-                    Duration joiningTimeout = Duration.ofSeconds(60);
-
-                    channel.setReceiver(new Receiver() {
-                        @Override
-                        public void receive(Message msg) {
-
-                        }
-
-                        @Override
-                        public void viewAccepted(View newView) {
-                            instanceCount.set(newView.size());
-                            LOGGER.debug("New cluster view, number of nodes: {}", newView.size());
-                            if (instanceCount.get() == expectedInstances) {
-                                LOGGER.debug("New view has expected number of nodes, starting...");
-                                expectedInstanceCountReached.countDown();
-                            }
-                        }
-
-                        @Override
-                        public void getState(OutputStream output) throws Exception {
-                            Util.objectToStream(instanceCount.get(), new DataOutputStream(output));
-                        }
-
-                        @Override
-                        public void setState(InputStream input) throws Exception {
-                            Integer c = Util.objectFromStream(new DataInputStream(input));
-                            LOGGER.debug("Received state, number of nodes: {}", c);
-                            if (c == expectedInstances) {
-                                LOGGER.debug("State has expected number of nodes, starting...");
-                                expectedInstanceCountReached.countDown();
-                            }
-                        }
-                    });
-
-                    channel.connect(testID, null, joiningTimeout.toMillis());
-
-                    boolean allInstancesJoined = expectedInstanceCountReached.await(joiningTimeout.toMillis(), TimeUnit.MILLISECONDS);
-                    if (!allInstancesJoined) {
-                        throw new IllegalStateException("Waited " + joiningTimeout.getSeconds()
-                            + " second(s) and expected number of "
-                            + "PerfTest instances did not join");
-                    }
-                    LOGGER.debug("All expected instances started after {} ms", Duration.ofNanos(
-                        System.nanoTime() - start
-                    ).toMillis());
-
-                }
-            }
+            String instanceSyncNamespace = strArg(cmd, "isn", null);
+            int instanceSyncTimeout = intArg(cmd, "ist", 600);
+            InstanceSynchronization instanceSynchronization = new DefaultInstanceSynchronization(
+                testID, expectedInstances, instanceSyncNamespace, Duration.ofSeconds(instanceSyncTimeout)
+            );
+            instanceSynchronization.synchronize();
 
             MulticastSet set = new MulticastSet(performanceMetrics, factory, p, testID, uris, completionHandler,
                 shutdownService, expectedMetrics);
@@ -970,7 +921,12 @@ public class PerfTest {
             + "Valid values are 'first', 'last', 'next', an unsigned long, "
             + "or an ISO 8601 formatted timestamp (eg. 2022-06-03T07:45:54Z)."));
         options.addOption(new Option("ei", "expected-instances", true, "number of expected PerfTest instances "
-            + "to synchronize. Default is 0, that is no synchronization."));
+            + "to synchronize. Default is 0, that is no synchronization."
+            + "Test ID is mandatory when instance synchronization is in use."));
+        options.addOption(new Option("isn", "instance-sync-namespace", true,"Kubernetes namespace for "
+            + "instance synchronization"));
+        options.addOption(new Option("ist", "instance-sync-timeout", true, "Instance synchronization time "
+            + "in seconds. Default is 600 seconds."));
         return options;
     }
 
