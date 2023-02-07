@@ -79,6 +79,7 @@ public class MulticastSet {
     private final ValueIndicator<Long> consumerLatencyIndicator;
     private final ConnectionCreator connectionCreator;
     private final ExpectedMetrics expectedMetrics;
+    private final InstanceSynchronization instanceSynchronization;
 
     public MulticastSet(PerformanceMetrics performanceMetrics, ConnectionFactory factory,
         MulticastParams params, List<String> uris, CompletionHandler completionHandler) {
@@ -88,13 +89,15 @@ public class MulticastSet {
     public MulticastSet(PerformanceMetrics performanceMetrics, ConnectionFactory factory,
                         MulticastParams params, String testID, List<String> uris, CompletionHandler completionHandler) {
         this(performanceMetrics, factory, params, testID, uris, completionHandler, new ShutdownService(),
-            new ExpectedMetrics(params, new SimpleMeterRegistry(), "perftest_", Collections.emptyMap()));
+            new ExpectedMetrics(params, new SimpleMeterRegistry(), "perftest_", Collections.emptyMap()),
+            InstanceSynchronization.NO_OP);
     }
 
     public MulticastSet(PerformanceMetrics performanceMetrics, ConnectionFactory factory,
         MulticastParams params, String testID, List<String> uris,
         CompletionHandler completionHandler, ShutdownService shutdownService,
-        ExpectedMetrics expectedMetrics) {
+        ExpectedMetrics expectedMetrics,
+        InstanceSynchronization instanceSynchronization) {
         this.performanceMetrics = performanceMetrics;
         this.factory = factory;
         this.params = params;
@@ -138,6 +141,7 @@ public class MulticastSet {
 
         this.connectionCreator = new ConnectionCreator(this.factory, this.uris);
         this.expectedMetrics = expectedMetrics;
+        this.instanceSynchronization = instanceSynchronization;
     }
 
     protected static int nbThreadsForConsumer(MulticastParams params) {
@@ -235,6 +239,14 @@ public class MulticastSet {
             factory.setSharedExecutor(executorServiceForProducersConsumers);
 
             createProducers(announceStartup, producerStates, producerConnections);
+
+            try {
+                this.instanceSynchronization.synchronize();
+            } catch (PerfTestException e) {
+                throw e;
+            } catch (Exception e) {
+                throw new PerfTestException("Error while waiting for instance synchronization", e);
+            }
 
             this.performanceMetrics.start();
 
