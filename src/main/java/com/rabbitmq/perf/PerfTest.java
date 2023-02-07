@@ -251,7 +251,8 @@ public class PerfTest {
             String instanceSyncNamespace = lookUpInstanceSyncNamespace(cmd);
             int instanceSyncTimeout = intArg(cmd, "ist", 600);
             InstanceSynchronization instanceSynchronization = new DefaultInstanceSynchronization(
-                testID, expectedInstances, instanceSyncNamespace, Duration.ofSeconds(instanceSyncTimeout)
+                testID, expectedInstances, instanceSyncNamespace, Duration.ofSeconds(instanceSyncTimeout),
+                consoleOut
             );
             instanceSynchronization.addPostSyncListener(() -> metrics.start());
 

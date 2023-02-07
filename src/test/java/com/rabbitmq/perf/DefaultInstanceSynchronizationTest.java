@@ -21,6 +21,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
@@ -72,6 +74,15 @@ public class DefaultInstanceSynchronizationTest {
     return new ByteArrayInputStream(XML.getBytes(StandardCharsets.UTF_8));
   }
 
+  private static PrintStream noOpPrintStream() {
+    return new PrintStream(new OutputStream() {
+      @Override
+      public void write(int b) {
+
+      }
+    });
+  }
+
   @Test
   void processConfigurationFileNamespaceIsReplaced() throws Exception {
     assertThat(DefaultInstanceSynchronization.processConfigurationFile(xml(), "performance-test"))
@@ -86,7 +97,7 @@ public class DefaultInstanceSynchronizationTest {
     Duration timeout = Duration.ofSeconds(30);
     List<DefaultInstanceSynchronization> syncs = IntStream.range(0, expectedInstances)
         .mapToObj(unused -> new DefaultInstanceSynchronization(
-            id, expectedInstances, null, timeout
+            id, expectedInstances, null, timeout, noOpPrintStream()
         )).collect(toList());
     CountDownLatch latch = new CountDownLatch(expectedInstances);
     ExecutorService executorService = Executors.newFixedThreadPool(expectedInstances);

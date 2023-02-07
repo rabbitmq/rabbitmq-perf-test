@@ -23,12 +23,16 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Set;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -49,9 +53,10 @@ class DefaultInstanceSynchronization implements InstanceSynchronization {
   private final InstanceSynchronization delegate;
 
   DefaultInstanceSynchronization(String id, int expectedInstances, String namespace,
-      Duration timeout) {
+      Duration timeout, PrintStream out) {
     if (expectedInstances > 1) {
-      this.delegate = new JGroupsInstanceSynchronization(id, expectedInstances, namespace, timeout);
+      this.delegate = new JGroupsInstanceSynchronization(id, expectedInstances, namespace, timeout,
+          out);
     } else {
       this.delegate = new NoOpInstanceSynchronization();
     }
@@ -96,13 +101,15 @@ class DefaultInstanceSynchronization implements InstanceSynchronization {
     private final int expectedInstances;
     private final Duration timeout;
     private final JChannel channel;
+    private final PrintStream out;
     private Set<Runnable> listeners = Collections.synchronizedSet(new LinkedHashSet<>());
 
     private JGroupsInstanceSynchronization(String id, int expectedInstances, String namespace,
-        Duration timeout) {
+        Duration timeout, PrintStream out) {
       this.id = id;
       this.expectedInstances = expectedInstances;
       this.timeout = timeout;
+      this.out = out;
       InputStream configuration;
       try {
         if (namespace == null) {
@@ -134,6 +141,7 @@ class DefaultInstanceSynchronization implements InstanceSynchronization {
       AtomicInteger instanceCount = new AtomicInteger(0);
       CountDownLatch expectedInstanceCountReachedLatch = new CountDownLatch(1);
       AtomicBoolean expectedInstanceCountReached = new AtomicBoolean(false);
+      BlockingQueue<Integer> notifications = new LinkedBlockingQueue<>();
 
       channel.setReceiver(new Receiver() {
         @Override
@@ -146,6 +154,7 @@ class DefaultInstanceSynchronization implements InstanceSynchronization {
           instanceCount.set(newView.size());
           LOGGER.debug("New cluster view, number of nodes: {} ({})", newView.size(),
               newView.getMembers());
+          notifications.add(instanceCount.get());
           if (instanceCount.get() == expectedInstances) {
             if (expectedInstanceCountReached.compareAndSet(false, true)) {
               LOGGER.debug("New view has expected number of nodes, starting...");
@@ -167,6 +176,7 @@ class DefaultInstanceSynchronization implements InstanceSynchronization {
         @Override
         public void setState(InputStream input) throws Exception {
           Integer c = Util.objectFromStream(new DataInputStream(input));
+          notifications.add(instanceCount.get());
           LOGGER.debug("Received state, number of nodes: {}", c);
           if (c == expectedInstances) {
             if (expectedInstanceCountReached.compareAndSet(false, true)) {
@@ -186,6 +196,32 @@ class DefaultInstanceSynchronization implements InstanceSynchronization {
         }
       }
 
+      out.println("Waiting for " + (expectedInstances - 1) + " other instance(s) to join...");
+      out.print(".");
+      new Thread(() -> {
+        Set<Integer> counts = new HashSet<>();
+        int loops = 0;
+        while (!expectedInstanceCountReached.get()) {
+          Integer count;
+          try {
+            count = notifications.poll(1, TimeUnit.SECONDS);
+          } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return;
+          }
+          if (count != null && counts.add(count)) {
+            if (!expectedInstanceCountReached.get()) {
+              out.print(" " + count + "/" + expectedInstances + " instance(s) joined");
+            }
+          }
+          if (++loops % 5 == 0) {
+            if (!expectedInstanceCountReached.get()) {
+              out.print(".");
+            }
+          }
+        }
+      }).start();
+
       boolean allInstancesJoined = expectedInstanceCountReachedLatch.await(timeout.toMillis(),
           TimeUnit.MILLISECONDS);
       if (!allInstancesJoined) {
@@ -202,6 +238,9 @@ class DefaultInstanceSynchronization implements InstanceSynchronization {
       } catch (Exception e) {
         LOGGER.info("Error while closing JGroups channel: {}", e.getMessage());
       }
+
+      out.println();
+      out.println("All expected instances are ready, starting.");
 
       for (Runnable listener : listeners) {
         try {
