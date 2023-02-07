@@ -7,4 +7,8 @@ interface InstanceSynchronization {
 
   void synchronize() throws Exception;
 
+  default void addPostSyncListener(Runnable listener) {
+    listener.run();
+  }
+
 }

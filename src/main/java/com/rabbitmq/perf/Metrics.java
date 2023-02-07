@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2022 VMware, Inc. or its affiliates.  All rights reserved.
+// Copyright (c) 2018-2023 VMware, Inc. or its affiliates.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 2.0 ("MPL"), the GNU General Public License version 2
@@ -37,6 +37,9 @@ public interface Metrics {
             }
         }
         return false;
+    }
+
+    default void start() {
     }
 
     default void close() throws Exception { }

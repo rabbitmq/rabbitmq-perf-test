@@ -253,6 +253,7 @@ public class PerfTest {
             InstanceSynchronization instanceSynchronization = new DefaultInstanceSynchronization(
                 testID, expectedInstances, instanceSyncNamespace, Duration.ofSeconds(instanceSyncTimeout)
             );
+            instanceSynchronization.addPostSyncListener(() -> metrics.start());
 
             MulticastSet set = new MulticastSet(performanceMetrics, factory, p, testID, uris, completionHandler,
                 shutdownService, expectedMetrics, instanceSynchronization);

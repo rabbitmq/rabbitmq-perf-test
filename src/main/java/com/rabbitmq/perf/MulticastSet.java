@@ -550,13 +550,15 @@ public class MulticastSet {
                 if (Thread.interrupted()) {
                     return;
                 }
-                boolean cancelled = producerState.task.cancel(true);
-                LOGGER.debug("Producer has been correctly cancelled: {}", cancelled);
+                if (producerState.task != null) {
+                    boolean cancelled = producerState.task.cancel(true);
+                    LOGGER.debug("Producer has been correctly cancelled: {}", cancelled);
+                }
             }
 
             // we do our best to stop producers before closing their connections
             for (AgentState producerState : producerStates) {
-                if (!producerState.task.isDone()) {
+                if (producerState.task != null && !producerState.task.isDone()) {
                     try {
                         if (Thread.interrupted()) {
                             return;

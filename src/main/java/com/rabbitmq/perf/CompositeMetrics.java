@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2022 VMware, Inc. or its affiliates.  All rights reserved.
+// Copyright (c) 2018-2023 VMware, Inc. or its affiliates.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 2.0 ("MPL"), the GNU General Public License version 2
@@ -60,6 +60,11 @@ public class CompositeMetrics implements Metrics {
         for (Metrics metric : metrics) {
             metric.configure(context);
         }
+    }
+
+    @Override
+    public void start() {
+        metrics.forEach(Metrics::start);
     }
 
     @Override

@@ -25,6 +25,9 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -69,6 +72,11 @@ class DefaultInstanceSynchronization implements InstanceSynchronization {
   }
 
   @Override
+  public void addPostSyncListener(Runnable listener) {
+    this.delegate.addPostSyncListener(listener);
+  }
+
+  @Override
   public void synchronize() throws Exception {
     this.delegate.synchronize();
   }
@@ -88,6 +96,7 @@ class DefaultInstanceSynchronization implements InstanceSynchronization {
     private final int expectedInstances;
     private final Duration timeout;
     private final JChannel channel;
+    private Set<Runnable> listeners = Collections.synchronizedSet(new LinkedHashSet<>());
 
     private JGroupsInstanceSynchronization(String id, int expectedInstances, String namespace,
         Duration timeout) {
@@ -110,6 +119,11 @@ class DefaultInstanceSynchronization implements InstanceSynchronization {
         throw new PerfTestException("Error while configuring instance synchronization",
             e);
       }
+    }
+
+    @Override
+    public void addPostSyncListener(Runnable listener) {
+      listeners.add(listener);
     }
 
     @Override
@@ -187,6 +201,14 @@ class DefaultInstanceSynchronization implements InstanceSynchronization {
         channel.close();
       } catch (Exception e) {
         LOGGER.info("Error while closing JGroups channel: {}", e.getMessage());
+      }
+
+      for (Runnable listener : listeners) {
+        try {
+          listener.run();
+        } catch (Exception e) {
+          LOGGER.info("Error while running instance synchronization listener: {}", e.getMessage());
+        }
       }
     }
 

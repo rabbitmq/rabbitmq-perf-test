@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2022 VMware, Inc. or its affiliates.  All rights reserved.
+// Copyright (c) 2018-2023 VMware, Inc. or its affiliates.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 2.0 ("MPL"), the GNU General Public License version 2
@@ -19,9 +19,11 @@ import com.sun.net.httpserver.HttpServer;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
 import io.micrometer.prometheus.PrometheusConfig;
 import io.micrometer.prometheus.PrometheusMeterRegistry;
+import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 
@@ -34,6 +36,8 @@ import static com.rabbitmq.perf.Utils.strArg;
 public class PrometheusMetrics implements Metrics {
 
     private volatile HttpServer server;
+    private volatile Runnable serverStart = () -> { };
+    private volatile Runnable serverStop = () -> { };
 
     private volatile PrometheusMeterRegistry registry;
 
@@ -53,25 +57,44 @@ public class PrometheusMetrics implements Metrics {
             registry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
             meterRegistry.add(registry);
             int prometheusHttpEndpointPort = intArg(cmd, "mpp", 8080);
-            String prometheusHttpEndpoint = strArg(cmd, "mpe", "metrics");
-            prometheusHttpEndpoint = prometheusHttpEndpoint.startsWith("/") ? prometheusHttpEndpoint : "/" + prometheusHttpEndpoint;
-            server = HttpServer.create(new InetSocketAddress(prometheusHttpEndpointPort), 0);
-            server.createContext(prometheusHttpEndpoint, exchange -> {
-                exchange.getResponseHeaders().set("Content-Type", "text/plain");
-                byte[] content = registry.scrape().getBytes(StandardCharsets.UTF_8);
-                exchange.sendResponseHeaders(200, content.length);
-                try (OutputStream out = exchange.getResponseBody()) {
-                    out.write(content);
+            String endpoint = strArg(cmd, "mpe", "metrics");
+            String prometheusHttpEndpoint = endpoint.startsWith("/") ? endpoint : "/" + endpoint;
+            AtomicBoolean serverStarted = new AtomicBoolean(false);
+            this.serverStart = () -> {
+                try {
+                    server = HttpServer.create(new InetSocketAddress(prometheusHttpEndpointPort), 0);
+                } catch (IOException e) {
+                    throw new PerfTestException("Error while starting Prometheus HTTP server", e);
                 }
-            });
-            server.start();
+                server.createContext(prometheusHttpEndpoint, exchange -> {
+                    exchange.getResponseHeaders().set("Content-Type", "text/plain");
+                    byte[] content = registry.scrape().getBytes(StandardCharsets.UTF_8);
+                    exchange.sendResponseHeaders(200, content.length);
+                    try (OutputStream out = exchange.getResponseBody()) {
+                        out.write(content);
+                    }
+                });
+                server.start();
+                serverStarted.set(true);
+            };
+            this.serverStop = () -> {
+                if (serverStarted.compareAndSet(true, false)) {
+                    server.stop(0);
+                }
+            };
+        } else {
+            this.serverStart = () -> { };
+            this.serverStop = () -> { };
         }
     }
 
+    @Override
+    public void start() {
+        this.serverStart.run();
+    }
+
     public void close() throws Exception {
-        if (server != null) {
-            server.stop(0);
-        }
+        this.serverStop.run();
         if (registry != null) {
             registry.close();
         }
