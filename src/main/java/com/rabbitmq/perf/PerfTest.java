@@ -248,7 +248,7 @@ public class PerfTest {
                 expectedMetrics.agentStarted(type);
             });
 
-            String instanceSyncNamespace = strArg(cmd, "isn", null);
+            String instanceSyncNamespace = lookUpInstanceSyncNamespace(cmd);
             int instanceSyncTimeout = intArg(cmd, "ist", 600);
             InstanceSynchronization instanceSynchronization = new DefaultInstanceSynchronization(
                 testID, expectedInstances, instanceSyncNamespace, Duration.ofSeconds(instanceSyncTimeout)
@@ -758,6 +758,14 @@ public class PerfTest {
 
     static CommandLineParser getParser() {
         return new DefaultParser();
+    }
+
+    private static String lookUpInstanceSyncNamespace(CommandLineProxy cmd) {
+        String instanceSyncNamespace = strArg(cmd, "isn", null);
+        if (instanceSyncNamespace == null) {
+            instanceSyncNamespace = System.getenv("MY_POD_NAMESPACE");
+        }
+        return instanceSyncNamespace;
     }
 
     static Options getOptions() {
