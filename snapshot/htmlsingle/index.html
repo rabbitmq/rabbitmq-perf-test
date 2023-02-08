@@ -569,6 +569,7 @@ table.CodeRay td.code{padding:0 0 0 .75em}
 <li><a href="#running-producers-and-consumers-on-different-machines">Running Producers and Consumers on Different Machines</a></li>
 <li><a href="#asynchronous-consumers-vs-synchronous-consumers">Asynchronous Consumers vs Synchronous Consumers</a></li>
 <li><a href="#consuming-from-streams">Consuming From Streams</a></li>
+<li><a href="#synchronizing-several-instances">Synchronizing Several Instances</a></li>
 <li><a href="#tls-support">TLS Support</a></li>
 <li><a href="#using-environment-variables-as-options">Using Environment Variables as Options</a></li>
 <li><a href="#result-reporting-in-html">Result Reporting in HTML</a></li>
@@ -1666,6 +1667,71 @@ Use <a href="https://rabbitmq.github.io/rabbitmq-stream-java-client/stable/htmls
 </div>
 </div>
 <div class="sect1">
+<h2 id="synchronizing-several-instances"><a class="anchor" href="#synchronizing-several-instances"></a>Synchronizing Several Instances</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>PerfTest instances can synchronize to start at the same time.
+This can prove useful when you apply different workloads and want to compare them on the same monitoring graphics.
+The <code>--id</code> flag identifies the group of instances that need to synchronize and the <code>--expected-instances</code> flag sets the size of the group.</p>
+</div>
+<div class="paragraph">
+<p>Let&#8217;s take a somewhat artificial example to keep flags as simple as possible and compare the behavior of an auto-delete queue to a quorum queue.
+We start the first PerfTest instance:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>java -jar perf-test.jar --id auto-delete-vs-qq --expected-instances 2</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The instance will wait until the second one is ready:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>java -jar perf-test.jar --id auto-delete-vs-qq --expected-instances 2 \
+  --quorum-queue --queue qq</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Both instances <em>must</em> share the same <code>--id</code> if they want to communicate to synchronize.
+Note synchronized instances creates connections before starting the synchronization process.
+They are then ready to start their respective workload (publishing and/or consuming) when all the expected instances have joined the group.</p>
+</div>
+<div class="paragraph">
+<p>The default synchronization timeout is 10 minutes.
+This can be changed with the <code>--instance-sync-timeout</code> flag, using a value in seconds.</p>
+</div>
+<div class="paragraph">
+<p>PerfTest instance synchronization requires <a href="https://en.wikipedia.org/wiki/IP_multicast">IP multicast</a> to be available.
+IP multicast is not necessary when PerfTest runs on Kubernetes pods.
+In this case, PerfTest asks Kubernetes for a list of pod IPs.
+The PerfTest instances are expected to run in the same namespace, and the namespace must be available in the <code>MY_POD_NAMESPACE</code> environment or provided with the <code>--instance-sync-namespace</code>.
+As soon as the namespace information is available, PerfTest will prefer listing pod IPs over using IP multicast.
+Here is an example of using instance synchronization on Kubernetes by providing the namespace explicitly:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>java -jar perf-test.jar --id workload-1 --expected-instances 2 \
+  --instance-sync-namespace qa</pre>
+</div>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+PerfTest needs permission to ask Kubernetes for a list of pod IPs.
+This is done by creating various policies e.g. with YAML.
+See the <a href="https://github.com/jgroups-extras/jgroups-kubernetes">Kubernetes discovery protocol for JGroups page</a> for more information.
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+<div class="sect1">
 <h2 id="tls-support"><a class="anchor" href="#tls-support"></a>TLS Support</h2>
 <div class="sectionbody">
 <div class="paragraph">
@@ -2010,7 +2076,7 @@ It is then possible to override the metrics values thanks to the <code>--exposed
 <div id="footer">
 <div id="footer-text">
 Version 2.20.0-SNAPSHOT<br>
-Last updated 2023-01-31 15:10:57 UTC
+Last updated 2023-02-08 10:35:56 UTC
 </div>
 </div>
 </body>
