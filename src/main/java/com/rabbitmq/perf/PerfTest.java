@@ -932,7 +932,7 @@ public class PerfTest {
         options.addOption(new Option("ei", "expected-instances", true, "number of expected PerfTest instances "
             + "to synchronize. Default is 0, that is no synchronization."
             + "Test ID is mandatory when instance synchronization is in use."));
-        options.addOption(new Option("isn", "instance-sync-namespace", true,"Kubernetes namespace for "
+        options.addOption(new Option("isn", "instance-sync-namespace", true, "Kubernetes namespace for "
             + "instance synchronization"));
         options.addOption(new Option("ist", "instance-sync-timeout", true, "Instance synchronization time "
             + "in seconds. Default is 600 seconds."));
