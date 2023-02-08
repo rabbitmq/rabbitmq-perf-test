@@ -103,7 +103,15 @@ public class PerfTest {
                 systemExiter.exit(0);
             }
 
-            String testID = new SimpleDateFormat("HHmmss-SSS").format(Calendar.
+            int expectedInstances = intArg(cmd, "ei", 0);
+            String testID                   = strArg(cmd, 'd', null);
+            if (expectedInstances >= 2 && testID == null) {
+               validate(() -> false, "A test ID is mandatory when "
+                       + "instance synchronization is activated",
+                   systemExiter, consoleErr);
+            }
+
+            testID = new SimpleDateFormat("HHmmss-SSS").format(Calendar.
                 getInstance().getTime());
             testID                   = strArg(cmd, 'd', "test-"+testID);
             boolean saslExternal     = hasOption(cmd, "se");
@@ -240,8 +248,16 @@ public class PerfTest {
                 expectedMetrics.agentStarted(type);
             });
 
+            String instanceSyncNamespace = lookUpInstanceSyncNamespace(cmd);
+            int instanceSyncTimeout = intArg(cmd, "ist", 600);
+            InstanceSynchronization instanceSynchronization = new DefaultInstanceSynchronization(
+                testID, expectedInstances, instanceSyncNamespace, Duration.ofSeconds(instanceSyncTimeout),
+                consoleOut
+            );
+            instanceSynchronization.addPostSyncListener(() -> metrics.start());
+
             MulticastSet set = new MulticastSet(performanceMetrics, factory, p, testID, uris, completionHandler,
-                shutdownService, expectedMetrics);
+                shutdownService, expectedMetrics, instanceSynchronization);
             set.run(true);
 
             statsSummary.run();
@@ -745,6 +761,14 @@ public class PerfTest {
         return new DefaultParser();
     }
 
+    private static String lookUpInstanceSyncNamespace(CommandLineProxy cmd) {
+        String instanceSyncNamespace = strArg(cmd, "isn", null);
+        if (instanceSyncNamespace == null) {
+            instanceSyncNamespace = System.getenv("MY_POD_NAMESPACE");
+        }
+        return instanceSyncNamespace;
+    }
+
     static Options getOptions() {
         Options options = new Options();
         options.addOption(new Option("?", "help",                   false,"show usage"));
@@ -905,6 +929,13 @@ public class PerfTest {
             "stream offset to start listening from. "
             + "Valid values are 'first', 'last', 'next', an unsigned long, "
             + "or an ISO 8601 formatted timestamp (eg. 2022-06-03T07:45:54Z)."));
+        options.addOption(new Option("ei", "expected-instances", true, "number of expected PerfTest instances "
+            + "to synchronize. Default is 0, that is no synchronization."
+            + "Test ID is mandatory when instance synchronization is in use."));
+        options.addOption(new Option("isn", "instance-sync-namespace", true,"Kubernetes namespace for "
+            + "instance synchronization"));
+        options.addOption(new Option("ist", "instance-sync-timeout", true, "Instance synchronization time "
+            + "in seconds. Default is 600 seconds."));
         return options;
     }
 

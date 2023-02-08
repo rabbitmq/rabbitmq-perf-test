@@ -474,6 +474,43 @@ Valid values for `--stream-consumer-offset` are `first`, `last`, `next`, an unsi
 NOTE: PerfTest uses the AMQP 0.9.1 protocol.
 Use https://rabbitmq.github.io/rabbitmq-stream-java-client/stable/htmlsingle/#the-performance-tool[Stream PerfTest] if you want to test https://rabbitmq.com/streams.html[RabbitMQ Streams] with the https://github.com/rabbitmq/rabbitmq-server/blob/main/deps/rabbitmq_stream/docs/PROTOCOL.adoc[stream protocol].
 
+== Synchronizing Several Instances
+
+PerfTest instances can synchronize to start at the same time.
+This can prove useful when you apply different workloads and want to compare them on the same monitoring graphics.
+The `--id` flag identifies the group of instances that need to synchronize and the `--expected-instances` flag sets the size of the group.
+
+Let's take a somewhat artificial example to keep flags as simple as possible and compare the behavior of an auto-delete queue to a quorum queue.
+We start the first PerfTest instance:
+
+ java -jar perf-test.jar --id auto-delete-vs-qq --expected-instances 2
+
+The instance will wait until the second one is ready:
+
+ java -jar perf-test.jar --id auto-delete-vs-qq --expected-instances 2 \
+   --quorum-queue --queue qq
+
+Both instances _must_ share the same `--id` if they want to communicate to synchronize.
+Note synchronized instances creates connections before starting the synchronization process.
+They are then ready to start their respective workload (publishing and/or consuming) when all the expected instances have joined the group.
+
+The default synchronization timeout is 10 minutes.
+This can be changed with the `--instance-sync-timeout` flag, using a value in seconds.
+
+PerfTest instance synchronization requires https://en.wikipedia.org/wiki/IP_multicast[IP multicast] to be available.
+IP multicast is not necessary when PerfTest runs on Kubernetes pods.
+In this case, PerfTest asks Kubernetes for a list of pod IPs.
+The PerfTest instances are expected to run in the same namespace, and the namespace must be available in the `MY_POD_NAMESPACE` environment or provided with the `--instance-sync-namespace`.
+As soon as the namespace information is available, PerfTest will prefer listing pod IPs over using IP multicast.
+Here is an example of using instance synchronization on Kubernetes by providing the namespace explicitly:
+
+ java -jar perf-test.jar --id workload-1 --expected-instances 2 \
+   --instance-sync-namespace qa
+
+NOTE: PerfTest needs permission to ask Kubernetes for a list of pod IPs.
+This is done by creating various policies e.g. with YAML.
+See the https://github.com/jgroups-extras/jgroups-kubernetes[Kubernetes discovery protocol for JGroups page] for more information.
+
 == TLS Support
 
 PerfTest can use TLS to connect to a node that is https://www.rabbitmq.com/ssl.html[configured to accept TLS connections].

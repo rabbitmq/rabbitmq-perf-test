@@ -1,0 +1,27 @@
+<config xmlns="urn:org:jgroups"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="urn:org:jgroups http://www.jgroups.org/schema/jgroups.xsd">
+  <UDP
+    mcast_port="45588"
+    thread_pool.max_threads="10"
+    mcast_recv_buf_size="200000"
+    ucast_recv_buf_size="200000"
+  />
+  <PING />
+  <MERGE3 max_interval="30000"
+    min_interval="10000"/>
+  <FD_SOCK2/>
+  <FD_ALL3/>
+  <VERIFY_SUSPECT2 timeout="1500"  />
+  <pbcast.NAKACK2 xmit_interval="500"/>
+  <UNICAST3 xmit_interval="500" />
+  <pbcast.STABLE desired_avg_gossip="50000"
+    max_bytes="4M"/>
+  <pbcast.GMS print_local_addr="false" join_timeout="1000"/>
+  <UFC max_credits="4M"
+    min_threshold="0.4"/>
+  <MFC max_credits="4M"
+    min_threshold="0.4"/>
+  <FRAG2 frag_size="60K"  />
+  <pbcast.STATE_TRANSFER />
+</config>

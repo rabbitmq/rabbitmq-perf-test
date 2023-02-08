@@ -21,4 +21,7 @@ class PerfTestException extends RuntimeException {
         super(message);
     }
 
+    PerfTestException(String message, Throwable cause) {
+        super(message, cause);
+    }
 }
