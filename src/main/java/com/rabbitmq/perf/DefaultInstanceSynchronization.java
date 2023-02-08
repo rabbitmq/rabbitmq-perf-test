@@ -103,6 +103,7 @@ class DefaultInstanceSynchronization implements InstanceSynchronization {
     private final JChannel channel;
     private final PrintStream out;
     private Set<Runnable> listeners = Collections.synchronizedSet(new LinkedHashSet<>());
+    private final boolean multicast;
 
     private JGroupsInstanceSynchronization(String id, int expectedInstances, String namespace,
         Duration timeout, PrintStream out) {
@@ -113,8 +114,10 @@ class DefaultInstanceSynchronization implements InstanceSynchronization {
       InputStream configuration;
       try {
         if (namespace == null) {
+          this.multicast = true;
           configuration = PerfTest.class.getResourceAsStream("/jgroups-multicast-perf-test.xml");
         } else {
+          this.multicast = false;
           configuration = PerfTest.class.getResourceAsStream("/jgroups-k8s-perf-test.xml");
           configuration = new ByteArrayInputStream(
               processConfigurationFile(configuration, namespace).getBytes(StandardCharsets.UTF_8)
@@ -225,9 +228,12 @@ class DefaultInstanceSynchronization implements InstanceSynchronization {
       boolean allInstancesJoined = expectedInstanceCountReachedLatch.await(timeout.toMillis(),
           TimeUnit.MILLISECONDS);
       if (!allInstancesJoined) {
+        String message = multicast ? "Make sure multicast is available." :
+            "Make sure PerfTest can ask Kubernetes for a list of pod IPs, "
+                + "see https://github.com/jgroups-extras/jgroups-kubernetes.";
         throw new IllegalStateException("Waited " + timeout.getSeconds()
             + " second(s) and expected number of "
-            + "PerfTest instances did not join");
+            + "PerfTest instances did not join. " + message);
       }
       LOGGER.debug("All expected instances started after {} ms", Duration.ofNanos(
           System.nanoTime() - start
