@@ -1697,6 +1697,19 @@ We start the first PerfTest instance:</p>
 Note synchronized instances creates connections before starting the synchronization process.
 They are then ready to start their respective workload (publishing and/or consuming) when all the expected instances have joined the group.</p>
 </div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+Instance synchronization is compatible with <a href="https://rabbitmq.github.io/rabbitmq-stream-java-client/snapshot/htmlsingle/#performant-tool-instance-synchronization">StreamPerfTest</a>, the performance tool for RabbitMQ streams: instances of both tools can synchronize with each other.
+The 2 tools use the same flags for this feature.
+</td>
+</tr>
+</table>
+</div>
 <div class="paragraph">
 <p>The default synchronization timeout is 10 minutes.
 This can be changed with the <code>--instance-sync-timeout</code> flag, using a value in seconds.</p>
@@ -1705,7 +1718,7 @@ This can be changed with the <code>--instance-sync-timeout</code> flag, using a 
 <p>PerfTest instance synchronization requires <a href="https://en.wikipedia.org/wiki/IP_multicast">IP multicast</a> to be available.
 IP multicast is not necessary when PerfTest runs on Kubernetes pods.
 In this case, PerfTest asks Kubernetes for a list of pod IPs.
-The PerfTest instances are expected to run in the same namespace, and the namespace must be available in the <code>MY_POD_NAMESPACE</code> environment or provided with the <code>--instance-sync-namespace</code>.
+The PerfTest instances are expected to run in the same namespace, and the namespace must be available in the <code>MY_POD_NAMESPACE</code> environment variable or provided with the <code>--instance-sync-namespace</code> flag.
 As soon as the namespace information is available, PerfTest will prefer listing pod IPs over using IP multicast.
 Here is an example of using instance synchronization on Kubernetes by providing the namespace explicitly:</p>
 </div>
@@ -2076,7 +2089,7 @@ It is then possible to override the metrics values thanks to the <code>--exposed
 <div id="footer">
 <div id="footer-text">
 Version 2.20.0-SNAPSHOT<br>
-Last updated 2023-02-09 10:38:35 UTC
+Last updated 2023-02-09 11:15:04 UTC
 </div>
 </div>
 </body>
