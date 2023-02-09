@@ -474,6 +474,7 @@ Valid values for `--stream-consumer-offset` are `first`, `last`, `next`, an unsi
 NOTE: PerfTest uses the AMQP 0.9.1 protocol.
 Use https://rabbitmq.github.io/rabbitmq-stream-java-client/stable/htmlsingle/#the-performance-tool[Stream PerfTest] if you want to test https://rabbitmq.com/streams.html[RabbitMQ Streams] with the https://github.com/rabbitmq/rabbitmq-server/blob/main/deps/rabbitmq_stream/docs/PROTOCOL.adoc[stream protocol].
 
+[[instance-synchronization]]
 == Synchronizing Several Instances
 
 PerfTest instances can synchronize to start at the same time.
