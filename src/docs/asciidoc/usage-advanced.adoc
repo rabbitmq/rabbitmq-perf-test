@@ -495,13 +495,16 @@ Both instances _must_ share the same `--id` if they want to communicate to synch
 Note synchronized instances creates connections before starting the synchronization process.
 They are then ready to start their respective workload (publishing and/or consuming) when all the expected instances have joined the group.
 
+NOTE: Instance synchronization is compatible with https://rabbitmq.github.io/rabbitmq-stream-java-client/snapshot/htmlsingle/#performant-tool-instance-synchronization[StreamPerfTest], the performance tool for RabbitMQ streams: instances of both tools can synchronize with each other.
+The 2 tools use the same flags for this feature.
+
 The default synchronization timeout is 10 minutes.
 This can be changed with the `--instance-sync-timeout` flag, using a value in seconds.
 
 PerfTest instance synchronization requires https://en.wikipedia.org/wiki/IP_multicast[IP multicast] to be available.
 IP multicast is not necessary when PerfTest runs on Kubernetes pods.
 In this case, PerfTest asks Kubernetes for a list of pod IPs.
-The PerfTest instances are expected to run in the same namespace, and the namespace must be available in the `MY_POD_NAMESPACE` environment or provided with the `--instance-sync-namespace`.
+The PerfTest instances are expected to run in the same namespace, and the namespace must be available in the `MY_POD_NAMESPACE` environment variable or provided with the `--instance-sync-namespace` flag.
 As soon as the namespace information is available, PerfTest will prefer listing pod IPs over using IP multicast.
 Here is an example of using instance synchronization on Kubernetes by providing the namespace explicitly:
 
