@@ -76,7 +76,7 @@
     <versions.maven.plugin.version>2.14.2</versions.maven.plugin.version>
     <maven.release.plugin.version>2.5.3</maven.release.plugin.version>
     <maven.source.plugin.version>3.2.1</maven.source.plugin.version>
-    <maven.javadoc.plugin.version>3.4.1</maven.javadoc.plugin.version>
+    <maven.javadoc.plugin.version>3.5.0</maven.javadoc.plugin.version>
     <maven.gpg.plugin.version>3.0.1</maven.gpg.plugin.version>
     <maven.assembly.plugin.version>3.4.2</maven.assembly.plugin.version>
     <maven.install.plugin.version>3.1.0</maven.install.plugin.version>
