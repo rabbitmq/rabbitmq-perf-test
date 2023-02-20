@@ -22,9 +22,9 @@ import com.rabbitmq.client.RecoveryDelayHandler;
 import com.rabbitmq.client.impl.ClientVersion;
 import com.rabbitmq.client.impl.CredentialsProvider;
 import com.rabbitmq.client.impl.CredentialsRefreshService;
+import com.rabbitmq.client.impl.DefaultCredentialsRefreshService.DefaultCredentialsRefreshServiceBuilder;
 import com.rabbitmq.client.impl.DefaultExceptionHandler;
 import com.rabbitmq.client.impl.OAuth2ClientCredentialsGrantCredentialsProvider.OAuth2ClientCredentialsGrantCredentialsProviderBuilder;
-import com.rabbitmq.client.impl.DefaultCredentialsRefreshService.DefaultCredentialsRefreshServiceBuilder;
 import com.rabbitmq.client.impl.nio.NioParams;
 import com.rabbitmq.perf.Metrics.ConfigurationContext;
 import com.rabbitmq.perf.metrics.CompositeMetricsFormatter;
@@ -34,27 +34,29 @@ import com.rabbitmq.perf.metrics.MetricsFormatter;
 import com.rabbitmq.perf.metrics.MetricsFormatterFactory;
 import com.rabbitmq.perf.metrics.MetricsFormatterFactory.Context;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
+import org.apache.commons.cli.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.net.ssl.*;
+import java.io.*;
 import java.math.BigDecimal;
+import java.nio.charset.Charset;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.X509Certificate;
+import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.TemporalAccessor;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.BooleanSupplier;
-import java.util.stream.Collectors;
-import org.apache.commons.cli.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.net.ssl.SSLContext;
-import java.io.*;
-import java.nio.charset.Charset;
-import java.security.NoSuchAlgorithmException;
-import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.BooleanSupplier;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static com.rabbitmq.perf.OptionsUtils.forEach;
 import static com.rabbitmq.perf.Utils.strArg;
@@ -197,7 +199,9 @@ public class PerfTest {
                     String[] keyValue = param.split("=",2);
                     builder.parameter(keyValue[0], keyValue[1]);
                 }
-
+                if (sslContext != null) {
+                    builder.tls().sslContext(sslContext);
+                }
                 CredentialsProvider credentialsProvider = builder.build();
                 factory.setCredentialsProvider(credentialsProvider);
 
@@ -753,19 +757,42 @@ public class PerfTest {
                 );
     }
 
-    private static SSLContext getSslContextIfNecessary(CommandLineProxy cmd, Properties systemProperties) throws NoSuchAlgorithmException {
+    private static SSLContext getSslContextIfNecessary(CommandLineProxy cmd, Properties systemProperties) throws NoSuchAlgorithmException, KeyManagementException {
         SSLContext sslContext = null;
-        if (hasOption(cmd, "udsc") || hasOption(cmd,"useDefaultSslContext")) {
+
+        if (boolArg(cmd, "uisc", false)) {
+            TrustManager[] trustAllCerts = new TrustManager[] { new X509TrustManager() {
+                public java.security.cert.X509Certificate[] getAcceptedIssuers() { return null; }
+                public void checkClientTrusted(X509Certificate[] certs, String authType) { }
+                public void checkServerTrusted(X509Certificate[] certs, String authType) { }
+
+            } };
+
+            sslContext = SSLContext.getInstance("TLSv1.2");
+            sslContext.init(null, trustAllCerts, new java.security.SecureRandom());
+            HttpsURLConnection.setDefaultSSLSocketFactory(sslContext.getSocketFactory());
+
+            // Create all-trusting host name verifier
+            HostnameVerifier allHostsValid = new HostnameVerifier() {
+                public boolean verify(String hostname, SSLSession session) { return true; }
+            };
+            // Install the all-trusting host verifier
+            HttpsURLConnection.setDefaultHostnameVerifier(allHostsValid);
+        }
+
+        if (sslContext == null && boolArg(cmd, "udsc", false)) {
             LOGGER.info("Using default SSL context as per command line option");
             sslContext = SSLContext.getDefault();
         }
+
         for (String propertyName : systemProperties.stringPropertyNames()) {
-            if (propertyName != null && isPropertyTlsRelated(propertyName)) {
+            if (sslContext == null && propertyName != null && isPropertyTlsRelated(propertyName)) {
                 LOGGER.info("TLS related system properties detected, using default SSL context");
                 sslContext = SSLContext.getDefault();
                 break;
             }
         }
+
         return sslContext;
     }
 
@@ -865,6 +892,7 @@ public class PerfTest {
         options.addOption(new Option("L", "consumer-latency",       true, "consumer latency in microseconds"));
 
         options.addOption(new Option("udsc", "use-default-ssl-context", false, "use JVM default SSL context"));
+        options.addOption(new Option("uisc", "use-insecure-ssl-context", false, "Use SSL context that just ignores all SSL related problems"));
         options.addOption(new Option("se", "sasl-external", false, "use SASL EXTERNAL authentication, default is false. " +
                                                                    "Set to true if using client certificate authentication with the rabbitmq_auth_mechanism_ssl plugin."));
 
