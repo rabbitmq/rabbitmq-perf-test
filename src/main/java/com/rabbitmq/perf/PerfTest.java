@@ -174,7 +174,8 @@ public class PerfTest {
 
             String oauth2TokenEndpoint = strArg(cmd, "o2uri", null);
             if (oauth2TokenEndpoint != null) {
-                OAuth2ClientCredentialsGrantCredentialsProviderBuilder builder = new OAuth2ClientCredentialsGrantCredentialsProviderBuilder();
+                OAuth2ClientCredentialsGrantCredentialsProviderBuilder builder =
+                    new OAuth2ClientCredentialsGrantCredentialsProviderBuilder();
                 builder.tokenEndpointUri(oauth2TokenEndpoint);
 
                 String clientId = strArg(cmd, "o2id", null);
@@ -196,6 +197,14 @@ public class PerfTest {
                 for (String param : parameters) {
                     String[] keyValue = param.split("=",2);
                     builder.parameter(keyValue[0], keyValue[1]);
+                }
+
+                if (oauth2TokenEndpoint.toLowerCase().startsWith("https")) {
+                    if (sslContext == null) {
+                        builder.tls().dev();
+                    } else {
+                        builder.tls().sslContext(sslContext);
+                    }
                 }
 
                 CredentialsProvider credentialsProvider = builder.build();
