@@ -20,7 +20,11 @@ import com.rabbitmq.client.DefaultSaslConfig;
 import com.rabbitmq.client.ExceptionHandler;
 import com.rabbitmq.client.RecoveryDelayHandler;
 import com.rabbitmq.client.impl.ClientVersion;
+import com.rabbitmq.client.impl.CredentialsProvider;
+import com.rabbitmq.client.impl.CredentialsRefreshService;
 import com.rabbitmq.client.impl.DefaultExceptionHandler;
+import com.rabbitmq.client.impl.OAuth2ClientCredentialsGrantCredentialsProvider.OAuth2ClientCredentialsGrantCredentialsProviderBuilder;
+import com.rabbitmq.client.impl.DefaultCredentialsRefreshService.DefaultCredentialsRefreshServiceBuilder;
 import com.rabbitmq.client.impl.nio.NioParams;
 import com.rabbitmq.perf.Metrics.ConfigurationContext;
 import com.rabbitmq.perf.metrics.CompositeMetricsFormatter;
@@ -166,6 +170,48 @@ public class PerfTest {
             if (factory.getNioParams().getNioExecutor() != null) {
                 ExecutorService nioExecutor = factory.getNioParams().getNioExecutor();
                 shutdownService.wrap(() -> nioExecutor.shutdownNow());
+            }
+
+            String oauth2TokenEndpoint = strArg(cmd, "o2uri", null);
+            if (oauth2TokenEndpoint != null) {
+                OAuth2ClientCredentialsGrantCredentialsProviderBuilder builder =
+                    new OAuth2ClientCredentialsGrantCredentialsProviderBuilder();
+                builder.tokenEndpointUri(oauth2TokenEndpoint);
+
+                String clientId = strArg(cmd, "o2id", null);
+                if (clientId == null) {
+                    throw new MissingArgumentException("-o2id/--oauth2-client-id is mandatory when OAuth2 is used");
+                }
+                builder.clientId(clientId);
+
+                String clientSecret = strArg(cmd, "o2sec", null);
+                if (clientSecret == null) {
+                    throw new MissingArgumentException("-o2sec/--oauth2-client-secret is mandatory when OAuth2 is used");
+                }
+                builder.clientSecret(clientSecret);
+
+                String grantType = strArg(cmd, "o2gr", "client_credentials");
+                builder.grantType(grantType);
+
+                List<String> parameters = lstArg(cmd, "o2p");
+                for (String param : parameters) {
+                    String[] keyValue = param.split("=",2);
+                    builder.parameter(keyValue[0], keyValue[1]);
+                }
+
+                if (oauth2TokenEndpoint.toLowerCase().startsWith("https")) {
+                    if (sslContext == null) {
+                        builder.tls().dev();
+                    } else {
+                        builder.tls().sslContext(sslContext);
+                    }
+                }
+
+                CredentialsProvider credentialsProvider = builder.build();
+                factory.setCredentialsProvider(credentialsProvider);
+
+                CredentialsRefreshService refreshService = new DefaultCredentialsRefreshServiceBuilder().build();
+                factory.setCredentialsRefreshService(refreshService);
             }
 
             factory.setSocketConfigurator(Utils.socketConfigurator(cmd));
@@ -936,6 +982,18 @@ public class PerfTest {
             + "instance synchronization"));
         options.addOption(new Option("ist", "instance-sync-timeout", true, "Instance synchronization time "
             + "in seconds. Default is 600 seconds."));
+
+        options.addOption(new Option("o2uri","oauth2-token-endpoint", true, "OAuth2 token endpoint URI. "
+                + "At least --oauth2-client-id and --oauth2-client-secret should be also specified for OAuth2 flow to work."));
+        options.addOption(new Option("o2id", "oauth2-client-id", true, "OAuth2 client id"));
+        options.addOption(new Option("o2sec", "oauth2-client-secret", true, "OAuth2 client secret"));
+        options.addOption(new Option("o2gr", "oauth2-grant-type", true, "OAuth2 grant type. "
+            + "Default is 'client_credential'"));
+        Option oauth2ParamsOption = new Option("o2p", "oauth2-parameters",true, "Additional parameters for OAuth2 "
+                + "token endpoint, e.g. orgId=1234. Can be specified multiple times.");
+        oauth2ParamsOption.setArgs(Option.UNLIMITED_VALUES);
+        options.addOption(oauth2ParamsOption);
+
         return options;
     }
 
