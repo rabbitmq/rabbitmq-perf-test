@@ -250,7 +250,7 @@ public class PerfTest {
 
             String instanceSyncNamespace = lookUpInstanceSyncNamespace(cmd);
             int instanceSyncTimeout = intArg(cmd, "ist", 600);
-            InstanceSynchronization instanceSynchronization = new DefaultInstanceSynchronization(
+            InstanceSynchronization instanceSynchronization = Utils.defaultInstanceSynchronization(
                 testID, expectedInstances, instanceSyncNamespace, Duration.ofSeconds(instanceSyncTimeout),
                 consoleOut
             );
