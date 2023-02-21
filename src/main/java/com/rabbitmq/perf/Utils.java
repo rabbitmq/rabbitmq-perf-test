@@ -28,9 +28,13 @@ import com.rabbitmq.client.SslEngineConfigurator;
 import com.rabbitmq.client.SslEngineConfigurators;
 import com.rabbitmq.client.impl.recovery.AutorecoveringConnection;
 import java.io.IOException;
+import java.io.PrintStream;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.net.URISyntaxException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -212,6 +216,34 @@ abstract class Utils {
         }
       }
       throw e;
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  static InstanceSynchronization defaultInstanceSynchronization(String id, int expectedInstances,
+      String namespace,
+      Duration timeout, PrintStream out) {
+    try {
+      Class<InstanceSynchronization> defaultClass = (Class<InstanceSynchronization>) Class.forName(
+          "com.rabbitmq.perf.DefaultInstanceSynchronization");
+      Constructor<InstanceSynchronization> constructor = defaultClass.getDeclaredConstructor(
+          String.class,
+          int.class, String.class, Duration.class, PrintStream.class);
+      return constructor.newInstance(id, expectedInstances, namespace, timeout, out);
+    } catch (ClassNotFoundException e) {
+      return () -> {
+        if (expectedInstances > 1) {
+          throw new IllegalArgumentException("Multi-instance synchronization is not available");
+        }
+      };
+    } catch (NoSuchMethodException e) {
+      throw new RuntimeException(e);
+    } catch (InvocationTargetException e) {
+      throw new RuntimeException(e);
+    } catch (InstantiationException e) {
+      throw new RuntimeException(e);
+    } catch (IllegalAccessException e) {
+      throw new RuntimeException(e);
     }
   }
 }

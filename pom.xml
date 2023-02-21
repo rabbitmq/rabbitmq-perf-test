@@ -84,6 +84,7 @@
     <buildnumber.plugin.version>3.0.0</buildnumber.plugin.version>
     <maven.surefire.plugin.version>2.22.2</maven.surefire.plugin.version>
     <maven.failsafe.plugin.version>2.22.2</maven.failsafe.plugin.version>
+    <build-helper-maven-plugin.version>3.3.0</build-helper-maven-plugin.version>
     <maven.packagecloud.wagon.version>0.0.6</maven.packagecloud.wagon.version>
     <nexus-staging-maven-plugin.version>1.6.13</nexus-staging-maven-plugin.version>
     <checksum.maven.plugin.version>1.11</checksum.maven.plugin.version>
@@ -99,7 +100,6 @@
     <asciidoctorj.version>2.5.7</asciidoctorj.version>
     <!-- For GraalVM native image -->
     <graal-sdk.version>22.3.1</graal-sdk.version>
-    <build-helper-maven-plugin.version>3.3.0</build-helper-maven-plugin.version>
     <hdr-histogram.version>2.1.12</hdr-histogram.version>
 
     <maven.javadoc.skip>true</maven.javadoc.skip>
@@ -459,6 +459,49 @@
       <properties>
         <mockito.version>4.11.0</mockito.version>
       </properties>
+    </profile>
+
+    <profile>
+      <id>extensions</id>
+      <activation>
+        <jdk>[11,)</jdk>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>build-helper-maven-plugin</artifactId>
+            <version>${build-helper-maven-plugin.version}</version>
+            <executions>
+              <execution>
+                <id>add-extension-source</id>
+                <phase>generate-sources</phase>
+                <goals>
+                  <goal>add-source</goal>
+                </goals>
+                <configuration>
+                  <sources>
+                    <source>src/main/extensions</source>
+                  </sources>
+                </configuration>
+              </execution>
+              <execution>
+                <id>add-extensions-test-source</id>
+                <phase>generate-test-sources</phase>
+                <goals>
+                  <goal>add-test-source</goal>
+                </goals>
+                <configuration>
+                  <sources>
+                    <source>src/test/extensions</source>
+                  </sources>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+
     </profile>
 
     <!--

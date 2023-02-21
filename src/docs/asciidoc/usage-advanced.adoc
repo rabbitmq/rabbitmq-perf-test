@@ -477,6 +477,8 @@ Use https://rabbitmq.github.io/rabbitmq-stream-java-client/stable/htmlsingle/#th
 [[instance-synchronization]]
 == Synchronizing Several Instances
 
+NOTE: This feature is available only on Java 11 or more.
+
 PerfTest instances can synchronize to start at the same time.
 This can prove useful when you apply different workloads and want to compare them on the same monitoring graphics.
 The `--id` flag identifies the group of instances that need to synchronize and the `--expected-instances` flag sets the size of the group.
