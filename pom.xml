@@ -54,7 +54,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
-    <rabbitmq.version>5.17.0-SNAPSHOT</rabbitmq.version>
+    <rabbitmq.version>5.17.0.RC1</rabbitmq.version>
     <slf4j.version>2.0.6</slf4j.version>
     <commons-cli.version>1.5.0</commons-cli.version>
     <metrics.version>4.2.16</metrics.version>
@@ -914,16 +914,6 @@
       </releases>
       <snapshots>
         <enabled>false</enabled>
-      </snapshots>
-    </repository>
-    <repository>
-      <id>ossrh</id>
-      <url>https://oss.sonatype.org/content/repositories/snapshots</url>
-      <releases>
-        <enabled>false</enabled>
-      </releases>
-      <snapshots>
-        <enabled>true</enabled>
       </snapshots>
     </repository>
   </repositories>
