@@ -19,6 +19,7 @@ import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.DefaultSaslConfig;
 import com.rabbitmq.client.ExceptionHandler;
 import com.rabbitmq.client.RecoveryDelayHandler;
+import com.rabbitmq.client.TrustEverythingTrustManager;
 import com.rabbitmq.client.impl.ClientVersion;
 import com.rabbitmq.client.impl.CredentialsProvider;
 import com.rabbitmq.client.impl.CredentialsRefreshService;
@@ -27,6 +28,7 @@ import com.rabbitmq.client.impl.OAuth2ClientCredentialsGrantCredentialsProvider.
 import com.rabbitmq.client.impl.DefaultCredentialsRefreshService.DefaultCredentialsRefreshServiceBuilder;
 import com.rabbitmq.client.impl.nio.NioParams;
 import com.rabbitmq.perf.Metrics.ConfigurationContext;
+import com.rabbitmq.perf.Utils.GsonOAuth2ClientCredentialsGrantCredentialsProvider;
 import com.rabbitmq.perf.metrics.CompositeMetricsFormatter;
 import com.rabbitmq.perf.metrics.CsvMetricsFormatter;
 import com.rabbitmq.perf.metrics.DefaultPerformanceMetrics;
@@ -43,6 +45,7 @@ import java.time.temporal.TemporalAccessor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BooleanSupplier;
 import java.util.stream.Collectors;
+import javax.net.ssl.TrustManager;
 import org.apache.commons.cli.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,6 +59,7 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.Function;
 
+import static com.rabbitmq.client.ConnectionFactory.computeDefaultTlsProtocol;
 import static com.rabbitmq.perf.OptionsUtils.forEach;
 import static com.rabbitmq.perf.Utils.strArg;
 import static java.lang.String.format;
@@ -174,40 +178,43 @@ public class PerfTest {
 
             String oauth2TokenEndpoint = strArg(cmd, "o2uri", null);
             if (oauth2TokenEndpoint != null) {
-                OAuth2ClientCredentialsGrantCredentialsProviderBuilder builder =
-                    new OAuth2ClientCredentialsGrantCredentialsProviderBuilder();
-                builder.tokenEndpointUri(oauth2TokenEndpoint);
-
                 String clientId = strArg(cmd, "o2id", null);
                 if (clientId == null) {
                     throw new MissingArgumentException("-o2id/--oauth2-client-id is mandatory when OAuth2 is used");
                 }
-                builder.clientId(clientId);
 
                 String clientSecret = strArg(cmd, "o2sec", null);
                 if (clientSecret == null) {
                     throw new MissingArgumentException("-o2sec/--oauth2-client-secret is mandatory when OAuth2 is used");
                 }
-                builder.clientSecret(clientSecret);
 
                 String grantType = strArg(cmd, "o2gr", "client_credentials");
-                builder.grantType(grantType);
 
                 List<String> parameters = lstArg(cmd, "o2p");
+                Map<String, String> parametersMap = new LinkedHashMap<>();
                 for (String param : parameters) {
                     String[] keyValue = param.split("=",2);
-                    builder.parameter(keyValue[0], keyValue[1]);
+                    parametersMap.put(keyValue[0], keyValue[1]);
                 }
 
+                SSLContext oauthSslContext = null;
                 if (oauth2TokenEndpoint.toLowerCase().startsWith("https")) {
                     if (sslContext == null) {
-                        builder.tls().dev();
+                        oauthSslContext = SSLContext.getInstance(computeDefaultTlsProtocol(
+                            SSLContext.getDefault().getSupportedSSLParameters().getProtocols()
+                        ));
+                        oauthSslContext.init(null, new TrustManager[]{new TrustEverythingTrustManager()}, null);
                     } else {
-                        builder.tls().sslContext(sslContext);
+                        oauthSslContext = sslContext;
                     }
                 }
 
-                CredentialsProvider credentialsProvider = builder.build();
+                CredentialsProvider credentialsProvider = new GsonOAuth2ClientCredentialsGrantCredentialsProvider(
+                    oauth2TokenEndpoint, clientId, clientSecret, grantType, parametersMap,
+                    null,
+                    oauthSslContext == null ? null : oauthSslContext.getSocketFactory()
+                );
+
                 factory.setCredentialsProvider(credentialsProvider);
 
                 CredentialsRefreshService refreshService = new DefaultCredentialsRefreshServiceBuilder().build();

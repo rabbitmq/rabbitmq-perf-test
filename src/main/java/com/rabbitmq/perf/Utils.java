@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2022 VMware, Inc. or its affiliates.  All rights reserved.
+// Copyright (c) 2018-2023 VMware, Inc. or its affiliates.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 2.0 ("MPL"), the GNU General Public License version 2
@@ -15,6 +15,7 @@
 
 package com.rabbitmq.perf;
 
+import com.google.gson.Gson;
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Address;
 import com.rabbitmq.client.Channel;
@@ -26,30 +27,38 @@ import com.rabbitmq.client.SocketConfigurator;
 import com.rabbitmq.client.SocketConfigurators;
 import com.rabbitmq.client.SslEngineConfigurator;
 import com.rabbitmq.client.SslEngineConfigurators;
+import com.rabbitmq.client.impl.OAuth2ClientCredentialsGrantCredentialsProvider;
+import com.rabbitmq.client.impl.OAuthTokenManagementException;
 import com.rabbitmq.client.impl.recovery.AutorecoveringConnection;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.net.HttpURLConnection;
 import java.net.URISyntaxException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SNIHostName;
 import javax.net.ssl.SNIServerName;
 import javax.net.ssl.SSLParameters;
 import javax.net.ssl.SSLSocket;
+import javax.net.ssl.SSLSocketFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -244,6 +253,33 @@ abstract class Utils {
       throw new RuntimeException(e);
     } catch (IllegalAccessException e) {
       throw new RuntimeException(e);
+    }
+  }
+
+  static class GsonOAuth2ClientCredentialsGrantCredentialsProvider extends
+      OAuth2ClientCredentialsGrantCredentialsProvider {
+
+    private final Gson gson = new Gson();
+
+    public GsonOAuth2ClientCredentialsGrantCredentialsProvider(String tokenEndpointUri,
+        String clientId,
+        String clientSecret, String grantType, Map<String, String> parameters,
+        HostnameVerifier hostnameVerifier,
+        SSLSocketFactory sslSocketFactory) {
+      super(tokenEndpointUri, clientId, clientSecret, grantType, parameters, hostnameVerifier,
+          sslSocketFactory);
+    }
+
+    @Override
+    protected Token parseToken(String response) {
+      try {
+        Map<?, ?> map = gson.fromJson(response, Map.class);
+        int expiresIn = ((Number) map.get("expires_in")).intValue();
+        Instant receivedAt = Instant.now();
+        return new Token(map.get("access_token").toString(), expiresIn, receivedAt);
+      } catch (Exception e) {
+        throw new OAuthTokenManagementException("Error while parsing OAuth 2 token", e);
+      }
     }
   }
 }
