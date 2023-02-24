@@ -12,7 +12,6 @@
 //
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
-
 package com.rabbitmq.perf;
 
 import static com.rabbitmq.perf.RateLimiterUtils.GuavaPreconditions.checkArgument;
@@ -37,22 +36,20 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 /**
- * Rate limiting utilities taken from Google Guava.
- * Licensed under the Apache License, Version 2.0 (http://www.apache.org/licenses/LICENSE-2.0)
+ * Rate limiting utilities taken from Google Guava. Licensed under the Apache License, Version 2.0
+ * (http://www.apache.org/licenses/LICENSE-2.0)
  */
 abstract class RateLimiterUtils {
 
-  private RateLimiterUtils() {
-
-  }
+  private RateLimiterUtils() {}
 
   /**
    * A rate limiter. Conceptually, a rate limiter distributes permits at a configurable rate. Each
    * {@link #acquire()} blocks if necessary until a permit is available, and then takes it. Once
    * acquired, permits need not be released.
    *
-   * <p>{@code RateLimiter} is safe for concurrent use: It will restrict the total rate of calls from
-   * all threads. Note, however, that it does not guarantee fairness.
+   * <p>{@code RateLimiter} is safe for concurrent use: It will restrict the total rate of calls
+   * from all threads. Note, however, that it does not guarantee fairness.
    *
    * <p>Rate limiters are often used to restrict the rate at which some physical or logical resource
    * is accessed. This is in contrast to {@link java.util.concurrent.Semaphore} which restricts the
@@ -81,9 +78,9 @@ abstract class RateLimiterUtils {
    * }
    * }</pre>
    *
-   * <p>As another example, imagine that we produce a stream of data, and we want to cap it at 5kb per
-   * second. This could be accomplished by requiring a permit per byte, and specifying a rate of 5000
-   * permits per second:
+   * <p>As another example, imagine that we produce a stream of data, and we want to cap it at 5kb
+   * per second. This could be accomplished by requiring a permit per byte, and specifying a rate of
+   * 5000 permits per second:
    *
    * <pre>{@code
    * final RateLimiter rateLimiter = RateLimiter.create(5000.0); // rate = 5000 permits per second
@@ -94,11 +91,11 @@ abstract class RateLimiterUtils {
    * }</pre>
    *
    * <p>It is important to note that the number of permits requested <i>never</i> affects the
-   * throttling of the request itself (an invocation to {@code acquire(1)} and an invocation to {@code
-   * acquire(1000)} will result in exactly the same throttling, if any), but it affects the throttling
-   * of the <i>next</i> request. I.e., if an expensive task arrives at an idle RateLimiter, it will be
-   * granted immediately, but it is the <i>next</i> request that will experience extra throttling,
-   * thus paying for the cost of the expensive task.
+   * throttling of the request itself (an invocation to {@code acquire(1)} and an invocation to
+   * {@code acquire(1000)} will result in exactly the same throttling, if any), but it affects the
+   * throttling of the <i>next</i> request. I.e., if an expensive task arrives at an idle
+   * RateLimiter, it will be granted immediately, but it is the <i>next</i> request that will
+   * experience extra throttling, thus paying for the cost of the expensive task.
    *
    * @author Dimitris Andreou
    * @since 13.0
@@ -114,8 +111,9 @@ abstract class RateLimiterUtils {
      * permitsPerSecond} are issued during any given second, with sustained requests being smoothly
      * spread over each second. When the incoming request rate exceeds {@code permitsPerSecond} the
      * rate limiter will release one permit every {@code (1.0 / permitsPerSecond)} seconds. When the
-     * rate limiter is unused, bursts of up to {@code permitsPerSecond} permits will be allowed, with
-     * subsequent requests being smoothly limited at the stable rate of {@code permitsPerSecond}.
+     * rate limiter is unused, bursts of up to {@code permitsPerSecond} permits will be allowed,
+     * with subsequent requests being smoothly limited at the stable rate of {@code
+     * permitsPerSecond}.
      *
      * @param permitsPerSecond the rate of the returned {@code RateLimiter}, measured in how many
      *     permits become available per second
@@ -150,10 +148,10 @@ abstract class RateLimiterUtils {
      * Creates a {@code RateLimiter} with the specified stable throughput, given as "permits per
      * second" (commonly referred to as <i>QPS</i>, queries per second), and a <i>warmup period</i>,
      * during which the {@code RateLimiter} smoothly ramps up its rate, until it reaches its maximum
-     * rate at the end of the period (as long as there are enough requests to saturate it). Similarly,
-     * if the {@code RateLimiter} is left <i>unused</i> for a duration of {@code warmupPeriod}, it
-     * will gradually return to its "cold" state, i.e. it will go through the same warming up process
-     * as when it was first created.
+     * rate at the end of the period (as long as there are enough requests to saturate it).
+     * Similarly, if the {@code RateLimiter} is left <i>unused</i> for a duration of {@code
+     * warmupPeriod}, it will gradually return to its "cold" state, i.e. it will go through the same
+     * warming up process as when it was first created.
      *
      * <p>The returned {@code RateLimiter} is intended for cases where the resource that actually
      * fulfills the requests (e.g., a remote server) needs "warmup" time, rather than being
@@ -164,8 +162,8 @@ abstract class RateLimiterUtils {
      *
      * @param permitsPerSecond the rate of the returned {@code RateLimiter}, measured in how many
      *     permits become available per second
-     * @param warmupPeriod the duration of the period where the {@code RateLimiter} ramps up its rate,
-     *     before reaching its stable (maximum) rate
+     * @param warmupPeriod the duration of the period where the {@code RateLimiter} ramps up its
+     *     rate, before reaching its stable (maximum) rate
      * @throws IllegalArgumentException if {@code permitsPerSecond} is negative or zero or {@code
      *     warmupPeriod} is negative
      * @since 28.0
@@ -178,10 +176,10 @@ abstract class RateLimiterUtils {
      * Creates a {@code RateLimiter} with the specified stable throughput, given as "permits per
      * second" (commonly referred to as <i>QPS</i>, queries per second), and a <i>warmup period</i>,
      * during which the {@code RateLimiter} smoothly ramps up its rate, until it reaches its maximum
-     * rate at the end of the period (as long as there are enough requests to saturate it). Similarly,
-     * if the {@code RateLimiter} is left <i>unused</i> for a duration of {@code warmupPeriod}, it
-     * will gradually return to its "cold" state, i.e. it will go through the same warming up process
-     * as when it was first created.
+     * rate at the end of the period (as long as there are enough requests to saturate it).
+     * Similarly, if the {@code RateLimiter} is left <i>unused</i> for a duration of {@code
+     * warmupPeriod}, it will gradually return to its "cold" state, i.e. it will go through the same
+     * warming up process as when it was first created.
      *
      * <p>The returned {@code RateLimiter} is intended for cases where the resource that actually
      * fulfills the requests (e.g., a remote server) needs "warmup" time, rather than being
@@ -192,8 +190,8 @@ abstract class RateLimiterUtils {
      *
      * @param permitsPerSecond the rate of the returned {@code RateLimiter}, measured in how many
      *     permits become available per second
-     * @param warmupPeriod the duration of the period where the {@code RateLimiter} ramps up its rate,
-     *     before reaching its stable (maximum) rate
+     * @param warmupPeriod the duration of the period where the {@code RateLimiter} ramps up its
+     *     rate, before reaching its stable (maximum) rate
      * @param unit the time unit of the warmupPeriod argument
      * @throws IllegalArgumentException if {@code permitsPerSecond} is negative or zero or {@code
      *     warmupPeriod} is negative
@@ -245,17 +243,17 @@ abstract class RateLimiterUtils {
     /**
      * Updates the stable rate of this {@code RateLimiter}, that is, the {@code permitsPerSecond}
      * argument provided in the factory method that constructed the {@code RateLimiter}. Currently
-     * throttled threads will <b>not</b> be awakened as a result of this invocation, thus they do not
-     * observe the new rate; only subsequent requests will.
+     * throttled threads will <b>not</b> be awakened as a result of this invocation, thus they do
+     * not observe the new rate; only subsequent requests will.
      *
      * <p>Note though that, since each request repays (by waiting, if necessary) the cost of the
      * <i>previous</i> request, this means that the very next request after an invocation to {@code
      * setRate} will not be affected by the new rate; it will pay the cost of the previous request,
      * which is in terms of the previous rate.
      *
-     * <p>The behavior of the {@code RateLimiter} is not modified in any other way, e.g. if the {@code
-     * RateLimiter} was configured with a warmup period of 20 seconds, it still has a warmup period of
-     * 20 seconds after this method invocation.
+     * <p>The behavior of the {@code RateLimiter} is not modified in any other way, e.g. if the
+     * {@code RateLimiter} was configured with a warmup period of 20 seconds, it still has a warmup
+     * period of 20 seconds after this method invocation.
      *
      * @param permitsPerSecond the new stable rate of this {@code RateLimiter}
      * @throws IllegalArgumentException if {@code permitsPerSecond} is negative or zero
@@ -271,10 +269,10 @@ abstract class RateLimiterUtils {
     abstract void doSetRate(double permitsPerSecond, long nowMicros);
 
     /**
-     * Returns the stable rate (as {@code permits per seconds}) with which this {@code RateLimiter} is
-     * configured with. The initial value of this is the same as the {@code permitsPerSecond} argument
-     * passed in the factory method that produced this {@code RateLimiter}, and it is only updated
-     * after invocations to {@linkplain #setRate}.
+     * Returns the stable rate (as {@code permits per seconds}) with which this {@code RateLimiter}
+     * is configured with. The initial value of this is the same as the {@code permitsPerSecond}
+     * argument passed in the factory method that produced this {@code RateLimiter}, and it is only
+     * updated after invocations to {@linkplain #setRate}.
      */
     final double getRate() {
       synchronized (mutex()) {
@@ -298,8 +296,8 @@ abstract class RateLimiterUtils {
     }
 
     /**
-     * Acquires the given number of permits from this {@code RateLimiter}, blocking until the request
-     * can be granted. Tells the amount of time slept, if any.
+     * Acquires the given number of permits from this {@code RateLimiter}, blocking until the
+     * request can be granted. Tells the amount of time slept, if any.
      *
      * @param permits the number of permits to acquire
      * @return time spent sleeping to enforce rate, in seconds; 0.0 if not rate-limited
@@ -327,8 +325,8 @@ abstract class RateLimiterUtils {
 
     /**
      * Acquires a permit from this {@code RateLimiter} if it can be obtained without exceeding the
-     * specified {@code timeout}, or returns {@code false} immediately (without waiting) if the permit
-     * would not have been granted before the timeout expired.
+     * specified {@code timeout}, or returns {@code false} immediately (without waiting) if the
+     * permit would not have been granted before the timeout expired.
      *
      * <p>This method is equivalent to {@code tryAcquire(1, timeout)}.
      *
@@ -343,8 +341,8 @@ abstract class RateLimiterUtils {
 
     /**
      * Acquires a permit from this {@code RateLimiter} if it can be obtained without exceeding the
-     * specified {@code timeout}, or returns {@code false} immediately (without waiting) if the permit
-     * would not have been granted before the timeout expired.
+     * specified {@code timeout}, or returns {@code false} immediately (without waiting) if the
+     * permit would not have been granted before the timeout expired.
      *
      * <p>This method is equivalent to {@code tryAcquire(1, timeout, unit)}.
      *
@@ -359,7 +357,8 @@ abstract class RateLimiterUtils {
     }
 
     /**
-     * Acquires permits from this {@link RateLimiter} if it can be acquired immediately without delay.
+     * Acquires permits from this {@link RateLimiter} if it can be acquired immediately without
+     * delay.
      *
      * <p>This method is equivalent to {@code tryAcquire(permits, 0, anyUnit)}.
      *
@@ -387,8 +386,8 @@ abstract class RateLimiterUtils {
 
     /**
      * Acquires the given number of permits from this {@code RateLimiter} if it can be obtained
-     * without exceeding the specified {@code timeout}, or returns {@code false} immediately (without
-     * waiting) if the permits would not have been granted before the timeout expired.
+     * without exceeding the specified {@code timeout}, or returns {@code false} immediately
+     * (without waiting) if the permits would not have been granted before the timeout expired.
      *
      * @param permits the number of permits to acquire
      * @param timeout the maximum time to wait for the permits. Negative values are treated as zero.
@@ -402,8 +401,8 @@ abstract class RateLimiterUtils {
 
     /**
      * Acquires the given number of permits from this {@code RateLimiter} if it can be obtained
-     * without exceeding the specified {@code timeout}, or returns {@code false} immediately (without
-     * waiting) if the permits would not have been granted before the timeout expired.
+     * without exceeding the specified {@code timeout}, or returns {@code false} immediately
+     * (without waiting) if the permits would not have been granted before the timeout expired.
      *
      * @param permits the number of permits to acquire
      * @param timeout the maximum time to wait for the permits. Negative values are treated as zero.
@@ -678,16 +677,16 @@ abstract class RateLimiterUtils {
      *   <li>When the RateLimiter is not used, this goes right (up to maxPermits)
      *   <li>When the RateLimiter is used, this goes left (down to zero), since if we have
      *       storedPermits, we serve from those first
-     *   <li>When _unused_, we go right at a constant rate! The rate at which we move to the right is
-     *       chosen as maxPermits / warmupPeriod. This ensures that the time it takes to go from 0 to
-     *       maxPermits is equal to warmupPeriod.
-     *   <li>When _used_, the time it takes, as explained in the introductory class note, is equal to
-     *       the integral of our function, between X permits and X-K permits, assuming we want to
+     *   <li>When _unused_, we go right at a constant rate! The rate at which we move to the right
+     *       is chosen as maxPermits / warmupPeriod. This ensures that the time it takes to go from
+     *       0 to maxPermits is equal to warmupPeriod.
+     *   <li>When _used_, the time it takes, as explained in the introductory class note, is equal
+     *       to the integral of our function, between X permits and X-K permits, assuming we want to
      *       spend K saved permits.
      * </ol>
      *
-     * <p>In summary, the time it takes to move to the left (spend K permits), is equal to the area of
-     * the function of width == K.
+     * <p>In summary, the time it takes to move to the left (spend K permits), is equal to the area
+     * of the function of width == K.
      *
      * <p>Assuming we have saturated demand, the time to go from maxPermits to thresholdPermits is
      * equal to warmupPeriod. And the time to go from thresholdPermits to 0 is warmupPeriod/2. (The
@@ -698,8 +697,8 @@ abstract class RateLimiterUtils {
      *
      * <ul>
      *   <li>The time to go from thresholdPermits to 0 is equal to the integral of the function
-     *       between 0 and thresholdPermits. This is thresholdPermits * stableIntervals. By (5) it is
-     *       also equal to warmupPeriod/2. Therefore
+     *       between 0 and thresholdPermits. This is thresholdPermits * stableIntervals. By (5) it
+     *       is also equal to warmupPeriod/2. Therefore
      *       <blockquote>
      *       thresholdPermits = 0.5 * warmupPeriod / stableInterval
      *       </blockquote>
@@ -736,7 +735,8 @@ abstract class RateLimiterUtils {
         double coldIntervalMicros = stableIntervalMicros * coldFactor;
         thresholdPermits = 0.5 * warmupPeriodMicros / stableIntervalMicros;
         maxPermits =
-            thresholdPermits + 2.0 * warmupPeriodMicros / (stableIntervalMicros + coldIntervalMicros);
+            thresholdPermits
+                + 2.0 * warmupPeriodMicros / (stableIntervalMicros + coldIntervalMicros);
         slope = (coldIntervalMicros - stableIntervalMicros) / (maxPermits - thresholdPermits);
         if (oldMaxPermits == Double.POSITIVE_INFINITY) {
           // if we don't special-case this, we would get storedPermits == NaN, below
@@ -779,10 +779,10 @@ abstract class RateLimiterUtils {
     }
 
     /**
-     * This implements a "bursty" RateLimiter, where storedPermits are translated to zero throttling.
-     * The maximum number of permits that can be saved (when the RateLimiter is unused) is defined in
-     * terms of time, in this sense: if a RateLimiter is 2qps, and this time is specified as 10
-     * seconds, we can save up to 2 * 10 = 20 permits.
+     * This implements a "bursty" RateLimiter, where storedPermits are translated to zero
+     * throttling. The maximum number of permits that can be saved (when the RateLimiter is unused)
+     * is defined in terms of time, in this sense: if a RateLimiter is 2qps, and this time is
+     * specified as 10 seconds, we can save up to 2 * 10 = 20 permits.
      */
     static final class SmoothBursty extends SmoothRateLimiter {
       /** The work (permits) of how many seconds can be saved up if this RateLimiter is unused? */
@@ -832,8 +832,9 @@ abstract class RateLimiterUtils {
     double stableIntervalMicros;
 
     /**
-     * The time when the next request (no matter its size) will be granted. After granting a request,
-     * this is pushed further in the future. Large requests push this further than small requests.
+     * The time when the next request (no matter its size) will be granted. After granting a
+     * request, this is pushed further in the future. Large requests push this further than small
+     * requests.
      */
     private long nextFreeTicketMicros = 0L; // could be either in the past or future
 
@@ -877,9 +878,10 @@ abstract class RateLimiterUtils {
     }
 
     /**
-     * Translates a specified portion of our currently stored permits which we want to spend/acquire,
-     * into a throttling time. Conceptually, this evaluates the integral of the underlying function we
-     * use, for the range of [(storedPermits - permitsToTake), storedPermits].
+     * Translates a specified portion of our currently stored permits which we want to
+     * spend/acquire, into a throttling time. Conceptually, this evaluates the integral of the
+     * underlying function we use, for the range of [(storedPermits - permitsToTake),
+     * storedPermits].
      *
      * <p>This always holds: {@code 0 <= permitsToTake <= storedPermits}
      */
@@ -916,18 +918,18 @@ abstract class RateLimiterUtils {
    * An object that accurately measures <i>elapsed time</i>: the measured duration between two
    * successive readings of "now" in the same process.
    *
-   * <p>In contrast, <i>wall time</i> is a reading of "now" as given by a method like
-   * {@link System#currentTimeMillis()}, best represented as an Instant. Such values
-   * <i>can</i> be subtracted to obtain a {@code Duration} (such as by {@code Duration.between}), but
-   * doing so does <i>not</i> give a reliable measurement of elapsed time, because wall time readings
-   * are inherently approximate, routinely affected by periodic clock corrections. Because this class
+   * <p>In contrast, <i>wall time</i> is a reading of "now" as given by a method like {@link
+   * System#currentTimeMillis()}, best represented as an Instant. Such values <i>can</i> be
+   * subtracted to obtain a {@code Duration} (such as by {@code Duration.between}), but doing so
+   * does <i>not</i> give a reliable measurement of elapsed time, because wall time readings are
+   * inherently approximate, routinely affected by periodic clock corrections. Because this class
    * (by default) uses {@link System#nanoTime}, it is unaffected by these changes.
    *
    * <p>Use this class instead of direct calls to {@link System#nanoTime} for two reasons:
    *
    * <ul>
-   *   <li>The raw {@code long} values returned by {@code nanoTime} are meaningless and unsafe to use
-   *       in any other way than how {@code Stopwatch} uses them.
+   *   <li>The raw {@code long} values returned by {@code nanoTime} are meaningless and unsafe to
+   *       use in any other way than how {@code Stopwatch} uses them.
    *   <li>An alternative source of nanosecond ticks can be substituted, for example for testing or
    *       performance reasons, without affecting most of your code.
    * </ul>
@@ -976,7 +978,8 @@ abstract class RateLimiterUtils {
     private long startTick;
 
     /**
-     * Creates (but does not start) a new stopwatch using {@link System#nanoTime} as its time source.
+     * Creates (but does not start) a new stopwatch using {@link System#nanoTime} as its time
+     * source.
      *
      * @since 15.0
      */
@@ -1020,8 +1023,8 @@ abstract class RateLimiterUtils {
     }
 
     /**
-     * Returns {@code true} if {@link #start()} has been called on this stopwatch, and {@link #stop()}
-     * has not been called since the last call to {@code start()}.
+     * Returns {@code true} if {@link #start()} has been called on this stopwatch, and {@link
+     * #stop()} has not been called since the last call to {@code start()}.
      */
     boolean isRunning() {
       return isRunning;
@@ -1074,8 +1077,8 @@ abstract class RateLimiterUtils {
      * Returns the current elapsed time shown on this stopwatch, expressed in the desired time unit,
      * with any fraction rounded down.
      *
-     * <p><b>Note:</b> the overhead of measurement can be more than a microsecond, so it is generally
-     * not useful to specify {@link TimeUnit#NANOSECONDS} precision here.
+     * <p><b>Note:</b> the overhead of measurement can be more than a microsecond, so it is
+     * generally not useful to specify {@link TimeUnit#NANOSECONDS} precision here.
      *
      * <p>It is generally not a good idea to use an ambiguous, unitless {@code long} to represent
      * elapsed time. Therefore, we recommend using {@link #elapsed()} instead, which returns a
@@ -1210,8 +1213,7 @@ abstract class RateLimiterUtils {
       }
     }
 
-    static String lenientFormat(
-        String template, Object... args) {
+    static String lenientFormat(String template, Object... args) {
       template = String.valueOf(template); // null -> "null"
 
       if (args == null) {
@@ -1261,7 +1263,8 @@ abstract class RateLimiterUtils {
         // Default toString() behavior - see Object.toString()
         String objectToString =
             o.getClass().getName() + '@' + Integer.toHexString(System.identityHashCode(o));
-        // Logger is created inline with fixed name to avoid forcing Proguard to create another class.
+        // Logger is created inline with fixed name to avoid forcing Proguard to create another
+        // class.
         Logger.getLogger("com.google.common.base.Strings")
             .log(WARNING, "Exception during lenientFormat for " + objectToString, e);
         return "<" + objectToString + " threw " + e.getClass().getName() + ">";

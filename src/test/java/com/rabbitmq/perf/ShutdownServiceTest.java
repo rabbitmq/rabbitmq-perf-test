@@ -12,33 +12,30 @@
 //
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
-
 package com.rabbitmq.perf;
-
-import org.junit.jupiter.api.Test;
-
-import java.util.ArrayList;
-import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.ArrayList;
+import java.util.List;
+import org.junit.jupiter.api.Test;
+
 public class ShutdownServiceTest {
 
-    ShutdownService service = new ShutdownService();
+  ShutdownService service = new ShutdownService();
 
-    @Test
-    public void closeIsLifoAndIdempotent() throws Exception {
-        List<AutoCloseable> closeCallbacks = new ArrayList<>();
-        List<String> markers = new ArrayList<>();
-        closeCallbacks.add(service.wrap(() -> markers.add("1")));
-        closeCallbacks.add(service.wrap(() -> markers.add("2")));
-        closeCallbacks.add(service.wrap(() -> markers.add("3")));
-        service.close();
-        assertThat(markers).hasSize(closeCallbacks.size()).contains("3", "2", "1");
-        for (AutoCloseable closeCallback : closeCallbacks) {
-            closeCallback.close();
-        }
-        assertThat(markers).hasSize(closeCallbacks.size()).contains("3", "2", "1");
+  @Test
+  public void closeIsLifoAndIdempotent() throws Exception {
+    List<AutoCloseable> closeCallbacks = new ArrayList<>();
+    List<String> markers = new ArrayList<>();
+    closeCallbacks.add(service.wrap(() -> markers.add("1")));
+    closeCallbacks.add(service.wrap(() -> markers.add("2")));
+    closeCallbacks.add(service.wrap(() -> markers.add("3")));
+    service.close();
+    assertThat(markers).hasSize(closeCallbacks.size()).contains("3", "2", "1");
+    for (AutoCloseable closeCallback : closeCallbacks) {
+      closeCallback.close();
     }
-
+    assertThat(markers).hasSize(closeCallbacks.size()).contains("3", "2", "1");
+  }
 }

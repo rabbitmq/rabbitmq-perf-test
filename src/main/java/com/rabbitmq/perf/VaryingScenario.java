@@ -12,82 +12,85 @@
 //
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
-
 package com.rabbitmq.perf;
 
 import com.rabbitmq.client.ConnectionFactory;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class VaryingScenario implements Scenario {
-    private final String name;
-    private final ConnectionFactory factory;
-    private final MulticastParams[] params;
-    private final VaryingScenarioStats stats = new VaryingScenarioStats();
-    private final Variable[] variables;
+  private final String name;
+  private final ConnectionFactory factory;
+  private final MulticastParams[] params;
+  private final VaryingScenarioStats stats = new VaryingScenarioStats();
+  private final Variable[] variables;
 
-    public VaryingScenario(String name, ConnectionFactory factory,
-                           MulticastParams params, Variable... variables) {
-        this(name, factory, new MulticastParams[]{params}, variables);
-    }
+  public VaryingScenario(
+      String name, ConnectionFactory factory, MulticastParams params, Variable... variables) {
+    this(name, factory, new MulticastParams[] {params}, variables);
+  }
 
-    public VaryingScenario(String name, ConnectionFactory factory,
-                           MulticastParams[] params, Variable... variables) {
-        this.name = name;
-        this.factory = factory;
-        this.params = params;
-        this.variables = variables;
-    }
+  public VaryingScenario(
+      String name, ConnectionFactory factory, MulticastParams[] params, Variable... variables) {
+    this.name = name;
+    this.factory = factory;
+    this.params = params;
+    this.variables = variables;
+  }
 
-    public void run() throws Exception {
-        run(variables, new ArrayList<>());
-    }
+  public void run() throws Exception {
+    run(variables, new ArrayList<>());
+  }
 
-    private void run(Variable[] variables, List<VariableValue> values) throws Exception {
-        if (variables.length > 0) {
-            Variable variable = variables[0];
-            Variable[] rest = rest(variables);
-            for (VariableValue value : variable.getValues()) {
-                List<VariableValue> values2 = new ArrayList<VariableValue>(values);
-                values2.add(value);
-                run(rest, values2);
-            }
+  private void run(Variable[] variables, List<VariableValue> values) throws Exception {
+    if (variables.length > 0) {
+      Variable variable = variables[0];
+      Variable[] rest = rest(variables);
+      for (VariableValue value : variable.getValues()) {
+        List<VariableValue> values2 = new ArrayList<VariableValue>(values);
+        values2.add(value);
+        run(rest, values2);
+      }
+    } else {
+      SimpleScenarioStats stats0 = stats.next(values);
+      for (MulticastParams p : params) {
+        for (VariableValue value : values) {
+          value.setup(p);
         }
-        else {
-            SimpleScenarioStats stats0 = stats.next(values);
-            for (MulticastParams p : params) {
-                for (VariableValue value : values) {
-                    value.setup(p);
-                }
-                MulticastSet set = new MulticastSet(stats0, factory, p, null, PerfTest.getCompletionHandler(p, new ConcurrentHashMap<>()));
-                stats0.setup(p);
-                set.run();
-                for (VariableValue value : values) {
-                    value.teardown(p);
-                }
-            }
-            System.out.print("#");
-            System.out.flush();
+        MulticastSet set =
+            new MulticastSet(
+                stats0,
+                factory,
+                p,
+                null,
+                PerfTest.getCompletionHandler(p, new ConcurrentHashMap<>()));
+        stats0.setup(p);
+        set.run();
+        for (VariableValue value : values) {
+          value.teardown(p);
         }
+      }
+      System.out.print("#");
+      System.out.flush();
     }
+  }
 
-    private Variable[] rest(Variable[] variables) {
-        Variable[] tail = new Variable[variables.length - 1];
-        System.arraycopy(variables, 1, tail, 0, tail.length);
-        return tail;
-    }
+  private Variable[] rest(Variable[] variables) {
+    Variable[] tail = new Variable[variables.length - 1];
+    System.arraycopy(variables, 1, tail, 0, tail.length);
+    return tail;
+  }
 
-    public ScenarioStats getStats() {
-        return stats;
-    }
+  public ScenarioStats getStats() {
+    return stats;
+  }
 
-    public String getName() {
-        return name;
-    }
+  public String getName() {
+    return name;
+  }
 
-    Variable[] getVariables() {
-        return variables;
-    }
+  Variable[] getVariables() {
+    return variables;
+  }
 }

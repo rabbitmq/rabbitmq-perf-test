@@ -12,11 +12,9 @@
 //
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
-
 package com.rabbitmq.perf;
 
 import com.rabbitmq.client.ConnectionFactory;
-
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.security.KeyManagementException;
@@ -26,38 +24,42 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
 public class SimpleScenario implements Scenario {
-    private final String name;
-    private final ConnectionFactory factory;
-    private final MulticastParams[] params;
-    private final long interval;
-    private SimpleScenarioStats stats;
+  private final String name;
+  private final ConnectionFactory factory;
+  private final MulticastParams[] params;
+  private final long interval;
+  private SimpleScenarioStats stats;
 
-    public SimpleScenario(String name, ConnectionFactory factory, MulticastParams... params) {
-        this(name, factory, 1000L, params);
-    }
+  public SimpleScenario(String name, ConnectionFactory factory, MulticastParams... params) {
+    this(name, factory, 1000L, params);
+  }
 
-    public SimpleScenario(String name, ConnectionFactory factory, long interval, MulticastParams... params) {
-        this.name = name;
-        this.factory = factory;
-        this.params = params;
-        this.interval = interval;
-    }
+  public SimpleScenario(
+      String name, ConnectionFactory factory, long interval, MulticastParams... params) {
+    this.name = name;
+    this.factory = factory;
+    this.params = params;
+    this.interval = interval;
+  }
 
-    public void run()
-        throws IOException, InterruptedException, TimeoutException, NoSuchAlgorithmException, KeyManagementException, URISyntaxException, ExecutionException {
-        this.stats = new SimpleScenarioStats(interval);
-        for (MulticastParams p : params) {
-            MulticastSet set = new MulticastSet(stats, factory, p, null, PerfTest.getCompletionHandler(p, new ConcurrentHashMap<>()));
-            stats.setup(p);
-            set.run();
-        }
+  public void run()
+      throws IOException, InterruptedException, TimeoutException, NoSuchAlgorithmException,
+          KeyManagementException, URISyntaxException, ExecutionException {
+    this.stats = new SimpleScenarioStats(interval);
+    for (MulticastParams p : params) {
+      MulticastSet set =
+          new MulticastSet(
+              stats, factory, p, null, PerfTest.getCompletionHandler(p, new ConcurrentHashMap<>()));
+      stats.setup(p);
+      set.run();
     }
+  }
 
-    public SimpleScenarioStats getStats() {
-        return stats;
-    }
+  public SimpleScenarioStats getStats() {
+    return stats;
+  }
 
-    public String getName() {
-        return name;
-    }
+  public String getName() {
+    return name;
+  }
 }

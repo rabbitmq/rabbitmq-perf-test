@@ -12,7 +12,6 @@
 //
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
-
 package com.rabbitmq.perf;
 
 import java.util.concurrent.Executors;
@@ -21,29 +20,30 @@ import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * A {@link ThreadFactory} that names threads with a prefix and a sequence number.
+ *
  * @since 2.1.0
  */
 public class NamedThreadFactory implements ThreadFactory {
 
-    private final ThreadFactory backingThreaFactory;
+  private final ThreadFactory backingThreaFactory;
 
-    private final String prefix;
+  private final String prefix;
 
-    private final AtomicLong count = new AtomicLong(0);
+  private final AtomicLong count = new AtomicLong(0);
 
-    public NamedThreadFactory(String prefix) {
-        this(Executors.defaultThreadFactory(), prefix);
-    }
+  public NamedThreadFactory(String prefix) {
+    this(Executors.defaultThreadFactory(), prefix);
+  }
 
-    public NamedThreadFactory(ThreadFactory backingThreaFactory, String prefix) {
-        this.backingThreaFactory = backingThreaFactory;
-        this.prefix = prefix;
-    }
+  public NamedThreadFactory(ThreadFactory backingThreaFactory, String prefix) {
+    this.backingThreaFactory = backingThreaFactory;
+    this.prefix = prefix;
+  }
 
-    @Override
-    public Thread newThread(Runnable r) {
-        Thread thread = this.backingThreaFactory.newThread(r);
-        thread.setName(prefix + count.getAndIncrement());
-        return thread;
-    }
+  @Override
+  public Thread newThread(Runnable r) {
+    Thread thread = this.backingThreaFactory.newThread(r);
+    thread.setName(prefix + count.getAndIncrement());
+    return thread;
+  }
 }

@@ -12,7 +12,6 @@
 //
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
-
 package com.rabbitmq.perf;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -69,8 +68,7 @@ public class ConnectionRecoveryTest {
   @Mock ConnectionFactory cf;
   @Mock AutorecoveringConnection c;
   @Mock Channel ch;
-  @Mock
-  PerformanceMetrics performanceMetrics;
+  @Mock PerformanceMetrics performanceMetrics;
   @Mock MulticastSet.ThreadingHandler threadingHandler;
   @Mock ExecutorService executorService;
   @Mock ScheduledExecutorService scheduledExecutorService;

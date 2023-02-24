@@ -12,7 +12,6 @@
 //
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
-
 package com.rabbitmq.perf;
 
 import static com.rabbitmq.perf.Assertions.assertThat;
@@ -63,10 +62,8 @@ public class ExpectedMetricsTest {
     exposedMetrics.put(METRICS_PUBLISHED, 200);
     exposedMetrics.put(METRICS_CONSUMED, 100);
     expectedMetrics = expectedMetrics();
-    assertThat(registry).has(METRICS_PUBLISHED)
-        .gauge(METRICS_PUBLISHED).hasValue(200);
-    assertThat(registry).has(METRICS_CONSUMED)
-        .gauge(METRICS_CONSUMED).hasValue(100);
+    assertThat(registry).has(METRICS_PUBLISHED).gauge(METRICS_PUBLISHED).hasValue(200);
+    assertThat(registry).has(METRICS_CONSUMED).gauge(METRICS_CONSUMED).hasValue(100);
     expectedMetrics.register(new FixedValueIndicator<>(1.0f), null);
     expectedMetrics.agentStarted(PRODUCER);
     expectedMetrics.agentStarted(CONSUMER);
@@ -79,8 +76,7 @@ public class ExpectedMetricsTest {
     String name = "expected_confirm_latency";
     exposedMetrics.put(name, 0.1);
     expectedMetrics = expectedMetrics();
-    assertThat(registry).has(name)
-        .gauge(name).hasValue(0.1);
+    assertThat(registry).has(name).gauge(name).hasValue(0.1);
   }
 
   @Test
@@ -157,39 +153,40 @@ public class ExpectedMetricsTest {
     assertThat(metrics).hasValue(0);
     AtomicReference<Float> rate = new AtomicReference<>(10.0f);
     AtomicReference<Listener<Float>> listener = new AtomicReference<>();
-    ValueIndicator<Float> rateIndicator = new ValueIndicator<Float>() {
-      @Override
-      public Float getValue() {
-        return rate.get();
-      }
+    ValueIndicator<Float> rateIndicator =
+        new ValueIndicator<Float>() {
+          @Override
+          public Float getValue() {
+            return rate.get();
+          }
 
-      @Override
-      public void register(Listener<Float> lst) {
-        listener.set(lst);
-      }
+          @Override
+          public void register(Listener<Float> lst) {
+            listener.set(lst);
+          }
 
-      @Override
-      public void start() {
+          @Override
+          public void start() {}
 
-      }
+          @Override
+          public boolean isVariable() {
+            return true;
+          }
 
-      @Override
-      public boolean isVariable() {
-        return true;
-      }
-
-      @Override
-      public List<Float> values() {
-        return null;
-      }
-    };
+          @Override
+          public List<Float> values() {
+            return null;
+          }
+        };
     expectedMetrics.register(rateIndicator, null);
     assertThat(metrics).hasValue(0);
     int producerCount = 10;
-    IntStream.range(0, producerCount).forEach(i -> {
-      expectedMetrics.agentStarted(PRODUCER);
-      assertThat(metrics).hasValue(rate.get() * (i + 1));
-    });
+    IntStream.range(0, producerCount)
+        .forEach(
+            i -> {
+              expectedMetrics.agentStarted(PRODUCER);
+              assertThat(metrics).hasValue(rate.get() * (i + 1));
+            });
     // simulate the value change
     rate.set(20.0f);
     listener.get().valueChanged(10.0f, rate.get()); // supposed to be called by ValueIndicator
@@ -215,5 +212,4 @@ public class ExpectedMetricsTest {
   ExpectedMetrics expectedMetrics() {
     return new ExpectedMetrics(params, registry, prefix, exposedMetrics);
   }
-
 }

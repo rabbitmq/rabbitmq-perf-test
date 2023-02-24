@@ -12,58 +12,52 @@
 //
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
-
 package com.rabbitmq.perf;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.rabbitmq.perf.Metrics.ConfigurationContext;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
+import java.lang.management.ManagementFactory;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+import javax.management.MBeanInfo;
+import javax.management.MBeanServer;
+import javax.management.ObjectName;
 import org.apache.commons.cli.*;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
-import javax.management.MBeanInfo;
-import javax.management.MBeanServer;
-import javax.management.ObjectName;
-import java.lang.management.ManagementFactory;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
-/**
- *
- */
+/** */
 public class JmxMetricsTest {
 
-    Metrics metrics = new JmxMetrics();
+  Metrics metrics = new JmxMetrics();
 
-    @AfterEach
-    public void tearDown() throws Exception {
-        metrics.close();
-    }
+  @AfterEach
+  public void tearDown() throws Exception {
+    metrics.close();
+  }
 
-    @Test
-    public void metricsShouldBeExposedAsMbeans() throws Exception {
-        Options options = metrics.options();
+  @Test
+  public void metricsShouldBeExposedAsMbeans() throws Exception {
+    Options options = metrics.options();
 
-        CommandLineParser parser = new DefaultParser();
-        CommandLine rawCmd = parser.parse(
-            options,
-            ("--metrics-jmx").split(" ")
-        );
-        CommandLineProxy cmd = new CommandLineProxy(options, rawCmd, name -> null);
-        CompositeMeterRegistry registry = new CompositeMeterRegistry();
-        AtomicInteger metric = registry.gauge("dummy", new AtomicInteger(0));
-        metric.set(42);
-        metrics.configure(new ConfigurationContext(cmd, registry, null, null, null, null));
+    CommandLineParser parser = new DefaultParser();
+    CommandLine rawCmd = parser.parse(options, ("--metrics-jmx").split(" "));
+    CommandLineProxy cmd = new CommandLineProxy(options, rawCmd, name -> null);
+    CompositeMeterRegistry registry = new CompositeMeterRegistry();
+    AtomicInteger metric = registry.gauge("dummy", new AtomicInteger(0));
+    metric.set(42);
+    metrics.configure(new ConfigurationContext(cmd, registry, null, null, null, null));
 
-        MBeanServer server = ManagementFactory.getPlatformMBeanServer();
-//        Thread.sleep(1000000000);
-        Set<ObjectName> objectNames = server.queryNames(new ObjectName("*:name=dummy,type=gauges"), null);
-        assertEquals(1, objectNames.size());
-        ObjectName objectName = objectNames.iterator().next();
-        MBeanInfo info = server.getMBeanInfo(objectName);
-        Object attribute = server.getAttribute(objectName, info.getAttributes()[0].getName());
-        assertEquals(metric.get(), Double.valueOf(attribute.toString()).intValue());
-    }
+    MBeanServer server = ManagementFactory.getPlatformMBeanServer();
+    //        Thread.sleep(1000000000);
+    Set<ObjectName> objectNames =
+        server.queryNames(new ObjectName("*:name=dummy,type=gauges"), null);
+    assertEquals(1, objectNames.size());
+    ObjectName objectName = objectNames.iterator().next();
+    MBeanInfo info = server.getMBeanInfo(objectName);
+    Object attribute = server.getAttribute(objectName, info.getAttributes()[0].getName());
+    assertEquals(metric.get(), Double.valueOf(attribute.toString()).intValue());
+  }
 }

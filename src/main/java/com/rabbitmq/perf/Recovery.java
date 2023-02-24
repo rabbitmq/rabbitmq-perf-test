@@ -12,101 +12,111 @@
 //
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
-
 package com.rabbitmq.perf;
 
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.Recoverable;
 import com.rabbitmq.client.RecoveryListener;
 import com.rabbitmq.client.impl.recovery.AutorecoveringConnection;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
-
-/**
- *
- */
+/** */
 public class Recovery {
 
-    public static final RecoveryProcess NO_OP_RECOVERY_PROCESS = new RecoveryProcess() {
+  public static final RecoveryProcess NO_OP_RECOVERY_PROCESS =
+      new RecoveryProcess() {
 
         @Override
-        public void init(AgentBase agent) {
-        }
+        public void init(AgentBase agent) {}
 
         @Override
         public boolean isRecoverying() {
-            return false;
+          return false;
         }
 
         @Override
         public boolean isEnabled() {
-            return false;
+          return false;
         }
-    };
-    private static final Logger LOGGER = LoggerFactory.getLogger(Recovery.class);
+      };
+  private static final Logger LOGGER = LoggerFactory.getLogger(Recovery.class);
 
-    static Recovery.RecoveryProcess setupRecoveryProcess(Connection connection, TopologyRecording topologyRecording) {
-        if (Utils.isRecoverable(connection)) {
-            AtomicBoolean recoveryInProgress = new AtomicBoolean(false);
-            AtomicReference<AgentBase> agentReference = new AtomicReference<>();
-            Recovery.RecoveryProcess recoveryProcess = new Recovery.RecoveryProcess() {
+  static Recovery.RecoveryProcess setupRecoveryProcess(
+      Connection connection, TopologyRecording topologyRecording) {
+    if (Utils.isRecoverable(connection)) {
+      AtomicBoolean recoveryInProgress = new AtomicBoolean(false);
+      AtomicReference<AgentBase> agentReference = new AtomicReference<>();
+      Recovery.RecoveryProcess recoveryProcess =
+          new Recovery.RecoveryProcess() {
 
-                @Override
-                public void init(AgentBase agent) {
-                    agentReference.set(agent);
-                    agent.setTopologyRecording(topologyRecording);
-                }
+            @Override
+            public void init(AgentBase agent) {
+              agentReference.set(agent);
+              agent.setTopologyRecording(topologyRecording);
+            }
 
-                @Override
-                public boolean isRecoverying() {
-                    return recoveryInProgress.get();
-                }
+            @Override
+            public boolean isRecoverying() {
+              return recoveryInProgress.get();
+            }
 
-                @Override
-                public boolean isEnabled() {
-                    return true;
-                }
-            };
+            @Override
+            public boolean isEnabled() {
+              return true;
+            }
+          };
 
-            ((AutorecoveringConnection) connection).addRecoveryListener(new RecoveryListener() {
+      ((AutorecoveringConnection) connection)
+          .addRecoveryListener(
+              new RecoveryListener() {
 
                 @Override
                 public void handleRecoveryStarted(Recoverable recoverable) {
-                    // FIXME use lock to avoid start topology recovery twice
-                    recoveryInProgress.set(true);
+                  // FIXME use lock to avoid start topology recovery twice
+                  recoveryInProgress.set(true);
                 }
 
                 @Override
                 public void handleRecovery(Recoverable recoverable) {
-                    LOGGER.debug("Starting topology recovery for connection {}", connection.getClientProvidedName());
-                    topologyRecording.recover(connection);
-                    LOGGER.debug("Topology recovery done for connection {}, starting agent recovery", connection.getClientProvidedName());
-                    agentReference.get().recover(topologyRecording);
-                    recoveryInProgress.set(false);
-                    LOGGER.debug("Connection recovery done for connection {}", connection.getClientProvidedName());
+                  LOGGER.debug(
+                      "Starting topology recovery for connection {}",
+                      connection.getClientProvidedName());
+                  topologyRecording.recover(connection);
+                  LOGGER.debug(
+                      "Topology recovery done for connection {}, starting agent recovery",
+                      connection.getClientProvidedName());
+                  agentReference.get().recover(topologyRecording);
+                  recoveryInProgress.set(false);
+                  LOGGER.debug(
+                      "Connection recovery done for connection {}",
+                      connection.getClientProvidedName());
                 }
-            });
-            connection.addShutdownListener(cause -> {
-                if (AutorecoveringConnection.DEFAULT_CONNECTION_RECOVERY_TRIGGERING_CONDITION.test(cause)) {
-                    LOGGER.debug("Setting recovery in progress flag for connection {}", connection.getClientProvidedName());
-                    recoveryInProgress.set(true);
-                }
-            });
-            return recoveryProcess;
-        } else {
-            return Recovery.NO_OP_RECOVERY_PROCESS;
-        }
+              });
+      connection.addShutdownListener(
+          cause -> {
+            if (AutorecoveringConnection.DEFAULT_CONNECTION_RECOVERY_TRIGGERING_CONDITION.test(
+                cause)) {
+              LOGGER.debug(
+                  "Setting recovery in progress flag for connection {}",
+                  connection.getClientProvidedName());
+              recoveryInProgress.set(true);
+            }
+          });
+      return recoveryProcess;
+    } else {
+      return Recovery.NO_OP_RECOVERY_PROCESS;
     }
+  }
 
-    interface RecoveryProcess {
+  interface RecoveryProcess {
 
-        void init(AgentBase agent);
+    void init(AgentBase agent);
 
-        boolean isRecoverying();
+    boolean isRecoverying();
 
-        boolean isEnabled();
-    }
+    boolean isEnabled();
+  }
 }

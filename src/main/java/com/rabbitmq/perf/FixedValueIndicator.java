@@ -12,7 +12,6 @@
 //
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
-
 package com.rabbitmq.perf;
 
 import java.util.Arrays;
@@ -25,29 +24,27 @@ import java.util.List;
  */
 class FixedValueIndicator<T> implements ValueIndicator<T> {
 
-    private final T value;
+  private final T value;
 
-    public FixedValueIndicator(T value) {
-        this.value = value;
-    }
+  public FixedValueIndicator(T value) {
+    this.value = value;
+  }
 
-    @Override
-    public T getValue() {
-        return value;
-    }
+  @Override
+  public T getValue() {
+    return value;
+  }
 
-    @Override
-    public void start() {
+  @Override
+  public void start() {}
 
-    }
+  @Override
+  public boolean isVariable() {
+    return false;
+  }
 
-    @Override
-    public boolean isVariable() {
-        return false;
-    }
-
-    @Override
-    public List<T> values() {
-        return Arrays.asList(value);
-    }
+  @Override
+  public List<T> values() {
+    return Arrays.asList(value);
+  }
 }

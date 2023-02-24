@@ -12,7 +12,6 @@
 //
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
-
 package com.rabbitmq.perf.metrics;
 
 import static java.lang.String.format;
@@ -29,9 +28,7 @@ abstract class MetricsFormatterUtils {
 
   static final float NANO_TO_SECOND = 1_000_000_000;
 
-  private MetricsFormatterUtils() {
-
-  }
+  private MetricsFormatterUtils() {}
 
   static String formatTime(Duration time) {
     return format("%.3f", time.toNanos() / NANO_TO_SECOND);
@@ -50,8 +47,9 @@ abstract class MetricsFormatterUtils {
   }
 
   static String formatLatency(long[] stats, TimeUnit latencyCollectionTimeUnit) {
-    return format("%d/%d/%d/%d/%d %s", stats[0], stats[1], stats[2], stats[3], stats[4],
-        unit(latencyCollectionTimeUnit));
+    return format(
+        "%d/%d/%d/%d/%d %s",
+        stats[0], stats[1], stats[2], stats[3], stats[4], unit(latencyCollectionTimeUnit));
   }
 
   private static String unit(TimeUnit latencyCollectionTimeUnit) {
@@ -64,6 +62,4 @@ abstract class MetricsFormatterUtils {
       throw new IllegalArgumentException("Time unit not supported: " + latencyCollectionTimeUnit);
     }
   }
-
-
 }

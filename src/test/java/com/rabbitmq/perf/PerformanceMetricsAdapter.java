@@ -12,46 +12,31 @@
 //
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
-
 package com.rabbitmq.perf;
 
 import com.rabbitmq.perf.metrics.PerformanceMetrics;
 import java.time.Duration;
 
-/**
- * Metrics adapter with default no-op implementation methods. To be used in tests.
- */
+/** Metrics adapter with default no-op implementation methods. To be used in tests. */
 public class PerformanceMetricsAdapter implements PerformanceMetrics {
 
   @Override
-  public void start() {
-
-  }
+  public void start() {}
 
   @Override
-  public void published() {
-
-  }
+  public void published() {}
 
   @Override
-  public void confirmed(int count, long[] latencies) {
-
-  }
+  public void confirmed(int count, long[] latencies) {}
 
   @Override
-  public void nacked(int count) {
-
-  }
+  public void nacked(int count) {}
 
   @Override
-  public void returned() {
-
-  }
+  public void returned() {}
 
   @Override
-  public void received(long latency) {
-
-  }
+  public void received(long latency) {}
 
   @Override
   public Duration interval() {
@@ -59,7 +44,5 @@ public class PerformanceMetricsAdapter implements PerformanceMetrics {
   }
 
   @Override
-  public void resetGlobals() {
-
-  }
+  public void resetGlobals() {}
 }

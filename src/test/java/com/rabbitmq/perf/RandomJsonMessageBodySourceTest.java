@@ -12,58 +12,49 @@
 //
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
-
 package com.rabbitmq.perf;
 
-import com.google.gson.Gson;
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
 
+import com.google.gson.Gson;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.IntStream;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.Test;
 
 public class RandomJsonMessageBodySourceTest {
 
-    @Test
-    public void bodiesAreCorrectJsonDocument() {
-        RandomJsonMessageBodySource source = new RandomJsonMessageBodySource(
-                1200, 10000, 50
-        );
-        assertThat(source.bodies().length).isEqualTo(50);
-        Gson gson = new Gson();
-        for (byte[] body : source.bodies()) {
-            gson.fromJson(new String(body), Map.class);
-        }
+  @Test
+  public void bodiesAreCorrectJsonDocument() {
+    RandomJsonMessageBodySource source = new RandomJsonMessageBodySource(1200, 10000, 50);
+    assertThat(source.bodies().length).isEqualTo(50);
+    Gson gson = new Gson();
+    for (byte[] body : source.bodies()) {
+      gson.fromJson(new String(body), Map.class);
     }
+  }
 
-    @Test
-    public void bodiesAreDifferent() {
-        RandomJsonMessageBodySource source = new RandomJsonMessageBodySource(
-                128000, 10000, 50
-        );
-        assertThat(source.bodies().length).isEqualTo(50);
-        Set<String> bodies = new HashSet<>();
-        IntStream.range(0, 100).forEach(i -> bodies.add(new String(source.create(0).getBody())));
-        assertThat(bodies).hasSizeGreaterThan(1);
+  @Test
+  public void bodiesAreDifferent() {
+    RandomJsonMessageBodySource source = new RandomJsonMessageBodySource(128000, 10000, 50);
+    assertThat(source.bodies().length).isEqualTo(50);
+    Set<String> bodies = new HashSet<>();
+    IntStream.range(0, 100).forEach(i -> bodies.add(new String(source.create(0).getBody())));
+    assertThat(bodies).hasSizeGreaterThan(1);
+  }
+
+  @Test
+  public void sizeConstraintIsEnforced() {
+    RandomJsonMessageBodySource source = new RandomJsonMessageBodySource(12000, 1000, 50000);
+    assertThat(source.bodies().length).isEqualTo(50_000);
+    // an extra field could be added at the very end and make the body bigger than expected
+    // worst case:
+    // ,"max-is-30" : "max-is-200" }
+    // which is 240
+    int maxSize = 12000 + 240;
+    for (byte[] body : source.bodies()) {
+      assertThat(body).hasSizeBetween(12000, maxSize);
     }
-
-    @Test
-    public void sizeConstraintIsEnforced() {
-        RandomJsonMessageBodySource source = new RandomJsonMessageBodySource(
-                12000, 1000, 50000
-        );
-        assertThat(source.bodies().length).isEqualTo(50_000);
-        // an extra field could be added at the very end and make the body bigger than expected
-        // worst case:
-        // ,"max-is-30" : "max-is-200" }
-        // which is 240
-        int maxSize = 12000 + 240;
-        for (byte[] body : source.bodies()) {
-            assertThat(body).hasSizeBetween(12000, maxSize);
-        }
-    }
-
+  }
 }

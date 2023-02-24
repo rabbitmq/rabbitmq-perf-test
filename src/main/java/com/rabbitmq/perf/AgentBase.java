@@ -12,108 +12,107 @@
 //
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
-
 package com.rabbitmq.perf;
 
 import com.rabbitmq.client.ShutdownSignalException;
 import com.rabbitmq.client.impl.recovery.AutorecoveringConnection;
+import java.io.IOException;
+import java.net.SocketException;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.net.SocketException;
-
-/**
- *
- */
+/** */
 public abstract class AgentBase {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(AgentBase.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(AgentBase.class);
 
-    private static final AtomicInteger AGENT_ID_SEQUENCE = new AtomicInteger(0);
+  private static final AtomicInteger AGENT_ID_SEQUENCE = new AtomicInteger(0);
 
-    private volatile TopologyRecording topologyRecording;
+  private volatile TopologyRecording topologyRecording;
 
-    private final int agentId;
+  private final int agentId;
 
-    final StartListener startListener;
+  final StartListener startListener;
 
-    protected AgentBase(StartListener startListener) {
-        this.startListener = startListener == null ? StartListener.NO_OP : startListener;
-        this.agentId = AGENT_ID_SEQUENCE.getAndIncrement();
+  protected AgentBase(StartListener startListener) {
+    this.startListener = startListener == null ? StartListener.NO_OP : startListener;
+    this.agentId = AGENT_ID_SEQUENCE.getAndIncrement();
+  }
+
+  public void setTopologyRecording(TopologyRecording topologyRecording) {
+    this.topologyRecording = topologyRecording;
+  }
+
+  protected TopologyRecording topologyRecording() {
+    return this.topologyRecording;
+  }
+
+  protected boolean isConnectionRecoveryTriggered(ShutdownSignalException e) {
+    return AutorecoveringConnection.DEFAULT_CONNECTION_RECOVERY_TRIGGERING_CONDITION.test(e);
+  }
+
+  protected void handleShutdownSignalExceptionOnWrite(
+      Recovery.RecoveryProcess recoveryProcess, ShutdownSignalException e) {
+    if (LOGGER.isDebugEnabled()) {
+      LOGGER.debug(
+          "Handling write error, recovery process enabled? {}, condition to trigger connection recovery? {}",
+          recoveryProcess.isEnabled(),
+          isConnectionRecoveryTriggered(e),
+          e);
     }
-
-    public void setTopologyRecording(TopologyRecording topologyRecording) {
-        this.topologyRecording = topologyRecording;
+    if (shouldStop(recoveryProcess, e)) {
+      throw e;
     }
+  }
 
-    protected TopologyRecording topologyRecording() {
-        return this.topologyRecording;
+  protected boolean shouldStop(
+      Recovery.RecoveryProcess recoveryProcess, ShutdownSignalException e) {
+    if (recoveryProcess.isEnabled()) {
+      // we stop only if the error isn't likely to trigger connection recovery
+      return !isConnectionRecoveryTriggered(e);
+    } else {
+      return true;
     }
+  }
 
-    protected boolean isConnectionRecoveryTriggered(ShutdownSignalException e) {
-        return AutorecoveringConnection.DEFAULT_CONNECTION_RECOVERY_TRIGGERING_CONDITION.test(e);
-    }
-
-    protected void handleShutdownSignalExceptionOnWrite(Recovery.RecoveryProcess recoveryProcess, ShutdownSignalException e) {
+  protected void dealWithWriteOperation(
+      WriteOperation writeOperation, Recovery.RecoveryProcess recoveryProcess) throws IOException {
+    try {
+      writeOperation.call();
+    } catch (ShutdownSignalException e) {
+      handleShutdownSignalExceptionOnWrite(recoveryProcess, e);
+    } catch (SocketException e) {
+      if (recoveryProcess.isEnabled()) {
         if (LOGGER.isDebugEnabled()) {
-            LOGGER.debug(
-                "Handling write error, recovery process enabled? {}, condition to trigger connection recovery? {}",
-                recoveryProcess.isEnabled(), isConnectionRecoveryTriggered(e), e
-            );
+          LOGGER.debug(
+              "Socket exception in write, recovery process is enabled, ignoring to let connection recovery carry on");
         }
-        if (shouldStop(recoveryProcess, e)) {
-            throw e;
-        }
+      } else {
+        throw e;
+      }
     }
+  }
 
-    protected boolean shouldStop(Recovery.RecoveryProcess recoveryProcess, ShutdownSignalException e) {
-        if (recoveryProcess.isEnabled()) {
-            // we stop only if the error isn't likely to trigger connection recovery
-            return !isConnectionRecoveryTriggered(e);
-        } else {
-            return true;
-        }
-    }
+  protected void started() {
+    this.startListener.started(this.agentId, type());
+  }
 
-    protected void dealWithWriteOperation(WriteOperation writeOperation, Recovery.RecoveryProcess recoveryProcess) throws IOException {
-        try {
-            writeOperation.call();
-        } catch (ShutdownSignalException e) {
-            handleShutdownSignalExceptionOnWrite(recoveryProcess, e);
-        } catch (SocketException e) {
-            if (recoveryProcess.isEnabled()) {
-                if (LOGGER.isDebugEnabled()) {
-                    LOGGER.debug(
-                        "Socket exception in write, recovery process is enabled, ignoring to let connection recovery carry on"
-                    );
-                }
-            } else {
-                throw e;
-            }
-        }
-    }
+  protected abstract StartListener.Type type();
 
-    protected void started() {
-        this.startListener.started(this.agentId, type());
-    }
+  public abstract void recover(TopologyRecording topologyRecording);
 
-    protected abstract StartListener.Type type();
+  protected interface AgentState {
 
-    public abstract void recover(TopologyRecording topologyRecording);
+    long getLastStatsTime();
 
-    protected interface AgentState {
+    int getMsgCount();
 
-        long getLastStatsTime();
+    int incrementMessageCount();
+  }
 
-        int getMsgCount();
-
-        int incrementMessageCount();
-    }
-
-    @FunctionalInterface
-    interface WriteOperation {
-        void call() throws IOException;
-    }
+  @FunctionalInterface
+  interface WriteOperation {
+    void call() throws IOException;
+  }
 }

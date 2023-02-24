@@ -12,7 +12,6 @@
 //
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
-
 package com.rabbitmq.perf;
 
 import static java.util.stream.Stream.of;
@@ -30,11 +29,11 @@ public class ByteCapacityTest {
 
   static Stream<Arguments> fromOkArguments() {
     return of(
-        arguments("100tb", 100_000_000_000_000L),
-        arguments("100gb", 100_000_000_000L),
-        arguments("100mb", 100_000_000L),
-        arguments("100kb", 100_000L),
-        arguments("100", 100L))
+            arguments("100tb", 100_000_000_000_000L),
+            arguments("100gb", 100_000_000_000L),
+            arguments("100mb", 100_000_000L),
+            arguments("100kb", 100_000L),
+            arguments("100", 100L))
         .flatMap(
             arguments ->
                 Stream.of(

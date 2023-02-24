@@ -12,7 +12,6 @@
 //
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
-
 package com.rabbitmq.perf;
 
 import com.google.gson.Gson;
@@ -34,7 +33,6 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.net.HttpURLConnection;
 import java.net.URISyntaxException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
@@ -49,7 +47,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -195,7 +192,7 @@ abstract class Utils {
   }
 
   static String strArg(CommandLineProxy cmd, char opt, String def) {
-      return cmd.getOptionValue(opt, def);
+    return cmd.getOptionValue(opt, def);
   }
 
   static void exchangeDeclare(Channel channel, String exchange, String type) throws IOException {
@@ -215,8 +212,7 @@ abstract class Utils {
       checker.check(ch);
       ch.abort();
       return true;
-    }
-    catch (IOException e) {
+    } catch (IOException e) {
       ShutdownSignalException sse = (ShutdownSignalException) e.getCause();
       if (!sse.isHardError()) {
         AMQP.Channel.Close closeMethod = (AMQP.Channel.Close) sse.getReason();
@@ -229,15 +225,15 @@ abstract class Utils {
   }
 
   @SuppressWarnings("unchecked")
-  static InstanceSynchronization defaultInstanceSynchronization(String id, int expectedInstances,
-      String namespace,
-      Duration timeout, PrintStream out) {
+  static InstanceSynchronization defaultInstanceSynchronization(
+      String id, int expectedInstances, String namespace, Duration timeout, PrintStream out) {
     try {
-      Class<InstanceSynchronization> defaultClass = (Class<InstanceSynchronization>) Class.forName(
-          "com.rabbitmq.perf.DefaultInstanceSynchronization");
-      Constructor<InstanceSynchronization> constructor = defaultClass.getDeclaredConstructor(
-          String.class,
-          int.class, String.class, Duration.class, PrintStream.class);
+      Class<InstanceSynchronization> defaultClass =
+          (Class<InstanceSynchronization>)
+              Class.forName("com.rabbitmq.perf.DefaultInstanceSynchronization");
+      Constructor<InstanceSynchronization> constructor =
+          defaultClass.getDeclaredConstructor(
+              String.class, int.class, String.class, Duration.class, PrintStream.class);
       return constructor.newInstance(id, expectedInstances, namespace, timeout, out);
     } catch (ClassNotFoundException e) {
       return () -> {
@@ -256,17 +252,26 @@ abstract class Utils {
     }
   }
 
-  static class GsonOAuth2ClientCredentialsGrantCredentialsProvider extends
-      OAuth2ClientCredentialsGrantCredentialsProvider {
+  static class GsonOAuth2ClientCredentialsGrantCredentialsProvider
+      extends OAuth2ClientCredentialsGrantCredentialsProvider {
 
     private final Gson gson = new Gson();
 
-    public GsonOAuth2ClientCredentialsGrantCredentialsProvider(String tokenEndpointUri,
+    public GsonOAuth2ClientCredentialsGrantCredentialsProvider(
+        String tokenEndpointUri,
         String clientId,
-        String clientSecret, String grantType, Map<String, String> parameters,
+        String clientSecret,
+        String grantType,
+        Map<String, String> parameters,
         HostnameVerifier hostnameVerifier,
         SSLSocketFactory sslSocketFactory) {
-      super(tokenEndpointUri, clientId, clientSecret, grantType, parameters, hostnameVerifier,
+      super(
+          tokenEndpointUri,
+          clientId,
+          clientSecret,
+          grantType,
+          parameters,
+          hostnameVerifier,
           sslSocketFactory);
     }
 

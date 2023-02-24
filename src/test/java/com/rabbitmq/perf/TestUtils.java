@@ -12,71 +12,70 @@
 //
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
-
 package com.rabbitmq.perf;
 
+import static org.junit.jupiter.api.Assertions.fail;
+
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.net.ServerSocket;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.ThreadFactory;
+import java.util.function.BooleanSupplier;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import org.assertj.core.api.Condition;
 import org.junit.jupiter.api.TestInfo;
 
-import java.io.IOException;
-import java.net.ServerSocket;
-import java.util.concurrent.ThreadFactory;
-import java.util.function.BooleanSupplier;
-
-import static org.junit.jupiter.api.Assertions.fail;
-
-/**
- *
- */
+/** */
 public abstract class TestUtils {
 
-    static int randomNetworkPort() throws IOException {
-        ServerSocket socket = new ServerSocket();
-        socket.bind(null);
-        int port = socket.getLocalPort();
-        socket.close();
-        return port;
-    }
+  static int randomNetworkPort() throws IOException {
+    ServerSocket socket = new ServerSocket();
+    socket.bind(null);
+    int port = socket.getLocalPort();
+    socket.close();
+    return port;
+  }
 
-    public static void waitAtMost(int timeoutInSeconds, BooleanSupplier condition) throws InterruptedException {
-        if (condition.getAsBoolean()) {
-            return;
-        }
-        int waitTime = 100;
-        int waitedTime = 0;
-        int timeoutInMs = timeoutInSeconds * 1000;
-        while (waitedTime <= timeoutInMs) {
-            Thread.sleep(waitTime);
-            if (condition.getAsBoolean()) {
-                return;
-            }
-            waitedTime += waitTime;
-        }
-        fail("Waited " + timeoutInSeconds + " second(s), condition never got true");
+  public static void waitAtMost(int timeoutInSeconds, BooleanSupplier condition)
+      throws InterruptedException {
+    if (condition.getAsBoolean()) {
+      return;
     }
+    int waitTime = 100;
+    int waitedTime = 0;
+    int timeoutInMs = timeoutInSeconds * 1000;
+    while (waitedTime <= timeoutInMs) {
+      Thread.sleep(waitTime);
+      if (condition.getAsBoolean()) {
+        return;
+      }
+      waitedTime += waitTime;
+    }
+    fail("Waited " + timeoutInSeconds + " second(s), condition never got true");
+  }
 
-    public static ThreadFactory threadFactory(TestInfo info) {
-        return new NamedThreadFactory(name(info));
-    }
+  public static ThreadFactory threadFactory(TestInfo info) {
+    return new NamedThreadFactory(name(info));
+  }
 
-    public static String name(TestInfo info) {
-        return info.getTestMethod().get().getName() + "-" + info.getDisplayName() + "-";
-    }
+  public static String name(TestInfo info) {
+    return info.getTestMethod().get().getName() + "-" + info.getDisplayName() + "-";
+  }
 
   static Condition<String> validXml() {
-      return new Condition<>(xml -> {
+    return new Condition<>(
+        xml -> {
           try {
-              DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-              DocumentBuilder builder = factory.newDocumentBuilder();
-              builder.parse(new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8)));
-              return true;
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder builder = factory.newDocumentBuilder();
+            builder.parse(new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8)));
+            return true;
           } catch (Exception e) {
-              return false;
+            return false;
           }
-      }, "Not a valid XML document");
+        },
+        "Not a valid XML document");
   }
 }

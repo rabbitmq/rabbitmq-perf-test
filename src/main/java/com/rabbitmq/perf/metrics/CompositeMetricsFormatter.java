@@ -12,7 +12,6 @@
 //
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
-
 package com.rabbitmq.perf.metrics;
 
 import java.time.Duration;
@@ -25,8 +24,8 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Composite formatter that calls a list of formatters for each method.
- * <p>
- * Useful to combine the effects of several formatters.
+ *
+ * <p>Useful to combine the effects of several formatters.
  *
  * @since 2.19.0
  */
@@ -44,11 +43,13 @@ public class CompositeMetricsFormatter implements MetricsFormatter {
       try {
         action.accept(delegate);
       } catch (Exception e) {
-        LOGGER.warn("Error while executing '{}' on '{}' metrics collector: {}", description,
-            delegate.getClass().getSimpleName(), e.getMessage());
+        LOGGER.warn(
+            "Error while executing '{}' on '{}' metrics collector: {}",
+            description,
+            delegate.getClass().getSimpleName(),
+            e.getMessage());
       }
     }
-
   }
 
   @Override
@@ -57,19 +58,42 @@ public class CompositeMetricsFormatter implements MetricsFormatter {
   }
 
   @Override
-  public void report(Duration durationSinceStart, double publishedRate, double confirmedRate,
-      double nackedRate, double returnedRate, double receivedRate, long[] confirmedLatencyStats,
+  public void report(
+      Duration durationSinceStart,
+      double publishedRate,
+      double confirmedRate,
+      double nackedRate,
+      double returnedRate,
+      double receivedRate,
+      long[] confirmedLatencyStats,
       long[] consumerLatencyStats) {
-    iterate(this.delegates,
-        f -> f.report(durationSinceStart, publishedRate, confirmedRate, nackedRate, returnedRate,
-            receivedRate, confirmedLatencyStats, consumerLatencyStats), "report");
+    iterate(
+        this.delegates,
+        f ->
+            f.report(
+                durationSinceStart,
+                publishedRate,
+                confirmedRate,
+                nackedRate,
+                returnedRate,
+                receivedRate,
+                confirmedLatencyStats,
+                consumerLatencyStats),
+        "report");
   }
 
   @Override
-  public void summary(Duration elapsed, double ratePublished, double rateReceived,
-      long[] consumedLatencyTotal, long[] confirmedLatencyTotal) {
-    iterate(this.delegates,
-        f -> f.summary(elapsed, ratePublished, rateReceived, consumedLatencyTotal,
-            confirmedLatencyTotal), "summary");
+  public void summary(
+      Duration elapsed,
+      double ratePublished,
+      double rateReceived,
+      long[] consumedLatencyTotal,
+      long[] confirmedLatencyTotal) {
+    iterate(
+        this.delegates,
+        f ->
+            f.summary(
+                elapsed, ratePublished, rateReceived, consumedLatencyTotal, confirmedLatencyTotal),
+        "summary");
   }
 }

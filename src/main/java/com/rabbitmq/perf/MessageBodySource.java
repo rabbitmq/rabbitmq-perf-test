@@ -12,41 +12,36 @@
 //
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
-
 package com.rabbitmq.perf;
 
 import java.io.IOException;
 
-/**
- * Sources produce message bodies and content type
- * used by publishers.
- */
+/** Sources produce message bodies and content type used by publishers. */
 public interface MessageBodySource {
 
-    MessageEnvelope create(int sequenceNumber) throws IOException;
+  MessageEnvelope create(int sequenceNumber) throws IOException;
 
-    class MessageEnvelope {
-        private final byte [] body;
-        private final String contentType;
-        private final long time;
+  class MessageEnvelope {
+    private final byte[] body;
+    private final String contentType;
+    private final long time;
 
-        public MessageEnvelope(byte[] body, String contentType, long time) {
-            this.body = body;
-            this.contentType = contentType;
-            this.time = time;
-        }
-
-        public byte[] getBody() {
-            return body;
-        }
-
-        public String getContentType() {
-            return contentType;
-        }
-
-        public long getTime() {
-            return time;
-        }
+    public MessageEnvelope(byte[] body, String contentType, long time) {
+      this.body = body;
+      this.contentType = contentType;
+      this.time = time;
     }
 
+    public byte[] getBody() {
+      return body;
+    }
+
+    public String getContentType() {
+      return contentType;
+    }
+
+    public long getTime() {
+      return time;
+    }
+  }
 }

@@ -12,8 +12,11 @@
 //
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
-
 package com.rabbitmq.perf;
+
+import static com.rabbitmq.perf.PerfTest.hasOption;
+import static com.rabbitmq.perf.Utils.strArg;
+import static java.lang.Boolean.valueOf;
 
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -21,80 +24,94 @@ import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
 import io.micrometer.core.ipc.http.HttpUrlConnectionSender;
 import io.micrometer.datadog.DatadogConfig;
 import io.micrometer.datadog.DatadogMeterRegistry;
-import org.apache.commons.cli.Option;
-import org.apache.commons.cli.Options;
-
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.Options;
 
-import static com.rabbitmq.perf.PerfTest.hasOption;
-import static com.rabbitmq.perf.Utils.strArg;
-import static java.lang.Boolean.valueOf;
-
-/**
- *
- */
+/** */
 public class DatadogMetrics implements Metrics {
 
-    private volatile MeterRegistry registry;
+  private volatile MeterRegistry registry;
 
-    public Options options() {
-        Options options = new Options();
-        options.addOption(new Option("mda", "metrics-datadog", false, "enable Datadog metrics"));
-        options.addOption(new Option("mdk", "metrics-datadog-api-key", true, "Datadog API key"));
-        options.addOption(new Option("mds", "metrics-datadog-step-size", true, "step size (reporting frequency) to use "
-            + "in seconds, default is 10 seconds"));
-        options.addOption(new Option("mdak", "metrics-datadog-application-key", true, "Datadog application key"));
-        options.addOption(new Option("mdh", "metrics-datadog-host-tag", true, "tag that will be mapped to \"host\" when shipping metrics to datadog"));
-        options.addOption(new Option("mdd", "metrics-datadog-descriptions", false, "if meter descriptions should be sent to Datadog"));
-        options.addOption(new Option("mdu", "metrics-datadog-uri", true, "URI to ship metrics, useful when using "
-            + "a proxy, default is https://app.datadoghq.com"));
-        return options;
+  public Options options() {
+    Options options = new Options();
+    options.addOption(new Option("mda", "metrics-datadog", false, "enable Datadog metrics"));
+    options.addOption(new Option("mdk", "metrics-datadog-api-key", true, "Datadog API key"));
+    options.addOption(
+        new Option(
+            "mds",
+            "metrics-datadog-step-size",
+            true,
+            "step size (reporting frequency) to use " + "in seconds, default is 10 seconds"));
+    options.addOption(
+        new Option("mdak", "metrics-datadog-application-key", true, "Datadog application key"));
+    options.addOption(
+        new Option(
+            "mdh",
+            "metrics-datadog-host-tag",
+            true,
+            "tag that will be mapped to \"host\" when shipping metrics to datadog"));
+    options.addOption(
+        new Option(
+            "mdd",
+            "metrics-datadog-descriptions",
+            false,
+            "if meter descriptions should be sent to Datadog"));
+    options.addOption(
+        new Option(
+            "mdu",
+            "metrics-datadog-uri",
+            true,
+            "URI to ship metrics, useful when using "
+                + "a proxy, default is https://app.datadoghq.com"));
+    return options;
+  }
+
+  public void configure(ConfigurationContext context) throws Exception {
+    CommandLineProxy cmd = context.cmd();
+    CompositeMeterRegistry meterRegistry = context.meterRegistry();
+    if (isEnabled(cmd)) {
+      Map<String, String> dataCfg = new HashMap<>();
+      dataCfg.put("datadog.apiKey", strArg(cmd, "mdk", null));
+      dataCfg.put("datadog.step", strArg(cmd, "mds", "10"));
+      dataCfg.put("datadog.applicationKey", strArg(cmd, "mdak", null));
+      dataCfg.put("datadog.hostTag", strArg(cmd, "mdh", null));
+      dataCfg.put("datadog.descriptions", valueOf(hasOption(cmd, "mdd")).toString());
+      dataCfg.put("datadog.uri", strArg(cmd, "mdu", null));
+
+      DatadogConfig config =
+          new DatadogConfig() {
+
+            @Override
+            public Duration step() {
+              return Duration.ofSeconds(Integer.valueOf(dataCfg.get("datadog.step")));
+            }
+
+            @Override
+            public String get(String k) {
+              return dataCfg.get(k);
+            }
+          };
+      registry =
+          DatadogMeterRegistry.builder(config)
+              .clock(Clock.SYSTEM)
+              .threadFactory(new NamedThreadFactory("perf-test-metrics-datadog-"))
+              .httpClient(new HttpUrlConnectionSender())
+              .build();
+      meterRegistry.add(registry);
     }
+  }
 
-    public void configure(ConfigurationContext context) throws Exception {
-        CommandLineProxy cmd = context.cmd();
-        CompositeMeterRegistry meterRegistry = context.meterRegistry();
-        if (isEnabled(cmd)) {
-            Map<String, String> dataCfg = new HashMap<>();
-            dataCfg.put("datadog.apiKey", strArg(cmd, "mdk", null));
-            dataCfg.put("datadog.step", strArg(cmd, "mds", "10"));
-            dataCfg.put("datadog.applicationKey", strArg(cmd, "mdak", null));
-            dataCfg.put("datadog.hostTag", strArg(cmd, "mdh", null));
-            dataCfg.put("datadog.descriptions", valueOf(hasOption(cmd, "mdd")).toString());
-            dataCfg.put("datadog.uri", strArg(cmd, "mdu", null));
-
-            DatadogConfig config = new DatadogConfig() {
-
-                @Override
-                public Duration step() {
-                    return Duration.ofSeconds(Integer.valueOf(dataCfg.get("datadog.step")));
-                }
-
-                @Override
-                public String get(String k) {
-                    return dataCfg.get(k);
-                }
-            };
-            registry = DatadogMeterRegistry
-                    .builder(config)
-                    .clock(Clock.SYSTEM)
-                    .threadFactory(new NamedThreadFactory("perf-test-metrics-datadog-"))
-                    .httpClient(new HttpUrlConnectionSender())
-                    .build();
-            meterRegistry.add(registry);
-        }
+  public void close() {
+    if (registry != null) {
+      registry.close();
     }
+  }
 
-    public void close() {
-        if (registry != null) {
-            registry.close();
-        }
-    }
-
-    @Override
-    public String toString() {
-        return "Datadog Metrics";
-    }
+  @Override
+  public String toString() {
+    return "Datadog Metrics";
+  }
 }

@@ -12,7 +12,6 @@
 //
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
-
 package com.rabbitmq.perf;
 
 import io.micrometer.core.instrument.Clock;
@@ -23,39 +22,34 @@ import io.micrometer.jmx.JmxMeterRegistry;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 
-/**
- *
- */
+/** */
 public class JmxMetrics implements Metrics {
 
-    private volatile MeterRegistry registry;
+  private volatile MeterRegistry registry;
 
-    public Options options() {
-        Options options = new Options();
-        options.addOption(new Option("mjx", "metrics-jmx", false, "enable JMX metrics"));
-        return options;
-    }
+  public Options options() {
+    Options options = new Options();
+    options.addOption(new Option("mjx", "metrics-jmx", false, "enable JMX metrics"));
+    return options;
+  }
 
-    public void configure(ConfigurationContext context) throws Exception {
-        CommandLineProxy cmd = context.cmd();
-        CompositeMeterRegistry meterRegistry = context.meterRegistry();
-        if (isEnabled(cmd)) {
-            registry = new JmxMeterRegistry(
-                JmxConfig.DEFAULT,
-                Clock.SYSTEM
-            );
-            meterRegistry.add(registry);
-        }
+  public void configure(ConfigurationContext context) throws Exception {
+    CommandLineProxy cmd = context.cmd();
+    CompositeMeterRegistry meterRegistry = context.meterRegistry();
+    if (isEnabled(cmd)) {
+      registry = new JmxMeterRegistry(JmxConfig.DEFAULT, Clock.SYSTEM);
+      meterRegistry.add(registry);
     }
+  }
 
-    public void close() {
-        if (registry!= null) {
-            registry.close();
-        }
+  public void close() {
+    if (registry != null) {
+      registry.close();
     }
+  }
 
-    @Override
-    public String toString() {
-        return "JMX Metrics";
-    }
+  @Override
+  public String toString() {
+    return "JMX Metrics";
+  }
 }

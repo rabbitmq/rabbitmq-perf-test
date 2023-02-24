@@ -12,7 +12,6 @@
 //
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
-
 package com.rabbitmq.perf;
 
 import static java.util.stream.Collectors.toList;
@@ -26,9 +25,7 @@ import org.assertj.core.api.AbstractObjectAssert;
 
 abstract class Assertions {
 
-  private Assertions() {
-
-  }
+  private Assertions() {}
 
   static MeterRegistryAssert assertThat(MeterRegistry registry) {
     return new MeterRegistryAssert(registry);
@@ -38,8 +35,8 @@ abstract class Assertions {
     return new GaugeAssert(gauge);
   }
 
-  static class MeterRegistryAssert extends
-      AbstractObjectAssert<MeterRegistryAssert, MeterRegistry> {
+  static class MeterRegistryAssert
+      extends AbstractObjectAssert<MeterRegistryAssert, MeterRegistry> {
 
     public MeterRegistryAssert(MeterRegistry meterRegistry) {
       super(meterRegistry, MeterRegistryAssert.class);
@@ -48,8 +45,13 @@ abstract class Assertions {
     public MeterRegistryAssert has(String name) {
       isNotNull();
       if (this.actual.find(name).meter() == null) {
-        failWithMessage("Expected meter %s, but not found among %s", name,
-            this.actual.getMeters().stream().map(Meter::getId).map(Id::getName).collect(toList())
+        failWithMessage(
+            "Expected meter %s, but not found among %s",
+            name,
+            this.actual.getMeters().stream()
+                .map(Meter::getId)
+                .map(Id::getName)
+                .collect(toList())
                 .toString());
       }
       return this;
@@ -58,7 +60,8 @@ abstract class Assertions {
     public MeterRegistryAssert isEmpty() {
       isNotNull();
       if (this.actual.getMeters().size() > 0) {
-        fail("Expected meter registry to be empty, but has %d meter(s)",
+        fail(
+            "Expected meter registry to be empty, but has %d meter(s)",
             this.actual.getMeters().size());
       }
       return this;
@@ -87,7 +90,5 @@ abstract class Assertions {
       }
       return this;
     }
-
   }
-
 }

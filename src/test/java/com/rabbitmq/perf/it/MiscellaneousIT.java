@@ -12,7 +12,6 @@
 //
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
-
 package com.rabbitmq.perf.it;
 
 import static com.rabbitmq.perf.TestUtils.threadFactory;
@@ -27,8 +26,8 @@ import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.perf.MulticastParams;
 import com.rabbitmq.perf.MulticastSet;
-import com.rabbitmq.perf.metrics.PerformanceMetrics;
 import com.rabbitmq.perf.PerformanceMetricsAdapter;
+import com.rabbitmq.perf.metrics.PerformanceMetrics;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.time.Duration;
@@ -60,17 +59,18 @@ public class MiscellaneousIT {
   AtomicBoolean testIsDone;
   CountDownLatch testLatch;
   AtomicLong msgConsumed;
-  PerformanceMetrics performanceMetrics = new PerformanceMetricsAdapter() {
-    @Override
-    public void received(long latency) {
-      msgConsumed.incrementAndGet();
-    }
+  PerformanceMetrics performanceMetrics =
+      new PerformanceMetricsAdapter() {
+        @Override
+        public void received(long latency) {
+          msgConsumed.incrementAndGet();
+        }
 
-    @Override
-    public Duration interval() {
-      return Duration.ofSeconds(1);
-    }
-  };
+        @Override
+        public Duration interval() {
+          return Duration.ofSeconds(1);
+        }
+      };
 
   @BeforeEach
   public void init(TestInfo info) {
@@ -129,8 +129,9 @@ public class MiscellaneousIT {
     params.setConsumerPrefetch(10);
 
     try {
-      MulticastSet set = new MulticastSet(performanceMetrics, cf, params, "", URIS,
-          latchCompletionHandler(1, info));
+      MulticastSet set =
+          new MulticastSet(
+              performanceMetrics, cf, params, "", URIS, latchCompletionHandler(1, info));
       run(set);
 
       waitAtMost(180, () -> testIsDone.get());
@@ -152,7 +153,8 @@ public class MiscellaneousIT {
     List<String> queuesBeforeTest = Host.listQueues();
 
     MulticastSet.CompletionHandler completionHandler = latchCompletionHandler(1, info);
-    MulticastSet set = new MulticastSet(performanceMetrics, cf, params, "", URIS, completionHandler);
+    MulticastSet set =
+        new MulticastSet(performanceMetrics, cf, params, "", URIS, completionHandler);
     run(set);
 
     waitAtMost(10, () -> msgConsumed.get() >= 3 * rate);
@@ -186,7 +188,8 @@ public class MiscellaneousIT {
     params.setQueueNames(singletonList(queue));
 
     MulticastSet.CompletionHandler completionHandler = latchCompletionHandler(1, info);
-    MulticastSet set = new MulticastSet(performanceMetrics, cf, params, "", URIS, completionHandler);
+    MulticastSet set =
+        new MulticastSet(performanceMetrics, cf, params, "", URIS, completionHandler);
     run(set);
 
     waitAtMost(10, () -> msgConsumed.get() >= 3 * rate);
@@ -207,17 +210,18 @@ public class MiscellaneousIT {
   }
 
   private void run(MulticastSet multicastSet) {
-    executorService.submit(() -> {
-      try {
-        multicastSet.run();
-        testIsDone.set(true);
-        testLatch.countDown();
-      } catch (InterruptedException e) {
-        // one of the tests stops the execution, no need to be noisy
-        throw new RuntimeException(e);
-      } catch (Exception e) {
-        e.printStackTrace();
-      }
-    });
+    executorService.submit(
+        () -> {
+          try {
+            multicastSet.run();
+            testIsDone.set(true);
+            testLatch.countDown();
+          } catch (InterruptedException e) {
+            // one of the tests stops the execution, no need to be noisy
+            throw new RuntimeException(e);
+          } catch (Exception e) {
+            e.printStackTrace();
+          }
+        });
   }
 }

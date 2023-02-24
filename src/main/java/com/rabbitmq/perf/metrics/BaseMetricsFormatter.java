@@ -12,7 +12,6 @@
 //
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
-
 package com.rabbitmq.perf.metrics;
 
 import static com.rabbitmq.perf.metrics.MetricsFormatterUtils.LATENCY_HEADER;
@@ -25,10 +24,12 @@ import java.util.concurrent.TimeUnit;
 
 abstract class BaseMetricsFormatter implements MetricsFormatter {
 
-  protected final boolean publishedEnabled, receivedEnabled,
-      returnedEnabled, confirmedEnabled;
+  protected final boolean publishedEnabled, receivedEnabled, returnedEnabled, confirmedEnabled;
 
-  BaseMetricsFormatter(boolean publishedEnabled, boolean receivedEnabled, boolean returnedEnabled,
+  BaseMetricsFormatter(
+      boolean publishedEnabled,
+      boolean receivedEnabled,
+      boolean returnedEnabled,
       boolean confirmedEnabled) {
     this.publishedEnabled = publishedEnabled;
     this.receivedEnabled = receivedEnabled;
@@ -44,33 +45,56 @@ abstract class BaseMetricsFormatter implements MetricsFormatter {
     return publishedEnabled && confirmedEnabled;
   }
 
-  protected String summary(Duration elapsed, double ratePublished, double rateReceived,
+  protected String summary(
+      Duration elapsed,
+      double ratePublished,
+      double rateReceived,
       long[] consumedLatencyTotal,
-      long[] confirmedLatencyTotal, String testId, TimeUnit latencyCollectionTimeUnit) {
+      long[] confirmedLatencyTotal,
+      String testId,
+      TimeUnit latencyCollectionTimeUnit) {
     String lineSeparator = System.getProperty("line.separator");
     StringBuilder summary = new StringBuilder();
     String lineBeginning = "";
     if (testId != null) {
       lineBeginning = "id: " + testId + ", ";
     }
-    summary.append(lineBeginning).append("sending rate avg: " +
-        MetricsFormatterUtils.formatRate(ratePublished) +
-        " " + MESSAGE_RATE_LABEL);
+    summary
+        .append(lineBeginning)
+        .append(
+            "sending rate avg: "
+                + MetricsFormatterUtils.formatRate(ratePublished)
+                + " "
+                + MESSAGE_RATE_LABEL);
     summary.append(lineSeparator);
 
     if (elapsed.toMillis() > 0) {
-      summary.append(lineBeginning).append("receiving rate avg: " +
-          MetricsFormatterUtils.formatRate(rateReceived) +
-          " " + MESSAGE_RATE_LABEL).append(lineSeparator);
+      summary
+          .append(lineBeginning)
+          .append(
+              "receiving rate avg: "
+                  + MetricsFormatterUtils.formatRate(rateReceived)
+                  + " "
+                  + MESSAGE_RATE_LABEL)
+          .append(lineSeparator);
       if (shouldDisplayConsumerLatency()) {
-        summary.append(lineBeginning).append(format("consumer latency %s %s",
-            LATENCY_HEADER, formatLatency(consumedLatencyTotal, latencyCollectionTimeUnit))
-        ).append(lineSeparator);
+        summary
+            .append(lineBeginning)
+            .append(
+                format(
+                    "consumer latency %s %s",
+                    LATENCY_HEADER, formatLatency(consumedLatencyTotal, latencyCollectionTimeUnit)))
+            .append(lineSeparator);
       }
       if (shouldDisplayConfirmLatency()) {
-        summary.append(lineBeginning).append(format("confirm latency %s %s",
-            LATENCY_HEADER, formatLatency(confirmedLatencyTotal, latencyCollectionTimeUnit)
-        )).append(lineSeparator);
+        summary
+            .append(lineBeginning)
+            .append(
+                format(
+                    "confirm latency %s %s",
+                    LATENCY_HEADER,
+                    formatLatency(confirmedLatencyTotal, latencyCollectionTimeUnit)))
+            .append(lineSeparator);
       }
     }
     return summary.toString();

@@ -12,7 +12,6 @@
 //
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
-
 package com.rabbitmq.perf.metrics;
 
 import static org.apache.commons.lang3.StringUtils.countMatches;
@@ -50,87 +49,127 @@ public class DefaultPerformanceMetricsTest {
   }
 
   static TestConfiguration[] testConfigurationsMicroSeconds() {
-    return new TestConfiguration[]{
-        tc("All metrics (sent, received, returned, confirmed, nacked)",
-            configure().sent(true).received(true).returned(true).confirmed(true),
-            array("sent", "returned", "confirmed", "nacked", "received",
-                "min/median/75th/95th/99th consumer latency",
-                "confirm latency"),
-            2),
-        tc("Sent, received",
-            configure().sent(true).received(true).returned(false).confirmed(false),
-            array("sent", "received", "min/median/75th/95th/99th consumer latency"),
-            1,
-            array("returned", "confirmed", "nacked", "confirm latency")),
-        tc("Sent, received, confirmed",
-            configure().sent(true).received(true).returned(false).confirmed(true),
-            array("sent", "confirmed", "nacked", "received",
-                "min/median/75th/95th/99th consumer latency",
-                "confirm latency"),
-            2,
-            array("returned")),
-        tc("Sent, received, returned",
-            configure().sent(true).received(true).returned(true).confirmed(false),
-            array("sent", "returned", "received",
-                "min/median/75th/95th/99th consumer latency"),
-            1,
-            array("confirmed", "nacked", "confirm latency")),
-        tc("Sent",
-            configure().sent(true).received(false).returned(false).confirmed(false),
-            array("sent"),
-            0,
-            array("returned", "confirmed", "nacked", "received",
-                "min/median/75th/95th/99th consumer latency",
-                "consumer latency", "confirm latency")),
-        tc("Sent, returned",
-            configure().sent(true).received(false).returned(true).confirmed(false),
-            array("sent", "returned"),
-            0,
-            array("confirmed", "nacked", "received",
-                "min/median/75th/95th/99th consumer latency",
-                "consumer latency", "confirm latency")),
-        tc("Sent, confirmed",
-            configure().sent(true).received(false).returned(false).confirmed(true),
-            array("sent", "confirmed", "nacked", "min/median/75th/95th/99th confirm latency"),
-            1,
-            array("returned", "received",
-                "consumer latency")),
-        tc("Sent, returned, confirmed",
-            configure().sent(true).received(false).returned(true).confirmed(true),
-            array("sent", "returned", "confirmed", "nacked",
-                "min/median/75th/95th/99th confirm latency"),
-            1,
-            array("received", "consumer latency")),
-        tc("Sent, received",
-            configure().sent(true).received(true).returned(false).confirmed(false),
-            array("sent", "received", "min/median/75th/95th/99th consumer latency"),
-            1,
-            array("returned", "confirmed", "nacked", "confirm latency")),
-        tc("Received",
-            configure().sent(false).received(true).returned(false).confirmed(false),
-            array("received", "min/median/75th/95th/99th consumer latency"),
-            1,
-            array("sent", "returned", "confirmed", "nacked", "confirm latency")),
+    return new TestConfiguration[] {
+      tc(
+          "All metrics (sent, received, returned, confirmed, nacked)",
+          configure().sent(true).received(true).returned(true).confirmed(true),
+          array(
+              "sent",
+              "returned",
+              "confirmed",
+              "nacked",
+              "received",
+              "min/median/75th/95th/99th consumer latency",
+              "confirm latency"),
+          2),
+      tc(
+          "Sent, received",
+          configure().sent(true).received(true).returned(false).confirmed(false),
+          array("sent", "received", "min/median/75th/95th/99th consumer latency"),
+          1,
+          array("returned", "confirmed", "nacked", "confirm latency")),
+      tc(
+          "Sent, received, confirmed",
+          configure().sent(true).received(true).returned(false).confirmed(true),
+          array(
+              "sent",
+              "confirmed",
+              "nacked",
+              "received",
+              "min/median/75th/95th/99th consumer latency",
+              "confirm latency"),
+          2,
+          array("returned")),
+      tc(
+          "Sent, received, returned",
+          configure().sent(true).received(true).returned(true).confirmed(false),
+          array("sent", "returned", "received", "min/median/75th/95th/99th consumer latency"),
+          1,
+          array("confirmed", "nacked", "confirm latency")),
+      tc(
+          "Sent",
+          configure().sent(true).received(false).returned(false).confirmed(false),
+          array("sent"),
+          0,
+          array(
+              "returned",
+              "confirmed",
+              "nacked",
+              "received",
+              "min/median/75th/95th/99th consumer latency",
+              "consumer latency",
+              "confirm latency")),
+      tc(
+          "Sent, returned",
+          configure().sent(true).received(false).returned(true).confirmed(false),
+          array("sent", "returned"),
+          0,
+          array(
+              "confirmed",
+              "nacked",
+              "received",
+              "min/median/75th/95th/99th consumer latency",
+              "consumer latency",
+              "confirm latency")),
+      tc(
+          "Sent, confirmed",
+          configure().sent(true).received(false).returned(false).confirmed(true),
+          array("sent", "confirmed", "nacked", "min/median/75th/95th/99th confirm latency"),
+          1,
+          array("returned", "received", "consumer latency")),
+      tc(
+          "Sent, returned, confirmed",
+          configure().sent(true).received(false).returned(true).confirmed(true),
+          array(
+              "sent",
+              "returned",
+              "confirmed",
+              "nacked",
+              "min/median/75th/95th/99th confirm latency"),
+          1,
+          array("received", "consumer latency")),
+      tc(
+          "Sent, received",
+          configure().sent(true).received(true).returned(false).confirmed(false),
+          array("sent", "received", "min/median/75th/95th/99th consumer latency"),
+          1,
+          array("returned", "confirmed", "nacked", "confirm latency")),
+      tc(
+          "Received",
+          configure().sent(false).received(true).returned(false).confirmed(false),
+          array("received", "min/median/75th/95th/99th consumer latency"),
+          1,
+          array("sent", "returned", "confirmed", "nacked", "confirm latency")),
     };
   }
 
   static TestConfiguration[] testConfigurationsMilliSeconds() {
     return Stream.of(testConfigurationsMicroSeconds())
-        .map(configuration -> {
-          configuration.configurator.useMilliseconds(true);
-          return configuration;
-        }).collect(Collectors.toList()).toArray(new TestConfiguration[]{});
+        .map(
+            configuration -> {
+              configuration.configurator.useMilliseconds(true);
+              return configuration;
+            })
+        .collect(Collectors.toList())
+        .toArray(new TestConfiguration[] {});
   }
 
   static String[] array(String... values) {
     return values;
   }
 
-  static TestConfiguration tc(String description, Configurator configurator,
-      String[] expectedSubstringInOutput, int unitOccurrences,
+  static TestConfiguration tc(
+      String description,
+      Configurator configurator,
+      String[] expectedSubstringInOutput,
+      int unitOccurrences,
       String... nonExpectedSubstringInOutput) {
-    return new TestConfiguration(description, configurator, expectedSubstringInOutput,
-        unitOccurrences, nonExpectedSubstringInOutput);
+    return new TestConfiguration(
+        description,
+        configurator,
+        expectedSubstringInOutput,
+        unitOccurrences,
+        nonExpectedSubstringInOutput);
   }
 
   @BeforeEach
@@ -145,23 +184,25 @@ public class DefaultPerformanceMetricsTest {
   public void stats(TestConfiguration testConfiguration) {
     execute(testConfiguration.configurator);
     checkCsv(testConfiguration.unit());
-    assertThat(defaultOutput.split(",")).hasSize(
-        testConfiguration.expectedSubstringInOutput.length);
+    assertThat(defaultOutput.split(","))
+        .hasSize(testConfiguration.expectedSubstringInOutput.length);
     assertThatDefaultOutputContains(testConfiguration.expectedSubstringInOutput);
     assertThatDefaultOutputDoesNotContain(testConfiguration.nonExpectedSubstringInOutput);
-    assertThat(countMatches(defaultOutput, "0/0/0/0/0 " + testConfiguration.unit().name)).isEqualTo(
-        testConfiguration.unitOccurrences);
+    assertThat(countMatches(defaultOutput, "0/0/0/0/0 " + testConfiguration.unit().name))
+        .isEqualTo(testConfiguration.unitOccurrences);
 
     String[] lines = compactOutput.split(System.getProperty("line.separator"));
     assertThat(lines).hasSize(2);
-    assertThat(Arrays.stream(lines[0].split("  ")) // several spaces between fields
-        .map(String::trim)
-        .filter(s -> !s.isEmpty())) // remove fields that are empty because of the space split
+    assertThat(
+            Arrays.stream(lines[0].split("  ")) // several spaces between fields
+                .map(String::trim)
+                .filter(
+                    s -> !s.isEmpty())) // remove fields that are empty because of the space split
         .hasSize(testConfiguration.expectedSubstringInOutput.length - 1); // no test ID
     assertThatCompactOutputContains(testConfiguration.expectedSubstringInOutput);
     assertThatCompactOutputDoesNotContain(testConfiguration.nonExpectedSubstringInOutput);
-    assertThat(countMatches(compactOutput, "0/0/0/0/0 " + testConfiguration.unit().name)).isEqualTo(
-        testConfiguration.unitOccurrences);
+    assertThat(countMatches(compactOutput, "0/0/0/0/0 " + testConfiguration.unit().name))
+        .isEqualTo(testConfiguration.unitOccurrences);
   }
 
   void execute(Configurator configurator) {
@@ -182,8 +223,12 @@ public class DefaultPerformanceMetricsTest {
     for (int i = 0; i < substrings.length; i++) {
       relaxedSubstrings[i] = substrings[i].replace(LATENCY_HEADER, "").trim();
     }
-    assertThat(compactOutput).contains(Arrays.stream(relaxedSubstrings)
-        .filter(s -> !"id".equals(s)).filter(s -> !"test".equals(s)).collect(Collectors.toList()));
+    assertThat(compactOutput)
+        .contains(
+            Arrays.stream(relaxedSubstrings)
+                .filter(s -> !"id".equals(s))
+                .filter(s -> !"test".equals(s))
+                .collect(Collectors.toList()));
   }
 
   void assertThatDefaultOutputDoesNotContain(String... substrings) {
@@ -210,28 +255,38 @@ public class DefaultPerformanceMetricsTest {
   DefaultPerformanceMetrics metrics(Configurator configurator) {
     return new DefaultPerformanceMetrics(
         Duration.ofMillis(1000),
-        TimeUnit.NANOSECONDS, new SimpleMeterRegistry(), "metrics-prefix",
+        TimeUnit.NANOSECONDS,
+        new SimpleMeterRegistry(),
+        "metrics-prefix",
         new CompositeMetricsFormatter(
-            new DefaultPrintStreamMetricsFormatter(new PrintStream(defaultConsoleOut), "test-id",
-                configurator.sendStatsEnabled, configurator.recvStatsEnabled,
-                configurator.returnStatsEnabled, configurator.confirmStatsEnabled,
+            new DefaultPrintStreamMetricsFormatter(
+                new PrintStream(defaultConsoleOut),
+                "test-id",
+                configurator.sendStatsEnabled,
+                configurator.recvStatsEnabled,
+                configurator.returnStatsEnabled,
+                configurator.confirmStatsEnabled,
                 configurator.useMillis ? TimeUnit.MILLISECONDS : TimeUnit.NANOSECONDS),
-            new CompactPrintStreamMetricsFormatter(new PrintStream(compactConsoleOut),
-                configurator.sendStatsEnabled, configurator.recvStatsEnabled,
-                configurator.returnStatsEnabled, configurator.confirmStatsEnabled,
+            new CompactPrintStreamMetricsFormatter(
+                new PrintStream(compactConsoleOut),
+                configurator.sendStatsEnabled,
+                configurator.recvStatsEnabled,
+                configurator.returnStatsEnabled,
+                configurator.confirmStatsEnabled,
                 configurator.useMillis ? TimeUnit.MILLISECONDS : TimeUnit.NANOSECONDS),
-            new CsvMetricsFormatter(new PrintWriter(csvOut), "test-id",
-                configurator.sendStatsEnabled, configurator.recvStatsEnabled,
-                configurator.returnStatsEnabled, configurator.confirmStatsEnabled,
-                configurator.useMillis ? TimeUnit.MILLISECONDS : TimeUnit.NANOSECONDS)
-
-        )
-    );
+            new CsvMetricsFormatter(
+                new PrintWriter(csvOut),
+                "test-id",
+                configurator.sendStatsEnabled,
+                configurator.recvStatsEnabled,
+                configurator.returnStatsEnabled,
+                configurator.confirmStatsEnabled,
+                configurator.useMillis ? TimeUnit.MILLISECONDS : TimeUnit.NANOSECONDS)));
   }
 
   enum Unit {
-
-    MS("ms"), MICROS("µs");
+    MS("ms"),
+    MICROS("µs");
 
     private final String name;
 
@@ -250,13 +305,16 @@ public class DefaultPerformanceMetricsTest {
 
     String description;
 
-    public TestConfiguration(String description, Configurator configurator,
-        String[] expectedSubstringInOutput, int unitOccurrences,
+    public TestConfiguration(
+        String description,
+        Configurator configurator,
+        String[] expectedSubstringInOutput,
+        int unitOccurrences,
         String... nonExpectedSubstringInOutput) {
       this.description = description;
       this.configurator = configurator;
-      this.expectedSubstringInOutput = ArrayUtils.addAll(new String[]{"id", "test"},
-          expectedSubstringInOutput);
+      this.expectedSubstringInOutput =
+          ArrayUtils.addAll(new String[] {"id", "test"}, expectedSubstringInOutput);
       this.nonExpectedSubstringInOutput = nonExpectedSubstringInOutput;
       this.unitOccurrences = unitOccurrences;
     }
@@ -283,7 +341,6 @@ public class DefaultPerformanceMetricsTest {
     boolean confirmStatsEnabled;
     boolean useMillis;
 
-
     Configurator sent(boolean enabled) {
       this.sendStatsEnabled = enabled;
       return this;
@@ -308,6 +365,5 @@ public class DefaultPerformanceMetricsTest {
       this.useMillis = enabled;
       return this;
     }
-
   }
 }
