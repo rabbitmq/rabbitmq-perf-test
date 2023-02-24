@@ -12,42 +12,41 @@
 //
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
-
 package com.rabbitmq.perf;
 
 import java.time.Duration;
 
 public class TimestampProvider {
-    private final boolean useMillis;
-    private final boolean isTimestampInHeader;
+  private final boolean useMillis;
+  private final boolean isTimestampInHeader;
 
-    public TimestampProvider(boolean useMillis, boolean isTimestampInHeader) {
-        this.useMillis = useMillis;
-        this.isTimestampInHeader = isTimestampInHeader;
-    }
+  public TimestampProvider(boolean useMillis, boolean isTimestampInHeader) {
+    this.useMillis = useMillis;
+    this.isTimestampInHeader = isTimestampInHeader;
+  }
 
-    public boolean isTimestampInHeader() {
-        return this.isTimestampInHeader;
-    }
+  public boolean isTimestampInHeader() {
+    return this.isTimestampInHeader;
+  }
 
-    public long getCurrentTime() {
-        if (useMillis) {
-            return System.currentTimeMillis();
-        } else {
-            return System.nanoTime();
-        }
+  public long getCurrentTime() {
+    if (useMillis) {
+      return System.currentTimeMillis();
+    } else {
+      return System.nanoTime();
     }
+  }
 
-    public long getDifference(long ts1, long ts2) {
-        return Math.abs(ts1 - ts2);
-    }
+  public long getDifference(long ts1, long ts2) {
+    return Math.abs(ts1 - ts2);
+  }
 
-    Duration difference(long ts1, long ts2) {
-        long difference = getDifference(ts1, ts2);
-        if (useMillis) {
-            return Duration.ofMillis(difference);
-        } else {
-            return Duration.ofNanos(difference);
-        }
+  Duration difference(long ts1, long ts2) {
+    long difference = getDifference(ts1, ts2);
+    if (useMillis) {
+      return Duration.ofMillis(difference);
+    } else {
+      return Duration.ofNanos(difference);
     }
+  }
 }

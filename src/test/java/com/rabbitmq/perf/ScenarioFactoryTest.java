@@ -12,48 +12,48 @@
 //
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
-
 package com.rabbitmq.perf;
-
-import com.google.gson.Gson;
-import org.junit.jupiter.api.Test;
-
-import java.util.List;
-import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.google.gson.Gson;
+import java.util.List;
+import java.util.Map;
+import org.junit.jupiter.api.Test;
+
 public class ScenarioFactoryTest {
 
-    @Test
-    @SuppressWarnings("unchecked")
-    public void paramsFromJSON() {
-        String spec = "[{'name': 'consume', 'type': 'simple', 'params':" +
-                "[{'time-limit': 30, 'producer-count': 4, 'consumer-count': 2, " +
-                "  'rate': 10, 'exclusive': true, " +
-                "  'confirm': 10, " +
-                "  'queue-arguments': 'x-max-length=10,x-dead-letter-exchange=some.exchange.name,x-single-active-consumer=true', " +
-                "  'flags': 'persistent,mandatory', " +
-                "  'auto-delete': 'false', " +
-            "  'body': ['file1.json','file2.json'], 'body-content-type' : 'application/json'}]}]";
-        List<Map> scenariosJson = new Gson().fromJson(spec, List.class);
-        Map scenario = scenariosJson.get(0);
-        MulticastParams params = ScenarioFactory.paramsFromJSON((Map) ((List) scenario.get("params")).get(0));
-        assertThat(params.getTimeLimit()).isEqualTo(30);
-        assertThat(params.getProducerCount()).isEqualTo(4);
-        assertThat(params.getConsumerCount()).isEqualTo(2);
-        assertThat(params.getProducerRateLimit()).isEqualTo(10.0f);
-        assertThat(params.isExclusive()).isTrue();
-        assertThat(params.getConfirm()).isEqualTo(10L);
-        assertThat(params.getBodyFiles()).hasSize(2);
-        assertThat(params.getBodyFiles()).contains("file1.json", "file2.json");
-        assertThat(params.getBodyContentType()).isEqualTo("application/json");
-        assertThat(params.getQueueArguments()).hasSize(3)
-            .containsEntry("x-max-length", 10L)
-            .containsEntry("x-dead-letter-exchange", "some.exchange.name")
-            .containsEntry("x-single-active-consumer", true);
-        assertThat(params.getFlags()).hasSize(2).containsExactly("persistent", "mandatory");
-        assertThat(params.isAutoDelete()).isFalse();
-    }
-
+  @Test
+  @SuppressWarnings("unchecked")
+  public void paramsFromJSON() {
+    String spec =
+        "[{'name': 'consume', 'type': 'simple', 'params':"
+            + "[{'time-limit': 30, 'producer-count': 4, 'consumer-count': 2, "
+            + "  'rate': 10, 'exclusive': true, "
+            + "  'confirm': 10, "
+            + "  'queue-arguments': 'x-max-length=10,x-dead-letter-exchange=some.exchange.name,x-single-active-consumer=true', "
+            + "  'flags': 'persistent,mandatory', "
+            + "  'auto-delete': 'false', "
+            + "  'body': ['file1.json','file2.json'], 'body-content-type' : 'application/json'}]}]";
+    List<Map> scenariosJson = new Gson().fromJson(spec, List.class);
+    Map scenario = scenariosJson.get(0);
+    MulticastParams params =
+        ScenarioFactory.paramsFromJSON((Map) ((List) scenario.get("params")).get(0));
+    assertThat(params.getTimeLimit()).isEqualTo(30);
+    assertThat(params.getProducerCount()).isEqualTo(4);
+    assertThat(params.getConsumerCount()).isEqualTo(2);
+    assertThat(params.getProducerRateLimit()).isEqualTo(10.0f);
+    assertThat(params.isExclusive()).isTrue();
+    assertThat(params.getConfirm()).isEqualTo(10L);
+    assertThat(params.getBodyFiles()).hasSize(2);
+    assertThat(params.getBodyFiles()).contains("file1.json", "file2.json");
+    assertThat(params.getBodyContentType()).isEqualTo("application/json");
+    assertThat(params.getQueueArguments())
+        .hasSize(3)
+        .containsEntry("x-max-length", 10L)
+        .containsEntry("x-dead-letter-exchange", "some.exchange.name")
+        .containsEntry("x-single-active-consumer", true);
+    assertThat(params.getFlags()).hasSize(2).containsExactly("persistent", "mandatory");
+    assertThat(params.isAutoDelete()).isFalse();
+  }
 }

@@ -12,7 +12,6 @@
 //
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
-
 package com.rabbitmq.perf;
 
 import java.io.ByteArrayOutputStream;
@@ -21,71 +20,71 @@ import java.io.IOException;
 import java.util.List;
 import java.util.function.BiFunction;
 
-/**
- *
- */
+/** */
 public class TimeSequenceMessageBodySource implements MessageBodySource {
 
-    private static final byte[] EMPTY = new byte[0];
+  private static final byte[] EMPTY = new byte[0];
 
-    private final TimestampProvider tsp;
+  private final TimestampProvider tsp;
 
-    private final BiFunction<ByteArrayOutputStream, Long, MessageEnvelope> messageCreator;
+  private final BiFunction<ByteArrayOutputStream, Long, MessageEnvelope> messageCreator;
 
-    public TimeSequenceMessageBodySource(TimestampProvider tsp, int minMsgSize) {
-        this(tsp, new FixedValueIndicator<>(minMsgSize));
-    }
+  public TimeSequenceMessageBodySource(TimestampProvider tsp, int minMsgSize) {
+    this(tsp, new FixedValueIndicator<>(minMsgSize));
+  }
 
-    public TimeSequenceMessageBodySource(TimestampProvider tsp, ValueIndicator<Integer> sizeIndicator) {
-        this.tsp = tsp;
-        if (sizeIndicator.isVariable()) {
-            List<Integer> possibleSizes = sizeIndicator.values();
-            final byte[][] messages = new byte[possibleSizes.size()][];
-            for (int i = 0; i < possibleSizes.size(); i++) {
-                messages[i] = new byte[possibleSizes.get(i)];
+  public TimeSequenceMessageBodySource(
+      TimestampProvider tsp, ValueIndicator<Integer> sizeIndicator) {
+    this.tsp = tsp;
+    if (sizeIndicator.isVariable()) {
+      List<Integer> possibleSizes = sizeIndicator.values();
+      final byte[][] messages = new byte[possibleSizes.size()][];
+      for (int i = 0; i < possibleSizes.size(); i++) {
+        messages[i] = new byte[possibleSizes.get(i)];
+      }
+
+      this.messageCreator =
+          (acc, time) -> {
+            int size = sizeIndicator.getValue();
+            byte[] message = EMPTY;
+            for (byte[] m : messages) {
+              if (m.length == size) {
+                message = m;
+                break;
+              }
             }
-
-            this.messageCreator = (acc, time) -> {
-                int size = sizeIndicator.getValue();
-                byte[] message = EMPTY;
-                for (byte[] m : messages) {
-                    if (m.length == size) {
-                        message = m;
-                        break;
-                    }
-                }
-                byte[] m = acc.toByteArray();
-                if (m.length <= message.length) {
-                    System.arraycopy(m, 0, message, 0, m.length);
-                    return new MessageEnvelope(message, null, time);
-                } else {
-                    return new MessageEnvelope(m, null, time);
-                }
-            };
-        } else {
-            final byte[] message = new byte[sizeIndicator.getValue()];
-            this.messageCreator = (acc, time) -> {
-                byte[] m = acc.toByteArray();
-                if (m.length <= message.length) {
-                    System.arraycopy(m, 0, message, 0, m.length);
-                    return new MessageEnvelope(message, null, time);
-                } else {
-                    return new MessageEnvelope(m, null, time);
-                }
-            };
-        }
-
+            byte[] m = acc.toByteArray();
+            if (m.length <= message.length) {
+              System.arraycopy(m, 0, message, 0, m.length);
+              return new MessageEnvelope(message, null, time);
+            } else {
+              return new MessageEnvelope(m, null, time);
+            }
+          };
+    } else {
+      final byte[] message = new byte[sizeIndicator.getValue()];
+      this.messageCreator =
+          (acc, time) -> {
+            byte[] m = acc.toByteArray();
+            if (m.length <= message.length) {
+              System.arraycopy(m, 0, message, 0, m.length);
+              return new MessageEnvelope(message, null, time);
+            } else {
+              return new MessageEnvelope(m, null, time);
+            }
+          };
     }
+  }
 
-    @Override
-    public MessageEnvelope create(int sequenceNumber) throws IOException {
-        ByteArrayOutputStream acc = new ByteArrayOutputStream();
-        DataOutputStream d = new DataOutputStream(acc);
-        long time = tsp.getCurrentTime();
-        d.writeInt(sequenceNumber);
-        d.writeLong(time);
-        d.flush();
-        acc.flush();
-        return this.messageCreator.apply(acc, time);
-    }
+  @Override
+  public MessageEnvelope create(int sequenceNumber) throws IOException {
+    ByteArrayOutputStream acc = new ByteArrayOutputStream();
+    DataOutputStream d = new DataOutputStream(acc);
+    long time = tsp.getCurrentTime();
+    d.writeInt(sequenceNumber);
+    d.writeLong(time);
+    d.flush();
+    acc.flush();
+    return this.messageCreator.apply(acc, time);
+  }
 }

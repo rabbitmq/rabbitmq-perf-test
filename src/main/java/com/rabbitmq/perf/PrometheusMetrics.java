@@ -12,8 +12,10 @@
 //
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
-
 package com.rabbitmq.perf;
+
+import static com.rabbitmq.perf.PerfTest.intArg;
+import static com.rabbitmq.perf.Utils.strArg;
 
 import com.sun.net.httpserver.HttpServer;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
@@ -27,81 +29,90 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 
-import static com.rabbitmq.perf.PerfTest.intArg;
-import static com.rabbitmq.perf.Utils.strArg;
-
-/**
- *
- */
+/** */
 public class PrometheusMetrics implements Metrics {
 
-    private volatile HttpServer server;
-    private volatile Runnable serverStart = () -> { };
-    private volatile Runnable serverStop = () -> { };
+  private volatile HttpServer server;
+  private volatile Runnable serverStart = () -> {};
+  private volatile Runnable serverStop = () -> {};
 
-    private volatile PrometheusMeterRegistry registry;
+  private volatile PrometheusMeterRegistry registry;
 
-    public Options options() {
-        Options options = new Options();
-        options.addOption(new Option("mpr", "metrics-prometheus", false, "enable Prometheus metrics"));
-        options.addOption(new Option("mpe", "metrics-prometheus-endpoint", true, "the HTTP metrics endpoint, default is /metrics"));
-        options.addOption(new Option("mpp", "metrics-prometheus-port", true, "the port to launch the HTTP metrics endpoint on, default is 8080"));
+  public Options options() {
+    Options options = new Options();
+    options.addOption(new Option("mpr", "metrics-prometheus", false, "enable Prometheus metrics"));
+    options.addOption(
+        new Option(
+            "mpe",
+            "metrics-prometheus-endpoint",
+            true,
+            "the HTTP metrics endpoint, default is /metrics"));
+    options.addOption(
+        new Option(
+            "mpp",
+            "metrics-prometheus-port",
+            true,
+            "the port to launch the HTTP metrics endpoint on, default is 8080"));
 
-        return options;
-    }
+    return options;
+  }
 
-    public void configure(ConfigurationContext context) throws Exception {
-        CommandLineProxy cmd = context.cmd();
-        CompositeMeterRegistry meterRegistry = context.meterRegistry();
-        if (isEnabled(cmd)) {
-            registry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
-            meterRegistry.add(registry);
-            int prometheusHttpEndpointPort = intArg(cmd, "mpp", 8080);
-            String endpoint = strArg(cmd, "mpe", "metrics");
-            String prometheusHttpEndpoint = endpoint.startsWith("/") ? endpoint : "/" + endpoint;
-            AtomicBoolean serverStarted = new AtomicBoolean(false);
-            this.serverStart = () -> {
-                try {
-                    server = HttpServer.create(new InetSocketAddress(prometheusHttpEndpointPort), 0);
-                } catch (IOException e) {
-                    throw new PerfTestException("Error while starting Prometheus HTTP server", e);
-                }
-                server.createContext(prometheusHttpEndpoint, exchange -> {
-                    exchange.getResponseHeaders().set("Content-Type", "text/plain");
-                    byte[] content = registry.scrape().getBytes(StandardCharsets.UTF_8);
-                    exchange.sendResponseHeaders(200, content.length);
-                    try (OutputStream out = exchange.getResponseBody()) {
-                        out.write(content);
-                    }
+  public void configure(ConfigurationContext context) throws Exception {
+    CommandLineProxy cmd = context.cmd();
+    CompositeMeterRegistry meterRegistry = context.meterRegistry();
+    if (isEnabled(cmd)) {
+      registry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
+      meterRegistry.add(registry);
+      int prometheusHttpEndpointPort = intArg(cmd, "mpp", 8080);
+      String endpoint = strArg(cmd, "mpe", "metrics");
+      String prometheusHttpEndpoint = endpoint.startsWith("/") ? endpoint : "/" + endpoint;
+      AtomicBoolean serverStarted = new AtomicBoolean(false);
+      this.serverStart =
+          () -> {
+            try {
+              server = HttpServer.create(new InetSocketAddress(prometheusHttpEndpointPort), 0);
+            } catch (IOException e) {
+              throw new PerfTestException("Error while starting Prometheus HTTP server", e);
+            }
+            server.createContext(
+                prometheusHttpEndpoint,
+                exchange -> {
+                  exchange.getResponseHeaders().set("Content-Type", "text/plain");
+                  byte[] content = registry.scrape().getBytes(StandardCharsets.UTF_8);
+                  exchange.sendResponseHeaders(200, content.length);
+                  try (OutputStream out = exchange.getResponseBody()) {
+                    out.write(content);
+                  }
                 });
-                server.start();
-                serverStarted.set(true);
-            };
-            this.serverStop = () -> {
-                if (serverStarted.compareAndSet(true, false)) {
-                    server.stop(0);
-                }
-            };
-        } else {
-            this.serverStart = () -> { };
-            this.serverStop = () -> { };
-        }
+            server.start();
+            serverStarted.set(true);
+          };
+      this.serverStop =
+          () -> {
+            if (serverStarted.compareAndSet(true, false)) {
+              server.stop(0);
+            }
+          };
+    } else {
+      this.serverStart = () -> {};
+      this.serverStop = () -> {};
     }
+  }
 
-    @Override
-    public void start() {
-        this.serverStart.run();
-    }
+  @Override
+  public void start() {
+    this.serverStart.run();
+  }
 
-    public void close() throws Exception {
-        this.serverStop.run();
-        if (registry != null) {
-            registry.close();
-        }
+  public void close() throws Exception {
+    this.serverStop.run();
+    if (registry != null) {
+      registry.close();
     }
+  }
 
-    @Override
-    public String toString() {
-        return "Prometheus Metrics";
-    }
+  @Override
+  public String toString() {
+    return "Prometheus Metrics";
+  }
 }

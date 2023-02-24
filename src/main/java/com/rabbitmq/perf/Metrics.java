@@ -12,7 +12,6 @@
 //
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
-
 package com.rabbitmq.perf;
 
 import com.rabbitmq.client.ConnectionFactory;
@@ -20,74 +19,73 @@ import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 
-/**
- *
- */
+/** */
 public interface Metrics {
 
-    Options options();
+  Options options();
 
-    default void configure(ConfigurationContext context) throws Exception { }
+  default void configure(ConfigurationContext context) throws Exception {}
 
-    default boolean isEnabled(CommandLineProxy cmd) {
-        for (Object optObj : this.options().getOptions()) {
-            Option option = (Option) optObj;
-            if (cmd.hasOption(option.getOpt())) {
-                return true;
-            }
-        }
-        return false;
+  default boolean isEnabled(CommandLineProxy cmd) {
+    for (Object optObj : this.options().getOptions()) {
+      Option option = (Option) optObj;
+      if (cmd.hasOption(option.getOpt())) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  default void start() {}
+
+  default void close() throws Exception {}
+
+  class ConfigurationContext {
+
+    private final CommandLineProxy cmd;
+    private final CompositeMeterRegistry meterRegistry;
+    private final ConnectionFactory factory;
+    private final String[] args;
+    private final String metricsPrefix;
+    private final Options metricsOptions;
+
+    public ConfigurationContext(
+        CommandLineProxy cmd,
+        CompositeMeterRegistry meterRegistry,
+        ConnectionFactory factory,
+        String[] args,
+        String metricsPrefix,
+        Options metricsOptions) {
+      this.cmd = cmd;
+      this.meterRegistry = meterRegistry;
+      this.factory = factory;
+      this.args = args;
+      this.metricsPrefix = metricsPrefix;
+      this.metricsOptions = metricsOptions;
     }
 
-    default void start() {
+    public CommandLineProxy cmd() {
+      return cmd;
     }
 
-    default void close() throws Exception { }
-
-    class ConfigurationContext {
-
-        private final CommandLineProxy cmd;
-        private final CompositeMeterRegistry meterRegistry;
-        private final ConnectionFactory factory;
-        private final String [] args;
-        private final String metricsPrefix;
-        private final Options metricsOptions;
-
-        public ConfigurationContext(CommandLineProxy cmd,
-            CompositeMeterRegistry meterRegistry, ConnectionFactory factory,
-            String[] args, String metricsPrefix,
-            Options metricsOptions) {
-            this.cmd = cmd;
-            this.meterRegistry = meterRegistry;
-            this.factory = factory;
-            this.args = args;
-            this.metricsPrefix = metricsPrefix;
-            this.metricsOptions = metricsOptions;
-        }
-
-        public CommandLineProxy cmd() {
-            return cmd;
-        }
-
-        public CompositeMeterRegistry meterRegistry() {
-            return meterRegistry;
-        }
-
-        public ConnectionFactory factory() {
-            return factory;
-        }
-
-        public String[] args() {
-            return args;
-        }
-
-        public String metricsPrefix() {
-            return metricsPrefix;
-        }
-
-        public Options metricsOptions() {
-            return metricsOptions;
-        }
+    public CompositeMeterRegistry meterRegistry() {
+      return meterRegistry;
     }
 
+    public ConnectionFactory factory() {
+      return factory;
+    }
+
+    public String[] args() {
+      return args;
+    }
+
+    public String metricsPrefix() {
+      return metricsPrefix;
+    }
+
+    public Options metricsOptions() {
+      return metricsOptions;
+    }
+  }
 }

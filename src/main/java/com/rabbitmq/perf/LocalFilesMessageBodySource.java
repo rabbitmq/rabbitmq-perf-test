@@ -12,48 +12,44 @@
 //
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
-
 package com.rabbitmq.perf;
 
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- *
- */
+/** */
 public class LocalFilesMessageBodySource implements MessageBodySource {
 
-    private final long ZERO = 0L;
+  private final long ZERO = 0L;
 
-    private final List<byte[]> bodies;
+  private final List<byte[]> bodies;
 
-    private final String contentType;
+  private final String contentType;
 
-    public LocalFilesMessageBodySource(List<String> filesNames, String contentType) throws IOException {
-        bodies = new ArrayList<>(filesNames.size());
-        for (String fileName : filesNames) {
-            File file = new File(fileName.trim());
-            if (!file.exists() || file.isDirectory()) {
-                throw new IllegalArgumentException(fileName + " isn't a valid body file.");
-            }
-            try (BufferedInputStream inputStream = new BufferedInputStream(new FileInputStream(file))) {
-                byte [] body = new byte[(int) file.length()];
-                inputStream.read(body, 0, body.length);
-                bodies.add(body);
-            }
-        }
-        this.contentType = contentType;
+  public LocalFilesMessageBodySource(List<String> filesNames, String contentType)
+      throws IOException {
+    bodies = new ArrayList<>(filesNames.size());
+    for (String fileName : filesNames) {
+      File file = new File(fileName.trim());
+      if (!file.exists() || file.isDirectory()) {
+        throw new IllegalArgumentException(fileName + " isn't a valid body file.");
+      }
+      try (BufferedInputStream inputStream = new BufferedInputStream(new FileInputStream(file))) {
+        byte[] body = new byte[(int) file.length()];
+        inputStream.read(body, 0, body.length);
+        bodies.add(body);
+      }
     }
+    this.contentType = contentType;
+  }
 
-    public LocalFilesMessageBodySource(List<String> filesNames) throws IOException {
-        this(filesNames, null);
-    }
+  public LocalFilesMessageBodySource(List<String> filesNames) throws IOException {
+    this(filesNames, null);
+  }
 
-    @Override
-    public MessageEnvelope create(int sequenceNumber) {
-        return new MessageEnvelope(
-            bodies.get(sequenceNumber % bodies.size()), contentType, ZERO
-        );
-    }
+  @Override
+  public MessageEnvelope create(int sequenceNumber) {
+    return new MessageEnvelope(bodies.get(sequenceNumber % bodies.size()), contentType, ZERO);
+  }
 }

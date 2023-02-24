@@ -12,18 +12,17 @@
 //
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
-
 package com.rabbitmq.perf;
 
 @FunctionalInterface
 interface StartListener {
 
-  StartListener NO_OP = (id, type) -> { };
+  StartListener NO_OP = (id, type) -> {};
 
   void started(int id, Type type);
 
   enum Type {
-    PRODUCER, CONSUMER
+    PRODUCER,
+    CONSUMER
   }
-
 }

@@ -12,48 +12,45 @@
 //
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
-
 package com.rabbitmq.perf;
 
-import org.apache.commons.cli.Option;
-import org.apache.commons.cli.Options;
-import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.Options;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-/**
- *
- */
+/** */
 public class MetricsTest {
 
-    @Test
-    public void noDuplicateOptionBetweenMetrics() {
-        Set<String> options = new HashSet<>();
-        List<Metrics> metrics = new ArrayList<>();
-        metrics.add(new BaseMetrics());
-        metrics.add(new DatadogMetrics());
-        metrics.add(new JmxMetrics());
-        metrics.add(new PrometheusMetrics());
-        for (Metrics metric : metrics) {
-            for (Object optObj : metric.options().getOptions()) {
-                Option option = (Option) optObj;
-                assertTrue(options.add(option.getOpt()), "Option already exists: " + option.getOpt());
-            }
-        }
+  @Test
+  public void noDuplicateOptionBetweenMetrics() {
+    Set<String> options = new HashSet<>();
+    List<Metrics> metrics = new ArrayList<>();
+    metrics.add(new BaseMetrics());
+    metrics.add(new DatadogMetrics());
+    metrics.add(new JmxMetrics());
+    metrics.add(new PrometheusMetrics());
+    for (Metrics metric : metrics) {
+      for (Object optObj : metric.options().getOptions()) {
+        Option option = (Option) optObj;
+        assertTrue(options.add(option.getOpt()), "Option already exists: " + option.getOpt());
+      }
     }
+  }
 
-    @Test
-    public void noDuplicateOptionWithPerfTest() {
-        Options perfTestOptions = PerfTest.getOptions();
-        for (Object optObj : new CompositeMetrics().options().getOptions()) {
-            Option option = (Option) optObj;
-            assertFalse(perfTestOptions.hasOption(option.getOpt()), "Option already exists: " + option.getOpt());
-        }
+  @Test
+  public void noDuplicateOptionWithPerfTest() {
+    Options perfTestOptions = PerfTest.getOptions();
+    for (Object optObj : new CompositeMetrics().options().getOptions()) {
+      Option option = (Option) optObj;
+      assertFalse(
+          perfTestOptions.hasOption(option.getOpt()), "Option already exists: " + option.getOpt());
     }
+  }
 }

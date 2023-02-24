@@ -12,18 +12,15 @@
 //
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
-
 package com.rabbitmq.perf;
 
 interface InstanceSynchronization {
 
-  InstanceSynchronization NO_OP = () -> {
-  };
+  InstanceSynchronization NO_OP = () -> {};
 
   void synchronize() throws Exception;
 
   default void addPostSyncListener(Runnable listener) {
     listener.run();
   }
-
 }

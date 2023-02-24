@@ -12,36 +12,35 @@
 //
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
-
 package com.rabbitmq.perf;
 
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.IntStream;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 public class CachingRoutingKeyGeneratorTest {
 
-    Supplier<String> generator;
+  Supplier<String> generator;
 
-    @ParameterizedTest
-    @ValueSource(ints = {1, 10, 100})
-    public void cacheValues(int cacheSize) {
-        generator = new Producer.CachingRoutingKeyGenerator(cacheSize);
-        Set<String> keys = new HashSet<>();
-        IntStream.range(0, 1000).forEach(i -> keys.add(generator.get()));
-        assertThat(keys).hasSize(cacheSize);
-    }
+  @ParameterizedTest
+  @ValueSource(ints = {1, 10, 100})
+  public void cacheValues(int cacheSize) {
+    generator = new Producer.CachingRoutingKeyGenerator(cacheSize);
+    Set<String> keys = new HashSet<>();
+    IntStream.range(0, 1000).forEach(i -> keys.add(generator.get()));
+    assertThat(keys).hasSize(cacheSize);
+  }
 
-    @ParameterizedTest
-    @ValueSource(ints = {0, -1, -10})
-    public void cacheSizeMustBeGreaterThanZero(int size) {
-        assertThrows(IllegalArgumentException.class, () -> new Producer.CachingRoutingKeyGenerator(size));
-    }
+  @ParameterizedTest
+  @ValueSource(ints = {0, -1, -10})
+  public void cacheSizeMustBeGreaterThanZero(int size) {
+    assertThrows(
+        IllegalArgumentException.class, () -> new Producer.CachingRoutingKeyGenerator(size));
+  }
 }

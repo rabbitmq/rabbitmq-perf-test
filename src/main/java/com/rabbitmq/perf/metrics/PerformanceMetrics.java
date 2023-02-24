@@ -12,7 +12,6 @@
 //
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
-
 package com.rabbitmq.perf.metrics;
 
 import java.time.Duration;
@@ -24,47 +23,34 @@ import java.time.Duration;
  */
 public interface PerformanceMetrics {
 
-  PerformanceMetrics NO_OP = new PerformanceMetrics() {
-    @Override
-    public void start() {
+  PerformanceMetrics NO_OP =
+      new PerformanceMetrics() {
+        @Override
+        public void start() {}
 
-    }
+        @Override
+        public void published() {}
 
-    @Override
-    public void published() {
+        @Override
+        public void confirmed(int count, long[] latencies) {}
 
-    }
+        @Override
+        public void nacked(int count) {}
 
-    @Override
-    public void confirmed(int count, long[] latencies) {
+        @Override
+        public void returned() {}
 
-    }
+        @Override
+        public void received(long latency) {}
 
-    @Override
-    public void nacked(int count) {
+        @Override
+        public Duration interval() {
+          return Duration.ZERO;
+        }
 
-    }
-
-    @Override
-    public void returned() {
-
-    }
-
-    @Override
-    public void received(long latency) {
-
-    }
-
-    @Override
-    public Duration interval() {
-      return Duration.ZERO;
-    }
-
-    @Override
-    public void resetGlobals() {
-
-    }
-  };
+        @Override
+        public void resetGlobals() {}
+      };
 
   void start();
 

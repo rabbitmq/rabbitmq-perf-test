@@ -12,13 +12,11 @@
 //
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
-
 package com.rabbitmq.perf;
 
 import com.rabbitmq.client.Address;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
-
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Proxy;
 import java.util.Arrays;
@@ -26,78 +24,83 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
-/**
- *
- */
+/** */
 public class MockUtils {
 
-    private static final AtomicInteger PROXY_COUNTER = new AtomicInteger(0);
+  private static final AtomicInteger PROXY_COUNTER = new AtomicInteger(0);
 
-    @SuppressWarnings("unchecked")
-    public static <T> T proxy(Class<T> clazz, ProxyCallback... callbacks) {
-        final int id = PROXY_COUNTER.incrementAndGet();
-        ProxyCallback toString = new ProxyCallback("toString", (proxy, method, args) -> clazz.getSimpleName() + " " + id);
-        ProxyCallback[] proxyCallbacks = Arrays.copyOf(callbacks, callbacks.length + 1);
-        proxyCallbacks[callbacks.length] = toString;
-        return (T) Proxy.newProxyInstance(clazz.getClassLoader(), new Class[]{clazz}, (proxy, method, args) -> {
-            for (ProxyCallback callback : proxyCallbacks) {
+  @SuppressWarnings("unchecked")
+  public static <T> T proxy(Class<T> clazz, ProxyCallback... callbacks) {
+    final int id = PROXY_COUNTER.incrementAndGet();
+    ProxyCallback toString =
+        new ProxyCallback("toString", (proxy, method, args) -> clazz.getSimpleName() + " " + id);
+    ProxyCallback[] proxyCallbacks = Arrays.copyOf(callbacks, callbacks.length + 1);
+    proxyCallbacks[callbacks.length] = toString;
+    return (T)
+        Proxy.newProxyInstance(
+            clazz.getClassLoader(),
+            new Class[] {clazz},
+            (proxy, method, args) -> {
+              for (ProxyCallback callback : proxyCallbacks) {
                 if (method.getName().equals(callback.method)) {
-                    return callback.handler.invoke(proxy, method, args);
+                  return callback.handler.invoke(proxy, method, args);
                 }
-            }
-            // FIXME would be useful to inspect return type and use reasonable default
-            // (e.g. false for boolean, 0 for numbers, etc)
-            // this can be useful for future changes of code
-            if (long.class.equals(method.getReturnType()) || Long.class.equals(method.getReturnType())) {
+              }
+              // FIXME would be useful to inspect return type and use reasonable default
+              // (e.g. false for boolean, 0 for numbers, etc)
+              // this can be useful for future changes of code
+              if (long.class.equals(method.getReturnType())
+                  || Long.class.equals(method.getReturnType())) {
                 return 0L;
-            } else if (boolean.class.equals(method.getReturnType()) || Boolean.class.equals(method.getReturnType())) {
+              } else if (boolean.class.equals(method.getReturnType())
+                  || Boolean.class.equals(method.getReturnType())) {
                 return false;
-            }
-            return null;
-        });
+              }
+              return null;
+            });
+  }
+
+  public static ProxyCallback callback(String method, InvocationHandler handler) {
+    return new ProxyCallback(method, handler);
+  }
+
+  public static ConnectionFactory connectionFactoryThatReturns(Connection c) {
+    return new ConnectionFactory() {
+
+      @Override
+      public Connection newConnection(String name) {
+        return c;
+      }
+
+      @Override
+      public Connection newConnection(List<Address> addrs, String name) {
+        return c;
+      }
+    };
+  }
+
+  public static ConnectionFactory connectionFactoryThatReturns(Supplier<Connection> supplier) {
+    return new ConnectionFactory() {
+      @Override
+      public Connection newConnection(String name) {
+        return supplier.get();
+      }
+
+      @Override
+      public Connection newConnection(List<Address> addrs, String name) {
+        return supplier.get();
+      }
+    };
+  }
+
+  public static class ProxyCallback {
+
+    final String method;
+    final InvocationHandler handler;
+
+    private ProxyCallback(String method, InvocationHandler handler) {
+      this.method = method;
+      this.handler = handler;
     }
-
-    public static ProxyCallback callback(String method, InvocationHandler handler) {
-        return new ProxyCallback(method, handler);
-    }
-
-    public static ConnectionFactory connectionFactoryThatReturns(Connection c) {
-        return new ConnectionFactory() {
-
-            @Override
-            public Connection newConnection(String name) {
-                return c;
-            }
-
-            @Override
-            public Connection newConnection(List<Address> addrs, String name) {
-                return c;
-            }
-        };
-    }
-
-    public static ConnectionFactory connectionFactoryThatReturns(Supplier<Connection> supplier) {
-        return new ConnectionFactory() {
-            @Override
-            public Connection newConnection(String name) {
-                return supplier.get();
-            }
-
-            @Override
-            public Connection newConnection(List<Address> addrs, String name) {
-                return supplier.get();
-            }
-        };
-    }
-
-    public static class ProxyCallback {
-
-        final String method;
-        final InvocationHandler handler;
-
-        private ProxyCallback(String method, InvocationHandler handler) {
-            this.method = method;
-            this.handler = handler;
-        }
-    }
+  }
 }

@@ -12,10 +12,9 @@
 //
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
-
 package com.rabbitmq.perf;
 
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -24,53 +23,56 @@ import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.Test;
 
 public class LogTest {
 
-    static final String XML = "<configuration>\n" +
-            "    <appender name=\"STDOUT\" class=\"ch.qos.logback.core.ConsoleAppender\">\n" +
-            "        <encoder>\n" +
-            "            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>\n" +
-            "        </encoder>\n" +
-            "    </appender>\n" +
-            "\n" +
-            "${loggers}\n" +
-            "\n" +
-            "    <root level=\"warn\">\n" +
-            "        <appender-ref ref=\"STDOUT\" />\n" +
-            "    </root>\n" +
-            "</configuration>";
+  static final String XML =
+      "<configuration>\n"
+          + "    <appender name=\"STDOUT\" class=\"ch.qos.logback.core.ConsoleAppender\">\n"
+          + "        <encoder>\n"
+          + "            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>\n"
+          + "        </encoder>\n"
+          + "    </appender>\n"
+          + "\n"
+          + "${loggers}\n"
+          + "\n"
+          + "    <root level=\"warn\">\n"
+          + "        <appender-ref ref=\"STDOUT\" />\n"
+          + "    </root>\n"
+          + "</configuration>";
 
-    static InputStream xml() {
-        return new ByteArrayInputStream(XML.getBytes(StandardCharsets.UTF_8));
-    }
+  static InputStream xml() {
+    return new ByteArrayInputStream(XML.getBytes(StandardCharsets.UTF_8));
+  }
 
-    @Test
-    void processConfigurationFileNoLoggers() throws Exception {
-        assertThat(Log.processConfigurationFile(xml(), null))
-                .isEqualTo(XML.replace("${loggers}", "")).is(TestUtils.validXml());
-        assertThat(Log.processConfigurationFile(xml(), new HashMap<>()))
-                .isEqualTo(XML.replace("${loggers}", "")).is(TestUtils.validXml());
-    }
+  @Test
+  void processConfigurationFileNoLoggers() throws Exception {
+    assertThat(Log.processConfigurationFile(xml(), null))
+        .isEqualTo(XML.replace("${loggers}", ""))
+        .is(TestUtils.validXml());
+    assertThat(Log.processConfigurationFile(xml(), new HashMap<>()))
+        .isEqualTo(XML.replace("${loggers}", ""))
+        .is(TestUtils.validXml());
+  }
 
-    @Test
-    void processConfigurationFileOneLogger() throws IOException {
-        assertThat(Log.processConfigurationFile(xml(), Collections.singletonMap("com.rabbitmq.perf", "info")))
-                .contains("<logger name=\"com.rabbitmq.perf\" level=\"info\"")
-                .is(TestUtils.validXml());
-    }
+  @Test
+  void processConfigurationFileOneLogger() throws IOException {
+    assertThat(
+            Log.processConfigurationFile(
+                xml(), Collections.singletonMap("com.rabbitmq.perf", "info")))
+        .contains("<logger name=\"com.rabbitmq.perf\" level=\"info\"")
+        .is(TestUtils.validXml());
+  }
 
-    @Test
-    void processConfigurationFileSeveralLoggers() throws IOException {
-        Map<String, Object> loggers = new HashMap<>();
-        loggers.put("com.rabbitmq.perf", "debug");
-        loggers.put("com.rabbitmq.perf.Producer", "info");
-        assertThat(Log.processConfigurationFile(xml(), loggers))
-                .contains("<logger name=\"com.rabbitmq.perf\" level=\"debug\"")
-                .contains("<logger name=\"com.rabbitmq.perf.Producer\" level=\"info\"")
-                .is(TestUtils.validXml());
-    }
-
+  @Test
+  void processConfigurationFileSeveralLoggers() throws IOException {
+    Map<String, Object> loggers = new HashMap<>();
+    loggers.put("com.rabbitmq.perf", "debug");
+    loggers.put("com.rabbitmq.perf.Producer", "info");
+    assertThat(Log.processConfigurationFile(xml(), loggers))
+        .contains("<logger name=\"com.rabbitmq.perf\" level=\"debug\"")
+        .contains("<logger name=\"com.rabbitmq.perf.Producer\" level=\"info\"")
+        .is(TestUtils.validXml());
+  }
 }

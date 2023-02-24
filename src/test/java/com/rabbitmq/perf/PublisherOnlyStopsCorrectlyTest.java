@@ -12,8 +12,12 @@
 //
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
-
 package com.rabbitmq.perf;
+
+import static com.rabbitmq.perf.MockUtils.*;
+import static com.rabbitmq.perf.TestUtils.threadFactory;
+import static java.util.Collections.singletonList;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
@@ -21,6 +25,11 @@ import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.impl.AMQImpl;
 import com.rabbitmq.perf.metrics.PerformanceMetrics;
 import java.time.Duration;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestInfo;
@@ -28,29 +37,16 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
-import java.util.stream.Stream;
-
-import static com.rabbitmq.perf.MockUtils.*;
-import static com.rabbitmq.perf.TestUtils.threadFactory;
-import static java.util.Collections.singletonList;
-import static org.assertj.core.api.Assertions.assertThat;
-
-/**
- *
- */
+/** */
 public class PublisherOnlyStopsCorrectlyTest {
 
-    MulticastParams params;
+  MulticastParams params;
 
-    PerformanceMetrics performanceMetrics = PerformanceMetrics.NO_OP;
+  PerformanceMetrics performanceMetrics = PerformanceMetrics.NO_OP;
 
-    ExecutorService executorService;
+  ExecutorService executorService;
 
-    static Stream<Arguments> publisherOnlyStopsWhenBrokerCrashesArguments() {
+  static Stream<Arguments> publisherOnlyStopsWhenBrokerCrashesArguments() {
     return Stream.of(
         // number of messages before throwing exception, configurator, assertion message
         Arguments.of(
@@ -62,62 +58,74 @@ public class PublisherOnlyStopsCorrectlyTest {
             (Consumer<MulticastParams>)
                 (params) -> params.setPublishingInterval(Duration.ofSeconds(1)),
             "Sender should have failed and program should stop"));
-    }
+  }
 
-    @BeforeEach
-    public void init(TestInfo info) {
-        params = new MulticastParams();
-        executorService = Executors.newSingleThreadExecutor(threadFactory(info));
-    }
+  @BeforeEach
+  public void init(TestInfo info) {
+    params = new MulticastParams();
+    executorService = Executors.newSingleThreadExecutor(threadFactory(info));
+  }
 
-    @AfterEach
-    public void tearDown() {
-        executorService.shutdownNow();
-    }
+  @AfterEach
+  public void tearDown() {
+    executorService.shutdownNow();
+  }
 
-    @ParameterizedTest
-    @MethodSource("publisherOnlyStopsWhenBrokerCrashesArguments")
-    public void publisherOnlyStopsWhenBrokerCrashes(
-            int messageTotal, Consumer<MulticastParams> configurator, String message) throws Exception {
-        params.setConsumerCount(0);
-        params.setProducerCount(1);
-        configurator.accept(params);
+  @ParameterizedTest
+  @MethodSource("publisherOnlyStopsWhenBrokerCrashesArguments")
+  public void publisherOnlyStopsWhenBrokerCrashes(
+      int messageTotal, Consumer<MulticastParams> configurator, String message) throws Exception {
+    params.setConsumerCount(0);
+    params.setProducerCount(1);
+    configurator.accept(params);
 
-        AtomicInteger publishedMessages = new AtomicInteger(0);
-        Channel channel = proxy(Channel.class,
-                callback("queueDeclare", (proxy, method, args) -> new AMQImpl.Queue.DeclareOk(args[0].toString(), 0, 0)),
-                callback("basicPublish", (proxy, method, args) -> {
-                    if (publishedMessages.incrementAndGet() > messageTotal) {
-                        throw new RuntimeException("Expected exception, simulating broker crash");
-                    }
-                    return null;
-                })
-        );
+    AtomicInteger publishedMessages = new AtomicInteger(0);
+    Channel channel =
+        proxy(
+            Channel.class,
+            callback(
+                "queueDeclare",
+                (proxy, method, args) -> new AMQImpl.Queue.DeclareOk(args[0].toString(), 0, 0)),
+            callback(
+                "basicPublish",
+                (proxy, method, args) -> {
+                  if (publishedMessages.incrementAndGet() > messageTotal) {
+                    throw new RuntimeException("Expected exception, simulating broker crash");
+                  }
+                  return null;
+                }));
 
-        Supplier<Connection> connectionSupplier = () -> proxy(Connection.class,
+    Supplier<Connection> connectionSupplier =
+        () ->
+            proxy(
+                Connection.class,
                 callback("createChannel", (proxy, method, args) -> channel),
-                callback("isOpen", (proxy, method, args) -> true)
-        );
+                callback("isOpen", (proxy, method, args) -> true));
 
-        ConnectionFactory connectionFactory = connectionFactoryThatReturns(connectionSupplier);
+    ConnectionFactory connectionFactory = connectionFactoryThatReturns(connectionSupplier);
 
-        MulticastSet set = getMulticastSet(connectionFactory);
+    MulticastSet set = getMulticastSet(connectionFactory);
 
-        CountDownLatch latch = new CountDownLatch(1);
-        executorService.submit((Callable<Void>) () -> {
-            set.run();
-            latch.countDown();
-            return null;
-        });
-        assertThat(latch.await(10, TimeUnit.SECONDS)).as(message).isTrue();
-    }
+    CountDownLatch latch = new CountDownLatch(1);
+    executorService.submit(
+        (Callable<Void>)
+            () -> {
+              set.run();
+              latch.countDown();
+              return null;
+            });
+    assertThat(latch.await(10, TimeUnit.SECONDS)).as(message).isTrue();
+  }
 
-    private MulticastSet getMulticastSet(ConnectionFactory connectionFactory) {
-        MulticastSet set = new MulticastSet(
-                performanceMetrics, connectionFactory, params, singletonList("amqp://localhost"),
-                PerfTest.getCompletionHandler(params, new ConcurrentHashMap<>())
-        );
-        set.setThreadingHandler(new MulticastSet.DefaultThreadingHandler());
-        return set;
-    }
+  private MulticastSet getMulticastSet(ConnectionFactory connectionFactory) {
+    MulticastSet set =
+        new MulticastSet(
+            performanceMetrics,
+            connectionFactory,
+            params,
+            singletonList("amqp://localhost"),
+            PerfTest.getCompletionHandler(params, new ConcurrentHashMap<>()));
+    set.setThreadingHandler(new MulticastSet.DefaultThreadingHandler());
+    return set;
+  }
 }

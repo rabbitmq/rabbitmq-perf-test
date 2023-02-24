@@ -12,31 +12,30 @@
 //
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
-
 package com.rabbitmq.perf;
 
 class MulticastValue implements VariableValue {
-    private final String name;
-    private final Object value;
+  private final String name;
+  private final Object value;
 
-    MulticastValue(String name, Object value) {
-        this.name = name;
-        this.value = value;
-    }
+  MulticastValue(String name, Object value) {
+    this.name = name;
+    this.value = value;
+  }
 
-    public void setup(MulticastParams params) {
-        PerfUtil.setValue(params, name, value);
-    }
+  public void setup(MulticastParams params) {
+    PerfUtil.setValue(params, name, value);
+  }
 
-    public void teardown(MulticastParams params) {
-        // nothing to close here
-    }
+  public void teardown(MulticastParams params) {
+    // nothing to close here
+  }
 
-    public String getName() {
-        return name;
-    }
+  public String getName() {
+    return name;
+  }
 
-    public Object getValue() {
-        return value;
-    }
+  public Object getValue() {
+    return value;
+  }
 }

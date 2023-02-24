@@ -12,7 +12,6 @@
 //
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
-
 package com.rabbitmq.perf.metrics;
 
 import java.time.Duration;
@@ -26,13 +25,20 @@ public interface MetricsFormatter {
 
   void header();
 
-  void report(Duration durationSinceStart, double publishedRate, double confirmedRate,
-      double nackedRate, double returnedRate,
+  void report(
+      Duration durationSinceStart,
+      double publishedRate,
+      double confirmedRate,
+      double nackedRate,
+      double returnedRate,
       double receivedRate,
-      long[] confirmedLatencyStats, long[] consumerLatencyStats);
+      long[] confirmedLatencyStats,
+      long[] consumerLatencyStats);
 
-  void summary(Duration elapsed, double ratePublished, double rateReceived,
+  void summary(
+      Duration elapsed,
+      double ratePublished,
+      double rateReceived,
       long[] consumedLatencyTotal,
       long[] confirmedLatencyTotal);
-
 }

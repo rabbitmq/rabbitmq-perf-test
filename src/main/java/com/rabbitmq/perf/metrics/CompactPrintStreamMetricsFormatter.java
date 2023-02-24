@@ -12,7 +12,6 @@
 //
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
-
 package com.rabbitmq.perf.metrics;
 
 import static com.rabbitmq.perf.metrics.MetricsFormatterUtils.MESSAGE_RATE_LABEL;
@@ -26,8 +25,7 @@ import java.io.PrintStream;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
-class CompactPrintStreamMetricsFormatter extends BaseMetricsFormatter implements
-    MetricsFormatter {
+class CompactPrintStreamMetricsFormatter extends BaseMetricsFormatter implements MetricsFormatter {
 
   // e.g. 99999.999s
   private static final String TIME_FORMAT = "%-10s";
@@ -40,9 +38,12 @@ class CompactPrintStreamMetricsFormatter extends BaseMetricsFormatter implements
   private final PrintStream out;
   private final TimeUnit latencyCollectionTimeUnit;
 
-  CompactPrintStreamMetricsFormatter(PrintStream out, boolean publishedEnabled,
+  CompactPrintStreamMetricsFormatter(
+      PrintStream out,
+      boolean publishedEnabled,
       boolean receivedEnabled,
-      boolean returnedEnabled, boolean confirmedEnabled,
+      boolean returnedEnabled,
+      boolean confirmedEnabled,
       TimeUnit latencyCollectionTimeUnit) {
     super(publishedEnabled, receivedEnabled, returnedEnabled, confirmedEnabled);
     if (latencyCollectionTimeUnit != MILLISECONDS && latencyCollectionTimeUnit != NANOSECONDS) {
@@ -55,8 +56,7 @@ class CompactPrintStreamMetricsFormatter extends BaseMetricsFormatter implements
 
   @Override
   public void header() {
-    StringBuilder builder = new StringBuilder()
-        .append(format(TIME_FORMAT, "time"));
+    StringBuilder builder = new StringBuilder().append(format(TIME_FORMAT, "time"));
 
     if (this.publishedEnabled) {
       builder.append(format(RATE_FORMAT, "sent"));
@@ -86,11 +86,17 @@ class CompactPrintStreamMetricsFormatter extends BaseMetricsFormatter implements
   }
 
   @Override
-  public void report(Duration durationSinceStart, double publishedRate, double confirmedRate,
-      double nackedRate, double returnedRate, double receivedRate, long[] confirmedLatencyStats,
+  public void report(
+      Duration durationSinceStart,
+      double publishedRate,
+      double confirmedRate,
+      double nackedRate,
+      double returnedRate,
+      double receivedRate,
+      long[] confirmedLatencyStats,
       long[] consumerLatencyStats) {
-    StringBuilder builder = new StringBuilder()
-        .append(format(TIME_FORMAT, formatTime(durationSinceStart) + "s"));
+    StringBuilder builder =
+        new StringBuilder().append(format(TIME_FORMAT, formatTime(durationSinceStart) + "s"));
     if (this.publishedEnabled) {
       builder.append(format(RATE_FORMAT, formatRate(publishedRate) + " " + MESSAGE_RATE_LABEL));
     }
@@ -100,10 +106,8 @@ class CompactPrintStreamMetricsFormatter extends BaseMetricsFormatter implements
     }
 
     if (this.publishedEnabled && this.confirmedEnabled) {
-      builder.append(
-          format(RATE_FORMAT, formatRate(confirmedRate) + " " + MESSAGE_RATE_LABEL));
-      builder.append(
-          format(RATE_FORMAT, formatRate(nackedRate) + " " + MESSAGE_RATE_LABEL));
+      builder.append(format(RATE_FORMAT, formatRate(confirmedRate) + " " + MESSAGE_RATE_LABEL));
+      builder.append(format(RATE_FORMAT, formatRate(nackedRate) + " " + MESSAGE_RATE_LABEL));
     }
 
     if (this.receivedEnabled) {
@@ -112,8 +116,8 @@ class CompactPrintStreamMetricsFormatter extends BaseMetricsFormatter implements
 
     boolean latencyOverflow = false;
     if (shouldDisplayConsumerLatency()) {
-      String latency = MetricsFormatterUtils.formatLatency(consumerLatencyStats,
-          this.latencyCollectionTimeUnit);
+      String latency =
+          MetricsFormatterUtils.formatLatency(consumerLatencyStats, this.latencyCollectionTimeUnit);
       if (latency.length() > MAX_ALIGNED_LATENCY) {
         builder.append(" ").append(latency);
         latencyOverflow = true;
@@ -123,8 +127,9 @@ class CompactPrintStreamMetricsFormatter extends BaseMetricsFormatter implements
     }
 
     if (shouldDisplayConfirmLatency()) {
-      String latency = MetricsFormatterUtils.formatLatency(confirmedLatencyStats,
-          this.latencyCollectionTimeUnit);
+      String latency =
+          MetricsFormatterUtils.formatLatency(
+              confirmedLatencyStats, this.latencyCollectionTimeUnit);
       if (latency.length() > MAX_ALIGNED_LATENCY || latencyOverflow) {
         builder.append(" ").append(latency);
       } else {
@@ -135,10 +140,20 @@ class CompactPrintStreamMetricsFormatter extends BaseMetricsFormatter implements
   }
 
   @Override
-  public void summary(Duration elapsed, double ratePublished, double rateReceived,
-      long[] consumedLatencyTotal, long[] confirmedLatencyTotal) {
+  public void summary(
+      Duration elapsed,
+      double ratePublished,
+      double rateReceived,
+      long[] consumedLatencyTotal,
+      long[] confirmedLatencyTotal) {
     this.out.print(
-        summary(elapsed, ratePublished, rateReceived, consumedLatencyTotal, confirmedLatencyTotal,
-            null, this.latencyCollectionTimeUnit));
+        summary(
+            elapsed,
+            ratePublished,
+            rateReceived,
+            consumedLatencyTotal,
+            confirmedLatencyTotal,
+            null,
+            this.latencyCollectionTimeUnit));
   }
 }

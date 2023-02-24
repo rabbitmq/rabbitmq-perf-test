@@ -12,11 +12,9 @@
 //
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
-
 package com.rabbitmq.perf;
 
 import com.rabbitmq.client.Channel;
-
 import com.rabbitmq.perf.metrics.PerformanceMetrics;
 import java.util.List;
 import java.util.Map;
@@ -26,194 +24,194 @@ import java.util.Map;
  */
 public class ProducerParameters {
 
-    private Channel channel;
-    private String exchangeName;
-    private String id;
-    private boolean randomRoutingKey;
-    private List<?> flags;
-    private int txSize;
-    private int msgLimit;
-    private long confirm;
-    private int confirmTimeout;
-    private MessageBodySource messageBodySource;
-    private TimestampProvider tsp;
-    private PerformanceMetrics performanceMetrics;
-    private Map<String, Object> messageProperties;
-    private MulticastSet.CompletionHandler completionHandler;
-    private int routingKeyCacheSize;
-    private int randomStartDelayInSeconds;
-    private Recovery.RecoveryProcess recoveryProcess;
-    private ValueIndicator<Float> rateIndicator;
-    private StartListener startListener = StartListener.NO_OP;
+  private Channel channel;
+  private String exchangeName;
+  private String id;
+  private boolean randomRoutingKey;
+  private List<?> flags;
+  private int txSize;
+  private int msgLimit;
+  private long confirm;
+  private int confirmTimeout;
+  private MessageBodySource messageBodySource;
+  private TimestampProvider tsp;
+  private PerformanceMetrics performanceMetrics;
+  private Map<String, Object> messageProperties;
+  private MulticastSet.CompletionHandler completionHandler;
+  private int routingKeyCacheSize;
+  private int randomStartDelayInSeconds;
+  private Recovery.RecoveryProcess recoveryProcess;
+  private ValueIndicator<Float> rateIndicator;
+  private StartListener startListener = StartListener.NO_OP;
 
-    public Channel getChannel() {
-        return channel;
-    }
+  public Channel getChannel() {
+    return channel;
+  }
 
-    public ProducerParameters setChannel(Channel channel) {
-        this.channel = channel;
-        return this;
-    }
+  public ProducerParameters setChannel(Channel channel) {
+    this.channel = channel;
+    return this;
+  }
 
-    public String getExchangeName() {
-        return exchangeName;
-    }
+  public String getExchangeName() {
+    return exchangeName;
+  }
 
-    public ProducerParameters setExchangeName(String exchangeName) {
-        this.exchangeName = exchangeName;
-        return this;
-    }
+  public ProducerParameters setExchangeName(String exchangeName) {
+    this.exchangeName = exchangeName;
+    return this;
+  }
 
-    public String getId() {
-        return id;
-    }
+  public String getId() {
+    return id;
+  }
 
-    public ProducerParameters setId(String id) {
-        this.id = id;
-        return this;
-    }
+  public ProducerParameters setId(String id) {
+    this.id = id;
+    return this;
+  }
 
-    public boolean isRandomRoutingKey() {
-        return randomRoutingKey;
-    }
+  public boolean isRandomRoutingKey() {
+    return randomRoutingKey;
+  }
 
-    public ProducerParameters setRandomRoutingKey(boolean randomRoutingKey) {
-        this.randomRoutingKey = randomRoutingKey;
-        return this;
-    }
+  public ProducerParameters setRandomRoutingKey(boolean randomRoutingKey) {
+    this.randomRoutingKey = randomRoutingKey;
+    return this;
+  }
 
-    public List<?> getFlags() {
-        return flags;
-    }
+  public List<?> getFlags() {
+    return flags;
+  }
 
-    public ProducerParameters setFlags(List<?> flags) {
-        this.flags = flags;
-        return this;
-    }
+  public ProducerParameters setFlags(List<?> flags) {
+    this.flags = flags;
+    return this;
+  }
 
-    public int getTxSize() {
-        return txSize;
-    }
+  public int getTxSize() {
+    return txSize;
+  }
 
-    public ProducerParameters setTxSize(int txSize) {
-        this.txSize = txSize;
-        return this;
-    }
+  public ProducerParameters setTxSize(int txSize) {
+    this.txSize = txSize;
+    return this;
+  }
 
-    public int getMsgLimit() {
-        return msgLimit;
-    }
+  public int getMsgLimit() {
+    return msgLimit;
+  }
 
-    public ProducerParameters setMsgLimit(int msgLimit) {
-        this.msgLimit = msgLimit;
-        return this;
-    }
+  public ProducerParameters setMsgLimit(int msgLimit) {
+    this.msgLimit = msgLimit;
+    return this;
+  }
 
-    public long getConfirm() {
-        return confirm;
-    }
+  public long getConfirm() {
+    return confirm;
+  }
 
-    public ProducerParameters setConfirm(long confirm) {
-        this.confirm = confirm;
-        return this;
-    }
+  public ProducerParameters setConfirm(long confirm) {
+    this.confirm = confirm;
+    return this;
+  }
 
-    public int getConfirmTimeout() {
-        return confirmTimeout;
-    }
+  public int getConfirmTimeout() {
+    return confirmTimeout;
+  }
 
-    public ProducerParameters setConfirmTimeout(int confirmTimeout) {
-        this.confirmTimeout = confirmTimeout;
-        return this;
-    }
+  public ProducerParameters setConfirmTimeout(int confirmTimeout) {
+    this.confirmTimeout = confirmTimeout;
+    return this;
+  }
 
-    public MessageBodySource getMessageBodySource() {
-        return messageBodySource;
-    }
+  public MessageBodySource getMessageBodySource() {
+    return messageBodySource;
+  }
 
-    public ProducerParameters setMessageBodySource(MessageBodySource messageBodySource) {
-        this.messageBodySource = messageBodySource;
-        return this;
-    }
+  public ProducerParameters setMessageBodySource(MessageBodySource messageBodySource) {
+    this.messageBodySource = messageBodySource;
+    return this;
+  }
 
-    public TimestampProvider getTsp() {
-        return tsp;
-    }
+  public TimestampProvider getTsp() {
+    return tsp;
+  }
 
-    public ProducerParameters setTsp(TimestampProvider tsp) {
-        this.tsp = tsp;
-        return this;
-    }
+  public ProducerParameters setTsp(TimestampProvider tsp) {
+    this.tsp = tsp;
+    return this;
+  }
 
-    public PerformanceMetrics getPerformanceMetrics() {
-        return performanceMetrics;
-    }
+  public PerformanceMetrics getPerformanceMetrics() {
+    return performanceMetrics;
+  }
 
-    public ProducerParameters setPerformanceMetrics(PerformanceMetrics performanceMetrics) {
-        this.performanceMetrics = performanceMetrics;
-        return this;
-    }
+  public ProducerParameters setPerformanceMetrics(PerformanceMetrics performanceMetrics) {
+    this.performanceMetrics = performanceMetrics;
+    return this;
+  }
 
-    public Map<String, Object> getMessageProperties() {
-        return messageProperties;
-    }
+  public Map<String, Object> getMessageProperties() {
+    return messageProperties;
+  }
 
-    public ProducerParameters setMessageProperties(Map<String, Object> messageProperties) {
-        this.messageProperties = messageProperties;
-        return this;
-    }
+  public ProducerParameters setMessageProperties(Map<String, Object> messageProperties) {
+    this.messageProperties = messageProperties;
+    return this;
+  }
 
-    public MulticastSet.CompletionHandler getCompletionHandler() {
-        return completionHandler;
-    }
+  public MulticastSet.CompletionHandler getCompletionHandler() {
+    return completionHandler;
+  }
 
-    public ProducerParameters setCompletionHandler(MulticastSet.CompletionHandler completionHandler) {
-        this.completionHandler = completionHandler;
-        return this;
-    }
+  public ProducerParameters setCompletionHandler(MulticastSet.CompletionHandler completionHandler) {
+    this.completionHandler = completionHandler;
+    return this;
+  }
 
-    public int getRoutingKeyCacheSize() {
-        return routingKeyCacheSize;
-    }
+  public int getRoutingKeyCacheSize() {
+    return routingKeyCacheSize;
+  }
 
-    public ProducerParameters setRoutingKeyCacheSize(int routingKeyCacheSize) {
-        this.routingKeyCacheSize = routingKeyCacheSize;
-        return this;
-    }
+  public ProducerParameters setRoutingKeyCacheSize(int routingKeyCacheSize) {
+    this.routingKeyCacheSize = routingKeyCacheSize;
+    return this;
+  }
 
-    public int getRandomStartDelayInSeconds() {
-        return randomStartDelayInSeconds;
-    }
+  public int getRandomStartDelayInSeconds() {
+    return randomStartDelayInSeconds;
+  }
 
-    public ProducerParameters setRandomStartDelayInSeconds(int randomStartDelayInSeconds) {
-        this.randomStartDelayInSeconds = randomStartDelayInSeconds;
-        return this;
-    }
+  public ProducerParameters setRandomStartDelayInSeconds(int randomStartDelayInSeconds) {
+    this.randomStartDelayInSeconds = randomStartDelayInSeconds;
+    return this;
+  }
 
-    public Recovery.RecoveryProcess getRecoveryProcess() {
-        return recoveryProcess;
-    }
+  public Recovery.RecoveryProcess getRecoveryProcess() {
+    return recoveryProcess;
+  }
 
-    public ProducerParameters setRecoveryProcess(Recovery.RecoveryProcess recoveryProcess) {
-        this.recoveryProcess = recoveryProcess;
-        return this;
-    }
+  public ProducerParameters setRecoveryProcess(Recovery.RecoveryProcess recoveryProcess) {
+    this.recoveryProcess = recoveryProcess;
+    return this;
+  }
 
-    public ValueIndicator<Float> getRateIndicator() {
-        return rateIndicator;
-    }
+  public ValueIndicator<Float> getRateIndicator() {
+    return rateIndicator;
+  }
 
-    public ProducerParameters setRateIndicator(ValueIndicator<Float> rateIndicator) {
-        this.rateIndicator = rateIndicator;
-        return this;
-    }
+  public ProducerParameters setRateIndicator(ValueIndicator<Float> rateIndicator) {
+    this.rateIndicator = rateIndicator;
+    return this;
+  }
 
-    public StartListener getStartListener() {
-        return startListener;
-    }
+  public StartListener getStartListener() {
+    return startListener;
+  }
 
-    public ProducerParameters setStartListener(StartListener startListener) {
-        this.startListener = startListener;
-        return this;
-    }
+  public ProducerParameters setStartListener(StartListener startListener) {
+    this.startListener = startListener;
+    return this;
+  }
 }

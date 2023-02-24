@@ -12,16 +12,15 @@
 //
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
-
 package com.rabbitmq.perf;
 
 class PerfTestException extends RuntimeException {
 
-    PerfTestException(String message) {
-        super(message);
-    }
+  PerfTestException(String message) {
+    super(message);
+  }
 
-    PerfTestException(String message, Throwable cause) {
-        super(message, cause);
-    }
+  PerfTestException(String message, Throwable cause) {
+    super(message, cause);
+  }
 }

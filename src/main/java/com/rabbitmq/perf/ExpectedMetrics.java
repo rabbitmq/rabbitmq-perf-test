@@ -12,7 +12,6 @@
 //
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
-
 package com.rabbitmq.perf;
 
 import com.rabbitmq.perf.StartListener.Type;
@@ -40,34 +39,41 @@ final class ExpectedMetrics {
   // producer count to expected rate calculation
   private volatile IntToDoubleFunction publishingRateCalculation;
 
-  ExpectedMetrics(MulticastParams params, MeterRegistry registry, String prefix,
+  ExpectedMetrics(
+      MulticastParams params,
+      MeterRegistry registry,
+      String prefix,
       Map<String, Object> exposedMetrics) {
     exposedMetrics = exposedMetrics == null ? Collections.emptyMap() : exposedMetrics;
     if (exposedMetrics.containsKey(METRICS_PUBLISHED)) {
       Object expectedRateValue = exposedMetrics.get(METRICS_PUBLISHED);
-      expectedPublished = registry.gauge(prefix + METRICS_PUBLISHED,
-          createDoubleAccumulator(expectedRateValue));
+      expectedPublished =
+          registry.gauge(prefix + METRICS_PUBLISHED, createDoubleAccumulator(expectedRateValue));
     } else {
-      if (params.getProducerRateLimit() >= 0 ||
-          (params.getPublishingRates() != null && !params.getPublishingRates().isEmpty()) ||
-          params.getPublishingInterval() != null) {
+      if (params.getProducerRateLimit() >= 0
+          || (params.getPublishingRates() != null && !params.getPublishingRates().isEmpty())
+          || params.getPublishingInterval() != null) {
         // some rate instructions, so we create the expected metrics
-        expectedPublished = registry.gauge(prefix + METRICS_PUBLISHED, new DoubleAccumulator(
-            (previousValue, newValue) -> newValue, 0));
+        expectedPublished =
+            registry.gauge(
+                prefix + METRICS_PUBLISHED,
+                new DoubleAccumulator((previousValue, newValue) -> newValue, 0));
       } else {
         expectedPublished = new DoubleAccumulator((left, right) -> 0, 0);
       }
     }
     if (exposedMetrics.containsKey(METRICS_CONSUMED)) {
       Object expectedRateValue = exposedMetrics.get(METRICS_CONSUMED);
-      expectedConsumed = registry.gauge(prefix + METRICS_CONSUMED,
-          createDoubleAccumulator(expectedRateValue));
+      expectedConsumed =
+          registry.gauge(prefix + METRICS_CONSUMED, createDoubleAccumulator(expectedRateValue));
       consumingRateCalculation = c -> 0;
     } else {
       if (params.getConsumerRateLimit() > 0) {
         consumingRateCalculation = consumerCount -> consumerCount * params.getConsumerRateLimit();
-        expectedConsumed = registry.gauge(prefix + METRICS_CONSUMED, new DoubleAccumulator(
-            (previousValue, newValue) -> newValue, 0));
+        expectedConsumed =
+            registry.gauge(
+                prefix + METRICS_CONSUMED,
+                new DoubleAccumulator((previousValue, newValue) -> newValue, 0));
       } else {
         expectedConsumed = new DoubleAccumulator((left, right) -> 0, 0);
         consumingRateCalculation = c -> 0;
@@ -85,12 +91,11 @@ final class ExpectedMetrics {
         Object expectedValue = entry.getValue();
         // we keep a reference to them and update them
         // otherwise Prometheus shows a NaN value...
-        DoubleAccumulator gauge = registry.gauge(prefix + entry.getKey(),
-            createDoubleAccumulator(expectedValue));
+        DoubleAccumulator gauge =
+            registry.gauge(prefix + entry.getKey(), createDoubleAccumulator(expectedValue));
         this.exposed.put(entry.getKey(), gauge);
       }
     }
-
   }
 
   private static DoubleAccumulator createDoubleAccumulator(Object expectedValue) {
@@ -118,8 +123,7 @@ final class ExpectedMetrics {
       publishingRateCalculation = producers -> producers * publishingRateIndicator.getValue();
       publishingRateIndicator.register(
           (oldValue, newValue) -> {
-            expectedPublished.accumulate(
-                publishingRateCalculation.applyAsDouble(producers.get()));
+            expectedPublished.accumulate(publishingRateCalculation.applyAsDouble(producers.get()));
           });
     } else {
       publishingRateCalculation = producers -> producers / (double) publishingInterval.getSeconds();

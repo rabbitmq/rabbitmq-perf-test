@@ -12,63 +12,57 @@
 //
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
-
 package com.rabbitmq.perf;
 
 import java.util.List;
 
 /**
  * Contract to give hints about the value of a variable.
- * <p>
- * Can be used to roll over a given set of values for messages rate
- * or size.
+ *
+ * <p>Can be used to roll over a given set of values for messages rate or size.
  *
  * @since 2.8.0
  */
 interface ValueIndicator<T> {
 
-    /**
-     * Returns the current value of the variable.
-     *
-     * @return
-     */
-    T getValue();
+  /**
+   * Returns the current value of the variable.
+   *
+   * @return
+   */
+  T getValue();
 
-    /**
-     * Start method for internal initialization before requesting the value of the variable.
-     */
-    void start();
+  /** Start method for internal initialization before requesting the value of the variable. */
+  void start();
 
-    /**
-     * Indicates whether the value is supposed to change or not.
-     *
-     * @return
-     */
-    boolean isVariable();
+  /**
+   * Indicates whether the value is supposed to change or not.
+   *
+   * @return
+   */
+  boolean isVariable();
 
-    /**
-     * Returns all the possible values for the variable.
-     *
-     * @return
-     */
-    List<T> values();
+  /**
+   * Returns all the possible values for the variable.
+   *
+   * @return
+   */
+  List<T> values();
 
-    /**
-     * Register a listener to get notified when the hinted value changes.
-     * @param listener
-     */
-    default void register(Listener<T> listener) {
+  /**
+   * Register a listener to get notified when the hinted value changes.
+   *
+   * @param listener
+   */
+  default void register(Listener<T> listener) {}
 
-    }
+  /**
+   * Contract to get notified when the hinted value changes.
+   *
+   * @param <T>
+   */
+  interface Listener<T> {
 
-    /**
-     * Contract to get notified when the hinted value changes.
-     * @param <T>
-     */
-    interface Listener<T> {
-
-        void valueChanged(T oldValue, T newValue);
-
-    }
-
+    void valueChanged(T oldValue, T newValue);
+  }
 }

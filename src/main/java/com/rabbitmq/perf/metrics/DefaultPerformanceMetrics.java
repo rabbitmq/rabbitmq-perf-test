@@ -12,7 +12,6 @@
 //
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
-
 package com.rabbitmq.perf.metrics;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -66,7 +65,11 @@ public final class DefaultPerformanceMetrics implements PerformanceMetrics, Auto
   private final AtomicReference<Histogram> consumedLatencyTotal, confirmedLatencyTotal;
   // Micrometer's metrics
   // instant rates
-  private final DoubleAccumulator publishedRate, confirmedRate, nackedRate, returnedRate, receivedRate;
+  private final DoubleAccumulator publishedRate,
+      confirmedRate,
+      nackedRate,
+      returnedRate,
+      receivedRate;
   // latencies: confirmed, consumed
   private final Timer consumedLatencyTimer, confirmedLatencyTimer;
   // end of Micrometer's metrics
@@ -77,39 +80,43 @@ public final class DefaultPerformanceMetrics implements PerformanceMetrics, Auto
   private final AtomicReference<Histogram> consumedLatency, confirmedLatency;
   private final MetricsFormatter formatter;
 
-  public DefaultPerformanceMetrics(Duration interval,
+  public DefaultPerformanceMetrics(
+      Duration interval,
       TimeUnit latencyCollectionTimeUnit,
       MeterRegistry registry,
-      String metricsPrefix, MetricsFormatter formatter) {
+      String metricsPrefix,
+      MetricsFormatter formatter) {
     this.interval = interval;
     if (latencyCollectionTimeUnit != MILLISECONDS && latencyCollectionTimeUnit != NANOSECONDS) {
       throw new IllegalArgumentException(
           "Latency collection unit must be ms or ns, not " + latencyCollectionTimeUnit);
     }
     this.latencyCollectionTimeUnit = latencyCollectionTimeUnit;
-    this.scheduledExecutorService = Executors.newScheduledThreadPool(1,
-        new NamedThreadFactory("perf-test-metrics-scheduling-"));
+    this.scheduledExecutorService =
+        Executors.newScheduledThreadPool(
+            1, new NamedThreadFactory("perf-test-metrics-scheduling-"));
     this.formatter = formatter;
 
     metricsPrefix = metricsPrefix == null ? "" : metricsPrefix;
 
     DoubleBinaryOperator accumulatorFunction = (x, y) -> y;
-    publishedRate = registry.gauge(metricsPrefix + "published",
-        new DoubleAccumulator(accumulatorFunction, 0.0));
-    confirmedRate = registry.gauge(metricsPrefix + "confirmed",
-        new DoubleAccumulator(accumulatorFunction, 0.0));
-    nackedRate = registry.gauge(metricsPrefix + "nacked",
-        new DoubleAccumulator(accumulatorFunction, 0.0));
-    returnedRate = registry.gauge(metricsPrefix + "returned",
-        new DoubleAccumulator(accumulatorFunction, 0.0));
-    receivedRate = registry.gauge(metricsPrefix + "consumed",
-        new DoubleAccumulator(accumulatorFunction, 0.0));
+    publishedRate =
+        registry.gauge(
+            metricsPrefix + "published", new DoubleAccumulator(accumulatorFunction, 0.0));
+    confirmedRate =
+        registry.gauge(
+            metricsPrefix + "confirmed", new DoubleAccumulator(accumulatorFunction, 0.0));
+    nackedRate =
+        registry.gauge(metricsPrefix + "nacked", new DoubleAccumulator(accumulatorFunction, 0.0));
+    returnedRate =
+        registry.gauge(metricsPrefix + "returned", new DoubleAccumulator(accumulatorFunction, 0.0));
+    receivedRate =
+        registry.gauge(metricsPrefix + "consumed", new DoubleAccumulator(accumulatorFunction, 0.0));
 
-    consumedLatencyTimer = timer(metricsPrefix + "latency", "message latency", this.interval,
-        registry);
-    confirmedLatencyTimer = timer(metricsPrefix + "confirm.latency", "confirm latency",
-        this.interval,
-        registry);
+    consumedLatencyTimer =
+        timer(metricsPrefix + "latency", "message latency", this.interval, registry);
+    confirmedLatencyTimer =
+        timer(metricsPrefix + "confirm.latency", "confirm latency", this.interval, registry);
 
     this.consumedLatency = new AtomicReference<>(histogram());
     this.confirmedLatency = new AtomicReference<>(histogram());
@@ -122,15 +129,13 @@ public final class DefaultPerformanceMetrics implements PerformanceMetrics, Auto
     this.startTimeForTotal.set(startTime.get());
   }
 
-
   private static Histogram histogram() {
     return new Histogram(new ExponentiallyDecayingReservoir());
   }
 
-  private static Timer timer(String name, String description, Duration expiry,
-      MeterRegistry registry) {
-    return Timer
-        .builder(name)
+  private static Timer timer(
+      String name, String description, Duration expiry, MeterRegistry registry) {
+    return Timer.builder(name)
         .description(description)
         .publishPercentiles(0.5, 0.75, 0.95, 0.99)
         .distributionStatisticExpiry(expiry)
@@ -142,8 +147,8 @@ public final class DefaultPerformanceMetrics implements PerformanceMetrics, Auto
     return MS_TO_SECOND * count / elapsedInMs;
   }
 
-  private static double swapAndCalculateRate(AtomicLong current, AtomicLong last,
-      long elapsedTimeInMs) {
+  private static double swapAndCalculateRate(
+      AtomicLong current, AtomicLong last, long elapsedTimeInMs) {
     long currentValue = current.get();
     long count = currentValue - last.get();
     last.set(currentValue);
@@ -167,23 +172,27 @@ public final class DefaultPerformanceMetrics implements PerformanceMetrics, Auto
       lastTick.set(startTime.get());
       startTimeForTotal.set(startTime.get());
 
-      scheduledExecutorService.scheduleAtFixedRate(wrapInCatch(() -> {
-        if (!this.started.get()) {
-          return;
-        }
-        if (noActivity()) {
-          this.publishedRate.accumulate(0);
-          this.confirmedRate.accumulate(0);
-          this.nackedRate.accumulate(0);
-          this.returnedRate.accumulate(0);
-          this.receivedRate.accumulate(0);
-          this.confirmedLatency.set(histogram());
-          this.consumedLatency.set(histogram());
-        } else {
-          metrics(System.nanoTime());
-        }
-
-      }), interval.getSeconds(), interval.getSeconds(), TimeUnit.SECONDS);
+      scheduledExecutorService.scheduleAtFixedRate(
+          wrapInCatch(
+              () -> {
+                if (!this.started.get()) {
+                  return;
+                }
+                if (noActivity()) {
+                  this.publishedRate.accumulate(0);
+                  this.confirmedRate.accumulate(0);
+                  this.nackedRate.accumulate(0);
+                  this.returnedRate.accumulate(0);
+                  this.receivedRate.accumulate(0);
+                  this.confirmedLatency.set(histogram());
+                  this.consumedLatency.set(histogram());
+                } else {
+                  metrics(System.nanoTime());
+                }
+              }),
+          interval.getSeconds(),
+          interval.getSeconds(),
+          TimeUnit.SECONDS);
     }
   }
 
@@ -217,7 +226,11 @@ public final class DefaultPerformanceMetrics implements PerformanceMetrics, Auto
       if (this.firstReport.compareAndSet(false, true)) {
         this.formatter.header();
       }
-      this.formatter.report(durationSinceStart, ratePublished, rateConfirmed, rateNacked,
+      this.formatter.report(
+          durationSinceStart,
+          ratePublished,
+          rateConfirmed,
+          rateNacked,
           rateReturned,
           rateReceived,
           confirmedLatencyStats,
@@ -226,12 +239,12 @@ public final class DefaultPerformanceMetrics implements PerformanceMetrics, Auto
   }
 
   private long[] getStats(Histogram histogram) {
-    return new long[]{
-        div(histogram.getSnapshot().getMin()),
-        div(histogram.getSnapshot().getMedian()),
-        div(histogram.getSnapshot().get75thPercentile()),
-        div(histogram.getSnapshot().get95thPercentile()),
-        div(histogram.getSnapshot().get99thPercentile())
+    return new long[] {
+      div(histogram.getSnapshot().getMin()),
+      div(histogram.getSnapshot().getMedian()),
+      div(histogram.getSnapshot().get75thPercentile()),
+      div(histogram.getSnapshot().get95thPercentile()),
+      div(histogram.getSnapshot().get99thPercentile())
     };
   }
 
@@ -287,11 +300,11 @@ public final class DefaultPerformanceMetrics implements PerformanceMetrics, Auto
   }
 
   private boolean noActivity() {
-    return this.published.get() == this.lastPublished.get() &&
-        this.confirmed.get() == this.lastConfirmed.get() &&
-        this.nacked.get() == this.lastNacked.get() &&
-        this.returned.get() == this.lastReturned.get() &&
-        this.received.get() == this.lastReceived.get();
+    return this.published.get() == this.lastPublished.get()
+        && this.confirmed.get() == this.lastConfirmed.get()
+        && this.nacked.get() == this.lastNacked.get()
+        && this.returned.get() == this.lastReturned.get()
+        && this.received.get() == this.lastReceived.get();
   }
 
   private void printFinal() {
@@ -304,8 +317,8 @@ public final class DefaultPerformanceMetrics implements PerformanceMetrics, Auto
     double rateReceived = this.receivedTotal.get() * MS_TO_SECOND / elapsed;
     long[] consumeLatencyTotal = getStats(this.consumedLatencyTotal.get());
     long[] confirmedLatencyTotal = getStats(this.confirmedLatencyTotal.get());
-    this.formatter.summary(elapsedDuration, ratePublished, rateReceived, consumeLatencyTotal,
-        confirmedLatencyTotal);
+    this.formatter.summary(
+        elapsedDuration, ratePublished, rateReceived, consumeLatencyTotal, confirmedLatencyTotal);
   }
 
   @Override
@@ -332,5 +345,4 @@ public final class DefaultPerformanceMetrics implements PerformanceMetrics, Auto
   void started(boolean value) {
     this.started.set(value);
   }
-
 }

@@ -12,7 +12,6 @@
 //
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
-
 package com.rabbitmq.perf;
 
 import static com.rabbitmq.perf.TestUtils.waitAtMost;
@@ -127,7 +126,8 @@ public class StatsTest {
 
   private class SimpleStats extends Stats {
 
-    public SimpleStats(Duration interval, boolean useMs, MeterRegistry registry, String metricsPrefix) {
+    public SimpleStats(
+        Duration interval, boolean useMs, MeterRegistry registry, String metricsPrefix) {
       super(interval, useMs, registry, metricsPrefix);
     }
 

@@ -12,11 +12,10 @@
 //
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
-
 package com.rabbitmq.perf;
 
 import java.util.Map;
 
 public interface ScenarioStats {
-    Map<String, Object> results();
+  Map<String, Object> results();
 }

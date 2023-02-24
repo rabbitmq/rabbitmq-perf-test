@@ -54,6 +54,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
+    <spotless.check.skip>true</spotless.check.skip>
     <rabbitmq.version>5.17.0.RC1</rabbitmq.version>
     <slf4j.version>2.0.6</slf4j.version>
     <commons-cli.version>1.5.0</commons-cli.version>
@@ -89,6 +90,8 @@
     <nexus-staging-maven-plugin.version>1.6.13</nexus-staging-maven-plugin.version>
     <checksum.maven.plugin.version>1.11</checksum.maven.plugin.version>
     <spring-boot-maven-plugin.version>2.7.6</spring-boot-maven-plugin.version>
+    <spotless.version>2.33.0</spotless.version>
+    <google-java-format.version>1.15.0</google-java-format.version>
 
     <!-- because of https://issues.apache.org/jira/browse/MRESOURCES-99 -->
     <build.timestamp>${maven.build.timestamp}</build.timestamp>
@@ -436,6 +439,38 @@
             <source-highlighter>coderay</source-highlighter>
           </attributes>
 
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>com.diffplug.spotless</groupId>
+        <artifactId>spotless-maven-plugin</artifactId>
+        <version>${spotless.version}</version>
+        <configuration>
+          <java>
+            <googleJavaFormat>
+              <version>${google-java-format.version}</version>
+              <style>GOOGLE</style>
+            </googleJavaFormat>
+          </java>
+          <!--          <ratchetFrom>origin/main</ratchetFrom>-->
+          <licenseHeader> <!-- specify either content or file, but not both -->
+            <content>// Copyright (c) $YEAR VMware, Inc. or its affiliates.  All rights reserved.
+//
+// This software, the RabbitMQ Java client library, is triple-licensed under the
+// Mozilla Public License 2.0 ("MPL"), the GNU General Public License version 2
+// ("GPL") and the Apache License version 2 ("ASL"). For the MPL, please see
+// LICENSE-MPL-RabbitMQ. For the GPL, please see LICENSE-GPL2.  For the ASL,
+// please see LICENSE-APACHE2.
+//
+// This software is distributed on an "AS IS" basis, WITHOUT WARRANTY OF ANY KIND,
+// either express or implied. See the LICENSE file for specific language governing
+// rights and limitations of this software.
+//
+// If you have any questions regarding licensing, please contact us at
+// info@rabbitmq.com.
+            </content>
+          </licenseHeader>
         </configuration>
       </plugin>
 

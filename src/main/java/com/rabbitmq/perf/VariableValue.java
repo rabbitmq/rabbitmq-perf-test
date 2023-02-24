@@ -12,13 +12,14 @@
 //
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
-
 package com.rabbitmq.perf;
 
 public interface VariableValue {
-    void setup(MulticastParams params) throws Exception;
-    void teardown(MulticastParams params);
+  void setup(MulticastParams params) throws Exception;
 
-    String getName();
-    Object getValue();
+  void teardown(MulticastParams params);
+
+  String getName();
+
+  Object getValue();
 }

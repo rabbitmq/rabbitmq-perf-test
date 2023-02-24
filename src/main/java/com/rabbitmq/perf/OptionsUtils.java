@@ -12,32 +12,27 @@
 //
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
-
 package com.rabbitmq.perf;
 
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 
-/**
- *
- */
+/** */
 public class OptionsUtils {
 
-    static void forEach(Options options, OptionConsumer action) {
-        for (Object option : options.getOptions()) {
-            try {
-                action.apply((Option) option);
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        }
+  static void forEach(Options options, OptionConsumer action) {
+    for (Object option : options.getOptions()) {
+      try {
+        action.apply((Option) option);
+      } catch (Exception e) {
+        throw new RuntimeException(e);
+      }
     }
+  }
 
-    @FunctionalInterface
-    interface OptionConsumer {
+  @FunctionalInterface
+  interface OptionConsumer {
 
-        void apply(Option option) throws Exception;
-
-    }
-
+    void apply(Option option) throws Exception;
+  }
 }

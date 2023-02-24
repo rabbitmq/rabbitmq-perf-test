@@ -12,7 +12,6 @@
 //
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
-
 package com.rabbitmq.perf;
 
 import java.util.Collections;
@@ -23,9 +22,7 @@ import java.util.function.BiFunction;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/**
- * API to easily configure byte capacities.
- */
+/** API to easily configure byte capacities. */
 class ByteCapacity implements Comparable<ByteCapacity> {
 
   private static final String UNIT_MB = "mb";

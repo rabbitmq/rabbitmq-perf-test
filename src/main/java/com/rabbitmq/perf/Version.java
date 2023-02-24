@@ -12,102 +12,100 @@
 //
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
-
 package com.rabbitmq.perf;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.InputStream;
 import java.util.Properties;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * Current version of the tool.
- * Tries to get version information from a specific property file
- * and falls back to manifest information if the file cannot be loaded.
+ * Current version of the tool. Tries to get version information from a specific property file and
+ * falls back to manifest information if the file cannot be loaded.
  */
 public class Version {
 
-    public static final String VERSION, BUILD, BUILD_TIMESTAMP;
+  public static final String VERSION, BUILD, BUILD_TIMESTAMP;
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(Version.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(Version.class);
 
-    static {
-        VERSION = getVersion();
-        BUILD = getBuild();
-        BUILD_TIMESTAMP = getBuildTimestamp();
+  static {
+    VERSION = getVersion();
+    BUILD = getBuild();
+    BUILD_TIMESTAMP = getBuildTimestamp();
+  }
+
+  private static String getVersion() {
+    String version;
+    try {
+      version = getValueFromPropertyFile("com.rabbitmq.perf.version");
+    } catch (Exception e1) {
+      LOGGER.warn("Couldn't get version from property file", e1);
+      try {
+        version = getVersionFromPackage();
+      } catch (Exception e2) {
+        LOGGER.warn("Couldn't get version with Package#getImplementationVersion", e1);
+        version = getDefaultVersion();
+      }
     }
+    return version;
+  }
 
-    private static String getVersion() {
-        String version;
-        try {
-            version = getValueFromPropertyFile("com.rabbitmq.perf.version");
-        } catch (Exception e1) {
-            LOGGER.warn("Couldn't get version from property file", e1);
-            try {
-                version = getVersionFromPackage();
-            } catch (Exception e2) {
-                LOGGER.warn("Couldn't get version with Package#getImplementationVersion", e1);
-                version = getDefaultVersion();
-            }
-        }
-        return version;
+  private static String getBuild() {
+    String build;
+    try {
+      build = getValueFromPropertyFile("com.rabbitmq.perf.build");
+    } catch (Exception e) {
+      LOGGER.warn("Couldn't get build from property file", e);
+      build = getDefaultBuild();
     }
+    return build;
+  }
 
-    private static String getBuild() {
-        String build;
-        try {
-            build = getValueFromPropertyFile("com.rabbitmq.perf.build");
-        } catch (Exception e) {
-            LOGGER.warn("Couldn't get build from property file", e);
-            build = getDefaultBuild();
-        }
-        return build;
+  private static String getBuildTimestamp() {
+    String build;
+    try {
+      build = getValueFromPropertyFile("com.rabbitmq.perf.build.timestamp");
+    } catch (Exception e) {
+      LOGGER.warn("Couldn't get build timestamp from property file", e);
+      build = getDefaultBuildTimestamp();
     }
+    return build;
+  }
 
-    private static String getBuildTimestamp() {
-        String build;
-        try {
-            build = getValueFromPropertyFile("com.rabbitmq.perf.build.timestamp");
-        } catch (Exception e) {
-            LOGGER.warn("Couldn't get build timestamp from property file", e);
-            build = getDefaultBuildTimestamp();
-        }
-        return build;
+  private static String getValueFromPropertyFile(String key) throws Exception {
+    InputStream inputStream =
+        Version.class.getClassLoader().getResourceAsStream("rabbitmq-perf-test.properties");
+    Properties version = new Properties();
+    try {
+      version.load(inputStream);
+    } finally {
+      if (inputStream != null) {
+        inputStream.close();
+      }
     }
+    if (version.getProperty(key) == null) {
+      throw new IllegalStateException("Coulnd't find " + key + " property in property file");
+    }
+    return version.getProperty(key);
+  }
 
-    private static String getValueFromPropertyFile(String key) throws Exception {
-        InputStream inputStream = Version.class.getClassLoader().getResourceAsStream("rabbitmq-perf-test.properties");
-        Properties version = new Properties();
-        try {
-            version.load(inputStream);
-        } finally {
-            if (inputStream != null) {
-                inputStream.close();
-            }
-        }
-        if (version.getProperty(key) == null) {
-            throw new IllegalStateException("Coulnd't find " + key + " property in property file");
-        }
-        return version.getProperty(key);
+  private static String getVersionFromPackage() {
+    if (Version.class.getPackage().getImplementationVersion() == null) {
+      throw new IllegalStateException("Couldn't get version with Package#getImplementationVersion");
     }
+    return Version.class.getPackage().getImplementationVersion();
+  }
 
-    private static String getVersionFromPackage() {
-        if (Version.class.getPackage().getImplementationVersion() == null) {
-            throw new IllegalStateException("Couldn't get version with Package#getImplementationVersion");
-        }
-        return Version.class.getPackage().getImplementationVersion();
-    }
+  private static String getDefaultVersion() {
+    return "0.0.0";
+  }
 
-    private static String getDefaultVersion() {
-        return "0.0.0";
-    }
+  private static String getDefaultBuild() {
+    return "unknown";
+  }
 
-    private static String getDefaultBuild() {
-        return "unknown";
-    }
-
-    private static String getDefaultBuildTimestamp() {
-        return "unknown";
-    }
+  private static String getDefaultBuildTimestamp() {
+    return "unknown";
+  }
 }

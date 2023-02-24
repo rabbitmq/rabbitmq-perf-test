@@ -12,7 +12,6 @@
 //
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
-
 package com.rabbitmq.perf.metrics;
 
 import static java.util.stream.Collectors.joining;
@@ -33,16 +32,32 @@ import java.util.function.Function;
  */
 public class MetricsFormatterFactory {
 
-  private static final Map<String, Function<Context, MetricsFormatter>> FACTORIES = new ConcurrentHashMap<String, Function<Context, MetricsFormatter>>() {{
-    put("default", context -> new DefaultPrintStreamMetricsFormatter(context.out, context.testId,
-        context.publishedEnabled, context.receivedEnabled, context.returnedEnabled,
-        context.confirmedEnabled,
-        context.latencyCollectionTimeUnit));
-    put("compact", context -> new CompactPrintStreamMetricsFormatter(context.out,
-        context.publishedEnabled, context.receivedEnabled, context.returnedEnabled,
-        context.confirmedEnabled,
-        context.latencyCollectionTimeUnit));
-  }};
+  private static final Map<String, Function<Context, MetricsFormatter>> FACTORIES =
+      new ConcurrentHashMap<String, Function<Context, MetricsFormatter>>() {
+        {
+          put(
+              "default",
+              context ->
+                  new DefaultPrintStreamMetricsFormatter(
+                      context.out,
+                      context.testId,
+                      context.publishedEnabled,
+                      context.receivedEnabled,
+                      context.returnedEnabled,
+                      context.confirmedEnabled,
+                      context.latencyCollectionTimeUnit));
+          put(
+              "compact",
+              context ->
+                  new CompactPrintStreamMetricsFormatter(
+                      context.out,
+                      context.publishedEnabled,
+                      context.receivedEnabled,
+                      context.returnedEnabled,
+                      context.confirmedEnabled,
+                      context.latencyCollectionTimeUnit));
+        }
+      };
 
   public static List<String> types() {
     List<String> types = new ArrayList<>(FACTORIES.keySet());
@@ -54,7 +69,8 @@ public class MetricsFormatterFactory {
     Function<Context, MetricsFormatter> factory = FACTORIES.get(type);
     if (factory == null) {
       throw new IllegalArgumentException(
-          String.format("Unknown metrics formatter: %s. Possible values are %s.",
+          String.format(
+              "Unknown metrics formatter: %s. Possible values are %s.",
               type, types().stream().collect(joining(", "))));
     }
     return factory.apply(context);
@@ -70,10 +86,13 @@ public class MetricsFormatterFactory {
     private final boolean confirmedEnabled;
     private final TimeUnit latencyCollectionTimeUnit;
 
-    public Context(PrintStream out, String testId,
+    public Context(
+        PrintStream out,
+        String testId,
         boolean publishedEnabled,
         boolean receivedEnabled,
-        boolean returnedEnabled, boolean confirmedEnabled,
+        boolean returnedEnabled,
+        boolean confirmedEnabled,
         TimeUnit latencyCollectionTimeUnit) {
 
       this.out = out;
@@ -84,7 +103,5 @@ public class MetricsFormatterFactory {
       this.confirmedEnabled = confirmedEnabled;
       this.latencyCollectionTimeUnit = latencyCollectionTimeUnit;
     }
-
   }
-
 }

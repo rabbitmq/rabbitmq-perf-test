@@ -12,7 +12,6 @@
 //
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
-
 package com.rabbitmq.perf.metrics;
 
 import static com.rabbitmq.perf.metrics.MetricsFormatterUtils.LATENCY_HEADER;
@@ -32,18 +31,20 @@ import java.util.concurrent.TimeUnit;
  *
  * @since 2.19.0
  */
-class DefaultPrintStreamMetricsFormatter extends BaseMetricsFormatter implements
-    MetricsFormatter {
+class DefaultPrintStreamMetricsFormatter extends BaseMetricsFormatter implements MetricsFormatter {
 
   private final PrintStream out;
   private final String testId;
 
   private final TimeUnit latencyCollectionTimeUnit;
 
-  DefaultPrintStreamMetricsFormatter(PrintStream out, String testId,
+  DefaultPrintStreamMetricsFormatter(
+      PrintStream out,
+      String testId,
       boolean publishedEnabled,
       boolean receivedEnabled,
-      boolean returnedEnabled, boolean confirmedEnabled,
+      boolean returnedEnabled,
+      boolean confirmedEnabled,
       TimeUnit latencyCollectionTimeUnit) {
     super(publishedEnabled, receivedEnabled, returnedEnabled, confirmedEnabled);
     if (latencyCollectionTimeUnit != MILLISECONDS && latencyCollectionTimeUnit != NANOSECONDS) {
@@ -60,17 +61,22 @@ class DefaultPrintStreamMetricsFormatter extends BaseMetricsFormatter implements
   }
 
   @Override
-  public void header() {
-
-  }
+  public void header() {}
 
   @Override
-  public void report(Duration durationSinceStart, double publishedRate, double confirmedRate,
-      double nackedRate, double returnedRate, double receivedRate, long[] confirmedLatencyStats,
+  public void report(
+      Duration durationSinceStart,
+      double publishedRate,
+      double confirmedRate,
+      double nackedRate,
+      double returnedRate,
+      double receivedRate,
+      long[] confirmedLatencyStats,
       long[] consumerLatencyStats) {
-    StringBuilder builder = new StringBuilder()
-        .append(format("id: %s, ", testId))
-        .append(format("time %s s", formatTime(durationSinceStart)));
+    StringBuilder builder =
+        new StringBuilder()
+            .append(format("id: %s, ", testId))
+            .append(format("time %s s", formatTime(durationSinceStart)));
     if (this.publishedEnabled) {
       builder.append(formatRate("sent", publishedRate));
     }
@@ -106,17 +112,24 @@ class DefaultPrintStreamMetricsFormatter extends BaseMetricsFormatter implements
   }
 
   @Override
-  public void summary(Duration elapsed, double ratePublished, double rateReceived,
+  public void summary(
+      Duration elapsed,
+      double ratePublished,
+      double rateReceived,
       long[] consumedLatencyTotal,
       long[] confirmedLatencyTotal) {
     this.out.print(
-        summary(elapsed, ratePublished, rateReceived, consumedLatencyTotal, confirmedLatencyTotal,
-            this.testId, this.latencyCollectionTimeUnit));
+        summary(
+            elapsed,
+            ratePublished,
+            rateReceived,
+            consumedLatencyTotal,
+            confirmedLatencyTotal,
+            this.testId,
+            this.latencyCollectionTimeUnit));
   }
 
   private String formatLatency(long[] stats) {
     return MetricsFormatterUtils.formatLatency(stats, this.latencyCollectionTimeUnit);
   }
-
-
 }
