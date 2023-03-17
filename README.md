@@ -1,6 +1,6 @@
 ## RabbitMQ Performance Testing Tool
 
-[![Test against RabbitMQ 3.11 stable](https://github.com/rabbitmq/rabbitmq-perf-test/actions/workflows/test-3.11-stable.yml/badge.svg)](https://github.com/rabbitmq/rabbitmq-perf-test/actions/workflows/test-3.11-stable.yml)
+[![Test against RabbitMQ 3.11 stable](https://github.com/rabbitmq/rabbitmq-perf-test/actions/workflows/test.yml/badge.svg)](https://github.com/rabbitmq/rabbitmq-perf-test/actions/workflows/test.yml)
 
 This repository contains source code of the RabbitMQ Performance Testing Tool.
 The client is maintained by the [RabbitMQ team at VMware](https://github.com/rabbitmq/).
