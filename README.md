@@ -91,7 +91,7 @@ You need a local running RabbitMQ instance.
 
 Start a RabbitMQ container:
 
-    docker run -it --rm --name rabbitmq -p 5672:5672 rabbitmq:3.10
+    docker run -it --rm --name rabbitmq -p 5672:5672 rabbitmq:3.11
 
 Run the test suite:
 
