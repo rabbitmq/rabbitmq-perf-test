@@ -1004,7 +1004,9 @@ public class PerfTest {
             "mp",
             "message-properties",
             true,
-            "message properties as key/value pairs, separated by commas, " + "e.g. priority=5"));
+            "message properties as key/value pairs, separated by commas, "
+                + "e.g. priority=5. "
+                + "Non-standard properties are treated like arbitrary headers."));
     options.addOption(
         new Option(
             "rkcs",
