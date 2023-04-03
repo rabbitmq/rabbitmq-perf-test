@@ -940,18 +940,5 @@
 
   </profiles>
 
-  <repositories>
-    <repository>
-      <id>packagecloud-rabbitmq-maven-milestones</id>
-      <url>https://packagecloud.io/rabbitmq/maven-milestones/maven2</url>
-      <releases>
-        <enabled>true</enabled>
-      </releases>
-      <snapshots>
-        <enabled>false</enabled>
-      </snapshots>
-    </repository>
-  </repositories>
-
 </project>
 
