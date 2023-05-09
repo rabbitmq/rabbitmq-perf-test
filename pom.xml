@@ -59,7 +59,7 @@
     <slf4j.version>2.0.7</slf4j.version>
     <commons-cli.version>1.5.0</commons-cli.version>
     <metrics.version>4.2.18</metrics.version>
-    <micrometer.version>1.10.6</micrometer.version>
+    <micrometer.version>1.11.0</micrometer.version>
     <jgroups.version>5.2.14.Final</jgroups.version>
     <jgroups-kubernetes.version>2.0.1.Final</jgroups-kubernetes.version>
     <gson.version>2.10.1</gson.version>
