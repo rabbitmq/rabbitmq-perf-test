@@ -1,6 +1,6 @@
 ## RabbitMQ Performance Testing Tool
 
-[![Test against RabbitMQ 3.11 stable](https://github.com/rabbitmq/rabbitmq-perf-test/actions/workflows/test.yml/badge.svg)](https://github.com/rabbitmq/rabbitmq-perf-test/actions/workflows/test.yml)
+[![Test against RabbitMQ 3.12 stable](https://github.com/rabbitmq/rabbitmq-perf-test/actions/workflows/test.yml/badge.svg)](https://github.com/rabbitmq/rabbitmq-perf-test/actions/workflows/test.yml)
 
 This repository contains source code of the RabbitMQ Performance Testing Tool.
 The client is maintained by the [RabbitMQ team at VMware](https://github.com/rabbitmq/).
@@ -91,7 +91,7 @@ You need a local running RabbitMQ instance.
 
 Start a RabbitMQ container:
 
-    docker run -it --rm --name rabbitmq -p 5672:5672 rabbitmq:3.11
+    docker run -it --rm --name rabbitmq -p 5672:5672 rabbitmq:3.12
 
 Run the test suite:
 
