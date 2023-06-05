@@ -578,7 +578,7 @@ the `--oauth2-parameters` option.
 == Using Environment Variables as Options
 
 Environment variables can sometimes be easier to work with than command line options, for example
-when using a manifest file to configure PerfTest (with Docker Compose or Cloud Foundry), especially when
+when using a manifest file to configure PerfTest (with Docker Compose or Kubernetes), especially when
 the number of options used grows.
 
 PerfTest will automatically use environment variables that match the snake case version of the long version of its options

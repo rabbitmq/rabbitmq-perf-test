@@ -40,8 +40,3 @@ following commands:
  docker run -it --rm --network perf-test --name rabbitmq -p 15672:15672 rabbitmq:3.12-management
  docker run -it --rm --network perf-test pivotalrabbitmq/perf-test:latest --uri amqp://rabbitmq
 
-=== For Cloud Foundry
-
-There is a https://github.com/rabbitmq/rabbitmq-perf-test-for-cf[template project]
-to easily run PerfTest on https://www.cloudfoundry.org/[Cloud Foundry].
-
