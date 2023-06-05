@@ -538,7 +538,6 @@ table.CodeRay td.code{padding:0 0 0 .75em}
 <ul class="sectlevel2">
 <li><a href="#from-binary">From Binary</a></li>
 <li><a href="#from-docker-image">From Docker Image</a></li>
-<li><a href="#for-cloud-foundry">For Cloud Foundry</a></li>
 </ul>
 </li>
 <li><a href="#basic-usage">Basic Usage</a></li>
@@ -684,16 +683,9 @@ following commands:</p>
 <div class="literalblock">
 <div class="content">
 <pre>docker network create perf-test
-docker run -it --rm --network perf-test --name rabbitmq -p 15672:15672 rabbitmq:3.11-management
+docker run -it --rm --network perf-test --name rabbitmq -p 15672:15672 rabbitmq:3.12-management
 docker run -it --rm --network perf-test pivotalrabbitmq/perf-test:latest --uri amqp://rabbitmq</pre>
 </div>
-</div>
-</div>
-<div class="sect2">
-<h3 id="for-cloud-foundry"><a class="anchor" href="#for-cloud-foundry"></a>For Cloud Foundry</h3>
-<div class="paragraph">
-<p>There is a <a href="https://github.com/rabbitmq/rabbitmq-perf-test-for-cf">template project</a>
-to easily run PerfTest on <a href="https://www.cloudfoundry.org/">Cloud Foundry</a>.</p>
 </div>
 </div>
 </div>
@@ -1842,7 +1834,7 @@ the <code>--oauth2-parameters</code> option.</p>
 <div class="sectionbody">
 <div class="paragraph">
 <p>Environment variables can sometimes be easier to work with than command line options, for example
-when using a manifest file to configure PerfTest (with Docker Compose or Cloud Foundry), especially when
+when using a manifest file to configure PerfTest (with Docker Compose or Kubernetes), especially when
 the number of options used grows.</p>
 </div>
 <div class="paragraph">
@@ -2134,7 +2126,7 @@ It is then possible to override the metrics values thanks to the <code>--exposed
 <div id="footer">
 <div id="footer-text">
 Version 2.20.0-SNAPSHOT<br>
-Last updated 2023-06-02 14:36:43 UTC
+Last updated 2023-06-05 13:50:25 UTC
 </div>
 </div>
 </body>
