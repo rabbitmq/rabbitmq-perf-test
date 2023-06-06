@@ -82,7 +82,7 @@
     <maven.assembly.plugin.version>3.6.0</maven.assembly.plugin.version>
     <maven.install.plugin.version>3.1.1</maven.install.plugin.version>
     <maven.jar.plugin.version>3.3.0</maven.jar.plugin.version>
-    <buildnumber.plugin.version>3.1.0</buildnumber.plugin.version>
+    <buildnumber.plugin.version>3.2.0</buildnumber.plugin.version>
     <maven.surefire.plugin.version>3.1.0</maven.surefire.plugin.version>
     <maven.failsafe.plugin.version>3.1.0</maven.failsafe.plugin.version>
     <build-helper-maven-plugin.version>3.4.0</build-helper-maven-plugin.version>
