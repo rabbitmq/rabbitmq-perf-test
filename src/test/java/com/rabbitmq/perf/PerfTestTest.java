@@ -63,7 +63,7 @@ public class PerfTestTest {
         4,
         -1,
         4,
-        Integer.MAX_VALUE,
+        4 + 2,
         "2 extra threads for executor when only number of threads is specified",
         true
       },
