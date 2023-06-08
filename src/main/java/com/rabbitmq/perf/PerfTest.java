@@ -753,7 +753,7 @@ public class PerfTest {
       // there are no available threads anymore in the pool for NIO!
       nioParams.setNioExecutor(
           new ThreadPoolExecutor(
-              nbThreadsAndExecutorSize[0],
+              nbThreadsAndExecutorSize[1],
               Integer.MAX_VALUE,
               30L,
               TimeUnit.SECONDS,
@@ -773,8 +773,8 @@ public class PerfTest {
         requestedNbThreads > 0
             ? requestedNbThreads
             : requestedExecutorSize - extraThreadsForExecutor;
-    int executorSizeToUse = requestedExecutorSize > 0 ? requestedExecutorSize : Integer.MAX_VALUE;
-    if (nbThreadsToUse <= 0 || executorSizeToUse <= 0) {
+    int executorSizeToUse = requestedExecutorSize > 0 ? requestedExecutorSize : nbThreadsToUse;
+    if (nbThreadsToUse <= 0) {
       throw new IllegalArgumentException(
           format(
               "NIO number of threads and executor must be greater than 0: %d, %d",
