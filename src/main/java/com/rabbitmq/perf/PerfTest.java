@@ -904,38 +904,65 @@ public class PerfTest {
     options.addOption(exchangeOpt);
 
     options.addOption(new Option("u", "queue", true, "queue name, default is auto-generated"));
-    options.addOption(new Option("k", "routing-key", true, "routing key, default is auto-generated"));
     options.addOption(
-        new Option("K", "random-routing-key", false, "use random routing key per message, default is false"));
+        new Option("k", "routing-key", true, "routing key, default is auto-generated"));
     options.addOption(
-        new Option("sb", "skip-binding-queues", false, "don't bind queues to the exchange, default is false"));
-    options.addOption(new Option("i", "interval", true, "sampling interval in seconds, default is 1"));
+        new Option(
+            "K",
+            "random-routing-key",
+            false,
+            "use random routing key per message, default is false"));
+    options.addOption(
+        new Option(
+            "sb",
+            "skip-binding-queues",
+            false,
+            "don't bind queues to the exchange, default is false"));
+    options.addOption(
+        new Option("i", "interval", true, "sampling interval in seconds, default is 1"));
     options.addOption(new Option("r", "rate", true, "producer rate limit, default is no limit"));
-    options.addOption(new Option("R", "consumer-rate", true, "consumer rate limit, default is no limit"));
+    options.addOption(
+        new Option("R", "consumer-rate", true, "consumer rate limit, default is no limit"));
     options.addOption(new Option("x", "producers", true, "producer count, default is 1"));
     options.addOption(new Option("y", "consumers", true, "consumer count, default is 1"));
     options.addOption(
-        new Option("S", "slow-start", false, "start consumers slowly (1 sec delay between each), default is false"));
-    options.addOption(new Option("X", "producer-channel-count", true, "channels per producer, default is 1"));
-    options.addOption(new Option("Y", "consumer-channel-count", true, "channels per consumer, default is 1"));
-    options.addOption(new Option("m", "ptxsize", true, "producer tx size, default is 0 (no transaction)"));
-    options.addOption(new Option("n", "ctxsize", true, "consumer tx size, default is 0 (no transaction)"));
-    options.addOption(new Option("c", "confirm", true, "max unconfirmed publishes, default is -1 (no confirm)"));
+        new Option(
+            "S",
+            "slow-start",
+            false,
+            "start consumers slowly (1 sec delay between each), default is false"));
+    options.addOption(
+        new Option("X", "producer-channel-count", true, "channels per producer, default is 1"));
+    options.addOption(
+        new Option("Y", "consumer-channel-count", true, "channels per consumer, default is 1"));
+    options.addOption(
+        new Option("m", "ptxsize", true, "producer tx size, default is 0 (no transaction)"));
+    options.addOption(
+        new Option("n", "ctxsize", true, "consumer tx size, default is 0 (no transaction)"));
+    options.addOption(
+        new Option("c", "confirm", true, "max unconfirmed publishes, default is -1 (no confirm)"));
     options.addOption(
         new Option(
             "ct",
             "confirm-timeout",
             true,
             "waiting timeout for unconfirmed publishes before failing (in seconds), default is 30"));
-    options.addOption(new Option("a", "autoack", false, "auto ack, default is false (no auto-ack)"));
-    options.addOption(new Option("A", "multi-ack-every", true, "multi ack every, default is 0 (no multi-ack)"));
-    options.addOption(new Option("q", "qos", true, "consumer prefetch count, default is 0 (unlimited)"));
-    options.addOption(new Option("Q", "global-qos", true, "channel prefetch count, default is 0 (unlimited)"));
-    options.addOption(new Option("s", "size", true, "message size in bytes, default (and minimum value) is 12"));
+    options.addOption(
+        new Option("a", "autoack", false, "auto ack, default is false (no auto-ack)"));
+    options.addOption(
+        new Option("A", "multi-ack-every", true, "multi ack every, default is 0 (no multi-ack)"));
+    options.addOption(
+        new Option("q", "qos", true, "consumer prefetch count, default is 0 (unlimited)"));
+    options.addOption(
+        new Option("Q", "global-qos", true, "channel prefetch count, default is 0 (unlimited)"));
+    options.addOption(
+        new Option("s", "size", true, "message size in bytes, default (and minimum value) is 12"));
     options.addOption(
         new Option("z", "time", true, "run duration in seconds (unlimited by default)"));
-    options.addOption(new Option("C", "pmessages", true, "producer message count, default is 0 (no limit)"));
-    options.addOption(new Option("D", "cmessages", true, "consumer message count, default is 0 (no limit)"));
+    options.addOption(
+        new Option("C", "pmessages", true, "producer message count, default is 0 (no limit)"));
+    options.addOption(
+        new Option("D", "cmessages", true, "consumer message count, default is 0 (no limit)"));
     Option flag =
         new Option(
             "f",
@@ -946,9 +973,17 @@ public class PerfTest {
                 + "to specify several values.");
     flag.setArgs(Option.UNLIMITED_VALUES);
     options.addOption(flag);
-    options.addOption(new Option("M", "framemax", true, "requested maximum frame size, default is 0 (no limit)"));
-    options.addOption(new Option("b", "heartbeat", true, "requested heartbeat interval, default is 0 (no interval requested)"));
-    options.addOption(new Option("p", "predeclared", false, "allow use of predeclared objects, default is false"));
+    options.addOption(
+        new Option("M", "framemax", true, "requested maximum frame size, default is 0 (no limit)"));
+    options.addOption(
+        new Option(
+            "b",
+            "heartbeat",
+            true,
+            "requested heartbeat interval, default is 0 (no interval requested)"));
+    options.addOption(
+        new Option(
+            "p", "predeclared", false, "allow use of predeclared objects, default is false"));
     options.addOption(
         new Option("B", "body", true, "comma-separated list of files to use in message bodies"));
     options.addOption(new Option("T", "body-content-type", true, "body content-type"));
@@ -971,10 +1006,15 @@ public class PerfTest {
     queueArgumentsOption.setArgs(Option.UNLIMITED_VALUES);
     options.addOption(queueArgumentsOption);
     options.addOption(
-        new Option("L", "consumer-latency", true, "consumer latency in microseconds, default is 0"));
+        new Option(
+            "L", "consumer-latency", true, "consumer latency in microseconds, default is 0"));
 
     options.addOption(
-        new Option("udsc", "use-default-ssl-context", false, "use JVM default SSL context, default is false"));
+        new Option(
+            "udsc",
+            "use-default-ssl-context",
+            false,
+            "use JVM default SSL context, default is false"));
     options.addOption(
         new Option(
             "se",
@@ -1038,7 +1078,8 @@ public class PerfTest {
             "producer-scheduler-threads",
             true,
             "number of threads to use when using --publishing-interval, default is calculated by PerfTest"));
-    options.addOption(new Option("niot", "nio-threads", true, "number of NIO threads to use, default is 1"));
+    options.addOption(
+        new Option("niot", "nio-threads", true, "number of NIO threads to use, default is 1"));
     options.addOption(
         new Option(
             "niotp",
@@ -1053,7 +1094,10 @@ public class PerfTest {
 
     options.addOption(
         new Option(
-            "dcr", "disable-connection-recovery", false, "disable automatic connection recovery, default is false (recovery enabled)"));
+            "dcr",
+            "disable-connection-recovery",
+            false,
+            "disable automatic connection recovery, default is false (recovery enabled)"));
 
     options.addOption(
         new Option(
@@ -1119,7 +1163,8 @@ public class PerfTest {
             "po",
             "polling",
             false,
-            "use basic.get to consume messages. " + "Do not use this in real applications. Default is false."));
+            "use basic.get to consume messages. "
+                + "Do not use this in real applications. Default is false."));
     options.addOption(
         new Option(
             "pi",
@@ -1202,7 +1247,10 @@ public class PerfTest {
 
     options.addOption(
         new Option(
-            "mlb", "max-length-bytes", true, "max size of created queues, use 0 for no limit, default is no limit"));
+            "mlb",
+            "max-length-bytes",
+            true,
+            "max size of created queues, use 0 for no limit, default is no limit"));
     options.addOption(
         new Option(
             "smssb",
