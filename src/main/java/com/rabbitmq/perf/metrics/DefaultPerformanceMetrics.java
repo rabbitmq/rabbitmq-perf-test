@@ -20,6 +20,7 @@ import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import com.codahale.metrics.ExponentiallyDecayingReservoir;
 import com.codahale.metrics.Histogram;
 import com.rabbitmq.perf.NamedThreadFactory;
+import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import java.time.Duration;
@@ -72,6 +73,7 @@ public final class DefaultPerformanceMetrics implements PerformanceMetrics, Auto
       receivedRate;
   // latencies: confirmed, consumed
   private final Timer consumedLatencyTimer, confirmedLatencyTimer;
+  private final DistributionSummary confirmedSize;
   // end of Micrometer's metrics
   private final Duration interval;
   private final TimeUnit latencyCollectionTimeUnit;
@@ -117,6 +119,14 @@ public final class DefaultPerformanceMetrics implements PerformanceMetrics, Auto
         timer(metricsPrefix + "latency", "message latency", this.interval, registry);
     confirmedLatencyTimer =
         timer(metricsPrefix + "confirm.latency", "confirm latency", this.interval, registry);
+
+    confirmedSize =
+        DistributionSummary.builder(metricsPrefix + "confirm.size")
+            .description("number of confirms received per confirm frame")
+            .publishPercentiles(0.5, 0.75, 0.95, 0.99)
+            .distributionStatisticExpiry(this.interval)
+            .serviceLevelObjectives()
+            .register(registry);
 
     this.consumedLatency = new AtomicReference<>(histogram());
     this.confirmedLatency = new AtomicReference<>(histogram());
@@ -266,6 +276,7 @@ public final class DefaultPerformanceMetrics implements PerformanceMetrics, Auto
   @Override
   public void confirmed(int count, long[] latencies) {
     this.confirmed.addAndGet(count);
+    this.confirmedSize.record(count);
     for (long latency : latencies) {
       this.confirmedLatencyTimer.record(latency, this.latencyCollectionTimeUnit);
       this.confirmedLatency.get().update(latency);
