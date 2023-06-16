@@ -1027,7 +1027,8 @@ public class PerfTest {
 
     options.addOption(
         new Option(
-            "qp", "queue-pattern", true, "queue name pattern for creating queues in sequence"));
+            "qp", "queue-pattern", true, "queue name pattern for creating queues in sequence, " +
+            "e.g. 'perf-test-%d'"));
     options.addOption(
         new Option(
             "qpf", "queue-pattern-from", true, "queue name pattern range start (inclusive)"));
