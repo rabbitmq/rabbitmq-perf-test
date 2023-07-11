@@ -48,12 +48,6 @@ are enabled with the `-mcl` or `--metrics-class-loader` flag.
 * Processor metrics: there metrics report CPU activity as gathered by the JVM.
 They can be enabled with the `-mjp` or `--metrics-processor` flag.
 
-[WARNING]
-====
-The JVM-related metrics are not available when using the
-link:#native-executable[native executable].
-====
-
 === Tags
 
 One can specify metrics tags with the `-mt` or `--metrics-tags` options, e.g.
