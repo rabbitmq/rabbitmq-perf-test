@@ -42,6 +42,7 @@ public class ProducerParameters {
   private int randomStartDelayInSeconds;
   private Recovery.RecoveryProcess recoveryProcess;
   private ValueIndicator<Float> rateIndicator;
+  private RateLimiter.Factory rateLimiterFactory = RateLimiter.Type.GUAVA.factory();
   private StartListener startListener = StartListener.NO_OP;
 
   public Channel getChannel() {
@@ -213,5 +214,14 @@ public class ProducerParameters {
   public ProducerParameters setStartListener(StartListener startListener) {
     this.startListener = startListener;
     return this;
+  }
+
+  public ProducerParameters setRateLimiterFactory(RateLimiter.Factory rateLimiterFactory) {
+    this.rateLimiterFactory = rateLimiterFactory;
+    return this;
+  }
+
+  public RateLimiter.Factory getRateLimiterFactory() {
+    return rateLimiterFactory;
   }
 }

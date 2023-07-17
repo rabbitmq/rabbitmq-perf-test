@@ -55,6 +55,8 @@ public class ConsumerParameters {
 
   private StartListener startListener = StartListener.NO_OP;
 
+  private RateLimiter.Factory rateLimiterFactory = RateLimiter.Type.GUAVA.factory();
+
   public Channel getChannel() {
     return channel;
   }
@@ -253,5 +255,14 @@ public class ConsumerParameters {
   public ConsumerParameters setStartListener(StartListener startListener) {
     this.startListener = startListener;
     return this;
+  }
+
+  public ConsumerParameters setRateLimiterFactory(RateLimiter.Factory rateLimiterFactory) {
+    this.rateLimiterFactory = rateLimiterFactory;
+    return this;
+  }
+
+  public RateLimiter.Factory getRateLimiterFactory() {
+    return rateLimiterFactory;
   }
 }

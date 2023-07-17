@@ -167,8 +167,9 @@ public class Consumer extends AgentBase implements Runnable {
 
     this.rateLimitation = parameters.getRateLimit() > 0;
     if (this.rateLimitation) {
-      RateLimiter rateLimiter = RateLimiter.create(parameters.getRateLimit());
-      this.rateLimiterCallback = () -> rateLimiter.acquire(1);
+      RateLimiter rateLimiter =
+          parameters.getRateLimiterFactory().create(parameters.getRateLimit());
+      this.rateLimiterCallback = rateLimiter::acquire;
     } else {
       this.rateLimiterCallback = () -> {};
     }

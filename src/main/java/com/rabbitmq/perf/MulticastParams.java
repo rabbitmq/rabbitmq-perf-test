@@ -133,6 +133,8 @@ public class MulticastParams {
 
   private StartListener startListener;
 
+  private RateLimiter.Factory rateLimiterFactory = RateLimiter.Type.GUAVA.factory();
+
   public void setExchangeType(String exchangeType) {
     this.exchangeType = exchangeType;
   }
@@ -509,6 +511,10 @@ public class MulticastParams {
     this.startListener = startListener;
   }
 
+  public void setRateLimiterFactory(RateLimiter.Factory rateLimiterFactory) {
+    this.rateLimiterFactory = rateLimiterFactory;
+  }
+
   public Producer createProducer(
       Connection connection,
       PerformanceMetrics performanceMetrics,
@@ -564,7 +570,8 @@ public class MulticastParams {
                 .setRandomStartDelayInSeconds(this.producerRandomStartDelayInSeconds)
                 .setRecoveryProcess(recoveryProcess)
                 .setRateIndicator(rateIndicator)
-                .setStartListener(this.startListener));
+                .setStartListener(this.startListener)
+                .setRateLimiterFactory(this.rateLimiterFactory));
     channel.addReturnListener(producer);
     channel.addConfirmListener(producer);
     this.topologyHandler.next();
@@ -623,7 +630,8 @@ public class MulticastParams {
                 .setExitWhen(this.exitWhen)
                 .setTopologyRecoveryScheduledExecutorService(
                     topologyRecordingScheduledExecutorService)
-                .setStartListener(this.startListener));
+                .setStartListener(this.startListener)
+                .setRateLimiterFactory(this.rateLimiterFactory));
     this.topologyHandler.next();
     return consumer;
   }

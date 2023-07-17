@@ -14,7 +14,6 @@
 // info@rabbitmq.com.
 package com.rabbitmq.perf;
 
-import static com.rabbitmq.perf.RateLimiterUtils.*;
 import static java.util.stream.Collectors.toMap;
 
 import com.rabbitmq.client.AMQP;
@@ -160,21 +159,23 @@ public class Producer extends AgentBase implements Runnable, ReturnListener, Con
     this.rateIndicator = parameters.getRateIndicator();
     this.recoveryProcess = parameters.getRecoveryProcess();
     this.recoveryProcess.init(this);
+    final RateLimiter.Factory rateLimiterFactory = parameters.getRateLimiterFactory();
     if (this.rateIndicator.getValue() >= 0 && this.rateIndicator.isVariable()) {
       RateLimiter rateLimiter =
-          RateLimiter.create(this.rateIndicator.getValue() > 0 ? this.rateIndicator.getValue() : 1);
+          rateLimiterFactory.create(
+              this.rateIndicator.getValue() > 0 ? this.rateIndicator.getValue() : 1);
       AtomicReference<RateLimiter> rateLimiterReference = new AtomicReference<>(rateLimiter);
       this.rateIndicator.register(
           (oldValue, newValue) -> {
             if (newValue > 0) {
-              rateLimiterReference.set(RateLimiter.create(newValue));
+              rateLimiterReference.set(rateLimiterFactory.create(newValue));
             }
           });
-      this.rateLimiterCallback = () -> rateLimiterReference.get().acquire(1);
+      this.rateLimiterCallback = () -> rateLimiterReference.get().acquire();
     } else if (this.rateIndicator.getValue() >= 0 && !this.rateIndicator.isVariable()) {
       if (this.rateIndicator.getValue() > 0) {
-        RateLimiter rateLimiter = RateLimiter.create(this.rateIndicator.getValue());
-        this.rateLimiterCallback = () -> rateLimiter.acquire(1);
+        RateLimiter rateLimiter = rateLimiterFactory.create(this.rateIndicator.getValue());
+        this.rateLimiterCallback = rateLimiter::acquire;
       } else {
         this.rateLimiterCallback = () -> {};
       }
