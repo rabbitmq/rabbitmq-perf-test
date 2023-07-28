@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022 VMware, Inc. or its affiliates.  All rights reserved.
+// Copyright (c) 2019-2023 VMware, Inc. or its affiliates.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 2.0 ("MPL"), the GNU General Public License version 2
@@ -28,7 +28,7 @@ import java.util.concurrent.ScheduledExecutorService;
 public class ConsumerParameters {
 
   private Channel channel;
-  private String id;
+  private String routingKey;
   private List<String> queueNames;
   private int txSize;
   private boolean autoAck;
@@ -57,6 +57,9 @@ public class ConsumerParameters {
 
   private RateLimiter.Factory rateLimiterFactory = RateLimiter.Type.GUAVA.factory();
 
+  private int id;
+  private FunctionalLogger functionalLogger = FunctionalLogger.NO_OP;
+
   public Channel getChannel() {
     return channel;
   }
@@ -66,12 +69,12 @@ public class ConsumerParameters {
     return this;
   }
 
-  public String getId() {
-    return id;
+  public String getRoutingKey() {
+    return routingKey;
   }
 
-  public ConsumerParameters setId(String id) {
-    this.id = id;
+  public ConsumerParameters setRoutingKey(String routingKey) {
+    this.routingKey = routingKey;
     return this;
   }
 
@@ -264,5 +267,23 @@ public class ConsumerParameters {
 
   public RateLimiter.Factory getRateLimiterFactory() {
     return rateLimiterFactory;
+  }
+
+  public ConsumerParameters setId(int id) {
+    this.id = id;
+    return this;
+  }
+
+  public int getId() {
+    return id;
+  }
+
+  public ConsumerParameters setFunctionalLogger(FunctionalLogger functionalLogger) {
+    this.functionalLogger = functionalLogger;
+    return this;
+  }
+
+  public FunctionalLogger getFunctionalLogger() {
+    return functionalLogger;
   }
 }

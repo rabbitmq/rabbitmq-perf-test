@@ -460,7 +460,7 @@
               <style>GOOGLE</style>
             </googleJavaFormat>
           </java>
-          <!--          <ratchetFrom>origin/main</ratchetFrom>-->
+<!--                   <ratchetFrom>origin/main</ratchetFrom>-->
           <licenseHeader> <!-- specify either content or file, but not both -->
             <content>// Copyright (c) $YEAR VMware, Inc. or its affiliates.  All rights reserved.
 //

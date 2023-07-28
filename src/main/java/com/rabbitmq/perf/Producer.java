@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2022 VMware, Inc. or its affiliates.  All rights reserved.
+// Copyright (c) 2007-2023 VMware, Inc. or its affiliates.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 2.0 ("MPL"), the GNU General Public License version 2
@@ -67,7 +67,6 @@ public class Producer extends AgentBase implements Runnable, ReturnListener, Con
   static final String STOP_REASON_ERROR_IN_PRODUCER = "Error in producer";
   private final Channel channel;
   private final String exchangeName;
-  private final String id;
   private final boolean mandatory;
   private final boolean persistent;
   private final int txSize;
@@ -103,10 +102,13 @@ public class Producer extends AgentBase implements Runnable, ReturnListener, Con
   private final Runnable rateLimiterCallback;
 
   public Producer(ProducerParameters parameters) {
-    super(parameters.getStartListener());
+    super(
+        parameters.getStartListener(),
+        parameters.getRoutingKey(),
+        parameters.getId(),
+        parameters.getFunctionalLogger());
     this.channel = parameters.getChannel();
     this.exchangeName = parameters.getExchangeName();
-    this.id = parameters.getId();
     this.mandatory = parameters.getFlags().contains("mandatory");
     this.persistent = parameters.getFlags().contains("persistent");
 
@@ -152,7 +154,7 @@ public class Producer extends AgentBase implements Runnable, ReturnListener, Con
         this.routingKeyGenerator = () -> UUID.randomUUID().toString();
       }
     } else {
-      this.routingKeyGenerator = () -> this.id;
+      this.routingKeyGenerator = () -> this.routingKey;
     }
     this.randomStartDelay = parameters.getRandomStartDelayInSeconds();
 
@@ -338,18 +340,22 @@ public class Producer extends AgentBase implements Runnable, ReturnListener, Con
     if (multiple) {
       ConcurrentNavigableMap<Long, Long> confirmed = unconfirmed.headMap(seqNo, true);
       numConfirms = confirmed.size();
+      logger().receivedPublishConfirm(this.id, true, seqNo, numConfirms);
       latencies = new long[numConfirms];
       int index = 0;
       for (Map.Entry<Long, Long> entry : confirmed.entrySet()) {
+        logger().publishConfirmed(this.id, true, entry.getKey(), entry.getValue());
         latencies[index] = this.timestampProvider.getDifference(currentTime, entry.getValue());
         index++;
       }
       confirmed.clear();
     } else {
+      logger().receivedPublishConfirm(this.id, true, seqNo, 1);
       Long messageTimestamp = unconfirmed.remove(seqNo);
       if (messageTimestamp != null) {
         latencies =
             new long[] {this.timestampProvider.getDifference(currentTime, messageTimestamp)};
+        logger().publishConfirmed(this.id, true, seqNo, messageTimestamp);
       } else {
         latencies = new long[0];
       }
@@ -364,10 +370,18 @@ public class Producer extends AgentBase implements Runnable, ReturnListener, Con
     if (multiple) {
       ConcurrentNavigableMap<Long, Long> confirmed = unconfirmed.headMap(seqNo, true);
       numConfirms = confirmed.size();
+      logger().receivedPublishConfirm(this.id, false, seqNo, numConfirms);
+      if (!logger().isNoOp()) {
+        for (Map.Entry<Long, Long> entry : confirmed.entrySet()) {
+          logger().publishConfirmed(this.id, false, entry.getKey(), entry.getValue());
+        }
+      }
       confirmed.clear();
     } else {
-      unconfirmed.remove(seqNo);
+      Long messageTimestamp = unconfirmed.remove(seqNo);
       numConfirms = 1;
+      logger().receivedPublishConfirm(this.id, false, seqNo, numConfirms);
+      logger().publishConfirmed(this.id, false, seqNo, messageTimestamp);
     }
     this.performanceMetrics.nacked(numConfirms);
     return numConfirms;
@@ -611,14 +625,14 @@ public class Producer extends AgentBase implements Runnable, ReturnListener, Con
 
     AMQP.BasicProperties messageProperties = propertiesBuilder.build();
 
+    long timestamp = 0;
+    long publishindId = 0;
     if (shouldTrackPublishConfirms) {
-      if (this.timestampProvider.isTimestampInHeader()) {
-        Long timestamp = (Long) messageProperties.getHeaders().get(TIMESTAMP_HEADER);
-        unconfirmed.put(channel.getNextPublishSeqNo(), timestamp);
-      } else {
-        unconfirmed.put(channel.getNextPublishSeqNo(), messageEnvelope.getTime());
-      }
+      timestamp = timestamp(messageProperties, messageEnvelope);
+      publishindId = channel.getNextPublishSeqNo();
+      unconfirmed.put(publishindId, timestamp);
     }
+
     channel.basicPublish(
         exchangeName,
         routingKeyGenerator.get(),
@@ -626,6 +640,21 @@ public class Producer extends AgentBase implements Runnable, ReturnListener, Con
         false,
         messageProperties,
         messageEnvelope.getBody());
+    if (!this.shouldTrackPublishConfirms && !logger().isNoOp()) {
+      // the timestamp has not been extracted and we need it for the functional logger
+      timestamp = timestamp(messageProperties, messageEnvelope);
+    }
+    logger()
+        .published(this.id, timestamp, publishindId, messageProperties, messageEnvelope.getBody());
+  }
+
+  private long timestamp(
+      AMQP.BasicProperties messageProperties, MessageBodySource.MessageEnvelope envelope) {
+    if (this.timestampProvider.isTimestampInHeader()) {
+      return (Long) messageProperties.getHeaders().get(TIMESTAMP_HEADER);
+    } else {
+      return envelope.getTime();
+    }
   }
 
   private void countDown(String reason) {

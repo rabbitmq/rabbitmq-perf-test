@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2022 VMware, Inc. or its affiliates.  All rights reserved.
+// Copyright (c) 2018-2023 VMware, Inc. or its affiliates.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 2.0 ("MPL"), the GNU General Public License version 2
@@ -26,7 +26,7 @@ public class ProducerParameters {
 
   private Channel channel;
   private String exchangeName;
-  private String id;
+  private String routingKey;
   private boolean randomRoutingKey;
   private List<?> flags;
   private int txSize;
@@ -44,6 +44,8 @@ public class ProducerParameters {
   private ValueIndicator<Float> rateIndicator;
   private RateLimiter.Factory rateLimiterFactory = RateLimiter.Type.GUAVA.factory();
   private StartListener startListener = StartListener.NO_OP;
+  private int id;
+  private FunctionalLogger functionalLogger = FunctionalLogger.NO_OP;
 
   public Channel getChannel() {
     return channel;
@@ -63,12 +65,12 @@ public class ProducerParameters {
     return this;
   }
 
-  public String getId() {
-    return id;
+  public String getRoutingKey() {
+    return routingKey;
   }
 
-  public ProducerParameters setId(String id) {
-    this.id = id;
+  public ProducerParameters setRoutingKey(String routingKey) {
+    this.routingKey = routingKey;
     return this;
   }
 
@@ -223,5 +225,23 @@ public class ProducerParameters {
 
   public RateLimiter.Factory getRateLimiterFactory() {
     return rateLimiterFactory;
+  }
+
+  public ProducerParameters setId(int id) {
+    this.id = id;
+    return this;
+  }
+
+  public int getId() {
+    return id;
+  }
+
+  public ProducerParameters setFunctionalLogger(FunctionalLogger functionalLogger) {
+    this.functionalLogger = functionalLogger;
+    return this;
+  }
+
+  public FunctionalLogger getFunctionalLogger() {
+    return functionalLogger;
   }
 }

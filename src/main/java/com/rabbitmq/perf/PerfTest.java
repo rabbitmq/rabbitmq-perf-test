@@ -75,9 +75,9 @@ public class PerfTest {
     Options options = getOptions();
     CommandLineParser parser = getParser();
     CompositeMetrics metrics = new CompositeMetrics();
-    shutdownService.wrap(() -> metrics.close());
+    shutdownService.wrap(metrics::close);
     Options metricsOptions = metrics.options();
-    forEach(metricsOptions, option -> options.addOption(option));
+    forEach(metricsOptions, options::addOption);
     int exitStatus = 0;
 
     try {
@@ -330,7 +330,7 @@ public class PerfTest {
               instanceSyncNamespace,
               Duration.ofSeconds(instanceSyncTimeout),
               consoleOut);
-      instanceSynchronization.addPostSyncListener(() -> metrics.start());
+      instanceSynchronization.addPostSyncListener(metrics::start);
 
       MulticastSet set =
           new MulticastSet(
@@ -651,6 +651,13 @@ public class PerfTest {
     RateLimiter.Factory rateLimiterFactory =
         RateLimiter.Type.valueOf(rateLimiterArg.toUpperCase()).factory();
 
+    boolean verbose = hasOption(cmd, "verbose");
+    boolean verboseFull = hasOption(cmd, "verbose-full");
+    FunctionalLogger functionalLogger = FunctionalLogger.NO_OP;
+    if (verbose || verboseFull) {
+      functionalLogger = new DefaultFunctionalLogger(perfTestOptions.consoleOut, verboseFull);
+    }
+
     MulticastParams p = new MulticastParams();
     p.setAutoAck(autoAck);
     p.setAutoDelete(autoDelete);
@@ -715,6 +722,7 @@ public class PerfTest {
     p.setCluster(uris.size() > 0);
     p.setConsumerStartDelay(consumerStartDelay);
     p.setRateLimiterFactory(rateLimiterFactory);
+    p.setFunctionalLogger(functionalLogger);
     return p;
   }
 
@@ -1359,6 +1367,15 @@ public class PerfTest {
                     .collect(Collectors.joining(", ")),
                 RateLimiter.Type.GUAVA.name().toLowerCase())));
 
+    options.addOption(
+        new Option(
+            null, "verbose", false, "Output message information. Use only with slow rates."));
+    options.addOption(
+        new Option(
+            null,
+            "verbose-full",
+            false,
+            "Same as --verbose, but with message headers and body as well. Use only with slow rates."));
     return options;
   }
 
