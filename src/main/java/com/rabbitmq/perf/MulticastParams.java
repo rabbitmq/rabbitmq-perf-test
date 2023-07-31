@@ -124,7 +124,6 @@ public class MulticastParams {
 
   private EXIT_WHEN exitWhen = EXIT_WHEN.NEVER;
   private Duration consumerStartDelay = Duration.ofSeconds(-1);
-  private Map<String, Number> exposedMetrics = Collections.emptyMap();
 
   // for random JSON body generation
   private AtomicReference<MessageBodySource> messageBodySourceReference = new AtomicReference<>();
@@ -132,6 +131,10 @@ public class MulticastParams {
   private boolean cluster = false;
 
   private StartListener startListener;
+
+  private RateLimiter.Factory rateLimiterFactory = RateLimiter.Type.GUAVA.factory();
+
+  private FunctionalLogger functionalLogger = FunctionalLogger.NO_OP;
 
   public void setExchangeType(String exchangeType) {
     this.exchangeType = exchangeType;
@@ -509,7 +512,16 @@ public class MulticastParams {
     this.startListener = startListener;
   }
 
+  public void setRateLimiterFactory(RateLimiter.Factory rateLimiterFactory) {
+    this.rateLimiterFactory = rateLimiterFactory;
+  }
+
+  public void setFunctionalLogger(FunctionalLogger functionalLogger) {
+    this.functionalLogger = functionalLogger;
+  }
+
   public Producer createProducer(
+      int producerId,
       Connection connection,
       PerformanceMetrics performanceMetrics,
       MulticastSet.CompletionHandler completionHandler,
@@ -546,9 +558,10 @@ public class MulticastParams {
     final Producer producer =
         new Producer(
             new ProducerParameters()
+                .setId(producerId)
                 .setChannel(channel)
                 .setExchangeName(exchangeName)
-                .setId(this.topologyHandler.getRoutingKey())
+                .setRoutingKey(this.topologyHandler.getRoutingKey())
                 .setRandomRoutingKey(randomRoutingKey)
                 .setFlags(flags)
                 .setTxSize(producerTxSize)
@@ -564,7 +577,9 @@ public class MulticastParams {
                 .setRandomStartDelayInSeconds(this.producerRandomStartDelayInSeconds)
                 .setRecoveryProcess(recoveryProcess)
                 .setRateIndicator(rateIndicator)
-                .setStartListener(this.startListener));
+                .setStartListener(this.startListener)
+                .setRateLimiterFactory(this.rateLimiterFactory)
+                .setFunctionalLogger(this.functionalLogger));
     channel.addReturnListener(producer);
     channel.addConfirmListener(producer);
     this.topologyHandler.next();
@@ -572,6 +587,7 @@ public class MulticastParams {
   }
 
   public Consumer createConsumer(
+      int consumerId,
       Connection connection,
       PerformanceMetrics performanceMetrics,
       ValueIndicator<Long> consumerLatenciesIndicator,
@@ -588,7 +604,7 @@ public class MulticastParams {
     if (channelPrefetch > 0) channel.basicQos(channelPrefetch, true);
 
     boolean timestampInHeader;
-    if (bodyFiles.size() > 0 || jsonBody) {
+    if (!bodyFiles.isEmpty() || jsonBody) {
       timestampInHeader = true;
     } else {
       timestampInHeader = false;
@@ -601,8 +617,9 @@ public class MulticastParams {
     Consumer consumer =
         new Consumer(
             new ConsumerParameters()
+                .setId(consumerId)
                 .setChannel(channel)
-                .setId(this.topologyHandler.getRoutingKey())
+                .setRoutingKey(this.topologyHandler.getRoutingKey())
                 .setQueueNames(topologyHandlerResult.configuredQueues)
                 .setTxSize(consumerTxSize)
                 .setAutoAck(autoAck)
@@ -623,7 +640,9 @@ public class MulticastParams {
                 .setExitWhen(this.exitWhen)
                 .setTopologyRecoveryScheduledExecutorService(
                     topologyRecordingScheduledExecutorService)
-                .setStartListener(this.startListener));
+                .setStartListener(this.startListener)
+                .setRateLimiterFactory(this.rateLimiterFactory)
+                .setFunctionalLogger(this.functionalLogger));
     this.topologyHandler.next();
     return consumer;
   }

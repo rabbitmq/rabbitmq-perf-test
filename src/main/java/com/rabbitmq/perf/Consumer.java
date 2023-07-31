@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2022 VMware, Inc. or its affiliates.  All rights reserved.
+// Copyright (c) 2007-2023 VMware, Inc. or its affiliates.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 2.0 ("MPL"), the GNU General Public License version 2
@@ -13,8 +13,6 @@
 // If you have any questions regarding licensing, please contact us at
 // info@rabbitmq.com.
 package com.rabbitmq.perf;
-
-import static com.rabbitmq.perf.RateLimiterUtils.*;
 
 import com.rabbitmq.client.*;
 import com.rabbitmq.client.AMQP.BasicProperties;
@@ -56,7 +54,6 @@ public class Consumer extends AgentBase implements Runnable {
 
   private volatile ConsumerImpl q;
   private final Channel channel;
-  private final String id;
   private final int txSize;
   private final boolean autoAck;
   private final int multiAckEvery;
@@ -102,9 +99,12 @@ public class Consumer extends AgentBase implements Runnable {
   private final boolean rateLimitation;
 
   public Consumer(ConsumerParameters parameters) {
-    super(parameters.getStartListener());
+    super(
+        parameters.getStartListener(),
+        parameters.getRoutingKey(),
+        parameters.getId(),
+        parameters.getFunctionalLogger());
     this.channel = parameters.getChannel();
-    this.id = parameters.getId();
     this.txSize = parameters.getTxSize();
     this.autoAck = parameters.isAutoAck();
     this.multiAckEvery = parameters.getMultiAckEvery();
@@ -167,8 +167,9 @@ public class Consumer extends AgentBase implements Runnable {
 
     this.rateLimitation = parameters.getRateLimit() > 0;
     if (this.rateLimitation) {
-      RateLimiter rateLimiter = RateLimiter.create(parameters.getRateLimit());
-      this.rateLimiterCallback = () -> rateLimiter.acquire(1);
+      RateLimiter rateLimiter =
+          parameters.getRateLimiterFactory().create(parameters.getRateLimit());
+      this.rateLimiterCallback = rateLimiter::acquire;
     } else {
       this.rateLimiterCallback = () -> {};
     }
@@ -292,10 +293,11 @@ public class Consumer extends AgentBase implements Runnable {
         long messageTimestamp = timestampExtractor.apply(properties, body);
         long diff_time = timestampProvider.getDifference(nowTimestamp, messageTimestamp);
 
-        performanceMetrics.received(id.equals(envelope.getRoutingKey()) ? diff_time : 0L);
+        logger().received(Consumer.this.id, messageTimestamp, envelope, properties, body);
+        performanceMetrics.received(routingKey.equals(envelope.getRoutingKey()) ? diff_time : 0L);
 
         if (consumerLatency.simulateLatency()) {
-          ackIfNecessary(envelope, epochMessageCount.get(), ch);
+          ackIfNecessary(messageTimestamp, envelope, epochMessageCount.get(), ch);
           commitTransactionIfNecessary(epochMessageCount.get(), ch);
           lastDeliveryTag = envelope.getDeliveryTag();
 
@@ -321,7 +323,8 @@ public class Consumer extends AgentBase implements Runnable {
       }
     }
 
-    private void ackIfNecessary(Envelope envelope, long currentMessageCount, final Channel ch)
+    private void ackIfNecessary(
+        long timestamp, Envelope envelope, long currentMessageCount, final Channel ch)
         throws IOException {
       if (ackEnabled()) {
         dealWithWriteOperation(
@@ -329,9 +332,11 @@ public class Consumer extends AgentBase implements Runnable {
               if (multiAckEvery == 0) {
                 ackNackOperation.apply(ch, envelope, false, requeue);
                 lastAckedDeliveryTag = envelope.getDeliveryTag();
+                logger().acknowledged(Consumer.this.id, timestamp, envelope, 1);
               } else if (currentMessageCount % multiAckEvery == 0) {
                 ackNackOperation.apply(ch, envelope, true, requeue);
                 lastAckedDeliveryTag = envelope.getDeliveryTag();
+                logger().acknowledged(Consumer.this.id, timestamp, envelope, multiAckEvery);
               }
             },
             recoveryProcess);

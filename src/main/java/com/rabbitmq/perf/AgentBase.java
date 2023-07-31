@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2022 VMware, Inc. or its affiliates.  All rights reserved.
+// Copyright (c) 2007-2023 VMware, Inc. or its affiliates.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 2.0 ("MPL"), the GNU General Public License version 2
@@ -32,12 +32,19 @@ public abstract class AgentBase {
   private volatile TopologyRecording topologyRecording;
 
   private final int agentId;
+  final String routingKey;
 
   final StartListener startListener;
+  final int id;
+  final FunctionalLogger functionalLogger;
 
-  protected AgentBase(StartListener startListener) {
+  protected AgentBase(
+      StartListener startListener, String routingKey, int id, FunctionalLogger functionalLogger) {
     this.startListener = startListener == null ? StartListener.NO_OP : startListener;
     this.agentId = AGENT_ID_SEQUENCE.getAndIncrement();
+    this.routingKey = routingKey;
+    this.id = id;
+    this.functionalLogger = functionalLogger;
   }
 
   public void setTopologyRecording(TopologyRecording topologyRecording) {
@@ -114,5 +121,9 @@ public abstract class AgentBase {
   @FunctionalInterface
   interface WriteOperation {
     void call() throws IOException;
+  }
+
+  FunctionalLogger logger() {
+    return this.functionalLogger;
   }
 }

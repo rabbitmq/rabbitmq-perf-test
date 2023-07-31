@@ -1,4 +1,4 @@
-// Copyright (c) 2007-2022 VMware, Inc. or its affiliates.  All rights reserved.
+// Copyright (c) 2007-2023 VMware, Inc. or its affiliates.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 2.0 ("MPL"), the GNU General Public License version 2
@@ -459,6 +459,7 @@ public class MulticastSet {
       Function<Integer, ExecutorService> consumersExecutorsFactory,
       ScheduledExecutorService topologyRecordingScheduledExecutorService)
       throws IOException, TimeoutException {
+    int consumerIndex = 0;
     for (int i = 0; i < consumerConnections.length; i++) {
       if (announceStartup) {
         System.out.println("id: " + testID + ", starting consumer #" + i);
@@ -474,12 +475,14 @@ public class MulticastSet {
         }
         Consumer consumer =
             params.createConsumer(
+                consumerIndex,
                 consumerConnection,
                 performanceMetrics,
                 this.consumerLatencyIndicator,
                 this.completionHandler,
                 executorService,
                 topologyRecordingScheduledExecutorService);
+        consumerIndex++;
         consumerRunnables[(i * params.getConsumerChannelCount()) + j] = consumer;
       }
     }
@@ -488,6 +491,7 @@ public class MulticastSet {
   private void createProducers(
       boolean announceStartup, AgentState[] producerStates, Connection[] producerConnections)
       throws IOException, TimeoutException {
+    int producerIndex = 0;
     for (int i = 0; i < producerConnections.length; i++) {
       if (announceStartup) {
         System.out.println("id: " + testID + ", starting producer #" + i);
@@ -501,11 +505,13 @@ public class MulticastSet {
         AgentState agentState = new AgentState();
         agentState.runnable =
             params.createProducer(
+                producerIndex,
                 producerConnection,
                 performanceMetrics,
                 this.completionHandler,
                 this.rateIndicator,
                 this.messageSizeIndicator);
+        producerIndex++;
         producerStates[(i * params.getProducerChannelCount()) + j] = agentState;
       }
     }

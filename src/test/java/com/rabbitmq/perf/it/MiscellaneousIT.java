@@ -1,4 +1,4 @@
-// Copyright (c) 2022 VMware, Inc. or its affiliates.  All rights reserved.
+// Copyright (c) 2022-2023 VMware, Inc. or its affiliates.  All rights reserved.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 2.0 ("MPL"), the GNU General Public License version 2
@@ -24,12 +24,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
+import com.rabbitmq.perf.DefaultFunctionalLogger;
 import com.rabbitmq.perf.MulticastParams;
 import com.rabbitmq.perf.MulticastSet;
 import com.rabbitmq.perf.PerformanceMetricsAdapter;
 import com.rabbitmq.perf.metrics.PerformanceMetrics;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
+import java.io.PrintStream;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -207,6 +209,34 @@ public class MiscellaneousIT {
 
     completionHandler.countDown("stopped in test");
     waitAtMost(10, () -> testIsDone.get());
+  }
+
+  @Test
+  void verboseModeShouldOutputMessageInformation(TestInfo info) throws Exception {
+    params.setProducerCount(1);
+    params.setConsumerCount(1);
+    params.setProducerRateLimit(10);
+    params.setProducerMsgCount(10);
+    params.setConfirm(1);
+    params.setAutoAck(false);
+    ByteArrayOutputStream output = new ByteArrayOutputStream();
+    params.setFunctionalLogger(new DefaultFunctionalLogger(new PrintStream(output), true));
+
+    MulticastSet set =
+        new MulticastSet(performanceMetrics, cf, params, "", URIS, latchCompletionHandler(1, info));
+    run(set);
+
+    waitAtMost(60, () -> testIsDone.get());
+
+    output.flush();
+    assertThat(output.toString())
+        .contains("publisher 0: message published")
+        .contains("publisher 0: publish confirm")
+        .contains("publisher 0: message confirmed")
+        .contains("consumer 0: received message")
+        .contains("consumer 0: acknowledged message")
+        .contains("properties = ")
+        .contains("body = ");
   }
 
   private void run(MulticastSet multicastSet) {

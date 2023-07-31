@@ -75,9 +75,9 @@ public class PerfTest {
     Options options = getOptions();
     CommandLineParser parser = getParser();
     CompositeMetrics metrics = new CompositeMetrics();
-    shutdownService.wrap(() -> metrics.close());
+    shutdownService.wrap(metrics::close);
     Options metricsOptions = metrics.options();
-    forEach(metricsOptions, option -> options.addOption(option));
+    forEach(metricsOptions, options::addOption);
     int exitStatus = 0;
 
     try {
@@ -330,7 +330,7 @@ public class PerfTest {
               instanceSyncNamespace,
               Duration.ofSeconds(instanceSyncTimeout),
               consoleOut);
-      instanceSynchronization.addPostSyncListener(() -> metrics.start());
+      instanceSynchronization.addPostSyncListener(metrics::start);
 
       MulticastSet set =
           new MulticastSet(
@@ -634,6 +634,30 @@ public class PerfTest {
       }
     }
 
+    String rateLimiterArg = strArg(cmd, "rl", RateLimiter.Type.GUAVA.name()).toLowerCase();
+    validate(
+        () ->
+            Arrays.stream(RateLimiter.Type.values())
+                .anyMatch(t -> t.name().toLowerCase().equals(rateLimiterArg)),
+        format(
+            "Invalid value for --rate-limiter: %s. Valid values are %s.",
+            rateLimiterArg,
+            Arrays.stream(RateLimiter.Type.values())
+                .map(Enum::name)
+                .map(String::toLowerCase)
+                .collect(Collectors.joining(", "))),
+        perfTestOptions.systemExiter,
+        perfTestOptions.consoleErr);
+    RateLimiter.Factory rateLimiterFactory =
+        RateLimiter.Type.valueOf(rateLimiterArg.toUpperCase()).factory();
+
+    boolean verbose = hasOption(cmd, "verbose");
+    boolean verboseFull = hasOption(cmd, "verbose-full");
+    FunctionalLogger functionalLogger = FunctionalLogger.NO_OP;
+    if (verbose || verboseFull) {
+      functionalLogger = new DefaultFunctionalLogger(perfTestOptions.consoleOut, verboseFull);
+    }
+
     MulticastParams p = new MulticastParams();
     p.setAutoAck(autoAck);
     p.setAutoDelete(autoDelete);
@@ -697,6 +721,8 @@ public class PerfTest {
     p.setExitWhen(exitWhen);
     p.setCluster(uris.size() > 0);
     p.setConsumerStartDelay(consumerStartDelay);
+    p.setRateLimiterFactory(rateLimiterFactory);
+    p.setFunctionalLogger(functionalLogger);
     return p;
   }
 
@@ -1027,8 +1053,10 @@ public class PerfTest {
 
     options.addOption(
         new Option(
-            "qp", "queue-pattern", true, "queue name pattern for creating queues in sequence, " +
-            "e.g. 'perf-test-%d'"));
+            "qp",
+            "queue-pattern",
+            true,
+            "queue name pattern for creating queues in sequence, " + "e.g. 'perf-test-%d'"));
     options.addOption(
         new Option(
             "qpf", "queue-pattern-from", true, "queue name pattern range start (inclusive)"));
@@ -1326,6 +1354,28 @@ public class PerfTest {
     oauth2ParamsOption.setArgs(Option.UNLIMITED_VALUES);
     options.addOption(oauth2ParamsOption);
 
+    options.addOption(
+        new Option(
+            "rl",
+            "rate-limiter",
+            true,
+            format(
+                "Rate limiter implementation, one of %s. Default is %s.",
+                Arrays.stream(RateLimiter.Type.values())
+                    .map(Enum::name)
+                    .map(String::toLowerCase)
+                    .collect(Collectors.joining(", ")),
+                RateLimiter.Type.GUAVA.name().toLowerCase())));
+
+    options.addOption(
+        new Option(
+            null, "verbose", false, "Output message information. Use only with slow rates."));
+    options.addOption(
+        new Option(
+            null,
+            "verbose-full",
+            false,
+            "Same as --verbose, but with message headers and body as well. Use only with slow rates."));
     return options;
   }
 
