@@ -213,7 +213,6 @@ public class MiscellaneousIT {
 
   @Test
   void verboseModeShouldOutputMessageInformation(TestInfo info) throws Exception {
-    // 1 consumer only
     params.setProducerCount(1);
     params.setConsumerCount(1);
     params.setProducerRateLimit(10);

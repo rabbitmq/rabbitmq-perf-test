@@ -17,6 +17,7 @@ package com.rabbitmq.perf;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.List;
 import java.util.function.BiFunction;
 
@@ -79,12 +80,16 @@ public class TimeSequenceMessageBodySource implements MessageBodySource {
   @Override
   public MessageEnvelope create(int sequenceNumber) throws IOException {
     ByteArrayOutputStream acc = new ByteArrayOutputStream();
-    DataOutputStream d = new DataOutputStream(acc);
     long time = tsp.getCurrentTime();
-    d.writeInt(sequenceNumber);
-    d.writeLong(time);
-    d.flush();
-    acc.flush();
+    doCreate(acc, time, sequenceNumber);
     return this.messageCreator.apply(acc, time);
+  }
+
+  static void doCreate(OutputStream out, long timestamp, int sequenceNumber) throws IOException {
+    DataOutputStream d = new DataOutputStream(out);
+    d.writeInt(sequenceNumber);
+    d.writeLong(timestamp);
+    d.flush();
+    out.flush();
   }
 }

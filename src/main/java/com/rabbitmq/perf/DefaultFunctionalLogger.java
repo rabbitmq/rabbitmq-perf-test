@@ -14,8 +14,14 @@
 // info@rabbitmq.com.
 package com.rabbitmq.perf;
 
+import static java.lang.String.format;
+
 import com.rabbitmq.client.AMQP.BasicProperties;
 import com.rabbitmq.client.Envelope;
+import com.rabbitmq.client.impl.AMQBasicProperties;
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
+import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -52,7 +58,7 @@ public class DefaultFunctionalLogger implements FunctionalLogger {
     this.verbose = verbose;
   }
 
-  private static String details(BasicProperties properties, byte[] body) {
+  static String details(long timestamp, BasicProperties properties, byte[] body) {
     String propertiesString;
     if (properties == null) {
       propertiesString = "properties = {}";
@@ -70,18 +76,26 @@ public class DefaultFunctionalLogger implements FunctionalLogger {
         propertiesString = "properties = {" + String.join(", ", values) + "}";
       }
     }
-    String bodyString;
+    String bodyString = null;
     if (body == null) {
       bodyString = "body = null";
+    } else if (isStringContentType(properties)) {
+      bodyString = "body = " + toUtf8String(body);
     } else {
-      String bodyContent = null;
-      try {
-        bodyContent = new String(body, StandardCharsets.UTF_8);
-      } catch (Exception e) {
-        bodyContent = "<not UTF-8>";
+      if (body.length >= 12) {
+        DataInputStream d = new DataInputStream(new ByteArrayInputStream(body));
+        try {
+          int sequence = d.readInt();
+          long bodyTimestamp = d.readLong();
+          if (timestamp != Long.MAX_VALUE && timestamp == bodyTimestamp) {
+            bodyString = format("body = [sequence = %d, timestamp = %d]", sequence, timestamp);
+          }
+        } catch (IOException ignored) {
+
+        }
       }
-      bodyString = "body = " + bodyContent;
     }
+    bodyString = bodyString == null ? "body = " + toUtf8String(body) : bodyString;
     return propertiesString + ", " + bodyString;
   }
 
@@ -92,25 +106,34 @@ public class DefaultFunctionalLogger implements FunctionalLogger {
       long publishingId,
       BasicProperties messageProperties,
       byte[] body) {
-    print(
-        "publisher %d: message published, timestamp = %d, publishing ID = %d%s",
-        producerId, timestamp, publishingId, maybeDetails(messageProperties, body));
+    wrap(
+        () ->
+            print(
+                "publisher %d: message published, timestamp = %d, publishing ID = %d%s",
+                producerId,
+                timestamp,
+                publishingId,
+                maybeDetails(timestamp, messageProperties, body)));
   }
 
   @Override
   public void receivedPublishConfirm(
       int producerId, boolean confirmed, long publishingId, int confirmCount) {
-    print(
-        "publisher %d: publish confirm, type = %s, publishing ID = %d, confirm count = %d",
-        producerId, confirmed ? "ack" : "nack", publishingId, confirmCount);
+    wrap(
+        () ->
+            print(
+                "publisher %d: publish confirm, type = %s, publishing ID = %d, confirm count = %d",
+                producerId, confirmed ? "ack" : "nack", publishingId, confirmCount));
   }
 
   @Override
   public void publishConfirmed(
       int producerId, boolean confirmed, long publishingId, long timestamp) {
-    print(
-        "publisher %d: message confirmed, type = %s, timestamp = %d, publishing ID = %d",
-        producerId, confirmed ? "ack" : "nack", timestamp, publishingId);
+    wrap(
+        () ->
+            print(
+                "publisher %d: message confirmed, type = %s, timestamp = %d, publishing ID = %d",
+                producerId, confirmed ? "ack" : "nack", timestamp, publishingId));
   }
 
   @Override
@@ -120,25 +143,32 @@ public class DefaultFunctionalLogger implements FunctionalLogger {
       Envelope envelope,
       BasicProperties messageProperties,
       byte[] body) {
-    print(
-        "consumer %d: received message, timestamp = %d, delivery tag = %d%s",
-        consumerId, timestamp, envelope.getDeliveryTag(), maybeDetails(messageProperties, body));
+    wrap(
+        () ->
+            print(
+                "consumer %d: received message, timestamp = %d, delivery tag = %d%s",
+                consumerId,
+                timestamp,
+                envelope.getDeliveryTag(),
+                maybeDetails(timestamp, messageProperties, body)));
   }
 
   @Override
   public void acknowledged(int consumerId, long timestamp, Envelope envelope, int ackedCount) {
-    print(
-        "consumer %d: acknowledged message(s), timestamp = %d, delivery tag = %d, message count = %d",
-        consumerId, timestamp, envelope.getDeliveryTag(), ackedCount);
+    wrap(
+        () ->
+            print(
+                "consumer %d: acknowledged message(s), timestamp = %d, delivery tag = %d, message count = %d",
+                consumerId, timestamp, envelope.getDeliveryTag(), ackedCount));
   }
 
   private void print(String format, Object... args) {
     this.out.printf(format + "%n", args);
   }
 
-  private String maybeDetails(BasicProperties properties, byte[] body) {
+  private String maybeDetails(long timestamp, BasicProperties properties, byte[] body) {
     if (this.verbose) {
-      return ", " + details(properties, body);
+      return ", " + details(timestamp, properties, body);
     } else {
       return "";
     }
@@ -190,6 +220,38 @@ public class DefaultFunctionalLogger implements FunctionalLogger {
                 .collect(Collectors.joining(", "))
             + "}";
       }
+    }
+  }
+
+  private static boolean isStringContentType(AMQBasicProperties properties) {
+    if (properties == null || properties.getContentType() == null) {
+      return false;
+    } else {
+      String contentType = properties.getContentType().toLowerCase();
+      if (contentType.startsWith("text/")) {
+        return true;
+      } else
+        return contentType.startsWith("application/javascript")
+            || contentType.startsWith("application/xhtml")
+            || contentType.startsWith("application/json")
+            || contentType.startsWith("application/ld+json")
+            || contentType.startsWith("application/xml");
+    }
+  }
+
+  private static String toUtf8String(byte[] body) {
+    try {
+      return new String(body, StandardCharsets.UTF_8);
+    } catch (Exception e) {
+      return "<not UTF-8>";
+    }
+  }
+
+  private void wrap(Runnable action) {
+    try {
+      action.run();
+    } catch (Exception e) {
+      print("Verbose mode error: %s", e.getMessage());
     }
   }
 }
