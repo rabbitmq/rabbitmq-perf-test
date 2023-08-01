@@ -634,22 +634,7 @@ public class PerfTest {
       }
     }
 
-    String rateLimiterArg = strArg(cmd, "rl", RateLimiter.Type.GUAVA.name()).toLowerCase();
-    validate(
-        () ->
-            Arrays.stream(RateLimiter.Type.values())
-                .anyMatch(t -> t.name().toLowerCase().equals(rateLimiterArg)),
-        format(
-            "Invalid value for --rate-limiter: %s. Valid values are %s.",
-            rateLimiterArg,
-            Arrays.stream(RateLimiter.Type.values())
-                .map(Enum::name)
-                .map(String::toLowerCase)
-                .collect(Collectors.joining(", "))),
-        perfTestOptions.systemExiter,
-        perfTestOptions.consoleErr);
-    RateLimiter.Factory rateLimiterFactory =
-        RateLimiter.Type.valueOf(rateLimiterArg.toUpperCase()).factory();
+    RateLimiter.Factory rateLimiterFactory = RateLimiter.Type.GUAVA.factory();
 
     boolean verbose = hasOption(cmd, "verbose");
     boolean verboseFull = hasOption(cmd, "verbose-full");
@@ -1353,20 +1338,6 @@ public class PerfTest {
                 + "token endpoint, e.g. orgId=1234. Can be specified multiple times.");
     oauth2ParamsOption.setArgs(Option.UNLIMITED_VALUES);
     options.addOption(oauth2ParamsOption);
-
-    options.addOption(
-        new Option(
-            "rl",
-            "rate-limiter",
-            true,
-            format(
-                "Rate limiter implementation, one of %s. Default is %s.",
-                Arrays.stream(RateLimiter.Type.values())
-                    .map(Enum::name)
-                    .map(String::toLowerCase)
-                    .collect(Collectors.joining(", ")),
-                RateLimiter.Type.GUAVA.name().toLowerCase())));
-
     options.addOption(
         new Option(
             null, "verbose", false, "Output message information. Use only with slow rates."));

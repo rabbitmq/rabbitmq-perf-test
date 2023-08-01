@@ -14,9 +14,6 @@
 // info@rabbitmq.com.
 package com.rabbitmq.perf;
 
-import io.github.resilience4j.ratelimiter.RateLimiterConfig;
-import java.time.Duration;
-
 interface RateLimiter {
 
   void acquire();
@@ -48,38 +45,8 @@ interface RateLimiter {
     }
   }
 
-  class Resilience4jRateLimiterFactory implements Factory {
-
-    @Override
-    public RateLimiter create(double rate) {
-      RateLimiterConfig config =
-          RateLimiterConfig.custom()
-              .timeoutDuration(Duration.ofSeconds(10))
-              .limitRefreshPeriod(Duration.ofSeconds(1))
-              .limitForPeriod((int) rate)
-              .build();
-      return new Resilience4jRateLimiter(
-          io.github.resilience4j.ratelimiter.RateLimiter.of("perftest", config));
-    }
-  }
-
-  class Resilience4jRateLimiter implements RateLimiter {
-
-    private final io.github.resilience4j.ratelimiter.RateLimiter delegate;
-
-    public Resilience4jRateLimiter(io.github.resilience4j.ratelimiter.RateLimiter delegate) {
-      this.delegate = delegate;
-    }
-
-    @Override
-    public void acquire() {
-      delegate.acquirePermission();
-    }
-  }
-
   enum Type {
-    GUAVA(new GuavaRateLimiterFactory()),
-    RESILIENCE4J(new Resilience4jRateLimiterFactory());
+    GUAVA(new GuavaRateLimiterFactory());
 
     private final Factory factory;
 
