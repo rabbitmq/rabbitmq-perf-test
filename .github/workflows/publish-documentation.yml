@@ -29,7 +29,7 @@ jobs:
           mkdir ci/worker/public
           cp target/generated-docs/index.html ci/worker/public
       - name: Publish documentation to Cloudflare
-        uses: cloudflare/wrangler-action@3.0.1
+        uses: cloudflare/wrangler-action@v3.0.2
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           preCommands: npm i -D @cloudflare/kv-asset-handler
