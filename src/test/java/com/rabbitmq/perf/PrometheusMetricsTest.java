@@ -24,6 +24,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
+import java.net.URI;
 import java.net.URL;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.commons.cli.*;
@@ -46,7 +47,7 @@ public class PrometheusMetricsTest {
     metrics.configure(new ConfigurationContext(cmd, registry, null, null, null, null));
     metrics.start();
 
-    URL url = new URL("http://localhost:" + port + "/metrics");
+    URL url = new URI("http://localhost:" + port + "/metrics").toURL();
     HttpURLConnection con = (HttpURLConnection) url.openConnection();
     con.setRequestMethod("GET");
     assertEquals(200, con.getResponseCode());

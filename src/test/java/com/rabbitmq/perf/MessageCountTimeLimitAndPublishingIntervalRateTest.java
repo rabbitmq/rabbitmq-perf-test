@@ -106,6 +106,7 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
   }
 
   @BeforeEach
+  @SuppressWarnings("deprecation")
   public void init(TestInfo info) {
     LOGGER.info("Starting {} {}", info.getTestMethod().get().getName(), info.getDisplayName());
     Set<Thread> threads = Thread.getAllStackTraces().keySet();
