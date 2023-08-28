@@ -308,7 +308,6 @@
           <includes>
             <include>**/*IT.java</include>
           </includes>
-          <encoding>UTF-8</encoding>
         </configuration>
         <executions>
           <execution>
