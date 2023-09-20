@@ -298,6 +298,10 @@
           <includes>
             <include>**/*Test.java</include>
           </includes>
+          <systemPropertyVariables>
+            <net.bytebuddy.experimental>true</net.bytebuddy.experimental>
+          </systemPropertyVariables>
+          <argLine>${test-arguments}</argLine>
         </configuration>
       </plugin>
 
@@ -308,6 +312,10 @@
           <includes>
             <include>**/*IT.java</include>
           </includes>
+          <systemPropertyVariables>
+            <net.bytebuddy.experimental>true</net.bytebuddy.experimental>
+          </systemPropertyVariables>
+          <argLine>${test-arguments}</argLine>
         </configuration>
         <executions>
           <execution>
@@ -495,6 +503,16 @@
         <mockito.version>4.11.0</mockito.version>
       </properties>
     </profile>
+    <profile>
+      <id>jvm-test-arguments-java-21-and-more</id>
+      <activation>
+        <jdk>[21,)</jdk>
+      </activation>
+      <properties>
+        <test-arguments>-XX:+EnableDynamicAgentLoading</test-arguments>
+      </properties>
+    </profile>
+
 
     <profile>
       <id>extensions</id>
