@@ -33,5 +33,5 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           preCommands: npm i -D @cloudflare/kv-asset-handler
-          command: deploy
+          command: deploy --name perftest-dev --route https://perftest-dev.rabbitmq.com/*
           workingDirectory: 'ci/worker'
