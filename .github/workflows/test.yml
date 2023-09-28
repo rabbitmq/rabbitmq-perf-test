@@ -79,7 +79,7 @@ jobs:
           event-type: new_snapshot
           client-payload: >-
             {"archive_url" : "https://github.com/rabbitmq/rabbitmq-java-tools-binaries-dev/releases/download/${{ env.tag_name }}/perf-test-${{ env.release_version}}.jar",
-             "tags": "pivotalrabbitmq/perf-test:dev,pivotalrabbitmq/perf-test:dev-${{ env.tag_name }}"}
+             "tags": "pivotalrabbitmq/perf-test:dev,pivotalrabbitmq/perf-test:dev-${{ env.release_version }}"}
       - name: Generate documentation
         run: |
           rm -rf target/generated-docs
@@ -98,5 +98,5 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           preCommands: npm i -D @cloudflare/kv-asset-handler
-          command: deploy
+          command: deploy --name perftest-dev --route https://perftest-dev.rabbitmq.com/*
           workingDirectory: 'ci/worker'

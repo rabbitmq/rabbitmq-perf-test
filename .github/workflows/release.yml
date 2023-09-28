@@ -1,0 +1,96 @@
+name: Release PerfTest
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Evaluate release type
+        run:  ci/evaluate-release.sh
+      - name: Set up JDK
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '11'
+          cache: 'maven'
+          server-id: ${{ env.maven_server_id }}
+          server-username: MAVEN_USERNAME
+          server-password: MAVEN_PASSWORD
+          gpg-private-key: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
+          gpg-passphrase: MAVEN_GPG_PASSPHRASE
+      - name: Release PerfTest (GA)
+        if: ${{ env.ga_release == 'true' }}
+        run:  |
+          git config user.name "rabbitmq-ci"
+          git config user.email "rabbitmq-ci@users.noreply.github.com"
+          ci/release-perf-test.sh
+        env:
+          MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
+          MAVEN_PASSWORD: ${{ secrets.OSSRH_TOKEN }}
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
+      - name: Release PerfTest (Milestone/RC)
+        if: ${{ env.ga_release != 'true' }}
+        run:  |
+          git config user.name "rabbitmq-ci"
+          git config user.email "rabbitmq-ci@users.noreply.github.com"
+          ci/release-perf-test.sh
+        env:
+          MAVEN_USERNAME: ''
+          MAVEN_PASSWORD: ${{ secrets.PACKAGECLOUD_TOKEN }}
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
+      - name: Package Perf Test
+        run: ci/package-perf-test.sh
+        env:
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
+      - name: Push to GitHub Release (GA)
+        uses: softprops/action-gh-release@v1
+        with:
+          files: packages/*
+          name: ${{ env.release_name }}
+          tag_name: ${{ env.tag_name }}
+          target_commitish: ${{ env.release_branch }}
+          prerelease: ${{ env.prerelease }}
+          token: ${{ secrets.CI_GITHUB_TOKEN }}
+          repository: rabbitmq/rabbitmq-perf-test
+      - name: Trigger Perf Test Docker image build (GA)
+        uses: peter-evans/repository-dispatch@v2
+        if: ${{ env.ga_release == 'true' }}
+        with:
+          event-type: new_snapshot
+          client-payload: >-
+            {"archive_url" : "https://github.com/rabbitmq/rabbitmq-perf-test/releases/download/${{ env.tag_name }}/perf-test-${{ env.release_version}}.jar",
+             "tags": "pivotalrabbitmq/perf-test:latest,pivotalrabbitmq/perf-test:${{ env.release_version }}"}
+      - name: Trigger Perf Test Docker image build (Milestone/RC)
+        uses: peter-evans/repository-dispatch@v2
+        if: ${{ env.ga_release != 'true' }}
+        with:
+          event-type: new_snapshot
+          client-payload: >-
+            {"archive_url" : "https://github.com/rabbitmq/rabbitmq-perf-test/releases/download/${{ env.tag_name }}/perf-test-${{ env.release_version}}.jar",
+             "tags": "pivotalrabbitmq/perf-test:${{ env.release_version }}"}
+      - name: Generate documentation
+        run: |
+          rm -rf target/generated-docs
+          make doc
+      - name: Publish documentation to GitHub Pages
+        run: |
+          git config user.name "rabbitmq-ci"
+          git config user.email "rabbitmq-ci@users.noreply.github.com"
+          ci/publish-documentation-to-github-pages.sh
+      - name: Prepare worker
+        if: ${{ env.ga_release == 'true' }}
+        run: |
+          mkdir ci/worker/public
+          cp target/generated-docs/index.html ci/worker/public
+      - name: Publish documentation to Cloudflare (GA)
+        uses: cloudflare/wrangler-action@v3.1.1
+        if: ${{ env.ga_release == 'true' }}
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          preCommands: npm i -D @cloudflare/kv-asset-handler
+          command: deploy --name perftest --route https://perftest.rabbitmq.com/*
+          workingDirectory: 'ci/worker'
