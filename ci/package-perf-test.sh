@@ -40,7 +40,7 @@ then
   echo "release_version=$RELEASE_VERSION" >> $GITHUB_ENV
   echo "tag_name=v-rabbitmq-perf-test-$RELEASE_VERSION" >> $GITHUB_ENV
 else
-  echo "release_name=rabbitmq-perf-test-$RELEASE_VERSION" >> $GITHUB_ENV
+  echo "release_name=$RELEASE_VERSION" >> $GITHUB_ENV
   echo "release_version=$RELEASE_VERSION" >> $GITHUB_ENV
   echo "tag_name=v$RELEASE_VERSION" >> $GITHUB_ENV
   echo "release_branch=$RELEASE_BRANCH" >> $GITHUB_ENV
