@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="generator" content="Asciidoctor 2.0.18">
+<meta name="generator" content="Asciidoctor 2.0.20">
 <title>RabbitMQ PerfTest</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:300,300italic,400,400italic,600,600italic%7CNoto+Serif:400,400italic,700,700italic%7CDroid+Sans+Mono:400,700">
 <style>
@@ -208,13 +208,10 @@ table.tableblock.fit-content>caption.title{white-space:nowrap;width:0}
 .admonitionblock>table td.content{padding-left:1.125em;padding-right:1.25em;border-left:1px solid #dddddf;color:rgba(0,0,0,.6);word-wrap:anywhere}
 .admonitionblock>table td.content>:last-child>:last-child{margin-bottom:0}
 .exampleblock>.content{border:1px solid #e6e6e6;margin-bottom:1.25em;padding:1.25em;background:#fff;border-radius:4px}
-.exampleblock>.content>:first-child{margin-top:0}
-.exampleblock>.content>:last-child{margin-bottom:0}
 .sidebarblock{border:1px solid #dbdbd6;margin-bottom:1.25em;padding:1.25em;background:#f3f3f2;border-radius:4px}
-.sidebarblock>:first-child{margin-top:0}
-.sidebarblock>:last-child{margin-bottom:0}
 .sidebarblock>.content>.title{color:#7a2518;margin-top:0;text-align:center}
-.exampleblock>.content>:last-child>:last-child,.exampleblock>.content .olist>ol>li:last-child>:last-child,.exampleblock>.content .ulist>ul>li:last-child>:last-child,.exampleblock>.content .qlist>ol>li:last-child>:last-child,.sidebarblock>.content>:last-child>:last-child,.sidebarblock>.content .olist>ol>li:last-child>:last-child,.sidebarblock>.content .ulist>ul>li:last-child>:last-child,.sidebarblock>.content .qlist>ol>li:last-child>:last-child{margin-bottom:0}
+.exampleblock>.content>:first-child,.sidebarblock>.content>:first-child{margin-top:0}
+.exampleblock>.content>:last-child,.exampleblock>.content>:last-child>:last-child,.exampleblock>.content .olist>ol>li:last-child>:last-child,.exampleblock>.content .ulist>ul>li:last-child>:last-child,.exampleblock>.content .qlist>ol>li:last-child>:last-child,.sidebarblock>.content>:last-child,.sidebarblock>.content>:last-child>:last-child,.sidebarblock>.content .olist>ol>li:last-child>:last-child,.sidebarblock>.content .ulist>ul>li:last-child>:last-child,.sidebarblock>.content .qlist>ol>li:last-child>:last-child{margin-bottom:0}
 .literalblock pre,.listingblock>.content>pre{border-radius:4px;overflow-x:auto;padding:1em;font-size:.8125em}
 @media screen and (min-width:768px){.literalblock pre,.listingblock>.content>pre{font-size:.90625em}}
 @media screen and (min-width:1280px){.literalblock pre,.listingblock>.content>pre{font-size:1em}}
@@ -393,7 +390,7 @@ b.conum *{color:inherit!important}
 dt,th.tableblock,td.content,div.footnote{text-rendering:optimizeLegibility}
 h1,h2,p,td.content,span.alt,summary{letter-spacing:-.01em}
 p strong,td.content strong,div.footnote strong{letter-spacing:-.005em}
-p,blockquote,dt,td.content,span.alt,summary{font-size:1.0625rem}
+p,blockquote,dt,td.content,td.hdlist1,span.alt,summary{font-size:1.0625rem}
 p{margin-bottom:1.25rem}
 .sidebarblock p,.sidebarblock dt,.sidebarblock td.content,p.tableblock{font-size:1em}
 .exampleblock>.content{background:#fffef7;border-color:#e0e0dc;box-shadow:0 1px 4px #e0e0dc}
@@ -531,7 +528,7 @@ table.CodeRay td.code{padding:0 0 0 .75em}
 <div id="header">
 <h1>RabbitMQ PerfTest</h1>
 <div class="details">
-<span id="revnumber">version 2.19.0.RC3</span>
+<span id="revnumber">version 2.20.0.RC1</span>
 </div>
 <div id="toc" class="toc2">
 <div id="toctitle">Table of Contents</div>
@@ -541,13 +538,17 @@ table.CodeRay td.code{padding:0 0 0 .75em}
 <ul class="sectlevel2">
 <li><a href="#from-binary">From Binary</a></li>
 <li><a href="#from-docker-image">From Docker Image</a></li>
-<li><a href="#for-cloud-foundry">For Cloud Foundry</a></li>
 </ul>
 </li>
 <li><a href="#basic-usage">Basic Usage</a></li>
 <li><a href="#how-it-works">How It Works</a></li>
 <li><a href="#stopping-perftest">Stopping PerfTest</a></li>
-<li><a href="#customising-queues">Customising queues</a></li>
+<li><a href="#customising-queues">Customising queues</a>
+<ul class="sectlevel2">
+<li><a href="#quorum-queue-support">Quorum Queue Support</a></li>
+<li><a href="#stream-support">Stream Support</a></li>
+</ul>
+</li>
 <li><a href="#customising-messages">Customising messages</a>
 <ul class="sectlevel2">
 <li><a href="#message-properties">Message Properties</a></li>
@@ -563,7 +564,10 @@ table.CodeRay td.code{padding:0 0 0 .75em}
 <li><a href="#workloads-with-a-large-number-of-clients">Workloads With a Large Number of Clients</a></li>
 <li><a href="#running-producers-and-consumers-on-different-machines">Running Producers and Consumers on Different Machines</a></li>
 <li><a href="#asynchronous-consumers-vs-synchronous-consumers">Asynchronous Consumers vs Synchronous Consumers</a></li>
+<li><a href="#consuming-from-streams">Consuming From Streams</a></li>
+<li><a href="#instance-synchronization">Synchronizing Several Instances</a></li>
 <li><a href="#tls-support">TLS Support</a></li>
+<li><a href="#oauth2-authenticationauthorization">OAuth2 authentication/authorization</a></li>
 <li><a href="#using-environment-variables-as-options">Using Environment Variables as Options</a></li>
 <li><a href="#result-reporting-in-html">Result Reporting in HTML</a></li>
 <li><a href="#console-output-format">Console Output Format</a></li>
@@ -605,7 +609,7 @@ node or a cluster of nodes.</p>
 </div>
 <div class="paragraph">
 <p>PerfTest uses the <a href="https://www.rabbitmq.com/tutorials/amqp-concepts.html">AMQP 0.9.1 protocol</a> to communicate with a RabbitMQ cluster.
-Use <a href="https://rabbitmq.github.io/rabbitmq-stream-java-client/stable/htmlsingle/#the-performance-tool">Stream PerfTest</a> if you want to test <a href="https://rabbitmq.com/streams.html">RabbitMQ Streams</a> with the <a href="https://github.com/rabbitmq/rabbitmq-server/blob/master/deps/rabbitmq_stream/docs/PROTOCOL.adoc">stream protocol</a>.</p>
+Use <a href="https://rabbitmq.github.io/rabbitmq-stream-java-client/stable/htmlsingle/#the-performance-tool">Stream PerfTest</a> if you want to test <a href="https://rabbitmq.com/streams.html">RabbitMQ Streams</a> with the <a href="https://github.com/rabbitmq/rabbitmq-server/blob/main/deps/rabbitmq_stream/docs/PROTOCOL.adoc">stream protocol</a>.</p>
 </div>
 </div>
 </div>
@@ -679,16 +683,9 @@ following commands:</p>
 <div class="literalblock">
 <div class="content">
 <pre>docker network create perf-test
-docker run -it --rm --network perf-test --name rabbitmq -p 15672:15672 rabbitmq:3.10-management
+docker run -it --rm --network perf-test --name rabbitmq -p 15672:15672 rabbitmq:3.12-management
 docker run -it --rm --network perf-test pivotalrabbitmq/perf-test:latest --uri amqp://rabbitmq</pre>
 </div>
-</div>
-</div>
-<div class="sect2">
-<h3 id="for-cloud-foundry"><a class="anchor" href="#for-cloud-foundry"></a>For Cloud Foundry</h3>
-<div class="paragraph">
-<p>There is a <a href="https://github.com/rabbitmq/rabbitmq-perf-test-for-cf">template project</a>
-to easily run PerfTest on <a href="https://www.cloudfoundry.org/">Cloud Foundry</a>.</p>
 </div>
 </div>
 </div>
@@ -984,7 +981,7 @@ acceptable when performing runs on a test environment.</p>
 <h2 id="customising-queues"><a class="anchor" href="#customising-queues"></a>Customising queues</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>PerfTest can create queues using provided queue arguments:</p>
+<p>PerfTest can create queues using provided <a href="https://rabbitmq.com/queues.html#optional-arguments">queue arguments</a>:</p>
 </div>
 <div class="literalblock">
 <div class="content">
@@ -1003,19 +1000,84 @@ key/value pairs with commas:</p>
 </div>
 </div>
 <div class="paragraph">
-<p>It is possible to use several arguments to
-create <a href="https://rabbitmq.com/quorum-queues.html">quorum queues</a>, but PerfTest provides
-a <code>--quorum-queue</code> flag to do that:</p>
+<p>Some commonly supported queue arguments are available thanks to dedicated flags:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><code>--max-length-bytes</code>: <a href="https://rabbitmq.com/maxlength.html">maximum size</a> of created queues</p>
+</li>
+<li>
+<p><code>--leader-locator</code>: leader location strategy for <a href="https://www.rabbitmq.com/quorum-queues.html#leader-placement">quorum queues</a> and <a href="https://www.rabbitmq.com/streams.html#leader-election">streams</a>, supported values are <code>client-local</code> and <code>balanced</code></p>
+</li>
+</ul>
+</div>
+<div class="sect2">
+<h3 id="quorum-queue-support"><a class="anchor" href="#quorum-queue-support"></a>Quorum Queue Support</h3>
+<div class="paragraph">
+<p>It is possible to use several arguments to create <a href="https://rabbitmq.com/quorum-queues.html">quorum queues</a>, but PerfTest provides a <code>--quorum-queue</code> flag to do that:</p>
 </div>
 <div class="literalblock">
 <div class="content">
 <pre>java -jar perf-test.jar \
-  --quorum-queue --queue name</pre>
+  --quorum-queue --queue qq</pre>
 </div>
 </div>
 <div class="paragraph">
-<p><code>--quorum-queue</code> is a shortcut for <code>--flag persistent --queue-args x-queue-type=quorum --auto-delete false</code>. Note a quorum queue cannot have a server-generated name, so the
-<code>--queue</code> argument must be used to specify the name of the queue(s).</p>
+<p><code>--quorum-queue</code> is a shortcut for <code>--flag persistent --queue-args x-queue-type=quorum --auto-delete false</code>.
+Note a quorum queue cannot have a server-generated name, so the <code>--queue</code> argument must be used to specify the name of the queue(s).</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="stream-support"><a class="anchor" href="#stream-support"></a>Stream Support</h3>
+<div class="paragraph">
+<p>PerfTest provides flags and options to configure <a href="https://rabbitmq.com/streams.html">streams</a> and use them on top of the AMQP 0.9.1 protocol.
+Use the <code>--stream-queue</code> flag to create streams instead of classic queues:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>java -jar perf-test.jar \
+  --stream-queue --queue sq</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Note a stream cannot have a server-generated name, so the <code>--queue</code> argument must be used to specify the name of the stream(s).</p>
+</div>
+<div class="paragraph">
+<p><code>--stream-queue</code> automatically sets the <code>--qos</code> flag to 200.</p>
+</div>
+<div class="paragraph">
+<p>The following stream-related flags are also available, the defaults applied by <code>--stream-queue</code> are mentioned in parentheses (if any):</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><code>--max-length-bytes</code>: <a href="https://rabbitmq.com/streams.html#retention">maximum size</a> of created streams, use 0 for no limit (<code>20gb</code>)</p>
+</li>
+<li>
+<p><code>--stream-max-segment-size-bytes</code>: <a href="https://rabbitmq.com/streams.html#retention">maximum size</a> of stream segments (<code>500mb</code>)</p>
+</li>
+<li>
+<p><code>--max-age</code>: <a href="https://rabbitmq.com/streams.html#retention">maximum age</a> of stream segments using the <a href="https://en.wikipedia.org/wiki/ISO_8601#Durations">ISO 8601 duration format</a>, e.g. PT10M30S for 10 minutes 30 seconds, P5DT8H for 5 days 8 hours</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>See the <a href="#consuming-from-streams">stream consumer section</a> for details on how to consume from a stream.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+PerfTest uses the AMQP 0.9.1 protocol.
+Use <a href="https://rabbitmq.github.io/rabbitmq-stream-java-client/stable/htmlsingle/#the-performance-tool">Stream PerfTest</a> if you want to test <a href="https://rabbitmq.com/streams.html">RabbitMQ Streams</a> with the <a href="https://github.com/rabbitmq/rabbitmq-server/blob/main/deps/rabbitmq_stream/docs/PROTOCOL.adoc">stream protocol</a>.
+</td>
+</tr>
+</table>
+</div>
 </div>
 </div>
 </div>
@@ -1548,6 +1610,143 @@ it typically keeps a thread busy for polling in the application, and it intrinsi
 </div>
 </div>
 <div class="sect1">
+<h2 id="consuming-from-streams"><a class="anchor" href="#consuming-from-streams"></a>Consuming From Streams</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>RabbitMQ streams model an append-only log with non-destructive consumer semantics.
+PerfTest uses the AMQP 0.9.1 protocol to interact with streams.
+The <a href="#stream-support">queue customisation section</a> covers how to declare streams with PerfTest.</p>
+</div>
+<div class="paragraph">
+<p>Acknowledgments and <a href="https://www.rabbitmq.com/confirms.html#channel-qos-prefetch">consumer prefetch</a> are mandatory when consuming from a stream, so the <code>--qos</code> flag must be specified.
+The following example sets up a consume-only run from the already-existing <code>invoices</code> stream with consumer prefetch so to 200:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>java -jar perf-test.jar -x 0 -y 1 --predeclared \
+   --queue invoices --qos 200</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Note a consumer attaches to the end of a stream by default (<code>next</code> <a href="https://rabbitmq.com/streams.html#consuming">offset</a>).
+This means the consumer does not get any messages if no publishers add messages to the stream at that time.
+Use the <code>--stream-consumer-offset</code> flag to change the default, for example <code>first</code> to start at the beginning of the stream:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>java -jar perf-test.jar -x 0 -y 1 --predeclared \
+   --queue invoices --qos 200 --stream-consumer-offset first</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Valid values for <code>--stream-consumer-offset</code> are <code>first</code>, <code>last</code>, <code>next</code>, an unsigned long for the absolute offset in the stream, or an <a href="https://en.wikipedia.org/wiki/ISO_8601#Combined_date_and_time_representations">ISO 8601 formatted timestamp</a> (eg. <code>2022-06-03T07:45:54Z</code>) to attach to a point in time.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+PerfTest uses the AMQP 0.9.1 protocol.
+Use <a href="https://rabbitmq.github.io/rabbitmq-stream-java-client/stable/htmlsingle/#the-performance-tool">Stream PerfTest</a> if you want to test <a href="https://rabbitmq.com/streams.html">RabbitMQ Streams</a> with the <a href="https://github.com/rabbitmq/rabbitmq-server/blob/main/deps/rabbitmq_stream/docs/PROTOCOL.adoc">stream protocol</a>.
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="instance-synchronization"><a class="anchor" href="#instance-synchronization"></a>Synchronizing Several Instances</h2>
+<div class="sectionbody">
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+This feature is available only on Java 11 or more.
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>PerfTest instances can synchronize to start at the same time.
+This can prove useful when you apply different workloads and want to compare them on the same monitoring graphics.
+The <code>--id</code> flag identifies the group of instances that need to synchronize and the <code>--expected-instances</code> flag sets the size of the group.</p>
+</div>
+<div class="paragraph">
+<p>Let&#8217;s take a somewhat artificial example to keep flags as simple as possible and compare the behavior of an auto-delete queue to a quorum queue.
+We start the first PerfTest instance:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>java -jar perf-test.jar --id auto-delete-vs-qq --expected-instances 2</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The instance will wait until the second one is ready:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>java -jar perf-test.jar --id auto-delete-vs-qq --expected-instances 2 \
+  --quorum-queue --queue qq</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Both instances <em>must</em> share the same <code>--id</code> if they want to communicate to synchronize.
+Note synchronized instances creates connections before starting the synchronization process.
+They are then ready to start their respective workload (publishing and/or consuming) when all the expected instances have joined the group.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+Instance synchronization is compatible with <a href="https://rabbitmq.github.io/rabbitmq-stream-java-client/snapshot/htmlsingle/#performant-tool-instance-synchronization">StreamPerfTest</a>, the performance tool for RabbitMQ streams: instances of both tools can synchronize with each other.
+The 2 tools use the same flags for this feature.
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>The default synchronization timeout is 10 minutes.
+This can be changed with the <code>--instance-sync-timeout</code> flag, using a value in seconds.</p>
+</div>
+<div class="paragraph">
+<p>PerfTest instance synchronization requires <a href="https://en.wikipedia.org/wiki/IP_multicast">IP multicast</a> to be available.
+IP multicast is not necessary when PerfTest runs on Kubernetes pods.
+In this case, PerfTest asks Kubernetes for a list of pod IPs.
+The PerfTest instances are expected to run in the same namespace, and the namespace must be available in the <code>MY_POD_NAMESPACE</code> environment variable or provided with the <code>--instance-sync-namespace</code> flag.
+As soon as the namespace information is available, PerfTest will prefer listing pod IPs over using IP multicast.
+Here is an example of using instance synchronization on Kubernetes by providing the namespace explicitly:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>java -jar perf-test.jar --id workload-1 --expected-instances 2 \
+  --instance-sync-namespace qa</pre>
+</div>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+PerfTest needs permission to ask Kubernetes for a list of pod IPs.
+This is done by creating various policies e.g. with YAML.
+See the <a href="https://github.com/jgroups-extras/jgroups-kubernetes">Kubernetes discovery protocol for JGroups page</a> for more information.
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+<div class="sect1">
 <h2 id="tls-support"><a class="anchor" href="#tls-support"></a>TLS Support</h2>
 <div class="sectionbody">
 <div class="paragraph">
@@ -1580,11 +1779,22 @@ For example, to trust a given server:</p>
 Please refer to the <a href="https://www.rabbitmq.com/ssl.html">TLS guide</a> to learn about how to set up RabbitMQ with TLS.
 A convenient way to generate a CA and some self-signed certificate/key pairs for development and QA environments is with <a href="https://github.com/rabbitmq/tls-gen"><code>tls-gen</code></a>.
 <code>tls-gen</code> basic profile is a good starting point.
-Here is how to run PerfTest with a certificate/key pair generated by the aforementioned profile:</p>
+Once the TLS artifacts generated by <code>tls-gen</code>, you have to generate a trust store file with the server or CA certificate in it.
+<code>keytool</code> can do this:</p>
 </div>
 <div class="literalblock">
 <div class="content">
-<pre>java -Djavax.net.ssl.trustStore=/path/to/server_key.p12 \
+<pre>keytool -import -file server_certificate.pem \
+  -keystore server_certificate.p12 -storepass bunnies -storetype PKCS12 \
+  -noprompt</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>And here is how to run PerfTest with a certificate/key pair generated by <code>tls-gen</code> basic profile and the trust store:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>java -Djavax.net.ssl.trustStore=/path/to/server_certificate.p12 \
      -Djavax.net.ssl.trustStorePassword=bunnies \
      -Djavax.net.ssl.trustStoreType=PKCS12 \
      -Djavax.net.ssl.keyStore=/path/to/client_key.p12 \
@@ -1596,11 +1806,46 @@ Here is how to run PerfTest with a certificate/key pair generated by the aforeme
 </div>
 </div>
 <div class="sect1">
+<h2 id="oauth2-authenticationauthorization"><a class="anchor" href="#oauth2-authenticationauthorization"></a>OAuth2 authentication/authorization</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>It&#8217;s possible to connect to a RabbitMQ instance configured to use
+<a href="https://www.rabbitmq.com/oauth2.html">OAuth 2.0 Authentication
+Backend</a>. In this case it is not necessary to provide a username and a
+password in the AMQP URI: a token endpoint URI, client id and
+client secret should be provided as separate command line options instead.
+All 3 should be specified at once.</p>
+</div>
+<div class="paragraph">
+<p>Here is an example:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>java -jar perf-test.jar \
+  --uri amqps://some-uri-without-user-and-password:5671 \
+  --oauth2-token-endpoint https://example.com/api/auth/token \
+  --oauth2-client-id 12345 \
+  --oauth2-client-secret qwerty \
+  --oauth2-grant-type client_credentials \
+  --oauth2-parameters orgId=1212 \
+  --oauth2-parameters subject_token_type=urn:ietf:params:oauth:token-type:access_token</pre>
+</div>
+</div>
+<div class="paragraph">
+<p><code>--oauth2-grant-type</code> is optional and defaults to <code>client_credential</code>.</p>
+</div>
+<div class="paragraph">
+<p>Any number of optional parameters can be passed to the token endpoint via
+the <code>--oauth2-parameters</code> option.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
 <h2 id="using-environment-variables-as-options"><a class="anchor" href="#using-environment-variables-as-options"></a>Using Environment Variables as Options</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>Environment variables can sometimes be easier to work with than command line options, for example
-when using a manifest file to configure PerfTest (with Docker Compose or Cloud Foundry), especially when
+when using a manifest file to configure PerfTest (with Docker Compose or Kubernetes), especially when
 the number of options used grows.</p>
 </div>
 <div class="paragraph">
@@ -1763,21 +2008,6 @@ They can be enabled with the <code>-mjp</code> or <code>--metrics-processor</cod
 </li>
 </ul>
 </div>
-<div class="admonitionblock warning">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-warning" title="Warning"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>The JVM-related metrics are not available when using the
-<a href="#native-executable">native executable</a>.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
 </div>
 <div class="sect2">
 <h3 id="tags"><a class="anchor" href="#tags"></a>Tags</h3>
@@ -1891,8 +2121,8 @@ It is then possible to override the metrics values thanks to the <code>--exposed
 </div>
 <div id="footer">
 <div id="footer-text">
-Version 2.19.0.RC3<br>
-Last updated 2023-01-02 14:36:19 UTC
+Version 2.20.0.RC1<br>
+Last updated 2023-09-28 08:06:38 UTC
 </div>
 </div>
 </body>
