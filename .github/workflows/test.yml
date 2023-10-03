@@ -97,6 +97,7 @@ jobs:
         uses: cloudflare/wrangler-action@v3.2.0
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          packageManager: "npm"
           preCommands: npm i -D @cloudflare/kv-asset-handler
           command: deploy --name perftest-dev --route https://perftest-dev.rabbitmq.com/*
           workingDirectory: 'ci/worker'

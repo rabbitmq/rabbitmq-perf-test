@@ -91,6 +91,7 @@ jobs:
         if: ${{ env.ga_release == 'true' }}
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          packageManager: "npm"
           preCommands: npm i -D @cloudflare/kv-asset-handler
           command: deploy --name perftest --route https://perftest.rabbitmq.com/*
           workingDirectory: 'ci/worker'
