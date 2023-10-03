@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+POM_VERSION=$(cat pom.xml | grep -oPm1 '(?<=<version>)[^<]+')
 # shellcheck disable=SC2102
 if [[ $POM_VERSION == *[SNAPSHOT]* ]]
 then
