@@ -17,7 +17,7 @@ MESSAGE=$(git log -1 --pretty=%B)
 # Concourse does shallow clones, so need the next 2 commands to have the gh-pages branch
 git remote set-branches origin $PAGES_BRANCH
 git fetch -v
-git checkout gh-pages
+git checkout $PAGES_BRANCH
 cp target/generated-docs/index.html .
 if [ -z "$(git status --porcelain)" ];
 then
@@ -26,6 +26,6 @@ then
 else
   git add .
   git commit -m "$MESSAGE"
-  git push origin gh-pages
+  git push origin $PAGES_BRANCH
   git checkout main
 fi
