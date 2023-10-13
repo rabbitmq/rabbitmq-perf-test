@@ -76,22 +76,8 @@ jobs:
         run: |
           rm -rf target/generated-docs
           make doc
-      - name: Publish documentation to GitHub Pages
+      - name: Commit documentation changes
         run: |
           git config user.name "rabbitmq-ci"
           git config user.email "rabbitmq-ci@users.noreply.github.com"
-          ci/publish-documentation-to-github-pages.sh
-      - name: Prepare worker
-        if: ${{ env.ga_release == 'true' }}
-        run: |
-          mkdir ci/worker/public
-          cp target/generated-docs/index.html ci/worker/public
-      - name: Publish documentation to Cloudflare (GA)
-        uses: cloudflare/wrangler-action@v3.3.1
-        if: ${{ env.ga_release == 'true' }}
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          packageManager: "npm"
-          preCommands: npm i -D @cloudflare/kv-asset-handler
-          command: deploy --name perftest --route https://perftest.rabbitmq.com/*
-          workingDirectory: 'ci/worker'
+          ci/commit-documentation.sh
