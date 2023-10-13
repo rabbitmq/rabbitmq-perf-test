@@ -19,7 +19,7 @@ The [latest snapshot](https://github.com/rabbitmq/rabbitmq-java-tools-binaries-d
 ## Documentation
 
  * [Latest stable release](https://perftest.rabbitmq.com)
- * [Latest milestone release](https://rabbitmq.github.io/rabbitmq-perf-test/milestone/htmlsingle/)
+ <!-- * [Latest milestone release](https://rabbitmq.github.io/rabbitmq-perf-test/milestone/htmlsingle/) -->
  * [Latest development build](https://perftest-dev.rabbitmq.com)
 
 ## Usage
