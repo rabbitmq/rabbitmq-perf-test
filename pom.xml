@@ -58,7 +58,7 @@
     <rabbitmq.version>5.20.0</rabbitmq.version>
     <slf4j.version>2.0.9</slf4j.version>
     <commons-cli.version>1.6.0</commons-cli.version>
-    <metrics.version>4.2.21</metrics.version>
+    <metrics.version>4.2.22</metrics.version>
     <micrometer.version>1.11.5</micrometer.version>
     <jgroups.version>5.3.0.Final</jgroups.version>
     <jgroups-kubernetes.version>2.0.1.Final</jgroups-kubernetes.version>
