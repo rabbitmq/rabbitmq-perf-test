@@ -3,7 +3,7 @@
 [![Test against RabbitMQ 3.12 stable](https://github.com/rabbitmq/rabbitmq-perf-test/actions/workflows/test.yml/badge.svg)](https://github.com/rabbitmq/rabbitmq-perf-test/actions/workflows/test.yml)
 
 This repository contains source code of the RabbitMQ Performance Testing Tool.
-The client is maintained by the [RabbitMQ team at VMware](https://github.com/rabbitmq/).
+The client is maintained by the [RabbitMQ team at Broadcom](https://github.com/rabbitmq/).
 
 PerfTest uses the [AMQP 0.9.1 protocol](https://www.rabbitmq.com/tutorials/amqp-concepts.html) to communicate with a RabbitMQ cluster.
 Use [Stream PerfTest](https://github.com/rabbitmq/rabbitmq-stream-perf-test) if you want to test [RabbitMQ Streams](https://rabbitmq.com/streams.html) with the [stream protocol](https://github.com/rabbitmq/rabbitmq-server/blob/main/deps/rabbitmq_stream/docs/PROTOCOL.adoc).
