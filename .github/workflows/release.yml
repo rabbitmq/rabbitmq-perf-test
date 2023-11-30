@@ -12,7 +12,7 @@ jobs:
       - name: Evaluate release type
         run:  ci/evaluate-release.sh
       - name: Set up JDK
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '11'
