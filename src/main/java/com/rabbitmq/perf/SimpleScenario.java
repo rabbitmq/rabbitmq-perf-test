@@ -1,4 +1,5 @@
-// Copyright (c) 2007-2023 Broadcom. All Rights Reserved. The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
+// Copyright (c) 2007-2023 Broadcom. All Rights Reserved. The term "Broadcom" refers to Broadcom
+// Inc. and/or its subsidiaries.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 2.0 ("MPL"), the GNU General Public License version 2
@@ -43,8 +44,13 @@ public class SimpleScenario implements Scenario {
   }
 
   public void run()
-      throws IOException, InterruptedException, TimeoutException, NoSuchAlgorithmException,
-          KeyManagementException, URISyntaxException, ExecutionException {
+      throws IOException,
+          InterruptedException,
+          TimeoutException,
+          NoSuchAlgorithmException,
+          KeyManagementException,
+          URISyntaxException,
+          ExecutionException {
     this.stats = new SimpleScenarioStats(interval);
     for (MulticastParams p : params) {
       MulticastSet set =

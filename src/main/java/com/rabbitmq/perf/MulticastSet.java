@@ -1,4 +1,5 @@
-// Copyright (c) 2007-2023 Broadcom. All Rights Reserved. The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
+// Copyright (c) 2007-2023 Broadcom. All Rights Reserved. The term "Broadcom" refers to Broadcom
+// Inc. and/or its subsidiaries.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 2.0 ("MPL"), the GNU General Public License version 2
@@ -207,14 +208,23 @@ public class MulticastSet {
   }
 
   public void run()
-      throws IOException, InterruptedException, TimeoutException, NoSuchAlgorithmException,
-          KeyManagementException, URISyntaxException, ExecutionException {
+      throws IOException,
+          InterruptedException,
+          TimeoutException,
+          NoSuchAlgorithmException,
+          KeyManagementException,
+          URISyntaxException,
+          ExecutionException {
     run(false);
   }
 
   public void run(boolean announceStartup)
-      throws IOException, InterruptedException, TimeoutException, NoSuchAlgorithmException,
-          KeyManagementException, URISyntaxException {
+      throws IOException,
+          InterruptedException,
+          TimeoutException,
+          NoSuchAlgorithmException,
+          KeyManagementException,
+          URISyntaxException {
     if (waitUntilBrokerAvailableIfNecessary(
         params.getServersStartUpTimeout(),
         params.getServersUpLimit() == -1
@@ -383,7 +393,9 @@ public class MulticastSet {
       int serversUpLimit,
       Collection<String> uris,
       ConnectionFactory factory)
-      throws NoSuchAlgorithmException, KeyManagementException, URISyntaxException,
+      throws NoSuchAlgorithmException,
+          KeyManagementException,
+          URISyntaxException,
           InterruptedException {
     if (startUpTimeoutInSeconds <= 0 || uris == null || uris.isEmpty()) {
       // we don't test the connection to the broker

@@ -1,4 +1,5 @@
-// Copyright (c) 2023 Broadcom. All Rights Reserved. The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
+// Copyright (c) 2023 Broadcom. All Rights Reserved. The term "Broadcom" refers to Broadcom Inc.
+// and/or its subsidiaries.
 //
 // This software, the RabbitMQ Java client library, is triple-licensed under the
 // Mozilla Public License 2.0 ("MPL"), the GNU General Public License version 2
@@ -713,6 +714,7 @@ abstract class RateLimiterUtils {
      */
     static final class SmoothWarmingUp extends SmoothRateLimiter {
       private final long warmupPeriodMicros;
+
       /**
        * The slope of the line from the stable interval (when permits == 0), to the cold interval
        * (when permits == maxPermits)
