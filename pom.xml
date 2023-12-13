@@ -85,7 +85,7 @@
     <maven.jar.plugin.version>3.3.0</maven.jar.plugin.version>
     <buildnumber.plugin.version>3.2.0</buildnumber.plugin.version>
     <maven.surefire.plugin.version>3.2.3</maven.surefire.plugin.version>
-    <maven.failsafe.plugin.version>3.2.2</maven.failsafe.plugin.version>
+    <maven.failsafe.plugin.version>3.2.3</maven.failsafe.plugin.version>
     <build-helper-maven-plugin.version>3.5.0</build-helper-maven-plugin.version>
     <maven.packagecloud.wagon.version>0.0.6</maven.packagecloud.wagon.version>
     <nexus-staging-maven-plugin.version>1.6.13</nexus-staging-maven-plugin.version>
