@@ -54,6 +54,9 @@ jobs:
           token: ${{ secrets.CI_GITHUB_TOKEN }}
           tag-filter: '^v-rabbitmq-perf-test-latest$'
           keep-last-n: 0
+      - name: Make sure latest release is deleted
+        run: |
+          sleep 5s
       - name: Push to GitHub Release
         uses: softprops/action-gh-release@v1
         with:
