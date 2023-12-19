@@ -15,12 +15,7 @@
 // info@rabbitmq.com.
 package com.rabbitmq.perf;
 
-import static com.rabbitmq.perf.PerfTest.ENVIRONMENT_VARIABLE_LOOKUP;
-import static com.rabbitmq.perf.PerfTest.ENVIRONMENT_VARIABLE_PREFIX;
-import static com.rabbitmq.perf.PerfTest.LONG_OPTION_TO_ENVIRONMENT_VARIABLE;
-import static com.rabbitmq.perf.PerfTest.convertKeyValuePairs;
-import static com.rabbitmq.perf.PerfTest.getParser;
-import static com.rabbitmq.perf.PerfTest.parsePublishingInterval;
+import static com.rabbitmq.perf.PerfTest.*;
 import static java.util.Arrays.asList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -416,6 +411,27 @@ public class PerfTestTest {
     assertThat(systemExiter.status()).isEqualTo(1);
     assertThat(out.toString()).isBlank();
     assertThat(err.toString()).isNotBlank();
+  }
+
+  @ParameterizedTest
+  @CsvSource({
+      "100,100",
+      "100,110",
+      "0,100",
+      "100,0",
+      "0,0"
+  })
+  void validateMultiAckEveryQosOk(int multiAck, int qos) {
+    assertThat(validateMultiAckEveryQos(multiAck, qos)).isTrue();
+  }
+
+  @ParameterizedTest
+  @CsvSource({
+      "110,100",
+      "2,1"
+  })
+  void validateMultiAckEveryQosKo(int multiAck, int qos) {
+    assertThat(validateMultiAckEveryQos(multiAck, qos)).isFalse();
   }
 
   private MulticastParams multicastParams(String args) throws Exception {
