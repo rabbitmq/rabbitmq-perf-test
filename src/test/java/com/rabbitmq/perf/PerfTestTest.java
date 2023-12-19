@@ -414,22 +414,13 @@ public class PerfTestTest {
   }
 
   @ParameterizedTest
-  @CsvSource({
-      "100,100",
-      "100,110",
-      "0,100",
-      "100,0",
-      "0,0"
-  })
+  @CsvSource({"100,100", "100,110", "0,100", "100,0", "0,0"})
   void validateMultiAckEveryQosOk(int multiAck, int qos) {
     assertThat(validateMultiAckEveryQos(multiAck, qos)).isTrue();
   }
 
   @ParameterizedTest
-  @CsvSource({
-      "110,100",
-      "2,1"
-  })
+  @CsvSource({"110,100", "2,1"})
   void validateMultiAckEveryQosKo(int multiAck, int qos) {
     assertThat(validateMultiAckEveryQos(multiAck, qos)).isFalse();
   }

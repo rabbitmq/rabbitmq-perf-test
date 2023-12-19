@@ -636,9 +636,11 @@ public class PerfTest {
     }
 
     int qosForValidation = consumerPrefetch;
-    validate(() -> validateMultiAckEveryQos(multiAckEvery, qosForValidation),
+    validate(
+        () -> validateMultiAckEveryQos(multiAckEvery, qosForValidation),
         "--multi-ack-every must be less than or equal to --qos",
-        systemExiter, consoleErr);
+        systemExiter,
+        consoleErr);
 
     RateLimiter.Factory rateLimiterFactory = RateLimiter.Type.GUAVA.factory();
 
