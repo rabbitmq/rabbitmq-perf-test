@@ -507,7 +507,7 @@ public class PerfTest {
 
     ByteCapacity maxLengthByteCapacity = null;
     if (streamQueue) {
-      consumerPrefetch = 200;
+      consumerPrefetch = consumerPrefetch == 0 ? 200 : consumerPrefetch;
       maxLengthByteCapacity = ByteCapacity.GB(20);
       queueArguments.put("x-max-length-bytes", maxLengthByteCapacity.toBytes());
       queueArguments.put("x-stream-max-segment-size-bytes", ByteCapacity.from("500mb").toBytes());
@@ -634,6 +634,13 @@ public class PerfTest {
             consoleErr);
       }
     }
+
+    int qosForValidation = consumerPrefetch;
+    validate(
+        () -> validateMultiAckEveryQos(multiAckEvery, qosForValidation),
+        "--multi-ack-every must be less than or equal to --qos",
+        systemExiter,
+        consoleErr);
 
     RateLimiter.Factory rateLimiterFactory = RateLimiter.Type.GUAVA.factory();
 
@@ -1667,9 +1674,13 @@ public class PerfTest {
 
   private static void validate(
       BooleanSupplier condition, String message, SystemExiter exiter, PrintStream output) {
-    if (condition.getAsBoolean() == false) {
+    if (!condition.getAsBoolean()) {
       output.println(message);
       exiter.exit(1);
     }
+  }
+
+  static boolean validateMultiAckEveryQos(int multiAckEvery, int qos) {
+    return multiAckEvery == 0 || qos == 0 || multiAckEvery <= qos;
   }
 }
