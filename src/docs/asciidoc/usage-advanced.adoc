@@ -83,6 +83,9 @@ the content-type can be specified:
   java -jar perf-test.jar --consumers 0 \
     --body content1.json,content2.json --body-content-type application/json
 
+NOTE: Make sure to also set `--body` in a consumer-only PerfTest instance if it consumes messages published with it.
+This is to tell PerfTest how to extract the message timestamp to calculate latency.
+
 === Random JSON Payload
 
 PerfTest can generate random JSON payload for messages. This is useful to
@@ -116,6 +119,10 @@ for more randomness, at the cost of slower startup time and higher memory consum
 Bear in mind that a large cache of generated payloads combined with a moderately large size
 can easily take up a significant amount of memory. As an example, `--json-body --body-count 50000 --size 100000`
 (50,000 payloads of 100 kB) will use about 5 GB of memory.
+
+NOTE: Make sure to also set `--json-body` in a consumer-only PerfTest instance if it consumes messages published with it.
+This is to tell PerfTest how to extract the message timestamp to calculate latency.
+
 
 == Limiting and varying publishing rate
 
