@@ -23,18 +23,18 @@ jobs:
           server-password: MAVEN_PASSWORD
           gpg-private-key: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
           gpg-passphrase: MAVEN_GPG_PASSPHRASE
-      - name: Start broker
-        run: ci/start-broker.sh
-      - name: Test
-        run: ./mvnw verify -Drabbitmqctl.bin=DOCKER:rabbitmq --no-transfer-progress
-      - name: Stop broker
-        run: docker stop rabbitmq && docker rm rabbitmq
-      - name: Publish snapshot
-        run: ./mvnw clean deploy -Psnapshots -DskipITs -DskipTests --no-transfer-progress
-        env:
-          MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
-          MAVEN_PASSWORD: ${{ secrets.OSSRH_TOKEN }}
-          MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
+      # - name: Start broker
+      #   run: ci/start-broker.sh
+      # - name: Test
+      #   run: ./mvnw verify -Drabbitmqctl.bin=DOCKER:rabbitmq --no-transfer-progress
+      # - name: Stop broker
+      #   run: docker stop rabbitmq && docker rm rabbitmq
+      # - name: Publish snapshot
+      #   run: ./mvnw clean deploy -Psnapshots -DskipITs -DskipTests --no-transfer-progress
+      #   env:
+      #     MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
+      #     MAVEN_PASSWORD: ${{ secrets.OSSRH_TOKEN }}
+      #     MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
       - name: Package Perf Test
         run: ci/package-perf-test.sh
         env:

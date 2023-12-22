@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+rm -rf packages*
+
 POM_VERSION=$(cat pom.xml | grep -oPm1 '(?<=<version>)[^<]+')
 
 # shellcheck disable=SC2102
@@ -14,7 +16,7 @@ fi
 
 MESSAGE=$(git log -1 --pretty=%B)
 
-# Concourse does shallow clones, so need the next 2 commands to have the gh-pages branch
+# GHA does shallow clones, so need the next 2 commands to have the appropriate branch
 git remote set-branches origin $PAGES_BRANCH
 git fetch -v
 git checkout $PAGES_BRANCH
