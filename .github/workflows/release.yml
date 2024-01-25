@@ -57,7 +57,7 @@ jobs:
           token: ${{ secrets.CI_GITHUB_TOKEN }}
           repository: rabbitmq/rabbitmq-perf-test
       - name: Trigger Perf Test Docker image build (GA)
-        uses: peter-evans/repository-dispatch@v2
+        uses: peter-evans/repository-dispatch@v3
         if: ${{ env.ga_release == 'true' }}
         with:
           event-type: new_snapshot
@@ -65,7 +65,7 @@ jobs:
             {"archive_url" : "https://github.com/rabbitmq/rabbitmq-perf-test/releases/download/${{ env.tag_name }}/perf-test-${{ env.release_version}}.jar",
              "tags": "pivotalrabbitmq/perf-test:latest,pivotalrabbitmq/perf-test:${{ env.release_version }}"}
       - name: Trigger Perf Test Docker image build (Milestone/RC)
-        uses: peter-evans/repository-dispatch@v2
+        uses: peter-evans/repository-dispatch@v3
         if: ${{ env.ga_release != 'true' }}
         with:
           event-type: new_snapshot

@@ -68,7 +68,7 @@ jobs:
           token: ${{ secrets.CI_GITHUB_TOKEN }}
           repository: rabbitmq/rabbitmq-java-tools-binaries-dev
       - name: Trigger Perf Test Docker image build
-        uses: peter-evans/repository-dispatch@v2
+        uses: peter-evans/repository-dispatch@v3
         with:
           event-type: new_snapshot
           client-payload: >-
