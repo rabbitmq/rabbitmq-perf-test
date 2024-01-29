@@ -30,8 +30,13 @@ import java.net.URL;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.commons.cli.*;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledIfSystemProperty;
 
-/** */
+@DisabledIfSystemProperty(
+    named = "java.runtime.name",
+    matches = ".*(?i:semeru)+.*",
+    disabledReason = "Test does not work on Semeru"
+)
 public class PrometheusMetricsTest {
 
   @Test
