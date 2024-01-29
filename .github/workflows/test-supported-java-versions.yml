@@ -14,7 +14,7 @@ jobs:
         version: [ '8', '11', '17', '21', '22-ea' ]
         include:
           - distribution: 'semeru'
-            version: '21'
+            version: '17'
     name:  Test against Java ${{ matrix.distribution }} ${{ matrix.version }}
     steps:
       - uses: actions/checkout@v4
