@@ -37,8 +37,13 @@ import org.apache.commons.cli.*;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledIfSystemProperty;
 
-/** */
+@DisabledIfSystemProperty(
+    named = "java.runtime.name",
+    matches = ".*(?i:semeru)+.*",
+    disabledReason = "Test does not work on Semeru"
+)
 public class DatadogMetricsTest {
 
   static final int NB_REQUESTS = 5;
