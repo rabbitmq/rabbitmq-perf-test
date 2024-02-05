@@ -85,15 +85,15 @@ public abstract class TestUtils {
         "Not a valid XML document");
   }
 
-  private static class DisabledOnSemeruCondition implements
-      org.junit.jupiter.api.extension.ExecutionCondition {
+  private static class DisabledOnSemeruCondition
+      implements org.junit.jupiter.api.extension.ExecutionCondition {
 
     @Override
     public ConditionEvaluationResult evaluateExecutionCondition(ExtensionContext context) {
       String javaRuntimeName = System.getProperty("java.runtime.name");
-      return javaRuntimeName.toLowerCase(Locale.ENGLISH).contains("semeru") ?
-          ConditionEvaluationResult.disabled("Test fails on Semeru") :
-          ConditionEvaluationResult.enabled("OK");
+      return javaRuntimeName.toLowerCase(Locale.ENGLISH).contains("semeru")
+          ? ConditionEvaluationResult.disabled("Test fails on Semeru")
+          : ConditionEvaluationResult.enabled("OK");
     }
   }
 
@@ -102,5 +102,4 @@ public abstract class TestUtils {
   @Documented
   @ExtendWith(DisabledOnSemeruCondition.class)
   @interface DisabledOnJavaSemeru {}
-
 }
