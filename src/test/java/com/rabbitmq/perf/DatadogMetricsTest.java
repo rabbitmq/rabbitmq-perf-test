@@ -19,6 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.rabbitmq.perf.Metrics.ConfigurationContext;
+import com.rabbitmq.perf.TestUtils.DisabledOnJavaSemeru;
 import com.sun.net.httpserver.HttpServer;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
@@ -37,13 +38,8 @@ import org.apache.commons.cli.*;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.DisabledIfSystemProperty;
 
-@DisabledIfSystemProperty(
-    named = "java.runtime.name",
-    matches = ".*(?i:semeru)+.*",
-    disabledReason = "Test does not work on Semeru"
-)
+@DisabledOnJavaSemeru
 public class DatadogMetricsTest {
 
   static final int NB_REQUESTS = 5;

@@ -19,14 +19,19 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.lang.annotation.*;
 import java.net.ServerSocket;
 import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 import java.util.concurrent.ThreadFactory;
 import java.util.function.BooleanSupplier;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import org.assertj.core.api.Condition;
 import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.extension.ConditionEvaluationResult;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.extension.ExtensionContext;
 
 /** */
 public abstract class TestUtils {
@@ -79,4 +84,23 @@ public abstract class TestUtils {
         },
         "Not a valid XML document");
   }
+
+  private static class DisabledOnSemeruCondition implements
+      org.junit.jupiter.api.extension.ExecutionCondition {
+
+    @Override
+    public ConditionEvaluationResult evaluateExecutionCondition(ExtensionContext context) {
+      String javaRuntimeName = System.getProperty("java.runtime.name");
+      return javaRuntimeName.toLowerCase(Locale.ENGLISH).contains("semeru") ?
+          ConditionEvaluationResult.disabled("Test fails on Semeru") :
+          ConditionEvaluationResult.enabled("OK");
+    }
+  }
+
+  @Target({ElementType.TYPE, ElementType.METHOD})
+  @Retention(RetentionPolicy.RUNTIME)
+  @Documented
+  @ExtendWith(DisabledOnSemeruCondition.class)
+  @interface DisabledOnJavaSemeru {}
+
 }

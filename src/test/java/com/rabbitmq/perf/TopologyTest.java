@@ -35,6 +35,7 @@ import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.impl.AMQImpl;
+import com.rabbitmq.perf.TestUtils.DisabledOnJavaSemeru;
 import com.rabbitmq.perf.metrics.PerformanceMetrics;
 import java.time.Duration;
 import java.util.*;
@@ -694,6 +695,7 @@ public class TopologyTest {
   // --queue-pattern 'perf-test-%d' --queue-pattern-from 1 --queue-pattern-to 10 --producers 15
   // --consumers 30
   @Test
+  @DisabledOnJavaSemeru
   @SuppressWarnings("unchecked")
   public void sequenceProducersAndConsumersSpread() throws Exception {
     String queuePrefix = "perf-test-";

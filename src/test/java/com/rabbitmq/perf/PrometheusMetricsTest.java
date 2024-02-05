@@ -20,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.rabbitmq.perf.Metrics.ConfigurationContext;
+import com.rabbitmq.perf.TestUtils.DisabledOnJavaSemeru;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -30,13 +31,8 @@ import java.net.URL;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.commons.cli.*;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.DisabledIfSystemProperty;
 
-@DisabledIfSystemProperty(
-    named = "java.runtime.name",
-    matches = ".*(?i:semeru)+.*",
-    disabledReason = "Test does not work on Semeru"
-)
+@DisabledOnJavaSemeru
 public class PrometheusMetricsTest {
 
   @Test
