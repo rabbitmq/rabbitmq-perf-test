@@ -80,7 +80,7 @@
     <maven.source.plugin.version>3.3.0</maven.source.plugin.version>
     <maven.javadoc.plugin.version>3.6.3</maven.javadoc.plugin.version>
     <maven.gpg.plugin.version>3.2.1</maven.gpg.plugin.version>
-    <maven.assembly.plugin.version>3.7.0</maven.assembly.plugin.version>
+    <maven.assembly.plugin.version>3.7.1</maven.assembly.plugin.version>
     <maven.install.plugin.version>3.1.1</maven.install.plugin.version>
     <maven.jar.plugin.version>3.3.0</maven.jar.plugin.version>
     <buildnumber.plugin.version>3.2.0</buildnumber.plugin.version>
