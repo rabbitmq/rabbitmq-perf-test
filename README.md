@@ -151,7 +151,7 @@ This tool uses [semantic versioning](https://semver.org/).
 
 ## Support
 
-See the [RabbitMQ Java libraries support page](https://www.rabbitmq.com/java-versions.html)
+See the [RabbitMQ Java libraries support page](https://www.rabbitmq.com/client-libraries/java-versions)
 for the support timeline of this library.
 
 ## License
