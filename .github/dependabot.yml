@@ -8,8 +8,6 @@ updates:
      interval: "daily"
    open-pull-requests-limit: 20
    ignore:
-     - dependency-name: "ch.qos.logback:logback-classic"
-       versions: [ "[1.4,)" ]
      - dependency-name: "org.springframework.boot:spring-boot-maven-plugin"
        versions: [ "[3.0,)" ]
  - package-ecosystem: "github-actions"
