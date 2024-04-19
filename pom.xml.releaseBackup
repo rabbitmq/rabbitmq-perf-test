@@ -1,0 +1,929 @@
+<?xml version="1.0"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.rabbitmq</groupId>
+  <artifactId>perf-test</artifactId>
+  <version>2.21.0-SNAPSHOT</version>
+  <packaging>jar</packaging>
+
+  <name>RabbitMQ Performance Testing Tool</name>
+  <description>A Java-based performance testing tool for RabbitMQ.</description>
+  <url>https://www.rabbitmq.com</url>
+
+  <licenses>
+    <license>
+      <name>ASL 2.0</name>
+      <url>https://www.apache.org/licenses/LICENSE-2.0.html</url>
+      <distribution>repo</distribution>
+    </license>
+    <license>
+      <name>GPL v2</name>
+      <url>https://www.gnu.org/licenses/gpl-2.0.txt</url>
+      <distribution>repo</distribution>
+    </license>
+    <license>
+      <name>MPL 2.0</name>
+      <url>https://www.mozilla.org/en-US/MPL/2.0/</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <developers>
+    <developer>
+      <email>info@rabbitmq.com</email>
+      <name>Team RabbitMQ</name>
+      <organization>Pivotal Software, Inc.</organization>
+      <organizationUrl>https://rabbitmq.com</organizationUrl>
+    </developer>
+  </developers>
+
+  <scm>
+    <url>https://github.com/rabbitmq/rabbitmq-perf-test</url>
+    <connection>scm:git:git://github.com/rabbitmq/rabbitmq-perf-test.git</connection>
+    <developerConnection>scm:git:https://github.com/rabbitmq/rabbitmq-perf-test.git</developerConnection>
+    <tag>HEAD</tag>
+  </scm>
+
+  <organization>
+    <name>Pivotal Software, Inc.</name>
+    <url>https://www.rabbitmq.com</url>
+  </organization>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+    <spotless.check.skip>true</spotless.check.skip>
+    <rabbitmq.version>5.21.0</rabbitmq.version>
+    <slf4j.version>2.0.13</slf4j.version>
+    <commons-cli.version>1.7.0</commons-cli.version>
+    <metrics.version>4.2.25</metrics.version>
+    <micrometer.version>1.12.5</micrometer.version>
+    <jgroups.version>5.3.6.Final</jgroups.version>
+    <jgroups-kubernetes.version>2.0.2.Final</jgroups-kubernetes.version>
+    <gson.version>2.10.1</gson.version>
+    <resilience4j.version>2.1.0</resilience4j.version>
+    <logback.version>1.3.14</logback.version>
+    <junit.jupiter.version>5.10.2</junit.jupiter.version>
+    <mockito.version>5.11.0</mockito.version>
+    <assertj.version>3.25.3</assertj.version>
+    <commons-lang3.version>3.14.0</commons-lang3.version>
+    <jmh.version>1.37</jmh.version>
+
+    <!-- to sign artifacts when releasing -->
+    <gpg.keyname>6026DFCA</gpg.keyname>
+
+    <maven.compiler.plugin.version>3.13.0</maven.compiler.plugin.version>
+    <versions.maven.plugin.version>2.16.2</versions.maven.plugin.version>
+    <maven.release.plugin.version>3.0.1</maven.release.plugin.version>
+    <maven.source.plugin.version>3.3.1</maven.source.plugin.version>
+    <maven.javadoc.plugin.version>3.6.3</maven.javadoc.plugin.version>
+    <maven.gpg.plugin.version>3.2.4</maven.gpg.plugin.version>
+    <maven.assembly.plugin.version>3.7.1</maven.assembly.plugin.version>
+    <maven.install.plugin.version>3.1.1</maven.install.plugin.version>
+    <maven.jar.plugin.version>3.4.0</maven.jar.plugin.version>
+    <buildnumber.plugin.version>3.2.0</buildnumber.plugin.version>
+    <maven.surefire.plugin.version>3.2.5</maven.surefire.plugin.version>
+    <maven.failsafe.plugin.version>3.2.5</maven.failsafe.plugin.version>
+    <build-helper-maven-plugin.version>3.5.0</build-helper-maven-plugin.version>
+    <maven.packagecloud.wagon.version>0.0.6</maven.packagecloud.wagon.version>
+    <nexus-staging-maven-plugin.version>1.6.13</nexus-staging-maven-plugin.version>
+    <checksum.maven.plugin.version>1.11</checksum.maven.plugin.version>
+    <spring-boot-maven-plugin.version>2.7.18</spring-boot-maven-plugin.version>
+    <spotless.version>2.43.0</spotless.version>
+    <google-java-format.version>1.21.0</google-java-format.version>
+
+    <!-- because of https://issues.apache.org/jira/browse/MRESOURCES-99 -->
+    <build.timestamp>${maven.build.timestamp}</build.timestamp>
+    <maven.build.timestamp.format>yyyy-MM-dd'T'HH:mm:ss'Z'</maven.build.timestamp.format>
+
+    <finalName>rabbitmq-${project.build.finalName}</finalName>
+    <uberJarFinalName>perf-test</uberJarFinalName>
+    <asciidoctor.maven.plugin.version>3.0.0</asciidoctor.maven.plugin.version>
+    <asciidoctorj.version>2.5.12</asciidoctorj.version>
+    <!-- For GraalVM native image -->
+    <graal-sdk.version>24.0.1</graal-sdk.version>
+    <hdr-histogram.version>2.1.12</hdr-histogram.version>
+
+    <maven.javadoc.skip>true</maven.javadoc.skip>
+    <gpg.skip>true</gpg.skip>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.rabbitmq</groupId>
+      <artifactId>amqp-client</artifactId>
+      <version>${rabbitmq.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <version>${slf4j.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>commons-cli</groupId>
+      <artifactId>commons-cli</artifactId>
+      <version>${commons-cli.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.dropwizard.metrics</groupId>
+      <artifactId>metrics-core</artifactId>
+      <version>${metrics.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.micrometer</groupId>
+      <artifactId>micrometer-core</artifactId>
+      <version>${micrometer.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.micrometer</groupId>
+      <artifactId>micrometer-registry-datadog</artifactId>
+      <version>${micrometer.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.micrometer</groupId>
+      <artifactId>micrometer-registry-jmx</artifactId>
+      <version>${micrometer.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.micrometer</groupId>
+      <artifactId>micrometer-registry-prometheus</artifactId>
+      <version>${micrometer.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.google.code.gson</groupId>
+      <artifactId>gson</artifactId>
+      <version>${gson.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-classic</artifactId>
+      <version>${logback.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.jgroups</groupId>
+      <artifactId>jgroups</artifactId>
+      <version>${jgroups.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.jgroups.kubernetes</groupId>
+      <artifactId>jgroups-kubernetes</artifactId>
+      <version>${jgroups-kubernetes.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+      <version>${junit.jupiter.version}</version>
+      <scope>test</scope>
+    </dependency>
+
+    <!-- for parameterized tests -->
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-params</artifactId>
+      <version>${junit.jupiter.version}</version>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
+      <version>${mockito.version}</version>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
+      <version>${assertj.version}</version>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-lang3</artifactId>
+      <version>${commons-lang3.version}</version>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.openjdk.jmh</groupId>
+      <artifactId>jmh-core</artifactId>
+      <version>${jmh.version}</version>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.openjdk.jmh</groupId>
+      <artifactId>jmh-generator-annprocess</artifactId>
+      <version>${jmh.version}</version>
+      <scope>test</scope>
+    </dependency>
+
+  </dependencies>
+
+  <build>
+
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+        <filtering>true</filtering>
+      </resource>
+      <resource>
+        <directory>html</directory>
+        <includes>
+          <include>perf.js</include>
+          <include>perf.css</include>
+          <include>lib/*</include>
+        </includes>
+        <targetPath>static</targetPath>
+      </resource>
+
+    </resources>
+
+    <plugins>
+
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>${maven.compiler.plugin.version}</version>
+        <configuration>
+          <source>1.8</source>
+          <target>1.8</target>
+          <compilerArgs>
+            <arg>-Xlint:deprecation</arg>
+            <arg>-Xlint:unchecked</arg>
+          </compilerArgs>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <version>${maven.javadoc.plugin.version}</version>
+        <configuration>
+          <additionalOptions>-Xdoclint:none</additionalOptions>
+          <detectJavaApiLink>false</detectJavaApiLink>
+          <quiet>true</quiet>
+        </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>${maven.surefire.plugin.version}</version>
+        <configuration>
+          <includes>
+            <include>**/*Test.java</include>
+          </includes>
+          <systemPropertyVariables>
+            <net.bytebuddy.experimental>true</net.bytebuddy.experimental>
+          </systemPropertyVariables>
+          <argLine>${test-arguments}</argLine>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <artifactId>maven-failsafe-plugin</artifactId>
+        <version>${maven.failsafe.plugin.version}</version>
+        <configuration>
+          <includes>
+            <include>**/*IT.java</include>
+          </includes>
+          <systemPropertyVariables>
+            <net.bytebuddy.experimental>true</net.bytebuddy.experimental>
+          </systemPropertyVariables>
+          <argLine>${test-arguments}</argLine>
+        </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>integration-test</goal>
+              <goal>verify</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>versions-maven-plugin</artifactId>
+        <version>${versions.maven.plugin.version}</version>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-release-plugin</artifactId>
+        <version>${maven.release.plugin.version}</version>
+        <configuration>
+          <tagNameFormat>v@{project.version}</tagNameFormat>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+        <version>${maven.source.plugin.version}</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>${maven.jar.plugin.version}</version>
+        <configuration>
+          <archive>
+            <manifest>
+              <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+            </manifest>
+            <manifestEntries>
+              <Automatic-Module-Name>com.rabbitmq.perf</Automatic-Module-Name>
+              <Implementation-Build>${buildNumber}</Implementation-Build>
+              <Implementation-Build-Timestamp>${maven.build.timestamp}</Implementation-Build-Timestamp>
+            </manifestEntries>
+          </archive>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-gpg-plugin</artifactId>
+        <version>${maven.gpg.plugin.version}</version>
+        <executions>
+          <execution>
+            <id>sign-artifacts</id>
+            <phase>install</phase>
+            <goals>
+              <goal>sign</goal>
+            </goals>
+            <configuration>
+              <keyname>${gpg.keyname}</keyname>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-install-plugin</artifactId>
+        <version>${maven.install.plugin.version}</version>
+      </plugin>
+
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>buildnumber-maven-plugin</artifactId>
+        <version>${buildnumber.plugin.version}</version>
+        <executions>
+          <execution>
+            <phase>validate</phase>
+            <goals>
+              <goal>create</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <doCheck>false</doCheck>
+          <doUpdate>false</doUpdate>
+          <revisionOnScmFailure>unknown</revisionOnScmFailure>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.asciidoctor</groupId>
+        <artifactId>asciidoctor-maven-plugin</artifactId>
+        <version>${asciidoctor.maven.plugin.version}</version>
+        <dependencies>
+          <dependency>
+            <groupId>org.asciidoctor</groupId>
+            <artifactId>asciidoctorj</artifactId>
+            <version>${asciidoctorj.version}</version>
+          </dependency>
+        </dependencies>
+        <configuration>
+          <sourceDirectory>src/docs/asciidoc</sourceDirectory>
+          <sourceDocumentName>index.adoc</sourceDocumentName>
+          <!-- Attributes common to all output formats -->
+          <backend>html5</backend>
+          <attributes>
+            <endpoint-url>https://example.org</endpoint-url>
+            <sourcedir>${project.build.sourceDirectory}</sourcedir>
+            <project-version>${project.version}</project-version>
+            <imagesdir>./images</imagesdir>
+            <toc>left</toc>
+            <icons>font</icons>
+            <sectanchors>true</sectanchors>
+            <!-- set the idprefix to blank -->
+            <idprefix />
+            <idseparator>-</idseparator>
+            <docinfo1>true</docinfo1>
+            <source-highlighter>coderay</source-highlighter>
+          </attributes>
+
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>com.diffplug.spotless</groupId>
+        <artifactId>spotless-maven-plugin</artifactId>
+        <version>${spotless.version}</version>
+        <configuration>
+          <java>
+            <googleJavaFormat>
+              <version>${google-java-format.version}</version>
+              <style>GOOGLE</style>
+            </googleJavaFormat>
+          </java>
+<!--                   <ratchetFrom>origin/main</ratchetFrom>-->
+          <licenseHeader> <!-- specify either content or file, but not both -->
+              <content>// Copyright (c) $YEAR Broadcom. All Rights Reserved.
+// The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
+//
+// This software, the RabbitMQ Java client library, is triple-licensed under the
+// Mozilla Public License 2.0 ("MPL"), the GNU General Public License version 2
+// ("GPL") and the Apache License version 2 ("ASL"). For the MPL, please see
+// LICENSE-MPL-RabbitMQ. For the GPL, please see LICENSE-GPL2.  For the ASL,
+// please see LICENSE-APACHE2.
+//
+// This software is distributed on an "AS IS" basis, WITHOUT WARRANTY OF ANY KIND,
+// either express or implied. See the LICENSE file for specific language governing
+// rights and limitations of this software.
+//
+// If you have any questions regarding licensing, please contact us at
+// info@rabbitmq.com.
+            </content>
+          </licenseHeader>
+        </configuration>
+      </plugin>
+
+    </plugins>
+    <extensions>
+      <extension>
+        <groupId>io.packagecloud.maven.wagon</groupId>
+        <artifactId>maven-packagecloud-wagon</artifactId>
+        <version>${maven.packagecloud.wagon.version}</version>
+      </extension>
+    </extensions>
+  </build>
+
+  <profiles>
+
+    <profile>
+      <id>mockito-4-on-java-8</id>
+      <activation>
+        <jdk>1.8</jdk>
+      </activation>
+      <properties>
+        <mockito.version>4.11.0</mockito.version>
+      </properties>
+    </profile>
+    <profile>
+      <id>jvm-test-arguments-java-21-and-more</id>
+      <activation>
+        <jdk>[21,)</jdk>
+      </activation>
+      <properties>
+        <test-arguments>-XX:+EnableDynamicAgentLoading</test-arguments>
+      </properties>
+    </profile>
+
+
+    <profile>
+      <id>extensions</id>
+      <activation>
+        <jdk>[11,)</jdk>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>build-helper-maven-plugin</artifactId>
+            <version>${build-helper-maven-plugin.version}</version>
+            <executions>
+              <execution>
+                <id>add-extension-source</id>
+                <phase>generate-sources</phase>
+                <goals>
+                  <goal>add-source</goal>
+                </goals>
+                <configuration>
+                  <sources>
+                    <source>src/main/extensions</source>
+                  </sources>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+
+    </profile>
+
+    <!--
+      The "release" Maven profile is used to push release artifacts to OSSRH.
+    -->
+    <profile>
+      <id>release</id>
+      <properties>
+        <maven.javadoc.skip>false</maven.javadoc.skip>
+        <gpg.skip>false</gpg.skip>
+      </properties>
+      <build>
+        <plugins>
+
+          <plugin>
+            <groupId>org.sonatype.plugins</groupId>
+            <artifactId>nexus-staging-maven-plugin</artifactId>
+            <version>${nexus-staging-maven-plugin.version}</version>
+            <extensions>true</extensions>
+            <configuration>
+              <serverId>ossrh</serverId>
+              <nexusUrl>https://oss.sonatype.org/</nexusUrl>
+              <autoReleaseAfterClose>false</autoReleaseAfterClose>
+              <stagingProgressTimeoutMinutes>20</stagingProgressTimeoutMinutes>
+            </configuration>
+          </plugin>
+
+        </plugins>
+      </build>
+      <distributionManagement>
+        <repository>
+          <id>ossrh</id>
+          <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+        </repository>
+      </distributionManagement>
+    </profile>
+
+    <!--
+      The "milestone" Maven profile is used to push release artifacts to the
+      PackageCloud Milestones Maven Repository.
+    -->
+    <profile>
+      <id>milestone</id>
+      <properties>
+        <maven.javadoc.skip>false</maven.javadoc.skip>
+        <gpg.skip>false</gpg.skip>
+      </properties>
+      <build>
+        <plugins>
+
+          <plugin>
+            <groupId>net.nicoulaj.maven.plugins</groupId>
+            <artifactId>checksum-maven-plugin</artifactId>
+            <version>${checksum.maven.plugin.version}</version>
+            <executions>
+              <execution>
+                <id>sign-artifacts</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>files</goal>
+                </goals>
+                <configuration>
+                  <fileSets>
+                    <fileSet>
+                      <directory>${project.build.directory}</directory>
+                      <includes>
+                        <include>*.jar</include>
+                        <include>*.pom</include>
+                      </includes>
+                    </fileSet>
+                  </fileSets>
+                  <algorithms>
+                    <algorithm>MD5</algorithm>
+                    <algorithm>SHA-1</algorithm>
+                  </algorithms>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+
+        </plugins>
+      </build>
+      <distributionManagement>
+        <repository>
+          <id>packagecloud-rabbitmq-maven-milestones</id>
+          <url>packagecloud+https://packagecloud.io/rabbitmq/maven-milestones</url>
+        </repository>
+      </distributionManagement>
+    </profile>
+
+    <profile>
+      <!--
+      The "assemblies" Maven profile is used to generate source
+      and binary archives (to-be-uploaded on Github).
+      -->
+      <id>assemblies</id>
+      <properties>
+        <maven.javadoc.skip>false</maven.javadoc.skip>
+        <gpg.skip>false</gpg.skip>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-assembly-plugin</artifactId>
+            <version>${maven.assembly.plugin.version}</version>
+            <configuration>
+              <finalName>${finalName}</finalName>
+              <descriptors>
+                <descriptor>src/assembly/dist-bin.xml</descriptor>
+                <descriptor>src/assembly/dist-src.xml</descriptor>
+              </descriptors>
+            </configuration>
+          </plugin>
+
+          <plugin>
+            <groupId>net.nicoulaj.maven.plugins</groupId>
+            <artifactId>checksum-maven-plugin</artifactId>
+            <version>${checksum.maven.plugin.version}</version>
+            <configuration>
+              <fileSets>
+                <fileSet>
+                  <directory>${project.build.directory}</directory>
+                  <includes>
+                    <include>*.tar.gz</include>
+                    <include>*.zip</include>
+                  </includes>
+                </fileSet>
+              </fileSets>
+              <algorithms>
+                <algorithm>MD5</algorithm>
+                <algorithm>SHA-256</algorithm>
+              </algorithms>
+            </configuration>
+          </plugin>
+
+        </plugins>
+      </build>
+    </profile>
+
+    <profile>
+      <id>uber-jar</id>
+      <build>
+        <finalName>${uberJarFinalName}</finalName>
+        <plugins>
+          <plugin>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-maven-plugin</artifactId>
+            <version>${spring-boot-maven-plugin.version}</version>
+            <executions>
+              <execution>
+                <goals>
+                  <goal>repackage</goal>
+                </goals>
+              </execution>
+            </executions>
+            <configuration>
+              <mainClass>com.rabbitmq.perf.PerfTest</mainClass>
+            </configuration>
+          </plugin>
+          <plugin>
+            <groupId>net.nicoulaj.maven.plugins</groupId>
+            <artifactId>checksum-maven-plugin</artifactId>
+            <version>${checksum.maven.plugin.version}</version>
+            <executions>
+              <execution>
+                <id>sign-artifacts</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>files</goal>
+                </goals>
+              </execution>
+            </executions>
+            <configuration>
+              <fileSets>
+                <fileSet>
+                  <directory>${project.build.directory}</directory>
+                  <includes>
+                    <include>*.jar</include>
+                  </includes>
+                </fileSet>
+              </fileSets>
+              <algorithms>
+                <algorithm>MD5</algorithm>
+                <algorithm>SHA-256</algorithm>
+              </algorithms>
+            </configuration>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-gpg-plugin</artifactId>
+            <version>${maven.gpg.plugin.version}</version>
+            <executions>
+              <execution>
+                <id>sign-artifacts</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>sign</goal>
+                </goals>
+                <configuration>
+                  <keyname>${gpg.keyname}</keyname>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+
+    </profile>
+
+    <profile>
+      <id>java-packaging</id>
+      <activation>
+        <property>
+          <name>!native-image</name>
+        </property>
+      </activation>
+      <properties>
+        <maven.javadoc.skip>false</maven.javadoc.skip>
+        <gpg.skip>false</gpg.skip>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>build-helper-maven-plugin</artifactId>
+            <version>${build-helper-maven-plugin.version}</version>
+            <executions>
+              <execution>
+                <id>add-source</id>
+                <phase>generate-sources</phase>
+                <goals>
+                  <goal>add-source</goal>
+                </goals>
+                <configuration>
+                  <sources>
+                    <source>src/java-packaging/java</source>
+                  </sources>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <profile>
+      <id>native-image</id>
+      <properties>
+        <gpg.skip>false</gpg.skip>
+      </properties>
+      <dependencies>
+
+        <dependency>
+          <groupId>org.graalvm.sdk</groupId>
+          <artifactId>graal-sdk</artifactId>
+          <version>${graal-sdk.version}</version>
+        </dependency>
+
+        <dependency>
+          <groupId>org.slf4j</groupId>
+          <artifactId>slf4j-simple</artifactId>
+          <version>${slf4j.version}</version>
+        </dependency>
+
+        <dependency>
+          <groupId>org.hdrhistogram</groupId>
+          <artifactId>HdrHistogram</artifactId>
+          <version>${hdr-histogram.version}</version>
+        </dependency>
+
+      </dependencies>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <version>${maven.compiler.plugin.version}</version>
+            <configuration>
+              <source>1.8</source>
+              <target>1.8</target>
+              <compilerArgs>
+                <arg>-Xlint:deprecation</arg>
+                <arg>-Xlint:unchecked</arg>
+              </compilerArgs>
+              <excludes>
+                <exclude>com/rabbitmq/perf/WebServer.java</exclude>
+              </excludes>
+            </configuration>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-assembly-plugin</artifactId>
+            <version>${maven.assembly.plugin.version}</version>
+            <configuration>
+              <finalName>${project.artifactId}</finalName>
+              <descriptors>
+                <descriptor>src/assembly/jar-for-native-image.xml</descriptor>
+              </descriptors>
+              <appendAssemblyId>false</appendAssemblyId>
+              <archive>
+                <manifest>
+                  <mainClass>com.rabbitmq.perf.NativePerfTest</mainClass>
+                </manifest>
+              </archive>
+            </configuration>
+            <executions>
+              <execution>
+                <id>assemble-all</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>single</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-jar-plugin</artifactId>
+            <version>${maven.jar.plugin.version}</version>
+            <executions>
+              <execution>
+                <id>default-jar</id>
+                <phase>none</phase>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>build-helper-maven-plugin</artifactId>
+            <version>${build-helper-maven-plugin.version}</version>
+            <executions>
+              <execution>
+                <id>add-source</id>
+                <phase>generate-sources</phase>
+                <goals>
+                  <goal>add-source</goal>
+                </goals>
+                <configuration>
+                  <sources>
+                    <source>src/graalvm/java</source>
+                  </sources>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>net.nicoulaj.maven.plugins</groupId>
+            <artifactId>checksum-maven-plugin</artifactId>
+            <version>${checksum.maven.plugin.version}</version>
+            <configuration>
+              <fileSets>
+                <fileSet>
+                  <directory>${project.build.directory}</directory>
+                  <includes>
+                    <include>perf-test_*</include>
+                  </includes>
+                </fileSet>
+              </fileSets>
+              <algorithms>
+                <algorithm>MD5</algorithm>
+                <algorithm>SHA-256</algorithm>
+              </algorithms>
+            </configuration>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-gpg-plugin</artifactId>
+            <version>${maven.gpg.plugin.version}</version>
+            <configuration>
+              <keyname>${gpg.keyname}</keyname>
+              <excludes>
+                  <exclude>*.jar</exclude>
+                  <exclude>*.md5</exclude>
+                  <exclude>*.sha256</exclude>
+                  <exclude>*.asc</exclude>
+              </excludes>
+            </configuration>
+          </plugin>
+        </plugins>
+
+      </build>
+    </profile>
+
+    <profile>
+      <id>snapshots</id>
+      <distributionManagement>
+        <snapshotRepository>
+          <id>ossrh</id>
+          <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+        </snapshotRepository>
+      </distributionManagement>
+    </profile>
+
+  </profiles>
+
+</project>
+
