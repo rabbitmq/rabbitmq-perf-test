@@ -16,17 +16,7 @@
 package com.rabbitmq.perf;
 
 import com.google.gson.Gson;
-import com.rabbitmq.client.AMQP;
-import com.rabbitmq.client.Address;
-import com.rabbitmq.client.Channel;
-import com.rabbitmq.client.Connection;
-import com.rabbitmq.client.ConnectionFactory;
-import com.rabbitmq.client.RecoveryDelayHandler;
-import com.rabbitmq.client.ShutdownSignalException;
-import com.rabbitmq.client.SocketConfigurator;
-import com.rabbitmq.client.SocketConfigurators;
-import com.rabbitmq.client.SslEngineConfigurator;
-import com.rabbitmq.client.SslEngineConfigurators;
+import com.rabbitmq.client.*;
 import com.rabbitmq.client.impl.OAuth2ClientCredentialsGrantCredentialsProvider;
 import com.rabbitmq.client.impl.OAuthTokenManagementException;
 import com.rabbitmq.client.impl.recovery.AutorecoveringConnection;
@@ -148,26 +138,49 @@ abstract class Utils {
   }
 
   static SocketConfigurator socketConfigurator(CommandLineProxy cmd) {
+    SocketConfigurator socketConfigurator = SocketConfigurators.defaultConfigurator();
     List<SNIServerName> serverNames = sniServerNames(strArg(cmd, "sni", null));
-    if (serverNames.isEmpty()) {
-      return SocketConfigurators.defaultConfigurator();
-    } else {
-      SocketConfigurator socketConfigurator =
-          socket -> {
-            if (socket instanceof SSLSocket) {
-              SSLSocket sslSocket = (SSLSocket) socket;
-              SSLParameters sslParameters =
-                  sslSocket.getSSLParameters() == null
-                      ? new SSLParameters()
-                      : sslSocket.getSSLParameters();
-              sslParameters.setServerNames(serverNames);
-              sslSocket.setSSLParameters(sslParameters);
-            } else {
-              LOGGER.warn("SNI parameter set on a non-TLS connection");
-            }
-          };
-      return SocketConfigurators.defaultConfigurator().andThen(socketConfigurator);
+    if (!serverNames.isEmpty()) {
+      socketConfigurator = socketConfigurator.andThen(socket -> {
+        if (socket instanceof SSLSocket) {
+          SSLSocket sslSocket = (SSLSocket) socket;
+          SSLParameters sslParameters =
+              sslSocket.getSSLParameters() == null
+                  ? new SSLParameters()
+                  : sslSocket.getSSLParameters();
+          sslParameters.setServerNames(serverNames);
+          sslSocket.setSSLParameters(sslParameters);
+        } else {
+          LOGGER.warn("SNI parameter set on a non-TLS connection");
+        }});
     }
+    int sendBufferSize = intArg(cmd, "tsbs", -1);
+    int receiveBufferSize = intArg(cmd, "trbs", -1);
+    socketConfigurator =
+        socketConfigurator.andThen(
+            socket -> {
+              if (sendBufferSize > 0) {
+                socket.setSendBufferSize(sendBufferSize);
+              }
+              if (receiveBufferSize > 0) {
+                socket.setReceiveBufferSize(receiveBufferSize);
+              }
+            });
+    return socketConfigurator;
+  }
+
+  static SocketChannelConfigurator socketChannelConfigurator(CommandLineProxy cmd) {
+    int sendBufferSize = intArg(cmd, "tsbs", -1);
+    int receiveBufferSize = intArg(cmd, "trbs", -1);
+    return SocketChannelConfigurators.defaultConfigurator().andThen(
+            socketChannel -> {
+              if (sendBufferSize > 0) {
+                socketChannel.socket().setSendBufferSize(sendBufferSize);
+              }
+              if (receiveBufferSize > 0) {
+                socketChannel.socket().setReceiveBufferSize(receiveBufferSize);
+              }
+            });
   }
 
   static SslEngineConfigurator sslEngineConfigurator(CommandLineProxy cmd) {
@@ -194,6 +207,10 @@ abstract class Utils {
 
   static String strArg(CommandLineProxy cmd, char opt, String def) {
     return cmd.getOptionValue(opt, def);
+  }
+
+  static int intArg(CommandLineProxy cmd, String opt, int def) {
+    return Integer.parseInt(cmd.getOptionValue(opt, Integer.toString(def)));
   }
 
   static void exchangeDeclare(Channel channel, String exchange, String type) throws IOException {

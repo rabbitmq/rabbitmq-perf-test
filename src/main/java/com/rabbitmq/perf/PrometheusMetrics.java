@@ -15,7 +15,7 @@
 // info@rabbitmq.com.
 package com.rabbitmq.perf;
 
-import static com.rabbitmq.perf.PerfTest.intArg;
+import static com.rabbitmq.perf.Utils.intArg;
 import static com.rabbitmq.perf.Utils.strArg;
 
 import com.sun.net.httpserver.HttpServer;

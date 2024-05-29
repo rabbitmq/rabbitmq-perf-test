@@ -109,7 +109,7 @@ public class PerfTest {
         systemExiter.exit(0);
       }
 
-      int expectedInstances = intArg(cmd, "ei", 0);
+      int expectedInstances = Utils.intArg(cmd, "ei", 0);
       String testID = strArg(cmd, 'd', null);
       if (expectedInstances >= 2 && testID == null) {
         validate(
@@ -233,6 +233,7 @@ public class PerfTest {
 
       factory.setSocketConfigurator(Utils.socketConfigurator(cmd));
       if (factory.getNioParams() != null) {
+        factory.getNioParams().setSocketChannelConfigurator(Utils.socketChannelConfigurator(cmd));
         factory.getNioParams().setSslEngineConfigurator(Utils.sslEngineConfigurator(cmd));
       }
 
@@ -323,7 +324,7 @@ public class PerfTest {
           });
 
       String instanceSyncNamespace = lookUpInstanceSyncNamespace(cmd);
-      int instanceSyncTimeout = intArg(cmd, "ist", 600);
+      int instanceSyncTimeout = Utils.intArg(cmd, "ist", 600);
       InstanceSynchronization instanceSynchronization =
           Utils.defaultInstanceSynchronization(
               testID,
@@ -382,7 +383,7 @@ public class PerfTest {
     int producerTxSize = intArg(cmd, 'm', 0);
     int consumerTxSize = intArg(cmd, 'n', 0);
     long confirm = intArg(cmd, 'c', -1);
-    int confirmTimeout = intArg(cmd, "ct", 30);
+    int confirmTimeout = Utils.intArg(cmd, "ct", 30);
     boolean autoAck = hasOption(cmd, "a");
     int multiAckEvery = intArg(cmd, 'A', 0);
     int channelPrefetch = intArg(cmd, 'Q', 0);
@@ -400,9 +401,9 @@ public class PerfTest {
     boolean useMillis = hasOption(cmd, "ms");
     List<String> queueArgs = lstArg(cmd, "qa");
     int consumerLatencyInMicroseconds = intArg(cmd, 'L', 0);
-    int heartbeatSenderThreads = intArg(cmd, "hst", -1);
+    int heartbeatSenderThreads = Utils.intArg(cmd, "hst", -1);
     String messageProperties = strArg(cmd, "mp", null);
-    int routingKeyCacheSize = intArg(cmd, "rkcs", 0);
+    int routingKeyCacheSize = Utils.intArg(cmd, "rkcs", 0);
     boolean exclusive = hasOption(cmd, "E");
     Duration publishingInterval = null;
     String publishingIntervalArg = strArg(cmd, "P", null);
@@ -414,14 +415,14 @@ public class PerfTest {
         systemExiter.exit(1);
       }
     }
-    int producerRandomStartDelayInSeconds = intArg(cmd, "prsd", -1);
-    int producerSchedulingThreads = intArg(cmd, "pst", -1);
+    int producerRandomStartDelayInSeconds = Utils.intArg(cmd, "prsd", -1);
+    int producerSchedulingThreads = Utils.intArg(cmd, "pst", -1);
 
-    int consumersThreadPools = intArg(cmd, "ctp", -1);
-    int shutdownTimeout = intArg(cmd, "st", 5);
+    int consumersThreadPools = Utils.intArg(cmd, "ctp", -1);
+    int shutdownTimeout = Utils.intArg(cmd, "st", 5);
 
-    int serversStartUpTimeout = intArg(cmd, "sst", -1);
-    int serversUpLimit = intArg(cmd, "sul", -1);
+    int serversStartUpTimeout = Utils.intArg(cmd, "sst", -1);
+    int serversUpLimit = Utils.intArg(cmd, "sul", -1);
     String consumerArgs = strArg(cmd, "ca", null);
 
     List<String> variableRates = lstArg(cmd, "vr");
@@ -467,18 +468,18 @@ public class PerfTest {
     }
 
     boolean polling = hasOption(cmd, "po");
-    int pollingInterval = intArg(cmd, "pi", -1);
+    int pollingInterval = Utils.intArg(cmd, "pi", -1);
 
     boolean nack = hasOption(cmd, "na");
     boolean requeue = boolArg(cmd, "re", true);
 
     boolean jsonBody = hasOption(cmd, "jb");
-    int bodyFieldCount = intArg(cmd, "bfc", 1000);
+    int bodyFieldCount = Utils.intArg(cmd, "bfc", 1000);
     if (bodyFieldCount < 0) {
       consoleErr.println("Body field count should greater than 0.");
       systemExiter.exit(1);
     }
-    int bodyCount = intArg(cmd, "bc", 100);
+    int bodyCount = Utils.intArg(cmd, "bc", 100);
     if (bodyCount < 0) {
       consoleErr.println("Number of pre-generated message bodies should be greater than 0.");
       systemExiter.exit(1);
@@ -524,11 +525,11 @@ public class PerfTest {
     } else {
       exitWhen = EXIT_WHEN.NEVER;
     }
-    Duration consumerStartDelay = Duration.ofSeconds(intArg(cmd, "csd", -1));
+    Duration consumerStartDelay = Duration.ofSeconds(Utils.intArg(cmd, "csd", -1));
 
     String queuePattern = strArg(cmd, "qp", null);
-    int from = intArg(cmd, "qpf", -1);
-    int to = intArg(cmd, "qpt", -1);
+    int from = Utils.intArg(cmd, "qpf", -1);
+    int to = Utils.intArg(cmd, "qpt", -1);
 
     if (queuePattern != null || from >= 0 || to >= 0) {
       if (queuePattern == null || from < 0 || to < 0) {
@@ -757,8 +758,8 @@ public class PerfTest {
 
   private static ConnectionFactory configureNioIfRequested(
       CommandLineProxy cmd, ConnectionFactory factory) {
-    int nbThreads = intArg(cmd, "niot", -1);
-    int executorSize = intArg(cmd, "niotp", -1);
+    int nbThreads = Utils.intArg(cmd, "niot", -1);
+    int executorSize = Utils.intArg(cmd, "niotp", -1);
     if (nbThreads > 0 || executorSize > 0) {
       NioParams nioParams = new NioParams();
       int[] nbThreadsAndExecutorSize = getNioNbThreadsAndExecutorSize(nbThreads, executorSize);
@@ -1355,14 +1356,13 @@ public class PerfTest {
             "verbose-full",
             false,
             "Same as --verbose, but with message headers and body as well. Use only with slow rates."));
+
+    options.addOption(new Option("tsbs", "tcp-send-buffer-size", true, "value for TCP SO_SNDBUF option"));
+    options.addOption(new Option("trbs", "tcp-receive-buffer-size", true, "value for TCP SO_RCVBUF option"));
     return options;
   }
 
   static int intArg(CommandLineProxy cmd, char opt, int def) {
-    return Integer.parseInt(cmd.getOptionValue(opt, Integer.toString(def)));
-  }
-
-  static int intArg(CommandLineProxy cmd, String opt, int def) {
     return Integer.parseInt(cmd.getOptionValue(opt, Integer.toString(def)));
   }
 
