@@ -141,18 +141,21 @@ abstract class Utils {
     SocketConfigurator socketConfigurator = SocketConfigurators.defaultConfigurator();
     List<SNIServerName> serverNames = sniServerNames(strArg(cmd, "sni", null));
     if (!serverNames.isEmpty()) {
-      socketConfigurator = socketConfigurator.andThen(socket -> {
-        if (socket instanceof SSLSocket) {
-          SSLSocket sslSocket = (SSLSocket) socket;
-          SSLParameters sslParameters =
-              sslSocket.getSSLParameters() == null
-                  ? new SSLParameters()
-                  : sslSocket.getSSLParameters();
-          sslParameters.setServerNames(serverNames);
-          sslSocket.setSSLParameters(sslParameters);
-        } else {
-          LOGGER.warn("SNI parameter set on a non-TLS connection");
-        }});
+      socketConfigurator =
+          socketConfigurator.andThen(
+              socket -> {
+                if (socket instanceof SSLSocket) {
+                  SSLSocket sslSocket = (SSLSocket) socket;
+                  SSLParameters sslParameters =
+                      sslSocket.getSSLParameters() == null
+                          ? new SSLParameters()
+                          : sslSocket.getSSLParameters();
+                  sslParameters.setServerNames(serverNames);
+                  sslSocket.setSSLParameters(sslParameters);
+                } else {
+                  LOGGER.warn("SNI parameter set on a non-TLS connection");
+                }
+              });
     }
     int sendBufferSize = intArg(cmd, "tsbs", -1);
     int receiveBufferSize = intArg(cmd, "trbs", -1);
@@ -172,7 +175,8 @@ abstract class Utils {
   static SocketChannelConfigurator socketChannelConfigurator(CommandLineProxy cmd) {
     int sendBufferSize = intArg(cmd, "tsbs", -1);
     int receiveBufferSize = intArg(cmd, "trbs", -1);
-    return SocketChannelConfigurators.defaultConfigurator().andThen(
+    return SocketChannelConfigurators.defaultConfigurator()
+        .andThen(
             socketChannel -> {
               if (sendBufferSize > 0) {
                 socketChannel.socket().setSendBufferSize(sendBufferSize);

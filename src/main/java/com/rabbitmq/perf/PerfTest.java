@@ -1357,8 +1357,10 @@ public class PerfTest {
             false,
             "Same as --verbose, but with message headers and body as well. Use only with slow rates."));
 
-    options.addOption(new Option("tsbs", "tcp-send-buffer-size", true, "value for TCP SO_SNDBUF option"));
-    options.addOption(new Option("trbs", "tcp-receive-buffer-size", true, "value for TCP SO_RCVBUF option"));
+    options.addOption(
+        new Option("tsbs", "tcp-send-buffer-size", true, "value for TCP SO_SNDBUF option"));
+    options.addOption(
+        new Option("trbs", "tcp-receive-buffer-size", true, "value for TCP SO_RCVBUF option"));
     return options;
   }
 
