@@ -169,12 +169,15 @@ abstract class Utils {
                 socket.setReceiveBufferSize(receiveBufferSize);
               }
             });
+    boolean tcpNoDelay = boolArg(cmd, "tnd", "true");
+    socketConfigurator = socketConfigurator.andThen(socket -> socket.setTcpNoDelay(tcpNoDelay));
     return socketConfigurator;
   }
 
   static SocketChannelConfigurator socketChannelConfigurator(CommandLineProxy cmd) {
     int sendBufferSize = intArg(cmd, "tsbs", -1);
     int receiveBufferSize = intArg(cmd, "trbs", -1);
+    boolean tcpNoDelay = boolArg(cmd, "tnd", "true");
     return SocketChannelConfigurators.defaultConfigurator()
         .andThen(
             socketChannel -> {
@@ -184,7 +187,10 @@ abstract class Utils {
               if (receiveBufferSize > 0) {
                 socketChannel.socket().setReceiveBufferSize(receiveBufferSize);
               }
-            });
+            })
+        .andThen(
+            socketChannel -> socketChannel.socket().setTcpNoDelay(boolArg(cmd, "tnd", "true"))
+        );
   }
 
   static SslEngineConfigurator sslEngineConfigurator(CommandLineProxy cmd) {
@@ -215,6 +221,10 @@ abstract class Utils {
 
   static int intArg(CommandLineProxy cmd, String opt, int def) {
     return Integer.parseInt(cmd.getOptionValue(opt, Integer.toString(def)));
+  }
+
+  static boolean boolArg(CommandLineProxy cmd, String opt, String def) {
+    return Boolean.parseBoolean(cmd.getOptionValue(opt, def));
   }
 
   static void exchangeDeclare(Channel channel, String exchange, String type) throws IOException {

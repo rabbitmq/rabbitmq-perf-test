@@ -1361,6 +1361,10 @@ public class PerfTest {
         new Option("tsbs", "tcp-send-buffer-size", true, "value for TCP SO_SNDBUF option"));
     options.addOption(
         new Option("trbs", "tcp-receive-buffer-size", true, "value for TCP SO_RCVBUF option"));
+
+    options.addOption(
+        new Option("tnd", "tcp-no-delay", true, "value for TCP_NODELAY option"));
+
     return options;
   }
 
