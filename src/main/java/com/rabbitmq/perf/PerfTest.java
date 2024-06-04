@@ -1362,8 +1362,7 @@ public class PerfTest {
     options.addOption(
         new Option("trbs", "tcp-receive-buffer-size", true, "value for TCP SO_RCVBUF option"));
 
-    options.addOption(
-        new Option("tnd", "tcp-no-delay", true, "value for TCP_NODELAY option"));
+    options.addOption(new Option("tnd", "tcp-no-delay", true, "value for TCP NODELAY option"));
 
     return options;
   }

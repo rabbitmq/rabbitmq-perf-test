@@ -159,6 +159,7 @@ abstract class Utils {
     }
     int sendBufferSize = intArg(cmd, "tsbs", -1);
     int receiveBufferSize = intArg(cmd, "trbs", -1);
+    boolean tcpNoDelay = boolArg(cmd, "tnd", "true");
     socketConfigurator =
         socketConfigurator.andThen(
             socket -> {
@@ -168,9 +169,8 @@ abstract class Utils {
               if (receiveBufferSize > 0) {
                 socket.setReceiveBufferSize(receiveBufferSize);
               }
+              socket.setTcpNoDelay(tcpNoDelay);
             });
-    boolean tcpNoDelay = boolArg(cmd, "tnd", "true");
-    socketConfigurator = socketConfigurator.andThen(socket -> socket.setTcpNoDelay(tcpNoDelay));
     return socketConfigurator;
   }
 
@@ -178,19 +178,15 @@ abstract class Utils {
     int sendBufferSize = intArg(cmd, "tsbs", -1);
     int receiveBufferSize = intArg(cmd, "trbs", -1);
     boolean tcpNoDelay = boolArg(cmd, "tnd", "true");
-    return SocketChannelConfigurators.defaultConfigurator()
-        .andThen(
-            socketChannel -> {
-              if (sendBufferSize > 0) {
-                socketChannel.socket().setSendBufferSize(sendBufferSize);
-              }
-              if (receiveBufferSize > 0) {
-                socketChannel.socket().setReceiveBufferSize(receiveBufferSize);
-              }
-            })
-        .andThen(
-            socketChannel -> socketChannel.socket().setTcpNoDelay(boolArg(cmd, "tnd", "true"))
-        );
+    return socketChannel -> {
+      if (sendBufferSize > 0) {
+        socketChannel.socket().setSendBufferSize(sendBufferSize);
+      }
+      if (receiveBufferSize > 0) {
+        socketChannel.socket().setReceiveBufferSize(receiveBufferSize);
+      }
+      socketChannel.socket().setTcpNoDelay(tcpNoDelay);
+    };
   }
 
   static SslEngineConfigurator sslEngineConfigurator(CommandLineProxy cmd) {
