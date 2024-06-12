@@ -622,14 +622,6 @@ with the `RABBITMQ_PERF_TEST_ENV_PREFIX` environment variable, e.g.:
 With `RABBITMQ_PERF_TEST_ENV_PREFIX="PERF_TEST_"` defined, PerfTest will for example look for
 the `PERF_TEST_CONFIRM_TIMEOUT` environment variable, not only `CONFIRM_TIMEOUT`.
 
-== Result Reporting in HTML
-
-The `PerfTest HTML extension` are a set of tools
-that can help you run automated benchmarks by wrapping around PerfTest. You can provide
-benchmark specs, and the tool will take care of running the benchmark,
-collecting results and displaying them in an HTML page. Learn more
-https://github.com/rabbitmq/rabbitmq-perf-test/blob/main/html/README.md[here].
-
 == Console Output Format
 
 PerfTest default console output format is explicit as each line contains a label for each value:
