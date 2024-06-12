@@ -32,7 +32,7 @@ import java.util.function.DoubleBinaryOperator;
 
 public abstract class Stats {
 
-  protected static final float NANO_TO_SECOND = 1_000_000_000;
+  protected static final double MS_TO_SECOND = 1_000;
 
   private final AtomicBoolean ongoingReport = new AtomicBoolean(false);
 

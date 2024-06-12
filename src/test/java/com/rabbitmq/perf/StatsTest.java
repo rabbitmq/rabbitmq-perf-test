@@ -143,7 +143,7 @@ public class StatsTest {
     }
 
     private double rate(long count, long elapsed) {
-      return NANO_TO_SECOND * count / elapsed;
+      return MS_TO_SECOND * count / elapsed;
     }
   }
 }
