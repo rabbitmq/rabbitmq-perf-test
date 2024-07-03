@@ -157,8 +157,8 @@ abstract class Utils {
                 }
               });
     }
-    int sendBufferSize = intArg(cmd, "tsbs", -1);
-    int receiveBufferSize = intArg(cmd, "trbs", -1);
+    int sendBufferSize = intArg(cmd, "tsbs", 65_536);
+    int receiveBufferSize = intArg(cmd, "trbs", 65_536);
     boolean tcpNoDelay = boolArg(cmd, "tnd", "true");
     socketConfigurator =
         socketConfigurator.andThen(
