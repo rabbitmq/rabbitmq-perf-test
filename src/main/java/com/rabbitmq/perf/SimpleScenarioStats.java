@@ -83,7 +83,7 @@ class SimpleScenarioStats extends Stats implements ScenarioStats, PerformanceMet
   }
 
   private double rate(long count, long elapsed) {
-    return elapsed == 0 ? 0.0 : MS_TO_SECOND * ( (double) count / (double) elapsed);
+    return elapsed == 0 ? 0.0 : MS_TO_SECOND * ((double) count / (double) elapsed);
   }
 
   private long overallAverageLatency() {
