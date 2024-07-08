@@ -712,7 +712,7 @@ public class TopologyTest {
 
     // once messages have been to all queues (queueCount routing keys in the set),
     // we open the latch so MulticastSet.run can end
-    Set<String> routingKeys = new HashSet<>();
+    Set<String> routingKeys = ConcurrentHashMap.newKeySet(queueCount);
     CountDownLatch latchPublishing = new CountDownLatch(1);
     doAnswer(
             invocation -> {
