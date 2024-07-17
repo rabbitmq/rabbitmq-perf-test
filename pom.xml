@@ -103,7 +103,7 @@
     <asciidoctor.maven.plugin.version>3.0.0</asciidoctor.maven.plugin.version>
     <asciidoctorj.version>2.5.13</asciidoctorj.version>
     <!-- For GraalVM native image -->
-    <graal-sdk.version>24.0.1</graal-sdk.version>
+    <graal-sdk.version>24.0.2</graal-sdk.version>
     <hdr-histogram.version>2.2.2</hdr-histogram.version>
 
     <maven.javadoc.skip>true</maven.javadoc.skip>
