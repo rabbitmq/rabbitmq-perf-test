@@ -56,7 +56,7 @@
 
     <spotless.check.skip>true</spotless.check.skip>
     <rabbitmq.version>5.21.0</rabbitmq.version>
-    <slf4j.version>2.0.13</slf4j.version>
+    <slf4j.version>2.0.14</slf4j.version>
     <commons-cli.version>1.8.0</commons-cli.version>
     <metrics.version>4.2.26</metrics.version>
     <micrometer.version>1.13.2</micrometer.version>
