@@ -10,9 +10,11 @@ Use [Stream PerfTest](https://github.com/rabbitmq/rabbitmq-stream-perf-test) if 
 
 ## Installation
 
-This is a standalone tool that is distributed in binary form using
-[GitHub releases](https://github.com/rabbitmq/rabbitmq-perf-test/releases)
-and as a JAR file on Maven Central (see below). A [Docker image](https://hub.docker.com/r/pivotalrabbitmq/perf-test/) is available as well.
+This is a standalone tool that is distributed in binary form using [GitHub releases](https://github.com/rabbitmq/rabbitmq-perf-test/releases) and as a JAR file on Maven Central (see below).
+PerfTest requires at least Java 8, but some features require Java 11.
+The latest LTS Java version is recommended.
+
+A [Docker image](https://hub.docker.com/r/pivotalrabbitmq/perf-test/) is available as well.
 
 The [latest snapshot](https://github.com/rabbitmq/rabbitmq-java-tools-binaries-dev/releases/tag/v-rabbitmq-perf-test-latest) is also available.
 

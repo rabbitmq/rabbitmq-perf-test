@@ -1,5 +1,8 @@
 == Installation
 
+PerfTest requires at least Java 8, but <<usage-advanced.adoc#instance-synchronization,some features>> require Java 11.
+The latest LTS Java version is recommended.
+
 === From Binary
 
 PerfTest is distributed as an uber JAR from https://github.com/rabbitmq/rabbitmq-perf-test/releases[GitHub releases].
