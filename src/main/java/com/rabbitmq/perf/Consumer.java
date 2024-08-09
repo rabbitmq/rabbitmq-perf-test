@@ -364,14 +364,27 @@ public class Consumer extends AgentBase implements Runnable {
     }
 
     @Override
-    public void handleCancel(String consumerTag) throws IOException {
+    public void handleCancel(String consumerTag) {
       System.out.printf("Consumer cancelled by broker for tag: %s\n", consumerTag);
       epochMessageCount.set(0);
       if (consumerTagBranchMap.containsKey(consumerTag)) {
         String qName = consumerTagBranchMap.get(consumerTag);
-        TopologyRecording topologyRecording = topologyRecording();
-        RecordedQueue queueRecord = topologyRecording.queue(qName);
-        consumeOrScheduleConsume(queueRecord, topologyRecording, consumerTag, qName);
+        Duration delay = Duration.ofSeconds(2);
+        LOGGER.debug("Scheduling consumer recovery after broker cancellation ({})", delay);
+        topologyRecoveryScheduledExecutorService.schedule(
+            () -> {
+              TopologyRecording topologyRecording = topologyRecording();
+              RecordedQueue queueRecord = topologyRecording.queue(qName);
+              try {
+                consumeOrScheduleConsume(queueRecord, topologyRecording, consumerTag, qName);
+              } catch (IOException e) {
+                LOGGER.info(
+                    "Error while recovering consumer after broker cancellation: {}",
+                    e.getMessage());
+              }
+            },
+            delay.toMillis(),
+            TimeUnit.MILLISECONDS);
       } else {
         System.out.printf("Could not find queue for consumer tag: %s\n", consumerTag);
       }
@@ -476,7 +489,9 @@ public class Consumer extends AgentBase implements Runnable {
             resubscription, schedulingPeriod.getSeconds(), TimeUnit.SECONDS);
       }
     } else {
-      if (!queueExists) {
+      if (queueExists) {
+        LOGGER.debug("Queue {} does exist, subscribing", queueName);
+      } else {
         // the queue seems to have been deleted, re-creating it with its bindings
         LOGGER.debug(
             "Queue {} does not exist, trying to re-create it before re-subscribing", queueName);
