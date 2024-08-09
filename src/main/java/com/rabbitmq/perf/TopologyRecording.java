@@ -326,7 +326,7 @@ public class TopologyRecording {
     return this.cluster;
   }
 
-  class RecordedExchange {
+  static class RecordedExchange {
 
     private final String name, type;
 
@@ -341,14 +341,14 @@ public class TopologyRecording {
     }
   }
 
-  class RecordedQueue {
+  static class RecordedQueue {
 
     private final boolean durable;
     private final boolean exclusive;
     private final boolean autoDelete;
     private final Map<String, Object> arguments;
     private final boolean serverNamed;
-    private String name;
+    private volatile String name;
 
     private RecordedQueue(
         String name,
@@ -371,10 +371,6 @@ public class TopologyRecording {
 
     public boolean isAutoDelete() {
       return autoDelete;
-    }
-
-    public boolean isServerNamed() {
-      return serverNamed;
     }
 
     public boolean isExclusive() {
@@ -421,7 +417,7 @@ public class TopologyRecording {
     }
   }
 
-  class RecordedBinding {
+  static class RecordedBinding {
 
     private final String queue, exchange, routingKey;
 
