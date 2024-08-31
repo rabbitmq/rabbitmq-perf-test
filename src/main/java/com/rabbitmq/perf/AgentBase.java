@@ -64,7 +64,7 @@ public abstract class AgentBase {
       Recovery.RecoveryProcess recoveryProcess, ShutdownSignalException e) {
     if (LOGGER.isDebugEnabled()) {
       LOGGER.debug(
-          "Handling write error, recovery process enabled? {}, condition to trigger connection recovery? {}",
+          "Handling  error, recovery process enabled? {}, condition to trigger connection recovery? {}",
           recoveryProcess.isEnabled(),
           isConnectionRecoveryTriggered(e),
           e);
