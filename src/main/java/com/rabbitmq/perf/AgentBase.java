@@ -6,7 +6,7 @@
 // ("GPL") and the Apache License version 2 ("ASL"). For the MPL, please see
 // LICENSE-MPL-RabbitMQ. For the GPL, please see LICENSE-GPL2.  For the ASL,
 // please see LICENSE-APACHE2.
-//
+// add comment
 // This software is distributed on an "AS IS" basis, WITHOUT WARRANTY OF ANY KIND,
 // either express or implied. See the LICENSE file for specific language governing
 // rights and limitations of this software.
