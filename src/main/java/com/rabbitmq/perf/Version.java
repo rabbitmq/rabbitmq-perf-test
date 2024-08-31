@@ -41,7 +41,7 @@ public class Version {
     try {
       version = getValueFromPropertyFile("com.rabbitmq.perf.version");
     } catch (Exception e1) {
-      LOGGER.warn("Couldn't get version from property file", e1);
+      LOGGER.warn("Version unavailable from property file", e1);
       try {
         version = getVersionFromPackage();
       } catch (Exception e2) {
