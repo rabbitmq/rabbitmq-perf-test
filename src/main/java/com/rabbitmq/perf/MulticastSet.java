@@ -18,14 +18,9 @@ package com.rabbitmq.perf;
 import static com.rabbitmq.perf.Utils.isRecoverable;
 import static java.lang.Math.min;
 import static java.lang.String.format;
+import static java.util.Collections.singletonList;
 
-import com.rabbitmq.client.AMQP;
-import com.rabbitmq.client.Address;
-import com.rabbitmq.client.AlreadyClosedException;
-import com.rabbitmq.client.Connection;
-import com.rabbitmq.client.ConnectionFactory;
-import com.rabbitmq.client.Recoverable;
-import com.rabbitmq.client.RecoveryListener;
+import com.rabbitmq.client.*;
 import com.rabbitmq.client.impl.recovery.AutorecoveringConnection;
 import com.rabbitmq.perf.PerfTest.EXIT_WHEN;
 import com.rabbitmq.perf.metrics.PerformanceMetrics;
@@ -839,7 +834,9 @@ public class MulticastSet {
     DefaultCompletionHandler(
         int timeLimit, int countLimit, ConcurrentMap<String, Integer> reasons) {
       this.timeLimit = timeLimit;
-      this.latch = new CountDownLatch(countLimit <= 0 ? 1 : countLimit);
+      int count = countLimit <= 0 ? 1 : countLimit;
+      LOGGER.debug("Count completion limit is {}", count);
+      this.latch = new CountDownLatch(count);
       this.reasons = reasons;
     }
 
@@ -983,15 +980,18 @@ public class MulticastSet {
      * @throws TimeoutException
      */
     Connection createConnection(String name) throws IOException, TimeoutException {
+      Connection connection;
       if (this.addresses.isEmpty()) {
-        return this.cf.newConnection(name);
+        connection = this.cf.newConnection(name);
       } else {
         List<Address> addrs = new ArrayList<>(addresses);
         if (addresses.size() > 1) {
           Collections.shuffle(addrs);
         }
-        return this.cf.newConnection(addrs, name);
+        connection = this.cf.newConnection(addrs, name);
       }
+      addBlockedListener(connection);
+      return connection;
     }
 
     /**
@@ -1003,16 +1003,28 @@ public class MulticastSet {
      */
     List<Connection> createConfigurationConnections() throws IOException, TimeoutException {
       if (this.addresses.isEmpty()) {
-        return Collections.singletonList(createConnection("perf-test-configuration-0"));
+        return singletonList(createConnection("perf-test-configuration-0"));
       } else {
         List<Connection> connections = new ArrayList<>(this.addresses.size());
         for (int i = 0; i < addresses.size(); i++) {
-          connections.add(
-              this.cf.newConnection(
-                  Collections.singletonList(addresses.get(i)), "perf-test-configuration-" + i));
+          String name = "perf-test-configuration-" + i;
+          Connection c = this.cf.newConnection(singletonList(addresses.get(i)), name);
+          addBlockedListener(c);
+          connections.add(c);
         }
         return Collections.unmodifiableList(connections);
       }
+    }
+
+    private static void addBlockedListener(Connection connection) {
+      String name = connection.getClientProvidedName();
+      connection.addBlockedListener(
+          reason -> logger().debug("Connection '{}' blocked: {}.", name, reason),
+          () -> logger().debug("Connection '{}' unblocked.", name));
+    }
+
+    private static Logger logger() {
+      return LoggerFactory.getLogger("com.rabbitmq.perf.ConnectionCreator");
     }
   }
 }
