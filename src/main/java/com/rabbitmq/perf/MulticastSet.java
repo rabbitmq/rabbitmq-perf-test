@@ -1018,6 +1018,7 @@ public class MulticastSet {
 
     private static void addBlockedListener(Connection connection) {
       String name = connection.getClientProvidedName();
+      logger().debug("Registering blocked listener for connection {}.", name);
       connection.addBlockedListener(
           reason -> logger().debug("Connection '{}' blocked: {}.", name, reason),
           () -> logger().debug("Connection '{}' unblocked.", name));
