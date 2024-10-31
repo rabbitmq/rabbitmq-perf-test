@@ -262,6 +262,7 @@ public class MulticastSetTest {
 
   @Test
   public void createConnectionAddressesNotUsedWhenNoUriList() throws Exception {
+    when(factory.newConnection(anyString())).thenReturn(connection);
     MulticastSet multicastSet = getMulticastSet(new ArrayList<>());
     multicastSet.createConnection("connection-1");
     assertThat(multicastSet.createConfigurationConnections()).hasSize(1);
@@ -271,6 +272,7 @@ public class MulticastSetTest {
 
   @Test
   public void createConnectionFromOneUri() throws Exception {
+    when(factory.newConnection(anyList(), anyString())).thenReturn(connection);
     MulticastSet multicastSet = getMulticastSet(Arrays.asList("amqp://host1:5673"));
     multicastSet.createConnection("connection-1");
     ArgumentCaptor<List<Address>> addresses = addressesArgumentCaptor();
@@ -285,6 +287,7 @@ public class MulticastSetTest {
 
   @Test
   public void createConfigurationConnectionFromOneUri() throws Exception {
+    when(factory.newConnection(anyList(), anyString())).thenReturn(connection);
     MulticastSet multicastSet = getMulticastSet(Arrays.asList("amqp://host1:5673"));
     assertThat(multicastSet.createConfigurationConnections()).hasSize(1);
     ArgumentCaptor<List<Address>> addresses = addressesArgumentCaptor();
@@ -300,6 +303,7 @@ public class MulticastSetTest {
 
   @Test
   public void createConnectionFromSeveralUrisShufflingShouldHappen() throws Exception {
+    when(factory.newConnection(anyList(), anyString())).thenReturn(connection);
     List<String> uris =
         IntStream.range(0, 100).mapToObj(i -> "amqp://host" + i).collect(Collectors.toList());
     MulticastSet multicastSet = getMulticastSet(uris);
@@ -323,6 +327,7 @@ public class MulticastSetTest {
   @Test
   public void createConfigurationConnectionFromSeveralUrisConnectionShouldBeSpread()
       throws Exception {
+    when(factory.newConnection(anyList(), anyString())).thenReturn(connection);
     int hostCount = 5;
     List<String> uris =
         IntStream.range(0, hostCount)
