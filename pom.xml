@@ -101,7 +101,7 @@
 
     <finalName>rabbitmq-${project.build.finalName}</finalName>
     <uberJarFinalName>perf-test</uberJarFinalName>
-    <asciidoctor.maven.plugin.version>3.0.0</asciidoctor.maven.plugin.version>
+    <asciidoctor.maven.plugin.version>3.1.0</asciidoctor.maven.plugin.version>
     <asciidoctorj.version>3.0.0</asciidoctorj.version>
     <!-- For GraalVM native image -->
     <graal-sdk.version>24.1.1</graal-sdk.version>
