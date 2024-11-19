@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 rm -rf packages*
+rm -rf pom.xml.releaseBackup release.properties
 
 POM_VERSION=$(cat pom.xml | grep -oPm1 '(?<=<version>)[^<]+')
 
