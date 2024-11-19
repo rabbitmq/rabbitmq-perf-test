@@ -40,7 +40,7 @@ jobs:
         env:
           MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
       - name: Delete old releases
-        uses: docker://pivotalrabbitmq/delete-release-action:latest
+        uses: docker://rabbitmqdevenv/delete-release-action:latest
         with:
           repository: rabbitmq/rabbitmq-java-tools-binaries-dev
           token: ${{ secrets.CI_GITHUB_TOKEN }}
@@ -57,7 +57,7 @@ jobs:
           token: ${{ secrets.CI_GITHUB_TOKEN }}
           repository: rabbitmq/rabbitmq-java-tools-binaries-dev
       - name: Delete latest release
-        uses: docker://pivotalrabbitmq/delete-release-action:latest
+        uses: docker://rabbitmqdevenv/delete-release-action:latest
         with:
           repository: rabbitmq/rabbitmq-java-tools-binaries-dev
           token: ${{ secrets.CI_GITHUB_TOKEN }}
