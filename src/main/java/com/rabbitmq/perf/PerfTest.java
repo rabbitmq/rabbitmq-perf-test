@@ -69,9 +69,6 @@ public class PerfTest {
   private static final Logger LOGGER = LoggerFactory.getLogger(PerfTest.class);
 
   public static void main(String[] args, PerfTestOptions perfTestOptions) {
-    //    args = "-qq -u qq -x 0 -y 4 -ms -D 50000".split(" ");
-//    args = "-qq -u qq -x 0 -y 4 -ms --exit-when idle".split(" ");
-//    args = "--rate 100".split(" ");
     SystemExiter systemExiter = perfTestOptions.systemExiter;
     ShutdownService shutdownService = perfTestOptions.shutdownService;
     PrintStream consoleOut = perfTestOptions.consoleOut;
