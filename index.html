@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="generator" content="Asciidoctor 2.0.22">
+<meta name="generator" content="Asciidoctor 2.0.23">
 <title>RabbitMQ PerfTest</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:300,300italic,400,400italic,600,600italic%7CNoto+Serif:400,400italic,700,700italic%7CDroid+Sans+Mono:400,700">
 <style>
@@ -529,7 +529,7 @@ table.CodeRay td.code{padding:0 0 0 .75em}
 <div id="header">
 <h1>RabbitMQ PerfTest</h1>
 <div class="details">
-<span id="revnumber">version 2.21.0</span>
+<span id="revnumber">version 2.22.0</span>
 </div>
 <div id="toc" class="toc2">
 <div id="toctitle">Table of Contents</div>
@@ -570,7 +570,6 @@ table.CodeRay td.code{padding:0 0 0 .75em}
 <li><a href="#tls-support">TLS Support</a></li>
 <li><a href="#oauth2-authenticationauthorization">OAuth2 authentication/authorization</a></li>
 <li><a href="#using-environment-variables-as-options">Using Environment Variables as Options</a></li>
-<li><a href="#result-reporting-in-html">Result Reporting in HTML</a></li>
 <li><a href="#console-output-format">Console Output Format</a></li>
 <li><a href="#monitoring">Monitoring</a>
 <ul class="sectlevel2">
@@ -617,6 +616,10 @@ Use <a href="https://rabbitmq.github.io/rabbitmq-stream-java-client/stable/htmls
 <div class="sect1">
 <h2 id="installation"><a class="anchor" href="#installation"></a>Installation</h2>
 <div class="sectionbody">
+<div class="paragraph">
+<p>PerfTest requires at least Java 8, but <a href="#instance-synchronization">some features</a> require Java 11.
+The latest LTS Java version is recommended.</p>
+</div>
 <div class="sect2">
 <h3 id="from-binary"><a class="anchor" href="#from-binary"></a>From Binary</h3>
 <div class="paragraph">
@@ -684,7 +687,7 @@ following commands:</p>
 <div class="literalblock">
 <div class="content">
 <pre>docker network create perf-test
-docker run -it --rm --network perf-test --name rabbitmq -p 15672:15672 rabbitmq:3.12-management
+docker run -it --rm --network perf-test --name rabbitmq -p 15672:15672 rabbitmq:4.0-management
 docker run -it --rm --network perf-test pivotalrabbitmq/perf-test:latest --uri amqp://rabbitmq</pre>
 </div>
 </div>
@@ -1923,18 +1926,6 @@ the <code>PERF_TEST_CONFIRM_TIMEOUT</code> environment variable, not only <code>
 </div>
 </div>
 <div class="sect1">
-<h2 id="result-reporting-in-html"><a class="anchor" href="#result-reporting-in-html"></a>Result Reporting in HTML</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>The <code>PerfTest HTML extension</code> are a set of tools
-that can help you run automated benchmarks by wrapping around PerfTest. You can provide
-benchmark specs, and the tool will take care of running the benchmark,
-collecting results and displaying them in an HTML page. Learn more
-<a href="https://github.com/rabbitmq/rabbitmq-perf-test/blob/main/html/README.md">here</a>.</p>
-</div>
-</div>
-</div>
-<div class="sect1">
 <h2 id="console-output-format"><a class="anchor" href="#console-output-format"></a>Console Output Format</h2>
 <div class="sectionbody">
 <div class="paragraph">
@@ -2148,8 +2139,8 @@ It is then possible to override the metrics values thanks to the <code>--exposed
 </div>
 <div id="footer">
 <div id="footer-text">
-Version 2.21.0<br>
-Last updated 2024-04-19 13:57:23 UTC
+Version 2.22.0<br>
+Last updated 2024-11-19 11:42:36 +0100
 </div>
 </div>
 </body>
