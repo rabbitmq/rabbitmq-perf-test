@@ -242,6 +242,23 @@ public class PerfTest {
 
       MulticastParams p = multicastParams(cmd, uris, perfTestOptions);
 
+      String connectionAllocationParam =
+          strArg(cmd, "cal", CONNECTION_ALLOCATION.RANDOM.allocation());
+      CONNECTION_ALLOCATION connectionAllocation =
+          Arrays.stream(CONNECTION_ALLOCATION.values())
+              .filter(a -> a.allocation().equals(connectionAllocationParam))
+              .findAny()
+              .orElse(null);
+
+      validate(
+          () -> connectionAllocation != null,
+          "--connection-allocation must one of "
+              + Arrays.stream(CONNECTION_ALLOCATION.values())
+                  .map(CONNECTION_ALLOCATION::allocation)
+                  .collect(Collectors.joining(", ")),
+          systemExiter,
+          consoleErr);
+
       ConcurrentMap<String, Integer> completionReasons = new ConcurrentHashMap<>();
 
       MulticastSet.CompletionHandler completionHandler = getCompletionHandler(p, completionReasons);
@@ -344,7 +361,8 @@ public class PerfTest {
               completionHandler,
               shutdownService,
               expectedMetrics,
-              instanceSynchronization);
+              instanceSynchronization,
+              connectionAllocation);
       set.run(true);
 
       statsSummary.run();
@@ -1364,6 +1382,13 @@ public class PerfTest {
 
     options.addOption(new Option("tnd", "tcp-no-delay", true, "value for TCP NODELAY option"));
 
+    options.addOption(
+        new Option(
+            "cal",
+            "connection-allocation",
+            true,
+            "the way to allocate connection across nodes (random or round-robin), default is random."));
+
     return options;
   }
 
@@ -1612,6 +1637,21 @@ public class PerfTest {
     NEVER,
     EMPTY,
     IDLE
+  }
+
+  enum CONNECTION_ALLOCATION {
+    RANDOM("random"),
+    ROUND_ROBIN("round-robin");
+
+    private final String allocation;
+
+    CONNECTION_ALLOCATION(String allocation) {
+      this.allocation = allocation;
+    }
+
+    public String allocation() {
+      return allocation;
+    }
   }
 
   private static ByteCapacity validateByteCapacity(

@@ -15,6 +15,8 @@
 // info@rabbitmq.com.
 package com.rabbitmq.perf;
 
+import static com.rabbitmq.perf.PerfTest.CONNECTION_ALLOCATION.RANDOM;
+import static com.rabbitmq.perf.PerfTest.CONNECTION_ALLOCATION.ROUND_ROBIN;
 import static com.rabbitmq.perf.Utils.isRecoverable;
 import static java.lang.Math.min;
 import static java.lang.String.format;
@@ -48,8 +50,10 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.function.UnaryOperator;
 import java.util.stream.IntStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -102,7 +106,8 @@ public class MulticastSet {
         completionHandler,
         new ShutdownService(),
         new ExpectedMetrics(params, new SimpleMeterRegistry(), "perftest_", Collections.emptyMap()),
-        InstanceSynchronization.NO_OP);
+        InstanceSynchronization.NO_OP,
+        RANDOM);
   }
 
   public MulticastSet(
@@ -114,7 +119,8 @@ public class MulticastSet {
       CompletionHandler completionHandler,
       ShutdownService shutdownService,
       ExpectedMetrics expectedMetrics,
-      InstanceSynchronization instanceSynchronization) {
+      InstanceSynchronization instanceSynchronization,
+      PerfTest.CONNECTION_ALLOCATION connectionAllocation) {
     this.performanceMetrics = performanceMetrics;
     this.factory = factory;
     this.params = params;
@@ -158,7 +164,7 @@ public class MulticastSet {
               input -> Long.valueOf(input));
     }
 
-    this.connectionCreator = new ConnectionCreator(this.factory, this.uris);
+    this.connectionCreator = new ConnectionCreator(this.factory, this.uris, connectionAllocation);
     this.expectedMetrics = expectedMetrics;
     this.instanceSynchronization = instanceSynchronization;
   }
@@ -952,12 +958,17 @@ public class MulticastSet {
 
     private final ConnectionFactory cf;
     private final List<Address> addresses;
+    private final UnaryOperator<List<Address>> connectionAllocation;
 
-    private ConnectionCreator(ConnectionFactory cf, List<String> uris) {
+    private ConnectionCreator(
+        ConnectionFactory cf,
+        List<String> uris,
+        PerfTest.CONNECTION_ALLOCATION connectionAllocation) {
       this.cf = cf;
       if (uris == null || uris.isEmpty()) {
         // URI already set on the connection factory, nothing special to do
         addresses = Collections.emptyList();
+        this.connectionAllocation = UnaryOperator.identity();
       } else {
         List<Address> addresses = new ArrayList<>(uris.size());
         for (String uri : uris) {
@@ -968,6 +979,26 @@ public class MulticastSet {
           }
         }
         this.addresses = Collections.unmodifiableList(addresses);
+        if (connectionAllocation == RANDOM) {
+          this.connectionAllocation =
+              l -> {
+                List<Address> addrs = new ArrayList<>(l);
+                if (addresses.size() > 1) {
+                  Collections.shuffle(addrs);
+                }
+                return addrs;
+              };
+        } else if (connectionAllocation == ROUND_ROBIN) {
+          AtomicInteger allocationCount = new AtomicInteger(0);
+          this.connectionAllocation =
+              l -> {
+                Address addr = l.get(allocationCount.getAndIncrement() % l.size());
+                return Collections.singletonList(addr);
+              };
+        } else {
+          throw new IllegalArgumentException(
+              "Unknown connection allocation type: " + connectionAllocation.name());
+        }
       }
     }
 
@@ -984,11 +1015,7 @@ public class MulticastSet {
       if (this.addresses.isEmpty()) {
         connection = this.cf.newConnection(name);
       } else {
-        List<Address> addrs = new ArrayList<>(addresses);
-        if (addresses.size() > 1) {
-          Collections.shuffle(addrs);
-        }
-        connection = this.cf.newConnection(addrs, name);
+        connection = this.cf.newConnection(this.connectionAllocation.apply(this.addresses), name);
       }
       addBlockedListener(connection);
       return connection;
