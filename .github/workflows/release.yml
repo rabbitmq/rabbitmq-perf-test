@@ -47,7 +47,7 @@ jobs:
         env:
           MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
       - name: Push to GitHub Release (GA)
-        uses: softprops/action-gh-release@v2.1.0
+        uses: softprops/action-gh-release@v2.2.0
         with:
           files: packages/*
           name: ${{ env.release_name }}
