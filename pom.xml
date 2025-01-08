@@ -92,7 +92,7 @@
     <nexus-staging-maven-plugin.version>1.7.0</nexus-staging-maven-plugin.version>
     <checksum.maven.plugin.version>1.11</checksum.maven.plugin.version>
     <spring-boot-maven-plugin.version>2.7.18</spring-boot-maven-plugin.version>
-    <spotless.version>2.44.0</spotless.version>
+    <spotless.version>2.44.1</spotless.version>
     <google-java-format.version>1.21.0</google-java-format.version>
 
     <!-- because of https://issues.apache.org/jira/browse/MRESOURCES-99 -->
