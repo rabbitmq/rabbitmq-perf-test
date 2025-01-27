@@ -88,7 +88,6 @@
     <maven.surefire.plugin.version>3.5.2</maven.surefire.plugin.version>
     <maven.failsafe.plugin.version>3.5.2</maven.failsafe.plugin.version>
     <build-helper-maven-plugin.version>3.6.0</build-helper-maven-plugin.version>
-    <maven.packagecloud.wagon.version>0.0.6</maven.packagecloud.wagon.version>
     <nexus-staging-maven-plugin.version>1.7.0</nexus-staging-maven-plugin.version>
     <checksum.maven.plugin.version>1.11</checksum.maven.plugin.version>
     <spring-boot-maven-plugin.version>2.7.18</spring-boot-maven-plugin.version>
@@ -482,13 +481,7 @@
       </plugin>
 
     </plugins>
-    <extensions>
-      <extension>
-        <groupId>io.packagecloud.maven.wagon</groupId>
-        <artifactId>maven-packagecloud-wagon</artifactId>
-        <version>${maven.packagecloud.wagon.version}</version>
-      </extension>
-    </extensions>
+
   </build>
 
   <profiles>
@@ -632,12 +625,6 @@
 
         </plugins>
       </build>
-      <distributionManagement>
-        <repository>
-          <id>packagecloud-rabbitmq-maven-milestones</id>
-          <url>packagecloud+https://packagecloud.io/rabbitmq/maven-milestones</url>
-        </repository>
-      </distributionManagement>
     </profile>
 
     <profile>
