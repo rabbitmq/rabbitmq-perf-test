@@ -1,4 +1,4 @@
-FROM ubuntu:22.04 as builder
+FROM ubuntu:24.04 as builder
 
 ARG perf_test_binary="target/perf-test.jar"
 
@@ -45,7 +45,7 @@ ADD $perf_test_binary /
 RUN mkdir $PERF_TEST_HOME; \
     mv /*.jar "$PERF_TEST_HOME/perf-test.jar"
 
-FROM ubuntu:22.04
+FROM ubuntu:24.04
 
 # we need locales support for characters like µ to show up correctly in the console
 RUN set -eux; \
@@ -81,8 +81,8 @@ RUN set -eux; \
 COPY --from=builder /usr/local/bin/rabbitmqadmin /usr/local/bin/rabbitmqadmin
 RUN chmod 755 /usr/local/bin/rabbitmqadmin
 
-RUN groupadd --gid 1000 perf-test;\
-    useradd --uid 1000 --gid perf-test --comment "perf-test user" perf-test; \
+RUN groupadd --gid 2000 perf-test;\
+    useradd --uid 2000 --gid perf-test --comment "perf-test user" perf-test; \
     chown -R 'perf-test':'perf-test' /perf_test
 
 USER perf-test:perf-test
