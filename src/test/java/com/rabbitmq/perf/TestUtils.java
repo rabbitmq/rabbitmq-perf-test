@@ -45,11 +45,13 @@ public abstract class TestUtils {
     return port;
   }
 
-  public static void waitAtMost(int timeoutInSeconds, BooleanSupplier condition) throws InterruptedException {
+  public static void waitAtMost(int timeoutInSeconds, BooleanSupplier condition)
+      throws InterruptedException {
     waitAtMost(timeoutInSeconds, condition, null);
   }
 
-  public static void waitAtMost(int timeoutInSeconds, BooleanSupplier condition, Supplier<String> message)
+  public static void waitAtMost(
+      int timeoutInSeconds, BooleanSupplier condition, Supplier<String> message)
       throws InterruptedException {
     if (condition.getAsBoolean()) {
       return;

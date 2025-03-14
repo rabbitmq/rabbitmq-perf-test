@@ -289,8 +289,12 @@ public class ConnectionRecoveryIT {
     long messageCountBeforeClosing = msgConsumed.get();
     closeAllConnections();
     long expectedMessageCount = 2 * messageCountBeforeClosing;
-    waitAtMost(20, () -> msgConsumed.get() >= expectedMessageCount,
-        () -> String.format("Expecting at least %d messages, got %d", expectedMessageCount, msgConsumed.get()));
+    waitAtMost(
+        20,
+        () -> msgConsumed.get() >= expectedMessageCount,
+        () ->
+            String.format(
+                "Expecting at least %d messages, got %d", expectedMessageCount, msgConsumed.get()));
     assertThat(testIsDone.get()).isFalse();
   }
 
