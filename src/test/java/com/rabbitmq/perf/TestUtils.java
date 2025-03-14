@@ -25,6 +25,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 import java.util.concurrent.ThreadFactory;
 import java.util.function.BooleanSupplier;
+import java.util.function.Supplier;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import org.assertj.core.api.Condition;
@@ -44,7 +45,11 @@ public abstract class TestUtils {
     return port;
   }
 
-  public static void waitAtMost(int timeoutInSeconds, BooleanSupplier condition)
+  public static void waitAtMost(int timeoutInSeconds, BooleanSupplier condition) throws InterruptedException {
+    waitAtMost(timeoutInSeconds, condition, null);
+  }
+
+  public static void waitAtMost(int timeoutInSeconds, BooleanSupplier condition, Supplier<String> message)
       throws InterruptedException {
     if (condition.getAsBoolean()) {
       return;
@@ -59,7 +64,13 @@ public abstract class TestUtils {
       }
       waitedTime += waitTime;
     }
-    fail("Waited " + timeoutInSeconds + " second(s), condition never got true");
+    String msg;
+    if (message == null) {
+      msg = "Waited " + timeoutInSeconds + " second(s), condition never got true";
+    } else {
+      msg = "Waited " + timeoutInSeconds + " second(s), " + message.get();
+    }
+    fail(msg);
   }
 
   public static ThreadFactory threadFactory(TestInfo info) {
