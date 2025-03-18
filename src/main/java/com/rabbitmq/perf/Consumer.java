@@ -283,7 +283,8 @@ public class Consumer extends AgentBase implements Runnable {
       this.maybeHandleMessage(envelope, properties, body, channel);
     }
 
-    private void maybeHandleMessage(Envelope envelope, BasicProperties properties, byte[] body, Channel ch) throws IOException {
+    private void maybeHandleMessage(
+        Envelope envelope, BasicProperties properties, byte[] body, Channel ch) throws IOException {
       if (ch.isOpen()) {
         handleMessage(envelope, properties, body, ch);
       }
