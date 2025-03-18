@@ -214,7 +214,7 @@ public class Consumer extends AgentBase implements Runnable {
                 try {
                   GetResponse response = ch.basicGet(queue, autoAck);
                   if (response != null) {
-                    delegate.handleMessage(
+                    delegate.maybeHandleMessage(
                         response.getEnvelope(), response.getProps(), response.getBody(), ch);
                   }
                 } catch (IOException e) {
@@ -280,7 +280,13 @@ public class Consumer extends AgentBase implements Runnable {
     public void handleDelivery(
         String consumerTag, Envelope envelope, BasicProperties properties, byte[] body)
         throws IOException {
-      this.handleMessage(envelope, properties, body, channel);
+      this.maybeHandleMessage(envelope, properties, body, channel);
+    }
+
+    private void maybeHandleMessage(Envelope envelope, BasicProperties properties, byte[] body, Channel ch) throws IOException {
+      if (ch.isOpen()) {
+        handleMessage(envelope, properties, body, ch);
+      }
     }
 
     void handleMessage(Envelope envelope, BasicProperties properties, byte[] body, Channel ch)
