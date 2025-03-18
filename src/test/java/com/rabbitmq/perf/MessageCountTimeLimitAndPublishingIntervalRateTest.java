@@ -338,6 +338,11 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         proxy(
             Channel.class,
             callback(
+                "isOpen",
+                (proxy, method, args) -> {
+                  return true;
+                }),
+            callback(
                 "basicConsume",
                 (proxy, method, args) -> {
                   consumers.add((Consumer) args[3]);
@@ -458,6 +463,11 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
     Channel channel =
         proxy(
             Channel.class,
+            callback(
+                "isOpen",
+                (proxy, method, args) -> {
+                  return true;
+                }),
             callback(
                 "basicConsume",
                 (proxy, method, args) -> {
@@ -925,6 +935,11 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
         proxy(
             Channel.class,
             callback(
+                "isOpen",
+                (proxy, method, args) -> {
+                  return true;
+                }),
+            callback(
                 "basicGet",
                 (proxy, method, args) -> {
                   GetResponse response =
@@ -1014,6 +1029,11 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
     Channel channel =
         proxy(
             Channel.class,
+            callback(
+                "isOpen",
+                (proxy, method, args) -> {
+                  return true;
+                }),
             callback(
                 "basicConsume",
                 (proxy, method, args) -> {
