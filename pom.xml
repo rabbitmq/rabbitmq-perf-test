@@ -86,7 +86,7 @@
     <buildnumber.plugin.version>3.2.1</buildnumber.plugin.version>
     <maven-dependency-plugin.version>3.8.1</maven-dependency-plugin.version>
     <maven.surefire.plugin.version>3.5.2</maven.surefire.plugin.version>
-    <maven.failsafe.plugin.version>3.5.2</maven.failsafe.plugin.version>
+    <maven.failsafe.plugin.version>3.5.3</maven.failsafe.plugin.version>
     <build-helper-maven-plugin.version>3.6.0</build-helper-maven-plugin.version>
     <nexus-staging-maven-plugin.version>1.7.0</nexus-staging-maven-plugin.version>
     <checksum.maven.plugin.version>1.11</checksum.maven.plugin.version>
