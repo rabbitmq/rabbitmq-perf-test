@@ -371,6 +371,18 @@ public class MulticastParams {
     return queueArguments;
   }
 
+  String getQueuePattern() {
+    return queuePattern;
+  }
+
+  int getQueueSequenceFrom() {
+    return queueSequenceFrom;
+  }
+
+  int getQueueSequenceTo() {
+    return queueSequenceTo;
+  }
+
   public void setBodyContentType(String bodyContentType) {
     this.bodyContentType = bodyContentType;
   }
