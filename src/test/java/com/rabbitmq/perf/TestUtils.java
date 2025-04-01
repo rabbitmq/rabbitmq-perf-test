@@ -15,14 +15,18 @@
 // info@rabbitmq.com.
 package com.rabbitmq.perf;
 
+import static java.lang.String.format;
 import static org.junit.jupiter.api.Assertions.fail;
 
+import com.rabbitmq.client.ConnectionFactory;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.lang.annotation.*;
+import java.lang.reflect.Method;
 import java.net.ServerSocket;
 import java.nio.charset.StandardCharsets;
 import java.util.Locale;
+import java.util.UUID;
 import java.util.concurrent.ThreadFactory;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
@@ -35,7 +39,13 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
 /** */
-public abstract class TestUtils {
+public final class TestUtils {
+
+  private TestUtils() {}
+
+  public static ConnectionFactory connectionFactory() {
+    return new ConnectionFactory();
+  }
 
   static int randomNetworkPort() throws IOException {
     ServerSocket socket = new ServerSocket();
@@ -81,6 +91,17 @@ public abstract class TestUtils {
 
   public static String name(TestInfo info) {
     return info.getTestMethod().get().getName() + "-" + info.getDisplayName() + "-";
+  }
+
+  public static String randomName(TestInfo info) {
+    return name(info.getTestClass().get(), info.getTestMethod().get());
+  }
+
+  private static String name(Class<?> testClass, Method testMethod) {
+    String uuid = UUID.randomUUID().toString();
+    return format(
+        "%s_%s%s",
+        testClass.getSimpleName(), testMethod.getName(), uuid.substring(uuid.length() / 2));
   }
 
   static Condition<String> validXml() {

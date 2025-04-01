@@ -33,6 +33,9 @@ public class ScenarioFactoryTest {
             + "  'rate': 10, 'exclusive': true, "
             + "  'confirm': 10, "
             + "  'queue-arguments': 'x-max-length=10,x-dead-letter-exchange=some.exchange.name,x-single-active-consumer=true', "
+            + "  'queue-pattern': 'gh-813-%d', "
+            + "  'queue-sequence-from': 0, "
+            + "  'queue-sequence-to': 3, "
             + "  'flags': 'persistent,mandatory', "
             + "  'auto-delete': 'false', "
             + "  'body': ['file1.json','file2.json'], 'body-content-type' : 'application/json'}]}]";
@@ -54,6 +57,9 @@ public class ScenarioFactoryTest {
         .containsEntry("x-max-length", 10L)
         .containsEntry("x-dead-letter-exchange", "some.exchange.name")
         .containsEntry("x-single-active-consumer", true);
+    assertThat(params.getQueuePattern()).isEqualTo("gh-813-%d");
+    assertThat(params.getQueueSequenceFrom()).isEqualTo(0);
+    assertThat(params.getQueueSequenceTo()).isEqualTo(3);
     assertThat(params.getFlags()).hasSize(2).containsExactly("persistent", "mandatory");
     assertThat(params.isAutoDelete()).isFalse();
   }

@@ -23,6 +23,7 @@ import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.Reader;
 import java.util.HashMap;
@@ -39,13 +40,14 @@ public class PerfTestMulti {
 
   private static final Map<String, Object> results = new HashMap<>();
 
-  @SuppressWarnings("unchecked")
-  public static void main(String[] args) throws Exception {
+  public static void main(String[] args, PerfTest.PerfTestOptions perfTestOptions)
+      throws Exception {
+    PrintStream consoleOut = perfTestOptions.consoleOut();
+    PerfTest.SystemExiter systemExiter = perfTestOptions.systemExiter();
     if (args.length != 2) {
-      System.out.println("Usage: PerfTestMulti input-json-file output-json-file");
-      System.exit(1);
+      consoleOut.println("Usage: PerfTestMulti input-json-file output-json-file");
+      systemExiter.exit(1);
     }
-    Log.configureLog();
     String inJSON = args[0];
     String outJSON = args[1];
 
@@ -53,26 +55,35 @@ public class PerfTestMulti {
     try {
       json = readFile(inJSON);
     } catch (FileNotFoundException e) {
-      System.out.println("Input json file " + inJSON + " could not be found");
-      System.exit(1);
+      consoleOut.println("Input json file " + inJSON + " could not be found");
+      systemExiter.exit(1);
     }
-    Scenario[] scenarios = scenarios(json, status -> System.exit(status));
+    Scenario[] scenarios = scenarios(json, systemExiter, consoleOut);
     try {
-      runStaticBrokerTests(scenarios);
+      runStaticBrokerTests(scenarios, consoleOut);
       writeJSON(outJSON);
-      System.exit(0);
+      systemExiter.exit(0);
     } catch (Exception e) {
       LOGGER.error("Error during test execution", e);
-      System.exit(1);
+      systemExiter.exit(1);
     }
   }
 
   @SuppressWarnings("unchecked")
-  static Scenario[] scenarios(String json, PerfTest.SystemExiter systemExiter) {
+  public static void main(String[] args) throws Exception {
+    Log.configureLog();
+    PerfTest.PerfTestOptions perfTestOptions = new PerfTest.PerfTestOptions();
+    main(
+        args,
+        perfTestOptions.setSystemExiter(new PerfTest.JvmSystemExiter()).setConsoleOut(System.out));
+  }
+
+  @SuppressWarnings("unchecked")
+  static Scenario[] scenarios(String json, PerfTest.SystemExiter systemExiter, PrintStream out) {
     Gson gson = new Gson();
     List<Map> scenariosJSON = gson.fromJson(json, List.class);
     if (scenariosJSON == null) {
-      System.out.println("Input json file could not be parsed");
+      out.println("Input json file could not be parsed");
       systemExiter.exit(1);
     }
     Scenario[] scenarios = new Scenario[scenariosJSON.size()];
@@ -109,15 +120,15 @@ public class PerfTestMulti {
     return gson.toJson(object);
   }
 
-  private static void runStaticBrokerTests(Scenario[] scenarios) throws Exception {
-    runTests(scenarios);
+  private static void runStaticBrokerTests(Scenario[] scenarios, PrintStream out) throws Exception {
+    runTests(scenarios, out);
   }
 
-  private static void runTests(Scenario[] scenarios) throws Exception {
+  private static void runTests(Scenario[] scenarios, PrintStream out) throws Exception {
     for (Scenario scenario : scenarios) {
-      System.out.print("Running scenario '" + scenario.getName() + "' ");
+      out.print("Running scenario '" + scenario.getName() + "' ");
       scenario.run();
-      System.out.println();
+      out.println();
       results.put(scenario.getName(), scenario.getStats().results());
     }
   }
