@@ -1591,6 +1591,14 @@ public class PerfTest {
       this.consoleErr = consoleErr;
       return this;
     }
+
+    SystemExiter systemExiter() {
+      return systemExiter;
+    }
+
+    PrintStream consoleOut() {
+      return consoleOut;
+    }
   }
 
   /**
@@ -1607,7 +1615,7 @@ public class PerfTest {
     void exit(int status);
   }
 
-  private static class JvmSystemExiter implements SystemExiter {
+  static class JvmSystemExiter implements SystemExiter {
 
     @Override
     public void exit(int status) {

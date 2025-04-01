@@ -37,7 +37,7 @@ public class PerfTestMultiTest {
             + "  'params': [{'time-limit': 30}], "
             + "  'variables': [{'name':'min-msg-size', 'values': [0, 100, 200, 500, 1000, 2000, 5000]}]}"
             + "]";
-    Scenario[] scenarios = PerfTestMulti.scenarios(json, status -> {});
+    Scenario[] scenarios = PerfTestMulti.scenarios(json, status -> {}, System.out);
     assertThat(scenarios).hasSize(3);
     assertThat(scenarios[0]).isInstanceOf(SimpleScenario.class);
     SimpleScenario simpleScenario = (SimpleScenario) scenarios[0];
