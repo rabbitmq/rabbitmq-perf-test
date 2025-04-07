@@ -36,7 +36,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 public class DefaultPerformanceMetricsTest {
 
-  static final String LATENCY_HEADER = "min/median/75th/95th/99th";
+  static final String LATENCY_HEADER = "min/median/75th/95th/99th/max";
   StringWriter csvOut;
   ByteArrayOutputStream defaultConsoleOut, compactConsoleOut;
   String defaultOutput, compactOutput;
@@ -60,13 +60,13 @@ public class DefaultPerformanceMetricsTest {
               "confirmed",
               "nacked",
               "received",
-              "min/median/75th/95th/99th consumer latency",
+              "min/median/75th/95th/99th/max consumer latency",
               "confirm latency"),
           2),
       tc(
           "Sent, received",
           configure().sent(true).received(true).returned(false).confirmed(false),
-          array("sent", "received", "min/median/75th/95th/99th consumer latency"),
+          array("sent", "received", "min/median/75th/95th/99th/max consumer latency"),
           1,
           array("returned", "confirmed", "nacked", "confirm latency")),
       tc(
@@ -77,14 +77,14 @@ public class DefaultPerformanceMetricsTest {
               "confirmed",
               "nacked",
               "received",
-              "min/median/75th/95th/99th consumer latency",
+              "min/median/75th/95th/99th/max consumer latency",
               "confirm latency"),
           2,
           array("returned")),
       tc(
           "Sent, received, returned",
           configure().sent(true).received(true).returned(true).confirmed(false),
-          array("sent", "returned", "received", "min/median/75th/95th/99th consumer latency"),
+          array("sent", "returned", "received", "min/median/75th/95th/99th/max consumer latency"),
           1,
           array("confirmed", "nacked", "confirm latency")),
       tc(
@@ -97,7 +97,7 @@ public class DefaultPerformanceMetricsTest {
               "confirmed",
               "nacked",
               "received",
-              "min/median/75th/95th/99th consumer latency",
+              "min/median/75th/95th/99th/max consumer latency",
               "consumer latency",
               "confirm latency")),
       tc(
@@ -109,13 +109,13 @@ public class DefaultPerformanceMetricsTest {
               "confirmed",
               "nacked",
               "received",
-              "min/median/75th/95th/99th consumer latency",
+              "min/median/75th/95th/99th/max consumer latency",
               "consumer latency",
               "confirm latency")),
       tc(
           "Sent, confirmed",
           configure().sent(true).received(false).returned(false).confirmed(true),
-          array("sent", "confirmed", "nacked", "min/median/75th/95th/99th confirm latency"),
+          array("sent", "confirmed", "nacked", "min/median/75th/95th/99th/max confirm latency"),
           1,
           array("returned", "received", "consumer latency")),
       tc(
@@ -126,19 +126,19 @@ public class DefaultPerformanceMetricsTest {
               "returned",
               "confirmed",
               "nacked",
-              "min/median/75th/95th/99th confirm latency"),
+              "min/median/75th/95th/99th/max confirm latency"),
           1,
           array("received", "consumer latency")),
       tc(
           "Sent, received",
           configure().sent(true).received(true).returned(false).confirmed(false),
-          array("sent", "received", "min/median/75th/95th/99th consumer latency"),
+          array("sent", "received", "min/median/75th/95th/99th/max consumer latency"),
           1,
           array("returned", "confirmed", "nacked", "confirm latency")),
       tc(
           "Received",
           configure().sent(false).received(true).returned(false).confirmed(false),
-          array("received", "min/median/75th/95th/99th consumer latency"),
+          array("received", "min/median/75th/95th/99th/max consumer latency"),
           1,
           array("sent", "returned", "confirmed", "nacked", "confirm latency")),
     };
