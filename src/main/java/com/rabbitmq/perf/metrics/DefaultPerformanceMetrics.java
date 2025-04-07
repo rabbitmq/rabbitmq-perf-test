@@ -255,7 +255,8 @@ public final class DefaultPerformanceMetrics implements PerformanceMetrics, Auto
       div(histogram.getSnapshot().getMedian()),
       div(histogram.getSnapshot().get75thPercentile()),
       div(histogram.getSnapshot().get95thPercentile()),
-      div(histogram.getSnapshot().get99thPercentile())
+      div(histogram.getSnapshot().get99thPercentile()),
+      div(histogram.getSnapshot().getMax())
     };
   }
 

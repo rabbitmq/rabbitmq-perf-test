@@ -24,7 +24,7 @@ import java.util.concurrent.TimeUnit;
 
 abstract class MetricsFormatterUtils {
 
-  static final String LATENCY_HEADER = "min/median/75th/95th/99th";
+  static final String LATENCY_HEADER = "min/median/75th/95th/99th/max";
   static final String MESSAGE_RATE_LABEL = "msg/s";
 
   static final float NANO_TO_SECOND = 1_000_000_000;
@@ -49,8 +49,14 @@ abstract class MetricsFormatterUtils {
 
   static String formatLatency(long[] stats, TimeUnit latencyCollectionTimeUnit) {
     return format(
-        "%d/%d/%d/%d/%d %s",
-        stats[0], stats[1], stats[2], stats[3], stats[4], unit(latencyCollectionTimeUnit));
+        "%d/%d/%d/%d/%d/%d %s",
+        stats[0],
+        stats[1],
+        stats[2],
+        stats[3],
+        stats[4],
+        stats[5],
+        unit(latencyCollectionTimeUnit));
   }
 
   private static String unit(TimeUnit latencyCollectionTimeUnit) {

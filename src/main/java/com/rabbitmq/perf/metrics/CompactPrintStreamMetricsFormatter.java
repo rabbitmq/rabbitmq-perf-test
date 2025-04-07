@@ -32,9 +32,9 @@ class CompactPrintStreamMetricsFormatter extends BaseMetricsFormatter implements
   private static final String TIME_FORMAT = "%-10s";
   // up to 999999 (6), space (1), msg/s (5), leading space to separate (1)
   private static final String RATE_FORMAT = "%13s";
-  // 5 values of 3 digits, 4 separators, 1 space, 2 characters for unit, 1 space to separate
-  private static final String LATENCY_FORMAT = "%23s";
-  private static final int MAX_ALIGNED_LATENCY = 23 - 1; // no space to separate
+  // 6 values of 3 digits, 5 separators, 1 space, 2 characters for unit, 1 space to separate
+  private static final String LATENCY_FORMAT = "%27s";
+  private static final int MAX_ALIGNED_LATENCY = 27 - 1; // no space to separate
 
   private final PrintStream out;
   private final TimeUnit latencyCollectionTimeUnit;
