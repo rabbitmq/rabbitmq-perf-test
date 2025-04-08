@@ -17,19 +17,24 @@ package com.rabbitmq.perf.metrics;
 
 import static com.rabbitmq.perf.metrics.MetricsFormatterUtils.MESSAGE_RATE_LABEL;
 import static com.rabbitmq.perf.metrics.MetricsFormatterUtils.formatRate;
-import static com.rabbitmq.perf.metrics.MetricsFormatterUtils.formatTime;
 import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
 import java.io.PrintStream;
 import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.concurrent.TimeUnit;
 
 class CompactPrintStreamMetricsFormatter extends BaseMetricsFormatter implements MetricsFormatter {
 
-  // e.g. 99999.999s
-  private static final String TIME_FORMAT = "%-10s";
+  private static final String DATE_TIME_FORMAT = "yyyy/MM/dd HH:mm:ss";
+  private static final DateTimeFormatter DATE_TIME_FORMATTER =
+      DateTimeFormatter.ofPattern(DATE_TIME_FORMAT);
+
+  // e.g. 2025/04/08 16:54:19
+  private static final String TIME_FORMAT = "%-" + DATE_TIME_FORMAT.length() + "s";
   // up to 999999 (6), space (1), msg/s (5), leading space to separate (1)
   private static final String RATE_FORMAT = "%13s";
   // 6 values of 3 digits, 5 separators, 1 space, 2 characters for unit, 1 space to separate
@@ -97,7 +102,7 @@ class CompactPrintStreamMetricsFormatter extends BaseMetricsFormatter implements
       long[] confirmedLatencyStats,
       long[] consumerLatencyStats) {
     StringBuilder builder =
-        new StringBuilder().append(format(TIME_FORMAT, formatTime(durationSinceStart) + "s"));
+        new StringBuilder().append(DATE_TIME_FORMATTER.format(LocalDateTime.now()));
     if (this.publishedEnabled) {
       builder.append(format(RATE_FORMAT, formatRate(publishedRate) + " " + MESSAGE_RATE_LABEL));
     }
