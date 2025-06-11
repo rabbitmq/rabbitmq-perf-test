@@ -47,7 +47,7 @@ jobs:
           tag-filter: '^v-rabbitmq-perf-test-.*-[0-9]{8}-[0-9]{6}$'
           keep-last-n: 2
       - name: Push to GitHub Release
-        uses: softprops/action-gh-release@v2.3.0
+        uses: softprops/action-gh-release@v2.3.2
         with:
           files: packages/*
           name: ${{ env.release_name }}
@@ -67,7 +67,7 @@ jobs:
         run: |
           sleep 5s
       - name: Push to GitHub Release
-        uses: softprops/action-gh-release@v2.3.0
+        uses: softprops/action-gh-release@v2.3.2
         with:
           files: packages-latest/*
           name: rabbitmq-perf-test-latest
