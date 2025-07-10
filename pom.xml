@@ -68,7 +68,7 @@
     <junit.jupiter.version>5.13.3</junit.jupiter.version>
     <mockito.version>5.18.0</mockito.version>
     <assertj.version>3.27.3</assertj.version>
-    <commons-lang3.version>3.17.0</commons-lang3.version>
+    <commons-lang3.version>3.18.0</commons-lang3.version>
     <jmh.version>1.37</jmh.version>
 
     <!-- to sign artifacts when releasing -->
