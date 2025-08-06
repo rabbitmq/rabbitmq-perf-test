@@ -25,6 +25,7 @@ import com.rabbitmq.perf.metrics.PerformanceMetrics;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.Callable;
@@ -98,6 +99,7 @@ public class Consumer extends AgentBase implements Runnable {
 
   private final Runnable rateLimiterCallback;
   private final boolean rateLimitation;
+  private final PrintStream out;
 
   public Consumer(ConsumerParameters parameters) {
     super(
@@ -124,6 +126,7 @@ public class Consumer extends AgentBase implements Runnable {
 
     this.queueNames.set(new ArrayList<>(parameters.getQueueNames()));
     this.initialQueueNames = new ArrayList<>(parameters.getQueueNames());
+    this.out = parameters.getOut();
 
     if (parameters.getConsumerLatenciesIndicator().isVariable()) {
       this.consumerLatency =
@@ -372,7 +375,7 @@ public class Consumer extends AgentBase implements Runnable {
 
     @Override
     public void handleCancel(String consumerTag) {
-      System.out.printf("Consumer cancelled by broker for tag: %s\n", consumerTag);
+      out.printf("Consumer cancelled by broker for tag: %s\n", consumerTag);
       epochMessageCount.set(0);
       if (consumerTagBranchMap.containsKey(consumerTag)) {
         String qName = consumerTagBranchMap.get(consumerTag);
@@ -393,7 +396,7 @@ public class Consumer extends AgentBase implements Runnable {
             delay.toMillis(),
             TimeUnit.MILLISECONDS);
       } else {
-        System.out.printf("Could not find queue for consumer tag: %s\n", consumerTag);
+        out.printf("Could not find queue for consumer tag: %s\n", consumerTag);
       }
     }
   }

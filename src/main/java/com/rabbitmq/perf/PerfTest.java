@@ -17,6 +17,7 @@ package com.rabbitmq.perf;
 
 import static com.rabbitmq.client.ConnectionFactory.computeDefaultTlsProtocol;
 import static com.rabbitmq.perf.OptionsUtils.forEach;
+import static com.rabbitmq.perf.Tuples.pair;
 import static com.rabbitmq.perf.Utils.strArg;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
@@ -32,8 +33,8 @@ import com.rabbitmq.client.impl.CredentialsProvider;
 import com.rabbitmq.client.impl.CredentialsRefreshService;
 import com.rabbitmq.client.impl.DefaultCredentialsRefreshService.DefaultCredentialsRefreshServiceBuilder;
 import com.rabbitmq.client.impl.DefaultExceptionHandler;
-import com.rabbitmq.client.impl.nio.NioParams;
 import com.rabbitmq.perf.Metrics.ConfigurationContext;
+import com.rabbitmq.perf.Tuples.Pair;
 import com.rabbitmq.perf.Utils.GsonOAuth2ClientCredentialsGrantCredentialsProvider;
 import com.rabbitmq.perf.metrics.CompositeMetricsFormatter;
 import com.rabbitmq.perf.metrics.CsvMetricsFormatter;
@@ -42,10 +43,22 @@ import com.rabbitmq.perf.metrics.MetricsFormatter;
 import com.rabbitmq.perf.metrics.MetricsFormatterFactory;
 import com.rabbitmq.perf.metrics.MetricsFormatterFactory.Context;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
+import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.Channel;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.IoHandlerFactory;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
+import io.netty.channel.epoll.Epoll;
+import io.netty.channel.epoll.EpollIoHandler;
+import io.netty.channel.epoll.EpollSocketChannel;
+import io.netty.channel.kqueue.KQueue;
+import io.netty.channel.kqueue.KQueueIoHandler;
+import io.netty.channel.kqueue.KQueueSocketChannel;
+import io.netty.channel.nio.NioIoHandler;
+import io.netty.channel.socket.nio.NioSocketChannel;
 import java.io.*;
 import java.math.BigDecimal;
 import java.nio.charset.Charset;
-import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.time.Instant;
@@ -56,7 +69,9 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BooleanSupplier;
+import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
@@ -105,7 +120,7 @@ public class PerfTest {
       }
 
       if (cmd.hasOption('v')) {
-        versionInformation();
+        versionInformation(consoleOut);
         systemExiter.exit(0);
       }
 
@@ -134,7 +149,7 @@ public class PerfTest {
       String metricsPrefix = strArg(cmd, "mpx", "perftest_");
 
       CompositeMeterRegistry registry = new CompositeMeterRegistry();
-      shutdownService.wrap(() -> registry.close());
+      shutdownService.wrap(registry::close);
 
       List<String> uris;
       if (urisParameter != null) {
@@ -156,14 +171,14 @@ public class PerfTest {
       if (recoveryDelayHandler != null) {
         factory.setRecoveryDelayHandler(recoveryDelayHandler);
       }
-      SSLContext sslContext =
-          perfTestOptions.skipSslContextConfiguration
-              ? null
-              : getSslContextIfNecessary(cmd, System.getProperties());
 
-      if (sslContext != null) {
+      SSLContext sslContext = null;
+      if (!perfTestOptions.skipSslContextConfiguration
+          && useDefaultSslContext(cmd, System.getProperties())) {
+        sslContext = SSLContext.getDefault();
         factory.useSslProtocol(sslContext);
       }
+
       if (saslExternal) {
         factory.setSaslConfig(DefaultSaslConfig.EXTERNAL);
       }
@@ -171,11 +186,14 @@ public class PerfTest {
       factory.setUri(uris.get(0));
       factory.setRequestedFrameMax(frameMax);
       factory.setRequestedHeartbeat(heartbeat);
-      factory = configureNioIfRequested(cmd, factory);
-      if (factory.getNioParams().getNioExecutor() != null) {
-        ExecutorService nioExecutor = factory.getNioParams().getNioExecutor();
-        shutdownService.wrap(() -> nioExecutor.shutdownNow());
+
+      boolean netty = netty(cmd);
+      if (netty) {
+        factory.useBlockingIo();
       }
+
+      configureNioIfRequested(cmd, factory, shutdownService);
+      configureNettyIfRequested(cmd, factory, shutdownService);
 
       String oauth2TokenEndpoint = strArg(cmd, "o2uri", null);
       if (oauth2TokenEndpoint != null) {
@@ -232,9 +250,16 @@ public class PerfTest {
       }
 
       factory.setSocketConfigurator(Utils.socketConfigurator(cmd));
-      if (factory.getNioParams() != null) {
-        factory.getNioParams().setSocketChannelConfigurator(Utils.socketChannelConfigurator(cmd));
-        factory.getNioParams().setSslEngineConfigurator(Utils.sslEngineConfigurator(cmd));
+      if (nioParams(factory) != null) {
+        nioParams(factory).setSocketChannelConfigurator(Utils.socketChannelConfigurator(cmd));
+        nioParams(factory).setSslEngineConfigurator(Utils.sslEngineConfigurator(cmd));
+      }
+
+      if (netty) {
+        factory.netty().channelCustomizer(Utils.channelCustomizer(cmd));
+        if (factory.isSSL()) {
+          factory.netty().sslContext(Utils.nettySslContext(sslContext));
+        }
       }
 
       metrics.configure(
@@ -325,7 +350,7 @@ public class PerfTest {
               consoleOut.flush();
             }
           };
-      shutdownService.wrap(() -> statsSummary.run());
+      shutdownService.wrap(statsSummary::run);
 
       Map<String, Object> exposedMetrics = convertKeyValuePairs(strArg(cmd, "em", null));
       ExpectedMetrics expectedMetrics =
@@ -384,6 +409,7 @@ public class PerfTest {
   static MulticastParams multicastParams(
       CommandLineProxy cmd, List<String> uris, PerfTestOptions perfTestOptions) throws Exception {
     SystemExiter systemExiter = perfTestOptions.systemExiter;
+    PrintStream consoleOut = perfTestOptions.consoleOut;
     PrintStream consoleErr = perfTestOptions.consoleErr;
 
     String exchangeType = strArg(cmd, 't', "direct");
@@ -670,6 +696,8 @@ public class PerfTest {
       functionalLogger = new DefaultFunctionalLogger(perfTestOptions.consoleOut, verboseFull);
     }
 
+    boolean netty = netty(cmd);
+
     MulticastParams p = new MulticastParams();
     p.setAutoAck(autoAck);
     p.setAutoDelete(autoDelete);
@@ -731,10 +759,12 @@ public class PerfTest {
     p.setConsumerArguments(consumerArguments);
     p.setQueuesInSequence(queueFile != null);
     p.setExitWhen(exitWhen);
-    p.setCluster(uris.size() > 0);
+    p.setCluster(!uris.isEmpty());
     p.setConsumerStartDelay(consumerStartDelay);
     p.setRateLimiterFactory(rateLimiterFactory);
     p.setFunctionalLogger(functionalLogger);
+    p.setOut(consoleOut);
+    p.setNetty(netty);
     return p;
   }
 
@@ -774,12 +804,14 @@ public class PerfTest {
     return output;
   }
 
-  private static ConnectionFactory configureNioIfRequested(
-      CommandLineProxy cmd, ConnectionFactory factory) {
+  @SuppressWarnings("deprecation")
+  private static void configureNioIfRequested(
+      CommandLineProxy cmd, ConnectionFactory factory, ShutdownService shutdownService) {
     int nbThreads = Utils.intArg(cmd, "niot", -1);
     int executorSize = Utils.intArg(cmd, "niotp", -1);
     if (nbThreads > 0 || executorSize > 0) {
-      NioParams nioParams = new NioParams();
+      com.rabbitmq.client.impl.nio.NioParams nioParams =
+          new com.rabbitmq.client.impl.nio.NioParams();
       int[] nbThreadsAndExecutorSize = getNioNbThreadsAndExecutorSize(nbThreads, executorSize);
       nioParams.setNbIoThreads(nbThreadsAndExecutorSize[0]);
       // FIXME we cannot limit the max size of the thread pool because of
@@ -789,18 +821,19 @@ public class PerfTest {
       // the thread pool is busy closing the connections, connection recovery
       // kicks in the same used threads, and new connection cannot be opened as
       // there are no available threads anymore in the pool for NIO!
-      nioParams.setNioExecutor(
+      ExecutorService nioExecutor =
           new ThreadPoolExecutor(
               nbThreadsAndExecutorSize[1],
               Integer.MAX_VALUE,
               30L,
               TimeUnit.SECONDS,
               new SynchronousQueue<>(),
-              new NamedThreadFactory("perf-test-nio-")));
+              new NamedThreadFactory("perf-test-nio-"));
+      nioParams.setNioExecutor(nioExecutor);
+      shutdownService.wrap(nioExecutor::shutdownNow);
       factory.useNio();
       factory.setNioParams(nioParams);
     }
-    return factory;
   }
 
   protected static int[] getNioNbThreadsAndExecutorSize(
@@ -824,6 +857,57 @@ public class PerfTest {
           ? executorSizeToUse
           : nbThreadsToUse + extraThreadsForExecutor
     };
+  }
+
+  @SuppressWarnings("deprecation")
+  private static com.rabbitmq.client.impl.nio.NioParams nioParams(ConnectionFactory cf) {
+    return cf.getNioParams();
+  }
+
+  private static void configureNettyIfRequested(
+      CommandLineProxy cmd, ConnectionFactory factory, ShutdownService shutdownService) {
+    if (netty(cmd)) {
+      int nbThreads = Utils.intArg(cmd, "ntyt", -1);
+      boolean epoll = hasOption(cmd, "ntyep");
+      boolean kqueue = hasOption(cmd, "ntykq");
+      Pair<IoHandlerFactory, Class<? extends Channel>> io = nettyIo(epoll, kqueue);
+      IoHandlerFactory ioHandlerFactory = io.v1();
+      Consumer<Bootstrap> bootstrapCustomizer = b -> b.channel(io.v2());
+      EventLoopGroup eventLoopGroup =
+          nbThreads > 0
+              ? new MultiThreadIoEventLoopGroup(nbThreads, ioHandlerFactory)
+              : new MultiThreadIoEventLoopGroup(ioHandlerFactory);
+      shutdownService.wrap(() -> eventLoopGroup.shutdownGracefully(0, 0, TimeUnit.SECONDS));
+      factory.netty().bootstrapCustomizer(bootstrapCustomizer).eventLoopGroup(eventLoopGroup);
+    }
+  }
+
+  private static Pair<IoHandlerFactory, Class<? extends Channel>> nettyIo(
+      boolean epoll, boolean kqueue) {
+    Supplier<Pair<IoHandlerFactory, Class<? extends Channel>>> result =
+        () -> pair(NioIoHandler.newFactory(), NioSocketChannel.class);
+    if (epoll) {
+      if (Epoll.isAvailable()) {
+        result = () -> pair(EpollIoHandler.newFactory(), EpollSocketChannel.class);
+      } else {
+        LOGGER.warn("epoll not available, using Java NIO instead");
+      }
+    } else if (kqueue) {
+      if (KQueue.isAvailable()) {
+        result = () -> pair(KQueueIoHandler.newFactory(), KQueueSocketChannel.class);
+      } else {
+        LOGGER.warn("kqueue not available, using Java NIO instead");
+      }
+    }
+    return result.get();
+  }
+
+  private static boolean netty(CommandLineProxy cmd) {
+    boolean netty = hasOption(cmd, "nty");
+    int nbThreads = Utils.intArg(cmd, "ntyt", -1);
+    boolean epoll = hasOption(cmd, "ntyep");
+    boolean kqueue = hasOption(cmd, "ntykq");
+    return netty || nbThreads > 0 || epoll || kqueue;
   }
 
   static MulticastSet.CompletionHandler getCompletionHandler(
@@ -865,21 +949,20 @@ public class PerfTest {
             .setExceptionHandler(new RelaxedExceptionHandler()));
   }
 
-  private static SSLContext getSslContextIfNecessary(
-      CommandLineProxy cmd, Properties systemProperties) throws NoSuchAlgorithmException {
-    SSLContext sslContext = null;
+  private static boolean useDefaultSslContext(CommandLineProxy cmd, Properties systemProperties) {
+    boolean result = false;
     if (hasOption(cmd, "udsc") || hasOption(cmd, "useDefaultSslContext")) {
       LOGGER.info("Using default SSL context as per command line option");
-      sslContext = SSLContext.getDefault();
+      result = true;
     }
     for (String propertyName : systemProperties.stringPropertyNames()) {
       if (propertyName != null && isPropertyTlsRelated(propertyName)) {
         LOGGER.info("TLS related system properties detected, using default SSL context");
-        sslContext = SSLContext.getDefault();
+        result = true;
         break;
       }
     }
-    return sslContext;
+    return result;
   }
 
   private static boolean isPropertyTlsRelated(String propertyName) {
@@ -1079,7 +1162,8 @@ public class PerfTest {
             "hst",
             "heartbeat-sender-threads",
             true,
-            "number of threads for producers and consumers heartbeat senders, default is 1 thread per connection"));
+            "number of threads for producers and consumers heartbeat senders, default is 1 thread per connection "
+                + "(not necessary when using Netty)"));
     options.addOption(
         new Option(
             "mp",
@@ -1120,13 +1204,17 @@ public class PerfTest {
             true,
             "number of threads to use when using --publishing-interval, default is calculated by PerfTest"));
     options.addOption(
-        new Option("niot", "nio-threads", true, "number of NIO threads to use, default is 1"));
+        new Option(
+            "niot",
+            "nio-threads",
+            true,
+            "number of NIO threads to use, default is 1 (deprecated, use Netty instead)"));
     options.addOption(
         new Option(
             "niotp",
             "nio-thread-pool",
             true,
-            "size of NIO thread pool, should be slightly higher than number of NIO threads, default is --nio-threads + 2"));
+            "size of NIO thread pool, should be slightly higher than number of NIO threads, default is --nio-threads + 2 (deprecated, use Netty instead)"));
 
     options.addOption(new Option("mh", "metrics-help", false, "show metrics usage"));
 
@@ -1389,6 +1477,25 @@ public class PerfTest {
             true,
             "the way to allocate connection across nodes (random or round-robin), default is random."));
 
+    options.addOption(new Option("nty", "netty", false, "use Netty for IO"));
+    options.addOption(
+        new Option(
+            "ntyt",
+            "netty-threads",
+            true,
+            "number of Netty threads to use (default is Netty's default)"));
+    options.addOption(
+        new Option(
+            "ntyep",
+            "netty-epoll",
+            false,
+            "use Netty's native epoll transport (Linux x86-64 only)"));
+    options.addOption(
+        new Option(
+            "ntykq",
+            "netty-kqueue",
+            false,
+            "use Netty's native kqueue transport (macOS aarch64 only)"));
     return options;
   }
 
@@ -1490,7 +1597,7 @@ public class PerfTest {
     return exchangeName;
   }
 
-  private static void versionInformation() {
+  private static void versionInformation(PrintStream out) {
     String version =
         format(
             "RabbitMQ Perf Test %s (%s; %s)",
@@ -1515,8 +1622,8 @@ public class PerfTest {
             System.getProperty("os.name"),
             System.getProperty("os.version"),
             System.getProperty("os.arch")));
-    System.out.println("\u001B[1m" + version);
-    System.out.println("\u001B[0m" + info);
+    out.println("\u001B[1m" + version);
+    out.println("\u001B[0m" + info);
   }
 
   static Duration parsePublishingInterval(String input) {

@@ -18,6 +18,7 @@ package com.rabbitmq.perf;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.perf.PerfTest.EXIT_WHEN;
 import com.rabbitmq.perf.metrics.PerformanceMetrics;
+import java.io.PrintStream;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -60,6 +61,16 @@ public class ConsumerParameters {
 
   private int id;
   private FunctionalLogger functionalLogger = FunctionalLogger.NO_OP;
+  private PrintStream out = System.out;
+
+  ConsumerParameters setOut(PrintStream out) {
+    this.out = out;
+    return this;
+  }
+
+  PrintStream getOut() {
+    return out;
+  }
 
   public Channel getChannel() {
     return channel;

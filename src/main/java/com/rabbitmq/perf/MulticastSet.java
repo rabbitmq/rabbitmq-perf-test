@@ -28,6 +28,7 @@ import com.rabbitmq.perf.PerfTest.EXIT_WHEN;
 import com.rabbitmq.perf.metrics.PerformanceMetrics;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.net.URISyntaxException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
@@ -80,6 +81,7 @@ public class MulticastSet {
   private final ConnectionCreator connectionCreator;
   private final ExpectedMetrics expectedMetrics;
   private final InstanceSynchronization instanceSynchronization;
+  private final PrintStream out;
 
   public MulticastSet(
       PerformanceMetrics performanceMetrics,
@@ -167,6 +169,7 @@ public class MulticastSet {
     this.connectionCreator = new ConnectionCreator(this.factory, this.uris, connectionAllocation);
     this.expectedMetrics = expectedMetrics;
     this.instanceSynchronization = instanceSynchronization;
+    this.out = params.getOut();
   }
 
   protected static int nbThreadsForConsumer(MulticastParams params) {
@@ -233,10 +236,17 @@ public class MulticastSet {
             : params.getServersUpLimit(),
         uris,
         factory)) {
-      ScheduledExecutorService heartbeatSenderExecutorService =
-          this.threadingHandler.scheduledExecutorService(
-              "perf-test-heartbeat-sender-", this.params.getHeartbeatSenderThreads());
-      factory.setHeartbeatExecutor(heartbeatSenderExecutorService);
+      // heartbeat sender executor not necessary with Netty
+      if (!params.netty()) {
+        ScheduledExecutorService heartbeatSenderExecutorService =
+            this.threadingHandler.scheduledExecutorService(
+                "perf-test-heartbeat-sender-", this.params.getHeartbeatSenderThreads());
+        factory.setHeartbeatExecutor(heartbeatSenderExecutorService);
+        if (heartbeatSenderExecutorService != null) {
+          shutdownService.wrap(heartbeatSenderExecutorService::shutdownNow);
+        }
+      }
+
       // use a single-threaded executor for the configuration connection
       // this way, a default one is not created and this one will shut down
       // when the run ends.
@@ -382,7 +392,7 @@ public class MulticastSet {
 
       executeShutdownSequence.run();
     } else {
-      System.out.println(
+      out.println(
           "Could not connect to broker(s) in "
               + params.getServersStartUpTimeout()
               + " second(s), exiting.");
@@ -475,7 +485,7 @@ public class MulticastSet {
     int consumerIndex = 0;
     for (int i = 0; i < consumerConnections.length; i++) {
       if (announceStartup) {
-        System.out.println("id: " + testID + ", starting consumer #" + i);
+        out.println("id: " + testID + ", starting consumer #" + i);
       }
       ExecutorService executorService = consumersExecutorsFactory.apply(i);
       factory.setSharedExecutor(executorService);
@@ -484,7 +494,7 @@ public class MulticastSet {
       consumerConnections[i] = consumerConnection;
       for (int j = 0; j < params.getConsumerChannelCount(); j++) {
         if (announceStartup) {
-          System.out.println("id: " + testID + ", starting consumer #" + i + ", channel #" + j);
+          out.println("id: " + testID + ", starting consumer #" + i + ", channel #" + j);
         }
         Consumer consumer =
             params.createConsumer(
@@ -507,13 +517,13 @@ public class MulticastSet {
     int producerIndex = 0;
     for (int i = 0; i < producerConnections.length; i++) {
       if (announceStartup) {
-        System.out.println("id: " + testID + ", starting producer #" + i);
+        out.println("id: " + testID + ", starting producer #" + i);
       }
       Connection producerConnection = createConnection(PRODUCER_THREAD_PREFIX + i);
       producerConnections[i] = producerConnection;
       for (int j = 0; j < params.getProducerChannelCount(); j++) {
         if (announceStartup) {
-          System.out.println("id: " + testID + ", starting producer #" + i + ", channel #" + j);
+          out.println("id: " + testID + ", starting producer #" + i + ", channel #" + j);
         }
         AgentState agentState = new AgentState();
         agentState.runnable =
@@ -538,7 +548,7 @@ public class MulticastSet {
         runnable.run();
         LOGGER.debug("Consumer runnable started");
         if (params.getConsumerSlowStart()) {
-          System.out.println("Delaying start by 1 second because -S/--slow-start was requested");
+          out.println("Delaying start by 1 second because -S/--slow-start was requested");
           Thread.sleep(1000);
         }
       }
@@ -551,8 +561,7 @@ public class MulticastSet {
                 for (Runnable runnable : consumerRunnables) {
                   runnable.run();
                   if (params.getConsumerSlowStart()) {
-                    System.out.println(
-                        "Delaying start by 1 second because -S/--slow-start was requested");
+                    out.println("Delaying start by 1 second because -S/--slow-start was requested");
                     try {
                       Thread.sleep(1000);
                     } catch (InterruptedException e) {

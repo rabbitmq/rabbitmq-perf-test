@@ -24,6 +24,7 @@ import com.rabbitmq.client.Connection;
 import com.rabbitmq.perf.PerfTest.EXIT_WHEN;
 import com.rabbitmq.perf.metrics.PerformanceMetrics;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -136,6 +137,9 @@ public class MulticastParams {
   private RateLimiter.Factory rateLimiterFactory = RateLimiter.Type.GUAVA.factory();
 
   private FunctionalLogger functionalLogger = FunctionalLogger.NO_OP;
+
+  private PrintStream out = System.out;
+  private boolean netty = false;
 
   public void setExchangeType(String exchangeType) {
     this.exchangeType = exchangeType;
@@ -319,6 +323,10 @@ public class MulticastParams {
     this.consumerStartDelay = csd;
   }
 
+  void setOut(PrintStream out) {
+    this.out = out;
+  }
+
   public int getConsumerCount() {
     return consumerCount;
   }
@@ -483,6 +491,10 @@ public class MulticastParams {
 
   public Duration getConsumerStartDelay() {
     return consumerStartDelay;
+  }
+
+  PrintStream getOut() {
+    return out;
   }
 
   public void setPolling(boolean polling) {
@@ -655,7 +667,8 @@ public class MulticastParams {
                     topologyRecordingScheduledExecutorService)
                 .setStartListener(this.startListener)
                 .setRateLimiterFactory(this.rateLimiterFactory)
-                .setFunctionalLogger(this.functionalLogger));
+                .setFunctionalLogger(this.functionalLogger)
+                .setOut(this.out));
     this.topologyHandler.next();
     return consumer;
   }
@@ -759,6 +772,14 @@ public class MulticastParams {
 
   public void setProducerSchedulerThreadCount(int producerSchedulerThreadCount) {
     this.producerSchedulerThreadCount = producerSchedulerThreadCount;
+  }
+
+  void setNetty(boolean netty) {
+    this.netty = netty;
+  }
+
+  boolean netty() {
+    return this.netty;
   }
 
   /**
