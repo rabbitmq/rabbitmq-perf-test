@@ -15,11 +15,20 @@
 // info@rabbitmq.com.
 package com.rabbitmq.perf;
 
+import static com.rabbitmq.client.ConnectionFactory.computeDefaultTlsProtocol;
+
 import com.google.gson.Gson;
 import com.rabbitmq.client.*;
 import com.rabbitmq.client.impl.OAuth2ClientCredentialsGrantCredentialsProvider;
 import com.rabbitmq.client.impl.OAuthTokenManagementException;
 import com.rabbitmq.client.impl.recovery.AutorecoveringConnection;
+import io.netty.channel.ChannelOption;
+import io.netty.handler.ssl.ClientAuth;
+import io.netty.handler.ssl.IdentityCipherSuiteFilter;
+import io.netty.handler.ssl.JdkSslContext;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.SslHandler;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.lang.reflect.Constructor;
@@ -27,26 +36,29 @@ import java.lang.reflect.InvocationTargetException;
 import java.net.URISyntaxException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
+import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SNIHostName;
 import javax.net.ssl.SNIServerName;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLParameters;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.X509TrustManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -71,27 +83,26 @@ abstract class Utils {
         }
 
         @Override
-        public Object get() throws InterruptedException, ExecutionException {
+        public Object get() {
           return null;
         }
 
         @Override
-        public Object get(long timeout, TimeUnit unit)
-            throws InterruptedException, ExecutionException, TimeoutException {
+        public Object get(long timeout, TimeUnit unit) {
           return null;
         }
       };
   private static final Logger LOGGER = LoggerFactory.getLogger(Utils.class);
-  private static final ConnectionFactory CF = new ConnectionFactory();
 
   static boolean isRecoverable(Connection connection) {
     return connection instanceof AutorecoveringConnection;
   }
 
-  static synchronized Address extract(String uri)
+  static Address extract(String uri)
       throws NoSuchAlgorithmException, KeyManagementException, URISyntaxException {
-    CF.setUri(uri);
-    return new Address(CF.getHost(), CF.getPort());
+    ConnectionFactory cf = new ConnectionFactory();
+    cf.setUri(uri);
+    return new Address(cf.getHost(), cf.getPort());
   }
 
   /**
@@ -129,8 +140,8 @@ abstract class Utils {
   static List<SNIServerName> sniServerNames(String argumentValue) {
     if (argumentValue != null && !argumentValue.trim().isEmpty()) {
       return Arrays.stream(argumentValue.split(","))
-          .map(s -> s.trim())
-          .map(s -> new SNIHostName(s))
+          .map(String::trim)
+          .map(SNIHostName::new)
           .collect(Collectors.toList());
     } else {
       return Collections.emptyList();
@@ -157,38 +168,82 @@ abstract class Utils {
                 }
               });
     }
-    int sendBufferSize = intArg(cmd, "tsbs", 65_536);
-    int receiveBufferSize = intArg(cmd, "trbs", 65_536);
-    boolean tcpNoDelay = boolArg(cmd, "tnd", "true");
+    TcpSettings settings = new TcpSettings(cmd);
     socketConfigurator =
         socketConfigurator.andThen(
             socket -> {
-              if (sendBufferSize > 0) {
-                socket.setSendBufferSize(sendBufferSize);
+              if (settings.sendBufferSize() > 0) {
+                socket.setSendBufferSize(settings.sendBufferSize());
               }
-              if (receiveBufferSize > 0) {
-                socket.setReceiveBufferSize(receiveBufferSize);
+              if (settings.receiveBufferSize() > 0) {
+                socket.setReceiveBufferSize(settings.receiveBufferSize());
               }
-              socket.setTcpNoDelay(tcpNoDelay);
+              socket.setTcpNoDelay(settings.tcpNoDelay());
             });
     return socketConfigurator;
   }
 
-  static SocketChannelConfigurator socketChannelConfigurator(CommandLineProxy cmd) {
-    int sendBufferSize = intArg(cmd, "tsbs", -1);
-    int receiveBufferSize = intArg(cmd, "trbs", -1);
-    boolean tcpNoDelay = boolArg(cmd, "tnd", "true");
-    return socketChannel -> {
-      if (sendBufferSize > 0) {
-        socketChannel.socket().setSendBufferSize(sendBufferSize);
+  static Consumer<io.netty.channel.Channel> channelCustomizer(CommandLineProxy cmd) {
+    TcpSettings settings = new TcpSettings(cmd);
+    List<SNIServerName> servers = sniServerNames(strArg(cmd, "sni", null));
+    return ch -> {
+      if (settings.sendBufferSize() > 0) {
+        ch.setOption(ChannelOption.SO_SNDBUF, settings.sendBufferSize());
       }
-      if (receiveBufferSize > 0) {
-        socketChannel.socket().setReceiveBufferSize(receiveBufferSize);
+      if (settings.receiveBufferSize() > 0) {
+        ch.setOption(ChannelOption.SO_RCVBUF, settings.receiveBufferSize());
       }
-      socketChannel.socket().setTcpNoDelay(tcpNoDelay);
+      ch.setOption(ChannelOption.TCP_NODELAY, settings.tcpNoDelay());
+      if (!servers.isEmpty()) {
+        SslHandler sslHandler = ch.pipeline().get(SslHandler.class);
+        if (sslHandler == null) {
+          LOGGER.warn("SNI TLS parameter set but there is no TLS Netty handler");
+        } else {
+          SSLParameters sslParameters = sslHandler.engine().getSSLParameters();
+          sslParameters.setServerNames(servers);
+          sslHandler.engine().setSSLParameters(sslParameters);
+        }
+      }
     };
   }
 
+  static SslContext nettySslContext(SSLContext defaultSslContext)
+      throws SSLException, NoSuchAlgorithmException {
+    if (defaultSslContext == null) {
+      return SslContextBuilder.forClient()
+          .protocols(
+              computeDefaultTlsProtocol(
+                  SSLContext.getDefault().getSupportedSSLParameters().getProtocols()))
+          .trustManager(new TrustAllTrustManager())
+          .build();
+    } else {
+      return new JdkSslContext(
+          defaultSslContext,
+          true,
+          null,
+          IdentityCipherSuiteFilter.INSTANCE,
+          null,
+          ClientAuth.NONE,
+          null,
+          false);
+    }
+  }
+
+  @SuppressWarnings("deprecation")
+  static SocketChannelConfigurator socketChannelConfigurator(CommandLineProxy cmd) {
+    TcpSettings settings = new TcpSettings(cmd);
+    return socketChannel -> {
+      if (settings.sendBufferSize() > 0) {
+        socketChannel.socket().setSendBufferSize(settings.sendBufferSize());
+      }
+      if (settings.receiveBufferSize() > 0) {
+        socketChannel.socket().setReceiveBufferSize(settings.receiveBufferSize());
+      }
+      socketChannel.socket().setTcpNoDelay(settings.tcpNoDelay());
+    };
+  }
+
+  @SuppressWarnings("deprecation")
   static SslEngineConfigurator sslEngineConfigurator(CommandLineProxy cmd) {
     List<SNIServerName> serverNames = sniServerNames(strArg(cmd, "sni", null));
     if (serverNames.isEmpty()) {
@@ -269,13 +324,10 @@ abstract class Utils {
           throw new IllegalArgumentException("Multi-instance synchronization is not available");
         }
       };
-    } catch (NoSuchMethodException e) {
-      throw new RuntimeException(e);
-    } catch (InvocationTargetException e) {
-      throw new RuntimeException(e);
-    } catch (InstantiationException e) {
-      throw new RuntimeException(e);
-    } catch (IllegalAccessException e) {
+    } catch (NoSuchMethodException
+        | InvocationTargetException
+        | InstantiationException
+        | IllegalAccessException e) {
       throw new RuntimeException(e);
     }
   }
@@ -313,6 +365,45 @@ abstract class Utils {
       } catch (Exception e) {
         throw new OAuthTokenManagementException("Error while parsing OAuth 2 token", e);
       }
+    }
+  }
+
+  private static class TcpSettings {
+
+    private final int sendBufferSize;
+    private final int receiveBufferSize;
+    private final boolean tcpNoDelay;
+
+    private TcpSettings(CommandLineProxy cmd) {
+      this.sendBufferSize = intArg(cmd, "tsbs", 65_536);
+      this.receiveBufferSize = intArg(cmd, "trbs", 65_536);
+      this.tcpNoDelay = boolArg(cmd, "tnd", "true");
+    }
+
+    private int sendBufferSize() {
+      return this.sendBufferSize;
+    }
+
+    private int receiveBufferSize() {
+      return this.receiveBufferSize;
+    }
+
+    private boolean tcpNoDelay() {
+      return this.tcpNoDelay;
+    }
+  }
+
+  static class TrustAllTrustManager implements X509TrustManager {
+
+    @Override
+    public void checkClientTrusted(X509Certificate[] chain, String authType) {}
+
+    @Override
+    public void checkServerTrusted(X509Certificate[] chain, String authType) {}
+
+    @Override
+    public X509Certificate[] getAcceptedIssuers() {
+      return new X509Certificate[0];
     }
   }
 }

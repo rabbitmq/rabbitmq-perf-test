@@ -16,10 +16,19 @@
 package com.rabbitmq.perf.it;
 
 import com.rabbitmq.perf.MulticastSet;
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import java.lang.reflect.Method;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.extension.ConditionEvaluationResult;
+import org.junit.jupiter.api.extension.ExecutionCondition;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.extension.ExtensionContext;
 
 final class Utils {
 
@@ -67,4 +76,32 @@ final class Utils {
       latch.countDown();
     }
   }
+
+  static boolean tlsAvailable() {
+    try {
+      Process process = Host.rabbitmqctl("status");
+      String output = Host.capture(process.getInputStream());
+      return output.contains("amqp/ssl");
+    } catch (Exception e) {
+      throw new RuntimeException("Error while trying to detect TLS: " + e.getMessage());
+    }
+  }
+
+  static class DisabledIfTlsNotEnabledCondition implements ExecutionCondition {
+
+    @Override
+    public ConditionEvaluationResult evaluateExecutionCondition(ExtensionContext context) {
+      if (tlsAvailable()) {
+        return ConditionEvaluationResult.enabled("TLS is enabled");
+      } else {
+        return ConditionEvaluationResult.disabled("TLS is disabled");
+      }
+    }
+  }
+
+  @Target({ElementType.TYPE, ElementType.METHOD})
+  @Retention(RetentionPolicy.RUNTIME)
+  @Documented
+  @ExtendWith(DisabledIfTlsNotEnabledCondition.class)
+  public @interface DisabledIfTlsNotEnabled {}
 }

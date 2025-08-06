@@ -29,10 +29,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
-import com.rabbitmq.client.impl.nio.NioParams;
 import com.rabbitmq.perf.MulticastParams;
 import com.rabbitmq.perf.MulticastSet;
-import com.rabbitmq.perf.NamedThreadFactory;
 import com.rabbitmq.perf.PerformanceMetricsAdapter;
 import com.rabbitmq.perf.metrics.PerformanceMetrics;
 import java.io.IOException;
@@ -99,18 +97,17 @@ public class ConnectionRecoveryIT {
       };
 
   static Stream<Arguments> configurationArguments() {
-    return Stream.of(blockingIoAndNio(multicastParamsConfigurers()));
+    return Stream.of(blockingIoAndNetty(multicastParamsConfigurers()));
   }
 
-  static Arguments[] blockingIoAndNio(List<Consumer<MulticastParams>> multicastParamsConfigurers) {
+  static Arguments[] blockingIoAndNetty(
+      List<Consumer<MulticastParams>> multicastParamsConfigurers) {
     List<Arguments> arguments = new ArrayList<>();
     for (Consumer<MulticastParams> configurer : multicastParamsConfigurers) {
       arguments.add(
           Arguments.of(
               configurer, namedConsumer("blocking IO", (Consumer<ConnectionFactory>) cf -> {})));
-      arguments.add(
-          Arguments.of(
-              configurer, namedConsumer("NIO", (Consumer<ConnectionFactory>) cf -> cf.useNio())));
+      arguments.add(Arguments.of(configurer, namedConsumer("Netty", ConnectionFactory::useNetty)));
     }
 
     return arguments.toArray(new Arguments[0]);
@@ -146,7 +143,7 @@ public class ConnectionRecoveryIT {
             namedConsumer("one server-named queue", empty()),
             namedConsumer("several queues", severalQueues()),
             namedConsumer("queue sequence", queueSequence()))
-        .map(configurer -> Arguments.of(configurer));
+        .map(Arguments::of);
   }
 
   static Consumer<MulticastParams> empty() {
@@ -299,23 +296,11 @@ public class ConnectionRecoveryIT {
   }
 
   @Test
-  public void shouldRecoverWithNio(TestInfo info) throws Exception {
+  public void shouldRecoverWithNetty(TestInfo info) throws Exception {
     params.setQueueNames(Arrays.asList("one", "two", "three"));
     params.setProducerCount(10);
     params.setConsumerCount(10);
-    cf.useNio();
-    cf.setNioParams(
-        new NioParams()
-            .setNbIoThreads(10)
-            // see PerfTest#configureNioIfRequested
-            .setNioExecutor(
-                new ThreadPoolExecutor(
-                    10,
-                    params.getProducerCount() + params.getConsumerCount() + 5,
-                    30L,
-                    TimeUnit.SECONDS,
-                    new SynchronousQueue<>(),
-                    new NamedThreadFactory("perf-test-nio-"))));
+    cf.useNetty();
     int producerConsumerCount = params.getProducerCount();
     MulticastSet set =
         new MulticastSet(performanceMetrics, cf, params, "", URIS, latchCompletionHandler(1, info));
