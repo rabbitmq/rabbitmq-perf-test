@@ -529,7 +529,7 @@ table.CodeRay td.code{padding:0 0 0 .75em}
 <div id="header">
 <h1>RabbitMQ PerfTest</h1>
 <div class="details">
-<span id="revnumber">version 2.24.0-SNAPSHOT</span>
+<span id="revnumber">version 2.25.0-SNAPSHOT</span>
 </div>
 <div id="toc" class="toc2">
 <div id="toctitle">Table of Contents</div>
@@ -1418,7 +1418,7 @@ should be enough. Don&#8217;t hesitate to experiment to come up with the appropr
 exceptions is to tune the number of file descriptors allowed per process
 at the OS level, as some distributions use very low limits.
 Here the recommendations are the same as for the broker, so you
-can refer to our <a href="https://www.rabbitmq.com/networking.html#os-tuning">networking guide</a>.</p>
+can refer to our <a href="https://www.rabbitmq.com/docs/networking#os-tuning">networking guide</a>.</p>
 </div>
 </div>
 </div>
@@ -1549,38 +1549,30 @@ huge resource saving to simulate more clients with a single PerfTest instance fo
 </div>
 <div class="paragraph">
 <p>By default, PerfTest uses blocking network socket I/O to communicate with
-the broker. This mode works fine for clients in many cases but the RabbitMQ Java client
-also supports an <a href="https://www.rabbitmq.com/api-guide.html#java-nio">asynchronous I/O mode</a>,
-where resources like threads can be easily tuned. The goal here is to use as few
-resources as possible to simulate as much load as possible with a single PerfTest instance.
+the broker.
+This mode works fine for clients in many cases but the RabbitMQ Java client can also use Netty for its network layer.
+Netty uses a multithreaded event loop to handle I/O operation and the number of threads can be easily tuned.
+The goal here is to use as few resources as possible to simulate as much load as possible with a single PerfTest instance.
 In the slow publisher example above, a handful of threads should be enough
-to handle the I/O. That&#8217;s what the
-<code>--nio-threads</code> flag is for:</p>
+to handle the I/O.
+That&#8217;s what the <code>--netty-threads</code> flag is for:</p>
 </div>
 <div class="listingblock">
-<div class="title">Reducing the number of IO threads by enabling the NIO mode with <code>--nio-threads</code></div>
+<div class="title">Reducing the number of I/O threads by using Netty with <code>--netty-threads</code></div>
 <div class="content">
 <pre class="CodeRay highlight"><code data-lang="bash">java -jar perf-test.jar --queue-pattern 'perf-test-%d' \
   --queue-pattern-from 1 --queue-pattern-to 1000 \
   --producers 1000 --consumers 1000 \
-  --heartbeat-sender-threads 10 \
   --publishing-interval 60 --producer-random-start-delay 1800 \
   --producer-scheduler-threads 10 \
-  --nio-threads 10</code></pre>
+  --consumers-thread-pools 10 \
+  --netty-threads 10</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>This way PerfTest will use  12 threads for I/O over all the connections.
-With the default blocking I/O mode, each producer (or consumer)
-uses a thread for the I/O loop, that is 2000 threads to simulate 1000 producers and
-1000 consumers. Using NIO in PerfTest can dramatically reduce the resources used
-to simulate workloads with a large number of connections with appropriate tuning.</p>
-</div>
-<div class="paragraph">
-<p>Note that in NIO mode the number of threads used can increase temporarily when connections close
-unexpectedly and connection recovery kicks in. This is due to the NIO mode dispatching
-connection closing to non-I/O threads to avoid deadlocks. Connection recovery can be disabled
-with the <code>--disable-connection-recovery</code> flag.</p>
+<p>This way PerfTest will use  10 threads for I/O over all the connections.
+With the default blocking I/O mode, each producer (or consumer) uses a thread for the I/O loop, that is 2000 threads to simulate 1000 producers and 1000 consumers.
+Using Netty in PerfTest can dramatically reduce the resources used to simulate workloads with a large number of connections with appropriate tuning.</p>
 </div>
 </div>
 </div>
@@ -2139,8 +2131,8 @@ It is then possible to override the metrics values thanks to the <code>--exposed
 </div>
 <div id="footer">
 <div id="footer-text">
-Version 2.24.0-SNAPSHOT<br>
-Last updated 2025-07-22 13:13:49 UTC
+Version 2.25.0-SNAPSHOT<br>
+Last updated 2025-08-06 09:57:56 UTC
 </div>
 </div>
 </body>
