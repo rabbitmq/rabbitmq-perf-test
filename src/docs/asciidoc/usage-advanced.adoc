@@ -276,7 +276,7 @@ Another way to avoid `java.lang.OutOfMemoryError: unable to create new native th
 exceptions is to tune the number of file descriptors allowed per process
 at the OS level, as some distributions use very low limits.
 Here the recommendations are the same as for the broker, so you
-can refer to our https://www.rabbitmq.com/networking.html#os-tuning[networking guide].
+can refer to our https://www.rabbitmq.com/docs/networking#os-tuning[networking guide].
 
 [[workloads-with-a-large-number-of-clients]]
 == Workloads With a Large Number of Clients
@@ -386,37 +386,29 @@ These are 1-thread thread pools in this case, so this is 10 threads overall inst
 huge resource saving to simulate more clients with a single PerfTest instance for large IoT workloads.
 
 By default, PerfTest uses blocking network socket I/O to communicate with
-the broker. This mode works fine for clients in many cases but the RabbitMQ Java client
-also supports an https://www.rabbitmq.com/api-guide.html#java-nio[asynchronous I/O mode],
-where resources like threads can be easily tuned. The goal here is to use as few
-resources as possible to simulate as much load as possible with a single PerfTest instance.
+the broker.
+This mode works fine for clients in many cases but the RabbitMQ Java client can also use Netty for its network layer.
+Netty uses a multithreaded event loop to handle I/O operation and the number of threads can be easily tuned.
+The goal here is to use as few resources as possible to simulate as much load as possible with a single PerfTest instance.
 In the slow publisher example above, a handful of threads should be enough
-to handle the I/O. That's what the
-`--nio-threads` flag is for:
+to handle the I/O.
+That's what the `--netty-threads` flag is for:
 
-.Reducing the number of IO threads by enabling the NIO mode with `--nio-threads`
+.Reducing the number of I/O threads by using Netty with `--netty-threads`
 [source,bash,indent=0]
 --------
 java -jar perf-test.jar --queue-pattern 'perf-test-%d' \
   --queue-pattern-from 1 --queue-pattern-to 1000 \
   --producers 1000 --consumers 1000 \
-  --heartbeat-sender-threads 10 \
   --publishing-interval 60 --producer-random-start-delay 1800 \
   --producer-scheduler-threads 10 \
-  --nio-threads 10
+  --consumers-thread-pools 10 \
+  --netty-threads 10
 --------
 
-This way PerfTest will use  12 threads for I/O over all the connections.
-With the default blocking I/O mode, each producer (or consumer)
-uses a thread for the I/O loop, that is 2000 threads to simulate 1000 producers and
-1000 consumers. Using NIO in PerfTest can dramatically reduce the resources used
-to simulate workloads with a large number of connections with appropriate tuning.
-
-Note that in NIO mode the number of threads used can increase temporarily when connections close
-unexpectedly and connection recovery kicks in. This is due to the NIO mode dispatching
-connection closing to non-I/O threads to avoid deadlocks. Connection recovery can be disabled
-with the `--disable-connection-recovery` flag.
-
+This way PerfTest will use  10 threads for I/O over all the connections.
+With the default blocking I/O mode, each producer (or consumer) uses a thread for the I/O loop, that is 2000 threads to simulate 1000 producers and 1000 consumers.
+Using Netty in PerfTest can dramatically reduce the resources used to simulate workloads with a large number of connections with appropriate tuning.
 
 == Running Producers and Consumers on Different Machines
 
