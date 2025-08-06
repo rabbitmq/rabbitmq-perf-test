@@ -75,7 +75,15 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
-import org.apache.commons.cli.*;
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.DefaultParser;
+import org.apache.commons.cli.MissingArgumentException;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
+import org.apache.commons.cli.help.HelpFormatter;
+import org.apache.commons.cli.help.OptionFormatter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -970,13 +978,20 @@ public class PerfTest {
   }
 
   private static void usage(Options options) {
-    HelpFormatter formatter = new HelpFormatter();
-    formatter.printHelp("<program>", options);
+    HelpFormatter formatter = HelpFormatter.builder().setShowSince(false).get();
+    try {
+      formatter.printHelp("perf-test", "", options, "", true);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   private static void usageWithEnvironmentVariables(Options options) {
-    HelpFormatter formatter = new HelpFormatter();
-    formatter.setOptPrefix("");
+    HelpFormatter formatter =
+        HelpFormatter.builder()
+            .setShowSince(false)
+            .setOptionFormatBuilder(OptionFormatter.builder().setOptPrefix(""))
+            .get();
     Options envOptions = new Options();
     forEach(
         options,
@@ -992,10 +1007,17 @@ public class PerfTest {
                 option.getDescription());
           }
         });
-    formatter.printHelp(
-        "<program>. For multi-value options, separate values "
-            + "with commas, e.g. VARIABLE_RATE='100:60,1000:10,500:15'",
-        envOptions);
+    try {
+      formatter.printHelp(
+          "perf-test",
+          " For multi-value options, separate values "
+              + "with commas, e.g. VARIABLE_RATE='100:60,1000:10,500:15'",
+          envOptions,
+          "",
+          true);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   static CommandLineParser getParser() {
