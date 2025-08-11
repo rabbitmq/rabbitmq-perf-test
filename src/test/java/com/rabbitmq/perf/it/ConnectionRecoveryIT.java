@@ -107,7 +107,7 @@ public class ConnectionRecoveryIT {
       arguments.add(
           Arguments.of(
               configurer, namedConsumer("blocking IO", (Consumer<ConnectionFactory>) cf -> {})));
-      arguments.add(Arguments.of(configurer, namedConsumer("Netty", ConnectionFactory::useNetty)));
+      arguments.add(Arguments.of(configurer, namedConsumer("Netty", ConnectionFactory::netty)));
     }
 
     return arguments.toArray(new Arguments[0]);
@@ -300,7 +300,7 @@ public class ConnectionRecoveryIT {
     params.setQueueNames(Arrays.asList("one", "two", "three"));
     params.setProducerCount(10);
     params.setConsumerCount(10);
-    cf.useNetty();
+    cf.netty();
     int producerConsumerCount = params.getProducerCount();
     MulticastSet set =
         new MulticastSet(performanceMetrics, cf, params, "", URIS, latchCompletionHandler(1, info));
