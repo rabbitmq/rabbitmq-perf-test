@@ -15,12 +15,11 @@
 // info@rabbitmq.com.
 package com.rabbitmq.perf.it;
 
+import static com.rabbitmq.perf.TestUtils.randomName;
 import static com.rabbitmq.perf.TestUtils.threadFactory;
 import static com.rabbitmq.perf.TestUtils.waitAtMost;
 import static com.rabbitmq.perf.it.Utils.latchCompletionHandler;
-import static com.rabbitmq.perf.it.Utils.queueName;
 import static java.lang.String.format;
-import static java.lang.String.valueOf;
 import static java.util.Arrays.asList;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.range;
@@ -42,6 +41,7 @@ import java.util.List;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -101,9 +101,9 @@ public class ConnectionRecoveryIT {
   }
 
   static Arguments[] blockingIoAndNetty(
-      List<Consumer<MulticastParams>> multicastParamsConfigurers) {
+      List<BiConsumer<MulticastParams, TestInfo>> multicastParamsConfigurers) {
     List<Arguments> arguments = new ArrayList<>();
-    for (Consumer<MulticastParams> configurer : multicastParamsConfigurers) {
+    for (BiConsumer<MulticastParams, TestInfo> configurer : multicastParamsConfigurers) {
       arguments.add(
           Arguments.of(
               configurer, namedConsumer("blocking IO", (Consumer<ConnectionFactory>) cf -> {})));
@@ -113,15 +113,15 @@ public class ConnectionRecoveryIT {
     return arguments.toArray(new Arguments[0]);
   }
 
-  static List<Consumer<MulticastParams>> multicastParamsConfigurers() {
-    List<Consumer<MulticastParams>> parameters = new ArrayList<>();
-    for (Consumer<MulticastParams> queuesVariation : queuesVariations()) {
+  static List<BiConsumer<MulticastParams, TestInfo>> multicastParamsConfigurers() {
+    List<BiConsumer<MulticastParams, TestInfo>> parameters = new ArrayList<>();
+    for (BiConsumer<MulticastParams, TestInfo> queuesVariation : queuesVariations()) {
       parameters.add(queuesVariation);
       parameters.add(
           namedConsumer(
               "polling - " + queuesVariation,
-              params -> {
-                queuesVariation.accept(params);
+              (params, i) -> {
+                queuesVariation.accept(params, i);
                 params.setPolling(true);
                 params.setPollingInterval(10);
               }));
@@ -129,18 +129,22 @@ public class ConnectionRecoveryIT {
     return parameters;
   }
 
-  static List<Consumer<MulticastParams>> queuesVariations() {
+  static List<BiConsumer<MulticastParams, TestInfo>> queuesVariations() {
     return asList(
-        namedConsumer("one server-named queue", empty()),
+        namedConsumer("one server-named queue", biConsumerAdapter(empty())),
         namedConsumer("several queues", severalQueues()),
         namedConsumer("queue sequence", queueSequence()),
-        namedConsumer("one server-named queue, exclusive", exclusive()),
-        namedConsumer("queue sequence, exclusive", queueSequence().andThen(exclusive())));
+        namedConsumer("one server-named queue, exclusive", biConsumerAdapter(exclusive())),
+        namedConsumer("queue sequence, exclusive", queueSequence().andThen(biExclusive())));
+  }
+
+  private static <T, U> BiConsumer<T, U> biConsumerAdapter(Consumer<T> delegate) {
+    return (t, u) -> delegate.accept(t);
   }
 
   static Stream<Arguments> configurationArgumentsForSeveralUris() {
     return Stream.of(
-            namedConsumer("one server-named queue", empty()),
+            namedConsumer("one server-named queue", biConsumerAdapter(empty())),
             namedConsumer("several queues", severalQueues()),
             namedConsumer("queue sequence", queueSequence()))
         .map(Arguments::of);
@@ -150,11 +154,10 @@ public class ConnectionRecoveryIT {
     return p -> {};
   }
 
-  static Consumer<MulticastParams> severalQueues() {
-    return p -> {
-      String suffix = valueOf(System.currentTimeMillis());
-      p.setQueueNames(
-          range(1, 5).mapToObj(i -> format("perf-test-%s-%d", suffix, i)).collect(toList()));
+  static BiConsumer<MulticastParams, TestInfo> severalQueues() {
+    return (p, info) -> {
+      String suffix = randomName(info);
+      p.setQueueNames(range(1, 5).mapToObj(i -> format("%s-%d", suffix, i)).collect(toList()));
     };
   }
 
@@ -162,11 +165,15 @@ public class ConnectionRecoveryIT {
     return p -> p.setExclusive(true);
   }
 
-  static Consumer<MulticastParams> queueSequence() {
-    return p -> {
+  static BiConsumer<MulticastParams, TestInfo> biExclusive() {
+    return (p, i) -> p.setExclusive(true);
+  }
+
+  static BiConsumer<MulticastParams, TestInfo> queueSequence() {
+    return (p, i) -> {
       p.setProducerCount(4);
       p.setConsumerCount(4);
-      p.setQueuePattern("perf-test-sequence-" + System.currentTimeMillis() + "-%d");
+      p.setQueuePattern(randomName(i) + "-%d");
       p.setQueueSequenceFrom(1);
       p.setQueueSequenceTo(4);
     };
@@ -178,6 +185,21 @@ public class ConnectionRecoveryIT {
       @Override
       public void accept(V obj) {
         consumer.accept(obj);
+      }
+
+      @Override
+      public String toString() {
+        return name;
+      }
+    };
+  }
+
+  static <T, U> BiConsumer<T, U> namedConsumer(String name, BiConsumer<T, U> consumer) {
+    return new BiConsumer<T, U>() {
+
+      @Override
+      public void accept(T t, U u) {
+        consumer.accept(t, u);
       }
 
       @Override
@@ -216,10 +238,12 @@ public class ConnectionRecoveryIT {
   @ParameterizedTest
   @MethodSource("configurationArguments")
   public void shouldStopWhenConnectionRecoveryIsOffAndConnectionsAreKilled(
-      Consumer<MulticastParams> configurer, Consumer<ConnectionFactory> cfConfigurer, TestInfo info)
+      BiConsumer<MulticastParams, TestInfo> configurer,
+      Consumer<ConnectionFactory> cfConfigurer,
+      TestInfo info)
       throws Exception {
     cf.setAutomaticRecoveryEnabled(false);
-    configurer.accept(params);
+    configurer.accept(params, info);
     cfConfigurer.accept(cf);
     int producerConsumerCount = params.getProducerCount();
     MulticastSet set =
@@ -234,12 +258,12 @@ public class ConnectionRecoveryIT {
   @MethodSource("configurationArguments")
   public void
       shouldStopWhenConnectionRecoveryIsOffAndConnectionsAreKilledAndUsingPublishingInterval(
-          Consumer<MulticastParams> configurer,
+          BiConsumer<MulticastParams, TestInfo> configurer,
           Consumer<ConnectionFactory> cfConfigurer,
           TestInfo info)
           throws Exception {
     cf.setAutomaticRecoveryEnabled(false);
-    configurer.accept(params);
+    configurer.accept(params, info);
     cfConfigurer.accept(cf);
     params.setPublishingInterval(Duration.ofSeconds(1));
     int producerConsumerCount = params.getProducerCount();
@@ -255,9 +279,11 @@ public class ConnectionRecoveryIT {
   @ParameterizedTest
   @MethodSource("configurationArguments")
   public void shouldRecoverWhenConnectionsAreKilled(
-      Consumer<MulticastParams> configurer, Consumer<ConnectionFactory> cfConfigurer, TestInfo info)
+      BiConsumer<MulticastParams, TestInfo> configurer,
+      Consumer<ConnectionFactory> cfConfigurer,
+      TestInfo info)
       throws Exception {
-    configurer.accept(params);
+    configurer.accept(params, info);
     cfConfigurer.accept(cf);
     int producerConsumerCount = params.getProducerCount();
     MulticastSet set =
@@ -273,10 +299,12 @@ public class ConnectionRecoveryIT {
   @ParameterizedTest
   @MethodSource("configurationArguments")
   public void shouldRecoverWhenConnectionsAreKilledAndUsingPublishingInterval(
-      Consumer<MulticastParams> configurer, Consumer<ConnectionFactory> cfConfigurer, TestInfo info)
+      BiConsumer<MulticastParams, TestInfo> configurer,
+      Consumer<ConnectionFactory> cfConfigurer,
+      TestInfo info)
       throws Exception {
     params.setPublishingInterval(Duration.ofSeconds(1));
-    configurer.accept(params);
+    configurer.accept(params, info);
     cfConfigurer.accept(cf);
     int producerConsumerCount = params.getProducerCount();
     MulticastSet set =
@@ -297,7 +325,8 @@ public class ConnectionRecoveryIT {
 
   @Test
   public void shouldRecoverWithNetty(TestInfo info) throws Exception {
-    params.setQueueNames(Arrays.asList("one", "two", "three"));
+    String prefix = randomName(info);
+    params.setQueueNames(Arrays.asList(prefix + "-one", prefix + "-two", prefix + "-three"));
     params.setProducerCount(10);
     params.setConsumerCount(10);
     cf.netty();
@@ -315,8 +344,8 @@ public class ConnectionRecoveryIT {
   @ParameterizedTest
   @MethodSource("configurationArgumentsForSeveralUris")
   public void shouldRecoverWhenConnectionsAreKilledAndUsingSeveralUris(
-      Consumer<MulticastParams> configurer, TestInfo info) throws Exception {
-    configurer.accept(params);
+      BiConsumer<MulticastParams, TestInfo> configurer, TestInfo info) throws Exception {
+    configurer.accept(params, info);
     int producerConsumerCount = params.getProducerCount();
     MulticastSet set =
         new MulticastSet(
@@ -338,7 +367,7 @@ public class ConnectionRecoveryIT {
   @ParameterizedTest
   public void shouldRecoverWithPreDeclared(boolean polling, TestInfo info) throws Exception {
     int queueCount = 5;
-    String queuePattern = "perf-test-" + info.getTestMethod().get().getName() + "-%d";
+    String queuePattern = randomName(info) + "-%d";
     ConnectionFactory connectionFactory = new ConnectionFactory();
     try (Connection c = connectionFactory.newConnection()) {
       Channel ch = c.createChannel();
@@ -383,7 +412,7 @@ public class ConnectionRecoveryIT {
     params.setExclusive(false);
     params.setQueueNames(Collections.emptyList());
 
-    List<String> queuesBeforeTest = Host.listQueues();
+    List<String> queuesBeforeTest = Host.listServerNamedQueues();
     MulticastSet.CompletionHandler completionHandler = latchCompletionHandler(1, info);
     String createdQueue = null;
     try {
@@ -392,7 +421,7 @@ public class ConnectionRecoveryIT {
           new MulticastSet(performanceMetrics, cf, params, "", URIS, completionHandler);
       run(set);
       waitAtMost(10, () -> msgConsumed.get() >= 3 * producerConsumerCount * RATE);
-      List<String> queuesDuringTest = Host.listQueues();
+      List<String> queuesDuringTest = Host.listServerNamedQueues();
       assertThat(queuesDuringTest).hasSize(queuesBeforeTest.size() + 1);
       queuesDuringTest.removeAll(queuesBeforeTest);
       assertThat(queuesDuringTest).hasSize(1);
@@ -400,7 +429,7 @@ public class ConnectionRecoveryIT {
       long messageCountBeforeClosing = msgConsumed.get();
       closeAllConnections();
       waitAtMost(10, () -> msgConsumed.get() >= 2 * messageCountBeforeClosing);
-      assertThat(Host.listQueues()).hasSize(queuesBeforeTest.size() + 1);
+      assertThat(Host.listServerNamedQueues()).hasSize(queuesBeforeTest.size() + 1);
       completionHandler.countDown("stopped in test");
       waitAtMost(10, () -> testIsDone.get());
     } finally {
@@ -414,7 +443,7 @@ public class ConnectionRecoveryIT {
 
   @Test
   void recreateBindingEvenOnPreDeclaredDurableQueue(TestInfo info) throws Exception {
-    String queue = queueName(info);
+    String queue = randomName(info);
     ConnectionFactory connectionFactory = new ConnectionFactory();
     try (Connection c = connectionFactory.newConnection()) {
       Channel ch = c.createChannel();
@@ -463,7 +492,7 @@ public class ConnectionRecoveryIT {
             // one of the tests stops the execution, no need to be noisy
             throw new RuntimeException(e);
           } catch (Exception e) {
-            e.printStackTrace();
+            throw new RuntimeException(e);
           }
         });
   }
