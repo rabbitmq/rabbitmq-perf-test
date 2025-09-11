@@ -1,3 +1,22 @@
+[[predeclared-topology]]
+== Using a Predeclared Topology
+
+`Perftest` can both declare a topology for its publishers and consumers, and use
+an existing topology declared via different means (for example, by real applications
+that are being benchmarked).
+
+To configure `PerfTest` to use an existing topology, use the `--predeclared` flag
+in combination with either `--exchange` (with publishers) or `--queue` (`-queue-pattern`)
+in the case of consumers.
+
+If the topology uses https://rabbitmq.com/docs/quorum-queues[quorum queues], passing
+`--quorum-queues` may be necessary, and would also help clarify the intent to a human
+reader or an AI agent.
+
+ java -jar perf-test.jar --producers 1 --consumers 0 \
+   --predeclared --routing-key rk --exchange x --use-millis
+
+
 [[customising-queues]]
 == Customising queues
 
