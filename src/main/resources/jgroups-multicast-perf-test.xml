@@ -6,6 +6,8 @@
     thread_pool.max_threads="10"
     mcast_recv_buf_size="200000"
     ucast_recv_buf_size="200000"
+    mcast_send_buf_size="200000"
+    ucast_send_buf_size="200000"
   />
   <PING />
   <MERGE3 max_interval="30000"
