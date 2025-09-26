@@ -15,7 +15,9 @@
 // info@rabbitmq.com.
 package com.rabbitmq.perf;
 
-import static com.rabbitmq.perf.MockUtils.*;
+import static com.rabbitmq.perf.MockUtils.callback;
+import static com.rabbitmq.perf.MockUtils.connectionFactoryThatReturns;
+import static com.rabbitmq.perf.MockUtils.proxy;
 import static com.rabbitmq.perf.TestUtils.threadFactory;
 import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -26,7 +28,12 @@ import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.impl.AMQImpl;
 import com.rabbitmq.perf.metrics.PerformanceMetrics;
 import java.time.Duration;
-import java.util.concurrent.*;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Supplier;

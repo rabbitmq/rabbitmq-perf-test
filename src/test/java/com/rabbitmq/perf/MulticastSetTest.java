@@ -15,11 +15,21 @@
 // info@rabbitmq.com.
 package com.rabbitmq.perf;
 
-import static com.rabbitmq.perf.MulticastSet.*;
+import static com.rabbitmq.perf.MulticastSet.nbThreadsForConsumer;
+import static com.rabbitmq.perf.MulticastSet.nbThreadsForProducerScheduledExecutorService;
+import static com.rabbitmq.perf.MulticastSet.rateToPublishingInterval;
+import static com.rabbitmq.perf.MulticastSet.waitUntilBrokerAvailableIfNecessary;
 import static java.util.Arrays.asList;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.atLeast;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import com.rabbitmq.client.Address;
 import com.rabbitmq.client.Connection;

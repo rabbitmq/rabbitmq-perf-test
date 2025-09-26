@@ -15,11 +15,19 @@
 // info@rabbitmq.com.
 package com.rabbitmq.perf;
 
-import static com.rabbitmq.perf.PerfTest.*;
+import static com.rabbitmq.perf.PerfTest.ENVIRONMENT_VARIABLE_LOOKUP;
+import static com.rabbitmq.perf.PerfTest.ENVIRONMENT_VARIABLE_PREFIX;
+import static com.rabbitmq.perf.PerfTest.LONG_OPTION_TO_ENVIRONMENT_VARIABLE;
+import static com.rabbitmq.perf.PerfTest.convertKeyValuePairs;
+import static com.rabbitmq.perf.PerfTest.getParser;
+import static com.rabbitmq.perf.PerfTest.parsePublishingInterval;
+import static com.rabbitmq.perf.PerfTest.validateMultiAckEveryQos;
 import static java.util.Arrays.asList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import com.rabbitmq.perf.PerfTest.PerfTestOptions;
 import com.rabbitmq.perf.PerfTest.SystemExiter;

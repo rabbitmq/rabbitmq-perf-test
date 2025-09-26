@@ -15,7 +15,9 @@
 // info@rabbitmq.com.
 package com.rabbitmq.perf;
 
-import static com.rabbitmq.perf.VariableValueIndicator.*;
+import static com.rabbitmq.perf.VariableValueIndicator.gcd;
+import static com.rabbitmq.perf.VariableValueIndicator.updateValueIfNecessary;
+import static com.rabbitmq.perf.VariableValueIndicator.validate;
 import static java.util.Arrays.asList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;

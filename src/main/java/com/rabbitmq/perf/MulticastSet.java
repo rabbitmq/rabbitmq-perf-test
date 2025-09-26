@@ -22,7 +22,13 @@ import static java.lang.Math.min;
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 
-import com.rabbitmq.client.*;
+import com.rabbitmq.client.AMQP;
+import com.rabbitmq.client.Address;
+import com.rabbitmq.client.AlreadyClosedException;
+import com.rabbitmq.client.Connection;
+import com.rabbitmq.client.ConnectionFactory;
+import com.rabbitmq.client.Recoverable;
+import com.rabbitmq.client.RecoveryListener;
 import com.rabbitmq.client.impl.recovery.AutorecoveringConnection;
 import com.rabbitmq.perf.PerfTest.EXIT_WHEN;
 import com.rabbitmq.perf.metrics.PerformanceMetrics;
