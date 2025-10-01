@@ -12,6 +12,8 @@ updates:
        versions: [ "[1.4,)" ]
      - dependency-name: "org.springframework.boot:spring-boot-maven-plugin"
        versions: [ "[3.0,)" ]
+     - dependency-name: "org.junit:*"
+       versions: [ "[6.0,)" ]
  - package-ecosystem: "github-actions"
    directory: "/"
    schedule:
