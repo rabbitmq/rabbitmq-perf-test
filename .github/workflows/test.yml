@@ -4,6 +4,11 @@ on:
   push:
     branches:
       - main
+    paths:
+      - src/**
+      - '!src/docs/**'
+      - pom.xml
+      - ci/**
   workflow_dispatch:
 
 jobs:
@@ -88,12 +93,3 @@ jobs:
           client-payload: >-
             {"archive_url" : "https://github.com/rabbitmq/rabbitmq-java-tools-binaries-dev/releases/download/${{ env.tag_name }}/perf-test-${{ env.release_version}}.jar",
              "tags": "pivotalrabbitmq/perf-test:dev,pivotalrabbitmq/perf-test:dev-${{ env.release_version }}"}
-      - name: Generate documentation
-        run: |
-          rm -rf target/generated-docs
-          make doc
-      - name: Commit documentation changes
-        run: |
-          git config user.name "rabbitmq-ci"
-          git config user.email "rabbitmq-ci@users.noreply.github.com"
-          ci/commit-documentation.sh

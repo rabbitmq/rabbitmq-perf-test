@@ -4,6 +4,11 @@ on:
   pull_request:
     branches:
       - main
+    paths:
+      - src/**
+      - '!src/docs/**'
+      - pom.xml
+      - ci/**
   workflow_dispatch:
 
 jobs:

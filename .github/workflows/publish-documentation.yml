@@ -1,6 +1,11 @@
 name: Publish documentation
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - src/docs/**
   workflow_dispatch:
 
 jobs:

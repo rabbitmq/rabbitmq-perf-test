@@ -4,6 +4,11 @@ on:
   push:
     branches:
       - main
+    paths:
+      - src/**
+      - '!src/docs/**'
+      - pom.xml
+      - ci/**
   schedule:
     - cron: '0 4 * * *'
   workflow_dispatch:
