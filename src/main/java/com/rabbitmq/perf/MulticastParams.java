@@ -140,6 +140,7 @@ public class MulticastParams {
 
   private PrintStream out = System.out;
   private boolean netty = false;
+  private java.util.function.Consumer<List<String>> consumerConfiguredQueueListener = qs -> {};
 
   public void setExchangeType(String exchangeType) {
     this.exchangeType = exchangeType;
@@ -639,6 +640,8 @@ public class MulticastParams {
     Recovery.RecoveryProcess recoveryProcess =
         setupRecoveryProcess(connection, topologyHandlerResult.topologyRecording);
 
+    this.consumerConfiguredQueueListener.accept(topologyHandlerResult.configuredQueues);
+
     Consumer consumer =
         new Consumer(
             new ConsumerParameters()
@@ -780,6 +783,11 @@ public class MulticastParams {
 
   boolean netty() {
     return this.netty;
+  }
+
+  public void setConsumerConfiguredQueueListener(
+      java.util.function.Consumer<List<String>> listener) {
+    this.consumerConfiguredQueueListener = listener;
   }
 
   /**

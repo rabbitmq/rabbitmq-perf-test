@@ -35,6 +35,8 @@ import java.io.DataOutputStream;
 import java.io.PrintStream;
 import java.time.Duration;
 import java.util.List;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -148,12 +150,12 @@ public class MiscellaneousIT {
 
   @Test
   void consumerShouldRecoverWhenServerNamedQueueIsDeleted(TestInfo info) throws Exception {
+    Queue<String> queues = new ConcurrentLinkedQueue<>();
     int rate = 100;
     params.setProducerCount(1);
     params.setConsumerCount(1);
     params.setProducerRateLimit(rate);
-
-    List<String> queuesBeforeTest = Host.listQueues();
+    params.setConsumerConfiguredQueueListener(queues::addAll);
 
     MulticastSet.CompletionHandler completionHandler = latchCompletionHandler(1, info);
     MulticastSet set =
@@ -161,10 +163,8 @@ public class MiscellaneousIT {
     run(set);
 
     waitAtMost(10, () -> msgConsumed.get() >= 3 * rate);
-    List<String> queuesDuringTest = Host.listQueues();
-    queuesDuringTest.removeAll(queuesBeforeTest);
-    assertThat(queuesDuringTest).hasSize(1);
-    String queue = queuesDuringTest.get(0);
+    assertThat(queues).hasSize(1);
+    String queue = queues.poll();
 
     ConnectionFactory connectionFactory = new ConnectionFactory();
     long messageConsumedBeforeDeletion;

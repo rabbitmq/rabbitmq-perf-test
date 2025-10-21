@@ -145,10 +145,6 @@ public class Host {
     return result;
   }
 
-  public static List<String> listServerNamedQueues() throws IOException {
-    return listQueues().stream().filter(q -> q.startsWith("amq.gen")).collect(Collectors.toList());
-  }
-
   public static List<String> listQueues() throws IOException {
     // "messages" column will help ignore the header line
     String output = capture(rabbitmqctl("list_queues -q name messages").getInputStream());

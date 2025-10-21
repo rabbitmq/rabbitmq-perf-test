@@ -18,9 +18,11 @@ package com.rabbitmq.perf.it;
 import static com.rabbitmq.perf.TestUtils.randomName;
 import static com.rabbitmq.perf.TestUtils.threadFactory;
 import static com.rabbitmq.perf.TestUtils.waitAtMost;
+import static com.rabbitmq.perf.it.Host.listQueues;
 import static com.rabbitmq.perf.it.Utils.latchCompletionHandler;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
+import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.range;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -38,6 +40,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -66,11 +70,12 @@ public class ConnectionRecoveryIT {
 
   static final String URI = "amqp://localhost";
 
-  static final List<String> URIS = Collections.singletonList(URI);
+  static final List<String> URIS = singletonList(URI);
 
   static final int RATE = 11;
 
   MulticastParams params;
+  Queue<String> consumerQueues = new ConcurrentLinkedQueue<>();
 
   ExecutorService executorService;
 
@@ -219,6 +224,7 @@ public class ConnectionRecoveryIT {
     params.setProducerCount(1);
     params.setConsumerCount(1);
     params.setProducerRateLimit(RATE);
+    params.setConsumerConfiguredQueueListener(consumerQueues::addAll);
     cf = new ConnectionFactory();
     cf.setNetworkRecoveryInterval(2000);
     cf.setTopologyRecoveryEnabled(false);
@@ -410,12 +416,11 @@ public class ConnectionRecoveryIT {
 
   @Test
   void durableServerNamedQueueShouldBeReusedIfStillThere(TestInfo info) throws Exception {
-    params.setFlags(Arrays.asList("persistent"));
+    params.setFlags(singletonList("persistent"));
     params.setAutoDelete(false);
     params.setExclusive(false);
     params.setQueueNames(Collections.emptyList());
 
-    List<String> queuesBeforeTest = Host.listServerNamedQueues();
     MulticastSet.CompletionHandler completionHandler = latchCompletionHandler(1, info);
     String createdQueue = null;
     try {
@@ -424,15 +429,12 @@ public class ConnectionRecoveryIT {
           new MulticastSet(performanceMetrics, cf, params, "", URIS, completionHandler);
       run(set);
       waitAtMost(10, () -> msgConsumed.get() >= 3 * producerConsumerCount * RATE);
-      List<String> queuesDuringTest = Host.listServerNamedQueues();
-      assertThat(queuesDuringTest).hasSize(queuesBeforeTest.size() + 1);
-      queuesDuringTest.removeAll(queuesBeforeTest);
-      assertThat(queuesDuringTest).hasSize(1);
-      createdQueue = queuesDuringTest.get(0);
+      assertThat(consumerQueues).hasSize(1);
+      createdQueue = consumerQueues.poll();
       long messageCountBeforeClosing = msgConsumed.get();
       closeAllConnections();
       waitAtMost(10, () -> msgConsumed.get() >= 2 * messageCountBeforeClosing);
-      assertThat(Host.listServerNamedQueues()).hasSize(queuesBeforeTest.size() + 1);
+      assertThat(listQueues()).contains(createdQueue);
       completionHandler.countDown("stopped in test");
       waitAtMost(10, () -> testIsDone.get());
     } finally {
@@ -454,7 +456,7 @@ public class ConnectionRecoveryIT {
       ch.exchangeDelete("direct");
     }
 
-    params.setQueueNames(Collections.singletonList(queue));
+    params.setQueueNames(singletonList(queue));
     params.setPredeclared(true);
 
     int producerConsumerCount = params.getProducerCount();
