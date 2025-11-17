@@ -83,7 +83,7 @@
     <maven.gpg.plugin.version>3.2.8</maven.gpg.plugin.version>
     <maven.assembly.plugin.version>3.7.1</maven.assembly.plugin.version>
     <maven.install.plugin.version>3.1.4</maven.install.plugin.version>
-    <maven.jar.plugin.version>3.4.2</maven.jar.plugin.version>
+    <maven.jar.plugin.version>3.5.0</maven.jar.plugin.version>
     <buildnumber.plugin.version>3.2.1</buildnumber.plugin.version>
     <maven-dependency-plugin.version>3.9.0</maven-dependency-plugin.version>
     <maven.surefire.plugin.version>3.5.4</maven.surefire.plugin.version>
