@@ -81,7 +81,7 @@
     <maven.source.plugin.version>3.3.1</maven.source.plugin.version>
     <maven.javadoc.plugin.version>3.12.0</maven.javadoc.plugin.version>
     <maven.gpg.plugin.version>3.2.8</maven.gpg.plugin.version>
-    <maven.assembly.plugin.version>3.7.1</maven.assembly.plugin.version>
+    <maven.assembly.plugin.version>3.8.0</maven.assembly.plugin.version>
     <maven.install.plugin.version>3.1.4</maven.install.plugin.version>
     <maven.jar.plugin.version>3.5.0</maven.jar.plugin.version>
     <buildnumber.plugin.version>3.2.1</buildnumber.plugin.version>
