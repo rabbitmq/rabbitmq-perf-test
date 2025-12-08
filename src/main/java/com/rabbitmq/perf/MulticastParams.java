@@ -869,18 +869,24 @@ public class MulticastParams {
 
     protected Connection maybeUseCachedConnection(List<String> queues, Connection connection)
         throws IOException {
-      // if queues are exclusive, we create them for each consumer connection or re-use them
-      // in case they are more consumers than queues
-      Connection connectionToUse = connectionCache.putIfAbsent(queues.toString(), connection);
-      if (connectionToUse == null) {
-        // not a hit in the cache, we use the one passed-in
+      Connection connectionToUse;
+      if (queues == null || queues.isEmpty()) {
+        // server-named exclusive queues, we can't re-use the connection
         connectionToUse = connection;
       } else {
-        // hit in the cache, we used the cached one, and close the passed-in one
-        // (unless the cache one and the passed-in one are the same object, which is the case
-        // when using several channels for each consumer!)
-        if (connection != connectionToUse) {
-          connection.close(AMQP.REPLY_SUCCESS, "Connection not used", -1);
+        // if queues are exclusive, we create them for each consumer connection or re-use them
+        // in case they are more consumers than queues
+        connectionToUse = connectionCache.putIfAbsent(queues.toString(), connection);
+        if (connectionToUse == null) {
+          // not a hit in the cache, we use the one passed-in
+          connectionToUse = connection;
+        } else {
+          // hit in the cache, we used the cached one, and close the passed-in one
+          // (unless the cache one and the passed-in one are the same object, which is the case
+          // when using several channels for each consumer!)
+          if (connection != connectionToUse) {
+            connection.close(AMQP.REPLY_SUCCESS, "Connection not used", -1);
+          }
         }
       }
       return connectionToUse;

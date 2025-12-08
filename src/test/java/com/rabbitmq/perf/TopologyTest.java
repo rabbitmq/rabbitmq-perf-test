@@ -77,6 +77,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
@@ -411,9 +412,9 @@ public class TopologyTest {
   }
 
   @ParameterizedTest
-  @ValueSource(strings = {"true", "false"})
-  public void exclusiveQueue(String exclusive) throws Exception {
-    params.setExclusive(valueOf(exclusive));
+  @ValueSource(booleans = {true, false})
+  public void exclusiveQueue(boolean exclusive) throws Exception {
+    params.setExclusive(exclusive);
     when(ch.queueDeclare(eq(""), anyBoolean(), anyBoolean(), anyBoolean(), isNull()))
         .thenReturn(new AMQImpl.Queue.DeclareOk("", 0, 0));
 
@@ -502,21 +503,7 @@ public class TopologyTest {
                 Connection.class,
                 callback("createChannel", (proxy, method, args) -> channel),
                 callback("isOpen", (proxy, method, args) -> true),
-                callback(
-                    "close",
-                    (proxy, method, args) -> {
-                      // un-used connections are closed in a specific manner (to ease testing)
-                      // they can be un-used because some connections are re-used when there are
-                      // more
-                      // consumers than queues and queues are exclusive
-                      if (args != null && args.length == 3) {
-                        String reason = args[1].toString();
-                        if ("Connection not used".equals(reason)) {
-                          unusedConnections.incrementAndGet();
-                        }
-                      }
-                      return null;
-                    }));
+                closedConnectionCallback(unusedConnections));
 
     ConnectionFactory connectionFactory = connectionFactoryThatReturns(connectionSupplier);
 
@@ -525,6 +512,45 @@ public class TopologyTest {
     set.run();
 
     assertThat(unusedConnections.get()).as(message).isEqualTo(expectedUnusedConnections);
+  }
+
+  @ParameterizedTest
+  @CsvSource({"10,1", "10,5"})
+  void serverNamedExclusiveQueuesShouldNotReuseConnections(
+      int consumerCount, int consumerChannelCount) throws Exception {
+    params.setExclusive(true);
+    params.setConsumerCount(consumerCount);
+    params.setConsumerChannelCount(consumerChannelCount);
+    params.setProducerCount(0);
+
+    Channel channel =
+        proxy(
+            Channel.class,
+            callback(
+                "queueDeclare",
+                (proxy, method, args) -> new AMQImpl.Queue.DeclareOk(args[0].toString(), 0, 0)));
+
+    AtomicInteger connectionCount = new AtomicInteger(0);
+    AtomicInteger closedConnections = new AtomicInteger(0);
+    // we want to return different instances because it matters when using connection caching
+    Supplier<Connection> connectionSupplier =
+        () -> {
+          connectionCount.incrementAndGet();
+          return proxy(
+              Connection.class,
+              callback("createChannel", (proxy, method, args) -> channel),
+              callback("isOpen", (proxy, method, args) -> true),
+              closedConnectionCallback(closedConnections));
+        };
+
+    ConnectionFactory connectionFactory = connectionFactoryThatReturns(connectionSupplier);
+
+    MulticastSet set = getMulticastSet(connectionFactory);
+
+    set.run();
+    assertThat(connectionCount).hasValue(11);
+    // server-named exclusive queues, we can't re-use connections between consumers
+    assertThat(closedConnections).hasValue(0);
   }
 
   // --queue-pattern 'perf-test-%d' --queue-pattern-from 1 --queue-pattern-to 100
@@ -1041,5 +1067,23 @@ public class TopologyTest {
         }
       }
     }
+  }
+
+  private static MockUtils.ProxyCallback closedConnectionCallback(AtomicInteger closedConnections) {
+    return callback(
+        "close",
+        (proxy, method, args) -> {
+          // un-used connections are closed in a specific manner (to ease testing)
+          // they can be un-used because some connections are re-used when there are
+          // more
+          // consumers than queues and queues are exclusive
+          if (args != null && args.length == 3) {
+            String reason = args[1].toString();
+            if ("Connection not used".equals(reason)) {
+              closedConnections.incrementAndGet();
+            }
+          }
+          return null;
+        });
   }
 }
