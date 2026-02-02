@@ -75,7 +75,7 @@
     <!-- to sign artifacts when releasing -->
     <gpg.keyname>6026DFCA</gpg.keyname>
 
-    <maven.compiler.plugin.version>3.14.1</maven.compiler.plugin.version>
+    <maven.compiler.plugin.version>3.15.0</maven.compiler.plugin.version>
     <versions.maven.plugin.version>2.21.0</versions.maven.plugin.version>
     <maven.release.plugin.version>3.3.1</maven.release.plugin.version>
     <maven.source.plugin.version>3.4.0</maven.source.plugin.version>
