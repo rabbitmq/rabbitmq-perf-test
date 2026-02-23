@@ -35,7 +35,10 @@ RUN set -eux; \
 
 RUN rm jdk.tar.gz
 
-RUN wget --progress=bar:force:noscroll https://raw.githubusercontent.com/rabbitmq/rabbitmq-server/main/deps/rabbitmq_management/bin/rabbitmqadmin -O /usr/local/bin/rabbitmqadmin
+RUN ARCH=$(if [ "$(uname -m)" = "aarch64" ] || [ "$(uname -m)" = "arm64" ]; then echo "aarch64"; else echo "x86_64"; fi) \
+    && RELEASE=$(wget -qO- https://api.github.com/repos/rabbitmq/rabbitmqadmin-ng/releases/latest | jq -r .tag_name) \
+    && VERSION=${RELEASE#v} \
+    && wget --progress=bar:force:noscroll "https://github.com/rabbitmq/rabbitmqadmin-ng/releases/download/${RELEASE}/rabbitmqadmin-${VERSION}-${ARCH}-unknown-linux-gnu" -O /usr/local/bin/rabbitmqadmin
 
 ENV PERF_TEST_HOME="/perf_test"
 ENV PERF_TEST_PATH="/usr/local/src/perf-test"
