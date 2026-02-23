@@ -46,7 +46,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.BiFunction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -75,7 +74,7 @@ public class Consumer extends AgentBase implements Runnable {
   private final Map<String, String> consumerTagBranchMap =
       Collections.synchronizedMap(new HashMap<>());
   private final ConsumerLatency consumerLatency;
-  private final BiFunction<BasicProperties, byte[], Long> timestampExtractor;
+  private final TimestampExtractor timestampExtractor;
   private final TimestampProvider timestampProvider;
   private final MulticastSet.CompletionHandler completionHandler;
   private final AtomicBoolean completed = new AtomicBoolean(false);
@@ -158,7 +157,7 @@ public class Consumer extends AgentBase implements Runnable {
       this.timestampExtractor =
           (properties, body) -> {
             Object timestamp = properties.getHeaders().get(Producer.TIMESTAMP_HEADER);
-            return timestamp == null ? Long.MAX_VALUE : (Long) timestamp;
+            return timestamp == null ? TimestampProvider.INCORRECT_VALUE : (Long) timestamp;
           };
     } else {
       this.timestampExtractor =
@@ -168,7 +167,7 @@ public class Consumer extends AgentBase implements Runnable {
               d.readInt(); // read sequence number
               return d.readLong();
             } catch (IOException e) {
-              return Long.MAX_VALUE;
+              return TimestampProvider.INCORRECT_VALUE;
             }
           };
     }
@@ -311,11 +310,11 @@ public class Consumer extends AgentBase implements Runnable {
       long nowTimestamp = timestampProvider.getCurrentTime();
       state.setLastActivityTimestamp(nowTimestamp);
       if (msgLimit == 0 || receivedMessageCount.get() <= msgLimit) {
-        long messageTimestamp = timestampExtractor.apply(properties, body);
+        long messageTimestamp = timestampExtractor.extract(properties, body);
         long diff_time = timestampProvider.getDifference(nowTimestamp, messageTimestamp);
 
         logger().received(Consumer.this.id, messageTimestamp, envelope, properties, body);
-        performanceMetrics.received(routingKey.equals(envelope.getRoutingKey()) ? diff_time : 0L);
+        performanceMetrics.received(diff_time);
 
         if (consumerLatency.simulateLatency()) {
           ackIfNecessary(messageTimestamp, envelope, epochMessageCount.get(), ch);
@@ -740,5 +739,10 @@ public class Consumer extends AgentBase implements Runnable {
 
     void apply(Channel channel, Envelope envelope, boolean multiple, boolean requeue)
         throws IOException;
+  }
+
+  @FunctionalInterface
+  private interface TimestampExtractor {
+    long extract(BasicProperties props, byte[] body);
   }
 }

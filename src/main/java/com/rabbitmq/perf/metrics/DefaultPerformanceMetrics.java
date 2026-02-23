@@ -300,7 +300,7 @@ public final class DefaultPerformanceMetrics implements PerformanceMetrics, Auto
   public void received(long latency) {
     this.received.incrementAndGet();
     this.receivedTotal.incrementAndGet();
-    if (latency > 0) {
+    if (latency >= 0) {
       this.consumedLatencyTimer.record(latency, this.latencyCollectionTimeUnit);
       this.consumedLatency.get().update(latency);
       this.consumedLatencyTotal.get().update(latency);

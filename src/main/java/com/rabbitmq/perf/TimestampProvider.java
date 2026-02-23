@@ -18,6 +18,9 @@ package com.rabbitmq.perf;
 import java.time.Duration;
 
 public class TimestampProvider {
+
+  public static final long INCORRECT_VALUE = Long.MAX_VALUE;
+
   private final boolean useMillis;
   private final boolean isTimestampInHeader;
 
@@ -39,7 +42,12 @@ public class TimestampProvider {
   }
 
   public long getDifference(long ts1, long ts2) {
-    return Math.abs(ts1 - ts2);
+    if (ts2 == INCORRECT_VALUE) {
+      // incorrect value in the message, returning 0
+      return -1L;
+    } else {
+      return Math.abs(ts1 - ts2);
+    }
   }
 
   Duration difference(long ts1, long ts2) {

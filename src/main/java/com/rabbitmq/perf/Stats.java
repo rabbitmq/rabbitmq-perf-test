@@ -209,7 +209,7 @@ public abstract class Stats {
   public void handleRecv(long latency) {
     recvCountInterval.incrementAndGet();
     recvCountTotal.incrementAndGet();
-    if (latency > 0) {
+    if (latency >= 0) {
       this.latency.update(latency);
       this.globalLatency.get().update(latency);
       this.updateLatency.accept(latency);
