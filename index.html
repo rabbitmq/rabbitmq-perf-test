@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="generator" content="Asciidoctor 2.0.23">
+<meta name="generator" content="Asciidoctor 2.0.26">
 <title>RabbitMQ PerfTest</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:300,300italic,400,400italic,600,600italic%7CNoto+Serif:400,400italic,700,700italic%7CDroid+Sans+Mono:400,700">
 <style>
@@ -116,7 +116,6 @@ h1 strong,h2 strong,h3 strong,#toctitle strong,.sidebarblock>.content>.title str
 :not(pre):not([class^=L])>code{font-size:.9375em;font-style:normal!important;letter-spacing:0;padding:.1em .5ex;word-spacing:-.15em;background:#f7f7f8;border-radius:4px;line-height:1.45;text-rendering:optimizeSpeed}
 pre{color:rgba(0,0,0,.9);font-family:"Droid Sans Mono","DejaVu Sans Mono",monospace;line-height:1.45;text-rendering:optimizeSpeed}
 pre code,pre pre{color:inherit;font-size:inherit;line-height:inherit}
-pre>code{display:block}
 pre.nowrap,pre.nowrap pre{white-space:pre;word-wrap:normal}
 em em{font-style:normal}
 strong strong{font-weight:400}
@@ -219,6 +218,7 @@ table.tableblock.fit-content>caption.title{white-space:nowrap;width:0}
 .literalblock pre,.listingblock>.content>pre:not(.highlight),.listingblock>.content>pre[class=highlight],.listingblock>.content>pre[class^="highlight "]{background:#f7f7f8}
 .literalblock.output pre{color:#f7f7f8;background:rgba(0,0,0,.9)}
 .listingblock>.content{position:relative}
+.listingblock pre>code{display:block}
 .listingblock code[data-lang]::before{display:none;content:attr(data-lang);position:absolute;font-size:.75em;top:.425rem;right:.5rem;line-height:1;text-transform:uppercase;color:inherit;opacity:.5}
 .listingblock:hover code[data-lang]::before{display:block}
 .listingblock.terminal pre .command::before{content:attr(data-prompt);padding-right:.5em;color:inherit;opacity:.5}
@@ -544,6 +544,7 @@ table.CodeRay td.code{padding:0 0 0 .75em}
 <li><a href="#basic-usage">Basic Usage</a></li>
 <li><a href="#how-it-works">How It Works</a></li>
 <li><a href="#stopping-perftest">Stopping PerfTest</a></li>
+<li><a href="#predeclared-topology">Using a Predeclared Topology</a></li>
 <li><a href="#customising-queues">Customising queues</a>
 <ul class="sectlevel2">
 <li><a href="#quorum-queue-support">Quorum Queue Support</a></li>
@@ -978,6 +979,32 @@ value:</p>
 <p>With the previous command, PerfTest won&#8217;t even try to close AMQP connections, it will exit
 as fast as possible, freeing only the most important resources. This is perfectly
 acceptable when performing runs on a test environment.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="predeclared-topology"><a class="anchor" href="#predeclared-topology"></a>Using a Predeclared Topology</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><code>Perftest</code> can both declare a topology for its publishers and consumers, and use
+an existing topology declared via different means (for example, by real applications
+that are being benchmarked).</p>
+</div>
+<div class="paragraph">
+<p>To configure <code>PerfTest</code> to use an existing topology, use the <code>--predeclared</code> flag
+in combination with either <code>--exchange</code> (with publishers) or <code>--queue</code> (<code>-queue-pattern</code>)
+in the case of consumers.</p>
+</div>
+<div class="paragraph">
+<p>If the topology uses <a href="https://rabbitmq.com/docs/quorum-queues">quorum queues</a>, passing
+<code>--quorum-queues</code> may be necessary, and would also help clarify the intent to a human
+reader or an AI agent.</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>java -jar perf-test.jar --producers 1 --consumers 0 \
+  --predeclared --routing-key rk --exchange x --use-millis</pre>
+</div>
 </div>
 </div>
 </div>
@@ -2132,7 +2159,7 @@ It is then possible to override the metrics values thanks to the <code>--exposed
 <div id="footer">
 <div id="footer-text">
 Version 2.25.0-SNAPSHOT<br>
-Last updated 2025-08-06 09:57:56 UTC
+Last updated 2026-02-23 15:45:26 UTC
 </div>
 </div>
 </body>
