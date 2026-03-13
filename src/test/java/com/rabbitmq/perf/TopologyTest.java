@@ -152,6 +152,8 @@ public class TopologyTest {
 
     when(cf.newConnection(anyList(), anyString())).thenReturn(c);
     when(c.createChannel()).thenReturn(ch);
+    Map<String, Object> serverProperties = Collections.singletonMap("version", "4.2.0");
+    when(c.getServerProperties()).thenReturn(serverProperties);
 
     params = new MulticastParams();
 

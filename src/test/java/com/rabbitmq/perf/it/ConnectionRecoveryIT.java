@@ -313,6 +313,7 @@ public class ConnectionRecoveryIT {
       TestInfo info)
       throws Exception {
     params.setPublishingInterval(Duration.ofSeconds(1));
+    params.setFlags(singletonList("persistent"));
     configurer.accept(params, info);
     cfConfigurer.accept(cf);
     int producerConsumerCount = params.getProducerCount();
@@ -338,6 +339,7 @@ public class ConnectionRecoveryIT {
     params.setQueueNames(Arrays.asList(prefix + "-one", prefix + "-two", prefix + "-three"));
     params.setProducerCount(10);
     params.setConsumerCount(10);
+    params.setFlags(singletonList("persistent"));
     cf.netty();
     int producerConsumerCount = params.getProducerCount();
     MulticastSet set =
@@ -381,7 +383,7 @@ public class ConnectionRecoveryIT {
     try (Connection c = connectionFactory.newConnection()) {
       Channel ch = c.createChannel();
       for (int i = 1; i <= queueCount; i++) {
-        ch.queueDeclare(String.format(queuePattern, i), false, false, false, null);
+        ch.queueDeclare(String.format(queuePattern, i), true, false, false, null);
       }
     }
 

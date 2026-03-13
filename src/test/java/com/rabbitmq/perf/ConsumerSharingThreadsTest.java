@@ -33,6 +33,8 @@ import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.impl.AMQImpl;
 import com.rabbitmq.perf.metrics.PerformanceMetrics;
+import java.util.Collections;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import org.junit.jupiter.api.AfterEach;
@@ -62,6 +64,8 @@ public class ConsumerSharingThreadsTest {
 
     when(cf.newConnection(anyList(), anyString())).thenReturn(c);
     when(c.createChannel()).thenReturn(ch);
+    Map<String, Object> serverProperties = Collections.singletonMap("version", "4.2.0");
+    when(c.getServerProperties()).thenReturn(serverProperties);
     when(ch.queueDeclare(eq(""), anyBoolean(), anyBoolean(), anyBoolean(), isNull()))
         .thenReturn(new AMQImpl.Queue.DeclareOk("", 0, 0));
 

@@ -38,8 +38,12 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class MulticastParams {
+
+  private static final Logger LOGGER = LoggerFactory.getLogger(MulticastParams.class);
 
   private long confirm = -1;
   private int confirmTimeout = 30;
@@ -956,23 +960,27 @@ public class MulticastParams {
         TopologyRecording topologyRecording = state.topologyRecording;
 
         if (!params.predeclared || !queueExists(connection, qName)) {
+          boolean durable = params.flags.contains("persistent");
+          boolean exclusive = params.isExclusive();
+          boolean autoDelete = params.autoDelete;
+
+          if (connection.getServerProperties() != null
+              && Utils.atLeast4_3(connection)
+              && !durable
+              && !exclusive) {
+            LOGGER.warn(
+                "Non-durable non-exclusive queues are not supported on RabbitMQ 4.3+, "
+                    + "switching to durable non-exclusive");
+            durable = true;
+          }
+
           boolean serverNamed = qName == null || "".equals(qName);
           qName =
               channel
-                  .queueDeclare(
-                      qName,
-                      params.flags.contains("persistent"),
-                      params.isExclusive(),
-                      params.autoDelete,
-                      params.queueArguments)
+                  .queueDeclare(qName, durable, exclusive, autoDelete, params.queueArguments)
                   .getQueue();
           topologyRecording.recordQueue(
-              qName,
-              params.flags.contains("persistent"),
-              params.isExclusive(),
-              params.autoDelete,
-              params.queueArguments,
-              serverNamed);
+              qName, durable, exclusive, autoDelete, params.queueArguments, serverNamed);
         }
         generatedQueueNames.add(qName);
         // skipping binding to default exchange,
