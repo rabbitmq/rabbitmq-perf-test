@@ -85,6 +85,8 @@ public class ConnectionRecoveryTest {
     when(cf.newConnection(anyList(), anyString())).thenReturn(c);
     when(c.createChannel()).thenReturn(ch);
     when(c.getClientProvidedName()).thenReturn("consumer-connection");
+    Map<String, Object> serverProperties = Collections.singletonMap("version", "4.3.0");
+    when(c.getServerProperties()).thenReturn(serverProperties);
     DeclareOk declareOk = new AMQImpl.Queue.DeclareOk(QUEUE, 0, 0);
     when(ch.queueDeclare(eq(QUEUE), anyBoolean(), anyBoolean(), anyBoolean(), anyMap()))
         .thenReturn(declareOk);
