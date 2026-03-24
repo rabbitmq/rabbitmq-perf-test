@@ -27,6 +27,7 @@ import java.time.Duration;
 import java.util.Collections;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 public class UtilsTest {
@@ -57,6 +58,21 @@ public class UtilsTest {
     RecoveryDelayHandler recoveryDelayHandler = getRecoveryDelayHandler(argument);
     range(0, 10)
         .forEach(attempt -> assertThat(recoveryDelayHandler.getDelay(attempt)).isBetween(min, max));
+  }
+
+  @ParameterizedTest
+  @CsvSource({
+    "4.3.0,4.3.0",
+    "3.13.6,3.13.6",
+    "3.13.6.2,3.13.6",
+    "3.13.6-alpha.0,3.13.6",
+    "3.13.6~beta-1,3.13.6",
+    "3.13.6+funky-metadata-1,3.13.6",
+    "3.7.0+rc.1.4.gedc5d96,3.7.0",
+    "tanzu+rabbitmq.v4.3.0.dev.1.179.g335e26b,4.3.0"
+  })
+  void currentVersionExtraction(String input, String expected) {
+    assertThat(Utils.currentVersion(input)).isEqualTo(expected);
   }
 
   @Test

@@ -951,6 +951,8 @@ public class MulticastParams {
         queues = Collections.singletonList("");
       }
 
+      boolean nonDurableNonExclusiveWarningLogged = false;
+
       for (int i = 0; i < queues.size(); i++) {
         String qName = queues.get(i);
         State state = states.get(i % states.size());
@@ -968,9 +970,12 @@ public class MulticastParams {
               && Utils.atLeast4_3(connection)
               && !durable
               && !exclusive) {
-            LOGGER.warn(
-                "Non-durable non-exclusive queues are not supported on RabbitMQ 4.3+, "
-                    + "switching to durable non-exclusive");
+            if (!nonDurableNonExclusiveWarningLogged) {
+              LOGGER.warn(
+                  "Non-durable non-exclusive queues are not supported on RabbitMQ 4.3+, "
+                      + "switching to durable non-exclusive");
+              nonDurableNonExclusiveWarningLogged = true;
+            }
             durable = true;
           }
 

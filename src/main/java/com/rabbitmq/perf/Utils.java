@@ -320,23 +320,22 @@ abstract class Utils {
 
   static boolean atLeast4_3(Connection connection) {
     String version = connection.getServerProperties().get("version").toString();
-    return versionCompare(currentVersion(version), "4.3.0") >= 0;
+    try {
+      return versionCompare(currentVersion(version), "4.3.0") >= 0;
+    } catch (Exception e) {
+      LOGGER.debug("Unable to parse broker version {}", version, e);
+      return true;
+    }
   }
 
-  private static String currentVersion(String currentVersion) {
-    // versions built from source: 3.7.0+rc.1.4.gedc5d96
-    if (currentVersion.contains("+")) {
-      currentVersion = currentVersion.substring(0, currentVersion.indexOf("+"));
+  private static final Pattern SEMVER_PATTERN = Pattern.compile("(\\d+\\.\\d+\\.\\d+)");
+
+  static String currentVersion(String currentVersion) {
+    Matcher matcher = SEMVER_PATTERN.matcher(currentVersion);
+    if (matcher.find()) {
+      return matcher.group(1);
     }
-    // alpha (snapshot) versions: 3.7.0~alpha.449-1
-    if (currentVersion.contains("~")) {
-      currentVersion = currentVersion.substring(0, currentVersion.indexOf("~"));
-    }
-    // alpha (snapshot) versions: 3.7.1-alpha.40
-    if (currentVersion.contains("-")) {
-      currentVersion = currentVersion.substring(0, currentVersion.indexOf("-"));
-    }
-    return currentVersion;
+    throw new IllegalArgumentException("No semver pattern found in: " + currentVersion);
   }
 
   /**
