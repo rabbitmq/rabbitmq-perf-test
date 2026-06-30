@@ -543,6 +543,14 @@ public class MulticastParams {
     this.flagMandatory = flagMandatory;
   }
 
+  // used only in PerfTestMulti
+  void setFlags(List<String> flags) {
+    if (flags != null && !flags.isEmpty()) {
+      this.setFlagMandatory(flags.contains("mandatory"));
+      this.setFlagPersistent(flags.contains("persistent"));
+    }
+  }
+
   public void setFlagPersistent(boolean flagPersistent) {
     this.flagPersistent = flagPersistent;
   }
