@@ -60,7 +60,8 @@ public class ScenarioFactoryTest {
     assertThat(params.getQueuePattern()).isEqualTo("gh-813-%d");
     assertThat(params.getQueueSequenceFrom()).isEqualTo(0);
     assertThat(params.getQueueSequenceTo()).isEqualTo(3);
-    assertThat(params.getFlags()).hasSize(2).containsExactly("persistent", "mandatory");
+    assertThat(params.flagMandatory()).isEqualTo(true);
+    assertThat(params.flagPersistent()).isEqualTo(true);
     assertThat(params.isAutoDelete()).isFalse();
   }
 }

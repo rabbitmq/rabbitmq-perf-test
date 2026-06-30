@@ -110,8 +110,8 @@ public class Producer extends AgentBase implements Runnable, ReturnListener, Con
         parameters.getFunctionalLogger());
     this.channel = parameters.getChannel();
     this.exchangeName = parameters.getExchangeName();
-    this.mandatory = parameters.getFlags().contains("mandatory");
-    this.persistent = parameters.getFlags().contains("persistent");
+    this.mandatory = parameters.mandatory();
+    this.persistent = parameters.persistent();
 
     Function<AMQP.BasicProperties.Builder, AMQP.BasicProperties.Builder> builderProcessor =
         Function.identity();

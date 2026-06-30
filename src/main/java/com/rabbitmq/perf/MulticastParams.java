@@ -72,7 +72,8 @@ public class MulticastParams {
   private boolean randomRoutingKey = false;
   private boolean skipBindingQueues = false;
 
-  private List<String> flags = new ArrayList<>();
+  private boolean flagMandatory = false;
+  private boolean flagPersistent = false;
 
   private int multiAckEvery = 0;
   private boolean autoAck = false;
@@ -262,14 +263,6 @@ public class MulticastParams {
   public void setMsgCount(int msgCount) {
     setProducerMsgCount(msgCount);
     setConsumerMsgCount(msgCount);
-  }
-
-  public void setFlags(List<String> flags) {
-    this.flags = flags;
-  }
-
-  List<String> getFlags() {
-    return flags;
   }
 
   public void setAutoDelete(boolean autoDelete) {
@@ -546,6 +539,22 @@ public class MulticastParams {
     this.rateLimiterFactory = rateLimiterFactory;
   }
 
+  public void setFlagMandatory(boolean flagMandatory) {
+    this.flagMandatory = flagMandatory;
+  }
+
+  public void setFlagPersistent(boolean flagPersistent) {
+    this.flagPersistent = flagPersistent;
+  }
+
+  boolean flagMandatory() {
+    return this.flagMandatory;
+  }
+
+  boolean flagPersistent() {
+    return this.flagPersistent;
+  }
+
   public void setFunctionalLogger(FunctionalLogger functionalLogger) {
     this.functionalLogger = functionalLogger;
   }
@@ -593,7 +602,8 @@ public class MulticastParams {
                 .setExchangeName(exchangeName)
                 .setRoutingKey(this.topologyHandler.getRoutingKey())
                 .setRandomRoutingKey(randomRoutingKey)
-                .setFlags(flags)
+                .setMandatory(this.flagMandatory)
+                .setPersistent(this.flagPersistent)
                 .setTxSize(producerTxSize)
                 .setMsgLimit(producerMsgCount)
                 .setConfirm(confirm)
@@ -960,7 +970,7 @@ public class MulticastParams {
         TopologyRecording topologyRecording = state.topologyRecording;
 
         if (!params.predeclared || !queueExists(connection, qName)) {
-          boolean durable = params.flags.contains("persistent");
+          boolean durable = params.flagPersistent();
           boolean exclusive = params.isExclusive();
           boolean autoDelete = params.autoDelete;
           if (connection.getServerProperties() != null

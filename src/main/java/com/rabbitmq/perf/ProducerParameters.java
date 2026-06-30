@@ -17,7 +17,6 @@ package com.rabbitmq.perf;
 
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.perf.metrics.PerformanceMetrics;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -29,7 +28,8 @@ public class ProducerParameters {
   private String exchangeName;
   private String routingKey;
   private boolean randomRoutingKey;
-  private List<?> flags;
+  private boolean mandatory = false;
+  private boolean persistent = false;
   private int txSize;
   private int msgLimit;
   private long confirm;
@@ -84,13 +84,22 @@ public class ProducerParameters {
     return this;
   }
 
-  public List<?> getFlags() {
-    return flags;
+  ProducerParameters setMandatory(boolean mandatory) {
+    this.mandatory = mandatory;
+    return this;
   }
 
-  public ProducerParameters setFlags(List<?> flags) {
-    this.flags = flags;
+  ProducerParameters setPersistent(boolean persistent) {
+    this.persistent = persistent;
     return this;
+  }
+
+  boolean mandatory() {
+    return this.mandatory;
+  }
+
+  boolean persistent() {
+    return this.persistent;
   }
 
   public int getTxSize() {

@@ -313,7 +313,7 @@ public class ConnectionRecoveryIT {
       TestInfo info)
       throws Exception {
     params.setPublishingInterval(Duration.ofSeconds(1));
-    params.setFlags(singletonList("persistent"));
+    params.setFlagPersistent(true);
     configurer.accept(params, info);
     cfConfigurer.accept(cf);
     int producerConsumerCount = params.getProducerCount();
@@ -339,7 +339,7 @@ public class ConnectionRecoveryIT {
     params.setQueueNames(Arrays.asList(prefix + "-one", prefix + "-two", prefix + "-three"));
     params.setProducerCount(10);
     params.setConsumerCount(10);
-    params.setFlags(singletonList("persistent"));
+    params.setFlagPersistent(true);
     cf.netty();
     int producerConsumerCount = params.getProducerCount();
     MulticastSet set =
@@ -418,7 +418,7 @@ public class ConnectionRecoveryIT {
 
   @Test
   void durableServerNamedQueueShouldBeReusedIfStillThere(TestInfo info) throws Exception {
-    params.setFlags(singletonList("persistent"));
+    params.setFlagPersistent(true);
     params.setAutoDelete(false);
     params.setExclusive(false);
     params.setQueueNames(Collections.emptyList());

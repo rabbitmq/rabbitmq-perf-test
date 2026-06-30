@@ -32,7 +32,6 @@ import com.rabbitmq.client.Channel;
 import com.rabbitmq.perf.metrics.PerformanceMetrics;
 import java.sql.Date;
 import java.time.OffsetDateTime;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -86,7 +85,7 @@ public class ProducerTest {
 
   @Test
   public void flagPersistent() throws Exception {
-    flagProducer("persistent").run();
+    flagProducer(false, true).run();
 
     verify(channel)
         .basicPublish(
@@ -103,7 +102,7 @@ public class ProducerTest {
 
   @Test
   public void flagMandatory() throws Exception {
-    flagProducer("mandatory").run();
+    flagProducer(true, false).run();
 
     verify(channel)
         .basicPublish(
@@ -120,7 +119,7 @@ public class ProducerTest {
 
   @Test
   public void priority() throws Exception {
-    flagProducer(singletonMap("priority", 10)).run();
+    flagProducer(singletonMap("priority", 10), false, false).run();
 
     verify(channel)
         .basicPublish(
@@ -137,7 +136,7 @@ public class ProducerTest {
 
   @Test
   public void flagPersistentMandatoryPriority() throws Exception {
-    flagProducer(singletonMap("priority", 10), "persistent", "mandatory").run();
+    flagProducer(singletonMap("priority", 10), true, true).run();
 
     verify(channel)
         .basicPublish(
@@ -177,7 +176,7 @@ public class ProducerTest {
                 .setExchangeName("exchange")
                 .setRoutingKey("id")
                 .setRandomRoutingKey(false)
-                .setFlags(asList("persistent"))
+                .setPersistent(true)
                 .setTxSize(0)
                 .setMsgLimit(1)
                 .setConfirm(-1)
@@ -229,7 +228,7 @@ public class ProducerTest {
           }
         };
 
-    flagProducer(messageProperties).run();
+    flagProducer(messageProperties, false, false).run();
 
     verify(channel)
         .basicPublish(
@@ -274,7 +273,7 @@ public class ProducerTest {
                 .setExchangeName("exchange")
                 .setRoutingKey("id")
                 .setRandomRoutingKey(false)
-                .setFlags(asList("persistent"))
+                .setPersistent(true)
                 .setTxSize(0)
                 .setMsgLimit(1)
                 .setConfirm(-1)
@@ -320,7 +319,7 @@ public class ProducerTest {
           }
         };
 
-    flagProducer(messageProperties).run();
+    flagProducer(messageProperties, false, false).run();
 
     verify(channel)
         .basicPublish(
@@ -359,7 +358,7 @@ public class ProducerTest {
                 .setExchangeName("exchange")
                 .setRoutingKey("id")
                 .setRandomRoutingKey(false)
-                .setFlags(asList("persistent"))
+                .setPersistent(true)
                 .setTxSize(0)
                 .setMsgLimit(1)
                 .setConfirm(-1)
@@ -471,13 +470,21 @@ public class ProducerTest {
         .containsExactlyInAnyOrder(sizes.toArray(new Integer[] {}));
   }
 
-  Producer flagProducer(String... flags) {
-    return flagProducer(null, flags);
+  Producer flagProducer() {
+    return flagProducer(null, false, false);
   }
 
-  Producer flagProducer(Map<String, Object> messageProperties, String... flags) {
+  Producer flagProducer(boolean mandatory, boolean persistent) {
+    return flagProducer(null, mandatory, persistent);
+  }
+
+  Producer flagProducer(
+      Map<String, Object> messageProperties, boolean mandatory, boolean persistent) {
     return new Producer(
-        parameters().setFlags(asList(flags)).setMessageProperties(messageProperties));
+        parameters()
+            .setMandatory(mandatory)
+            .setPersistent(persistent)
+            .setMessageProperties(messageProperties));
   }
 
   @Test
@@ -528,7 +535,6 @@ public class ProducerTest {
         .setExchangeName("exchange")
         .setRoutingKey("id")
         .setRandomRoutingKey(false)
-        .setFlags(new ArrayList<>())
         .setTxSize(0)
         .setMsgLimit(1)
         .setConfirm(-1)

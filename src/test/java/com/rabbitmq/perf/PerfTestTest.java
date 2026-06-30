@@ -237,7 +237,7 @@ public class PerfTestTest {
   void multicastParamsQuorumQueueFlagSetAppropriateArgumentsAndFlags() throws Exception {
     MulticastParams p = multicastParams("--quorum-queue");
     assertThat(systemExiter.notCalled()).isTrue();
-    assertThat(p.getFlags()).isNotNull().contains("persistent");
+    assertThat(p.flagPersistent()).isTrue();
     assertThat(p.getQueueArguments()).isNotNull().containsEntry("x-queue-type", "quorum");
     assertThat(p.isAutoDelete()).isFalse();
 
@@ -249,7 +249,7 @@ public class PerfTestTest {
   void multicastParamsStreamQueueFlagSetAppropriateArgumentsAndFlags() throws Exception {
     MulticastParams p = multicastParams("--stream-queue");
     assertThat(systemExiter.notCalled()).isTrue();
-    assertThat(p.getFlags()).isNotNull().contains("persistent");
+    assertThat(p.flagPersistent()).isTrue();
     assertThat(p.getQueueArguments()).isNotNull().containsEntry("x-queue-type", "stream");
     assertThat(p.isAutoDelete()).isFalse();
     assertThat(p.getConsumerPrefetch()).isEqualTo(200);

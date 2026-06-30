@@ -109,7 +109,7 @@ public class ConnectionRecoveryTest {
     params.setQueueNames(Collections.singletonList(QUEUE));
     params.setAutoDelete(false);
     params.setExclusive(false);
-    params.setFlags(Collections.singletonList("persistent"));
+    params.setFlagPersistent(true);
     params.setCluster(true);
   }
 
