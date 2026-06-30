@@ -69,6 +69,7 @@ import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLParameters;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -383,6 +384,15 @@ abstract class Utils {
         | IllegalAccessException e) {
       throw new RuntimeException(e);
     }
+  }
+
+  static SSLContext devSslContext() throws NoSuchAlgorithmException, KeyManagementException {
+    SSLContext sslContext =
+        SSLContext.getInstance(
+            computeDefaultTlsProtocol(
+                SSLContext.getDefault().getSupportedSSLParameters().getProtocols()));
+    sslContext.init(null, new TrustManager[] {new TrustAllTrustManager()}, null);
+    return sslContext;
   }
 
   static class GsonOAuth2ClientCredentialsGrantCredentialsProvider

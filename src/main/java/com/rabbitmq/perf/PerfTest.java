@@ -15,7 +15,6 @@
 // info@rabbitmq.com.
 package com.rabbitmq.perf;
 
-import static com.rabbitmq.client.ConnectionFactory.computeDefaultTlsProtocol;
 import static com.rabbitmq.perf.OptionsUtils.forEach;
 import static com.rabbitmq.perf.Tuples.pair;
 import static com.rabbitmq.perf.Utils.strArg;
@@ -27,7 +26,6 @@ import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.DefaultSaslConfig;
 import com.rabbitmq.client.ExceptionHandler;
 import com.rabbitmq.client.RecoveryDelayHandler;
-import com.rabbitmq.client.TrustEverythingTrustManager;
 import com.rabbitmq.client.impl.ClientVersion;
 import com.rabbitmq.client.impl.CredentialsProvider;
 import com.rabbitmq.client.impl.CredentialsRefreshService;
@@ -95,7 +93,6 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManager;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
@@ -217,11 +214,11 @@ public class PerfTest {
       factory.setRequestedHeartbeat(heartbeat);
 
       boolean netty = netty(cmd);
-      if (netty) {
+      if (!netty) {
         factory.useBlockingIo();
       }
 
-      configureNioIfRequested(cmd, factory, shutdownService);
+      boolean nio = configureNioIfRequested(cmd, factory, shutdownService);
       configureNettyIfRequested(cmd, factory, shutdownService);
 
       String oauth2TokenEndpoint = strArg(cmd, "o2uri", null);
@@ -250,12 +247,7 @@ public class PerfTest {
         SSLContext oauthSslContext = null;
         if (oauth2TokenEndpoint.toLowerCase().startsWith("https")) {
           if (sslContext == null) {
-            oauthSslContext =
-                SSLContext.getInstance(
-                    computeDefaultTlsProtocol(
-                        SSLContext.getDefault().getSupportedSSLParameters().getProtocols()));
-            oauthSslContext.init(
-                null, new TrustManager[] {new TrustEverythingTrustManager()}, null);
+            oauthSslContext = Utils.devSslContext();
           } else {
             oauthSslContext = sslContext;
           }
@@ -288,6 +280,13 @@ public class PerfTest {
         factory.netty().channelCustomizer(Utils.channelCustomizer(cmd));
         if (factory.isSSL()) {
           factory.netty().sslContext(Utils.nettySslContext(sslContext));
+        }
+      }
+
+      if (!netty && !nio) {
+        if (factory.isSSL() && sslContext == null) {
+          // blocking IO and no custom SSL context, we always trust the server for simplicity's sake
+          factory.useSslProtocol(Utils.devSslContext());
         }
       }
 
@@ -834,10 +833,11 @@ public class PerfTest {
   }
 
   @SuppressWarnings("deprecation")
-  private static void configureNioIfRequested(
+  private static boolean configureNioIfRequested(
       CommandLineProxy cmd, ConnectionFactory factory, ShutdownService shutdownService) {
     int nbThreads = Utils.intArg(cmd, "niot", -1);
     int executorSize = Utils.intArg(cmd, "niotp", -1);
+    boolean nio = false;
     if (nbThreads > 0 || executorSize > 0) {
       com.rabbitmq.client.impl.nio.NioParams nioParams =
           new com.rabbitmq.client.impl.nio.NioParams();
@@ -862,7 +862,9 @@ public class PerfTest {
       shutdownService.wrap(nioExecutor::shutdownNow);
       factory.useNio();
       factory.setNioParams(nioParams);
+      nio = true;
     }
+    return nio;
   }
 
   protected static int[] getNioNbThreadsAndExecutorSize(
