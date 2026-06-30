@@ -323,7 +323,6 @@ public class PerfTest {
       int producerCount = p.getProducerCount();
       int consumerCount = p.getConsumerCount();
       long confirm = p.getConfirm();
-      List<String> flags = p.getFlags();
       MetricsFormatter metricsFormatter = null;
       try {
         metricsFormatter =
@@ -334,7 +333,7 @@ public class PerfTest {
                     testID,
                     producerCount > 0,
                     consumerCount > 0,
-                    (flags.contains("mandatory") || flags.contains("immediate")),
+                    p.flagMandatory(),
                     confirm != -1,
                     latencyCollectionTimeUnit));
       } catch (IllegalArgumentException e) {
@@ -357,7 +356,7 @@ public class PerfTest {
                     testID,
                     producerCount > 0,
                     consumerCount > 0,
-                    (flags.contains("mandatory") || flags.contains("immediate")),
+                    p.flagMandatory(),
                     confirm != -1,
                     latencyCollectionTimeUnit));
       }
@@ -466,6 +465,8 @@ public class PerfTest {
     int producerMsgCount = intArg(cmd, 'C', 0);
     int consumerMsgCount = intArg(cmd, 'D', 0);
     List<String> flags = lstArg(cmd, 'f');
+    boolean flagMandatory = flags.contains("mandatory");
+    boolean flagPersistent = flags.contains("persistent");
     String bodyFiles = strArg(cmd, 'B', null);
     String bodyContentType = strArg(cmd, 'T', null);
     boolean predeclared = hasOption(cmd, "p");
@@ -569,10 +570,7 @@ public class PerfTest {
         consoleErr);
 
     if (quorumQueue || streamQueue) {
-      if (!flags.contains("persistent")) {
-        flags = new ArrayList<>(flags);
-        flags.add("persistent");
-      }
+      flagPersistent = true;
       autoDelete = false;
       String type = quorumQueue ? "quorum" : "stream";
       queueArguments.put("x-queue-type", type);
@@ -739,7 +737,8 @@ public class PerfTest {
     p.setConsumerSlowStart(slowStart);
     p.setExchangeName(exchangeName);
     p.setExchangeType(exchangeType);
-    p.setFlags(flags);
+    p.setFlagMandatory(flagMandatory);
+    p.setFlagPersistent(flagPersistent);
     p.setMultiAckEvery(multiAckEvery);
     p.setMinMsgSize(minMsgSize);
     p.setPredeclared(predeclared);
