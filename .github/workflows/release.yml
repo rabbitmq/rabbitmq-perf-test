@@ -15,9 +15,6 @@ jobs:
           distribution: 'temurin'
           java-version: '11'
           cache: 'maven'
-          server-id: central
-          server-username: MAVEN_USERNAME
-          server-password: MAVEN_PASSWORD
           gpg-private-key: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
           gpg-passphrase: MAVEN_GPG_PASSPHRASE
       - name: Release PerfTest
@@ -25,10 +22,6 @@ jobs:
           git config user.name "rabbitmq-ci"
           git config user.email "rabbitmq-ci@users.noreply.github.com"
           ci/release-perf-test.sh
-        env:
-          MAVEN_USERNAME: ${{ secrets.CENTRAL_USERNAME }}
-          MAVEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN }}
-          MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
       - name: Package Perf Test
         run: ci/package-perf-test.sh
         env:

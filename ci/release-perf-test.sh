@@ -21,5 +21,3 @@ then
 else
   MAVEN_PROFILE="release"
 fi
-
-./mvnw clean deploy -P $MAVEN_PROFILE -DskipTests --no-transfer-progress
