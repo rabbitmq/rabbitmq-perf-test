@@ -1,4 +1,4 @@
-FROM ubuntu:24.04 as builder
+FROM ubuntu:26.04 AS builder
 
 ARG perf_test_binary="target/perf-test.jar"
 
@@ -12,7 +12,7 @@ RUN set -eux; \
 		gnupg \
 		jq
 
-ARG JAVA_VERSION="21"
+ARG JAVA_VERSION="25"
 
 RUN if [ "$(uname -m)" = "aarch64" ] || [ "$(uname -m)" = "arm64" ] ; then echo "ARM"; ARCH="arm"; BUNDLE="jdk"; else echo "x86"; ARCH="x86"; BUNDLE="jdk"; fi \
     && wget "https://api.azul.com/zulu/download/community/v1.0/bundles/latest/?java_version=$JAVA_VERSION&ext=tar.gz&os=linux&arch=$ARCH&hw_bitness=64&release_status=ga&bundle_type=$BUNDLE" -O jdk-info.json
@@ -48,7 +48,7 @@ ADD $perf_test_binary /
 RUN mkdir $PERF_TEST_HOME; \
     mv /*.jar "$PERF_TEST_HOME/perf-test.jar"
 
-FROM ubuntu:24.04
+FROM ubuntu:26.04
 
 # we need locales support for characters like µ to show up correctly in the console
 RUN set -eux; \
@@ -60,11 +60,11 @@ RUN set -eux; \
 	rm -rf /var/lib/apt/lists/*; \
 	locale-gen en_US.UTF-8
 
-ENV LANG en_US.UTF-8
-ENV LANGUAGE en_US:en
-ENV LC_ALL en_US.UTF-8
+ENV LANG=en_US.UTF-8
+ENV LANGUAGE=en_US:en
+ENV LC_ALL=en_US.UTF-8
 
-ENV JAVA_HOME=/usr/lib/jvm/java-21-openjdk/jre
+ENV JAVA_HOME=/usr/lib/jvm/java-25-openjdk/jre
 RUN mkdir -p $JAVA_HOME
 COPY --from=builder /jre $JAVA_HOME/
 RUN ln -svT $JAVA_HOME/bin/java /usr/local/bin/java
