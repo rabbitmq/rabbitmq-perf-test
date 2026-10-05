@@ -32,9 +32,13 @@ This modification changes message size from default (12 bytes) to 4 kB:
 
  java -jar perf-test.jar -x 1 -y 2 -u "throughput-test-4" --id "test 4" -s 4000
 
-PerfTest can use durable queues and persistent messages:
+PerfTest can use persistent messages:
 
  java -jar perf-test.jar -x 1 -y 2 -u "throughput-test-5" --id "test-5" -f persistent
+
+Note the `persistent` flag applies only to messages: PerfTest always declares
+non-exclusive queues as durable, as RabbitMQ 4.3+ does not support
+non-durable non-exclusive queues.
 
 When PerfTest is running, it is important to monitor various
 publisher and consumer metrics provided by the https://www.rabbitmq.com/management.html[management UI].
@@ -45,7 +49,7 @@ connection page.
 Queue page demonstrates message rates, consumer count,
 acknowledgement mode used by the consumers, consumer
 utilisation and message location break down (disk, RAM,
-paged out transient messages, etc). When durable queues and
+paged out transient messages, etc). When
 persistent messages are used, node I/O and message
 store/queue index operation metrics become particularly
 important to monitor.

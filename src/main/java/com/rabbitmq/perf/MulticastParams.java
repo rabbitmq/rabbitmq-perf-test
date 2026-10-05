@@ -978,17 +978,10 @@ public class MulticastParams {
         TopologyRecording topologyRecording = state.topologyRecording;
 
         if (!params.predeclared || !queueExists(connection, qName)) {
-          boolean durable = params.flagPersistent();
           boolean exclusive = params.isExclusive();
+          // non-durable non-exclusive queues are not supported on RabbitMQ 4.3+
+          boolean durable = !exclusive;
           boolean autoDelete = params.autoDelete;
-          if (connection.getServerProperties() != null
-              && Utils.atLeast4_3(connection)
-              && !durable
-              && !exclusive) {
-            // Non-durable non-exclusive queues are not supported on RabbitMQ 4.3+,
-            // switching to durable non-exclusive
-            durable = true;
-          }
           boolean serverNamed = qName == null || "".equals(qName);
           qName =
               channel
