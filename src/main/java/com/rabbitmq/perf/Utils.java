@@ -319,48 +319,6 @@ abstract class Utils {
     }
   }
 
-  static boolean atLeast4_3(Connection connection) {
-    String version = connection.getServerProperties().get("version").toString();
-    try {
-      return versionCompare(currentVersion(version), "4.3.0") >= 0;
-    } catch (Exception e) {
-      LOGGER.debug("Unable to parse broker version {}", version, e);
-      return true;
-    }
-  }
-
-  private static final Pattern SEMVER_PATTERN = Pattern.compile("(\\d+\\.\\d+\\.\\d+)");
-
-  static String currentVersion(String currentVersion) {
-    Matcher matcher = SEMVER_PATTERN.matcher(currentVersion);
-    if (matcher.find()) {
-      return matcher.group(1);
-    }
-    throw new IllegalArgumentException("No semver pattern found in: " + currentVersion);
-  }
-
-  /**
-   * https://stackoverflow.com/questions/6701948/efficient-way-to-compare-version-strings-in-java
-   */
-  private static int versionCompare(String str1, String str2) {
-    String[] vals1 = str1.split("\\.");
-    String[] vals2 = str2.split("\\.");
-    int i = 0;
-    // set index to first non-equal ordinal or length of shortest version string
-    while (i < vals1.length && i < vals2.length && vals1[i].equals(vals2[i])) {
-      i++;
-    }
-    // compare first non-equal ordinal number
-    if (i < vals1.length && i < vals2.length) {
-      Integer val1 = Integer.valueOf(vals1[i]);
-      Integer val2 = Integer.valueOf(vals2[i]);
-      return val1.compareTo(val2);
-    }
-    // the strings are equal or one string is a substring of the other
-    // e.g. "1.2.3" = "1.2.3" or "1.2.3" < "1.2.3.4"
-    return Integer.signum(vals1.length - vals2.length);
-  }
-
   @SuppressWarnings("unchecked")
   static InstanceSynchronization defaultInstanceSynchronization(
       String id, int expectedInstances, String namespace, Duration timeout, PrintStream out) {
