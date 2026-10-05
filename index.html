@@ -529,7 +529,7 @@ table.CodeRay td.code{padding:0 0 0 .75em}
 <div id="header">
 <h1>RabbitMQ PerfTest</h1>
 <div class="details">
-<span id="revnumber">version 2.25.0-SNAPSHOT</span>
+<span id="revnumber">version 2.26.0-SNAPSHOT</span>
 </div>
 <div id="toc" class="toc2">
 <div id="toctitle">Table of Contents</div>
@@ -748,12 +748,17 @@ on the machine and RabbitMQ nodes:</p>
 </div>
 </div>
 <div class="paragraph">
-<p>PerfTest can use durable queues and persistent messages:</p>
+<p>PerfTest can use persistent messages:</p>
 </div>
 <div class="literalblock">
 <div class="content">
 <pre>java -jar perf-test.jar -x 1 -y 2 -u "throughput-test-5" --id "test-5" -f persistent</pre>
 </div>
+</div>
+<div class="paragraph">
+<p>Note the <code>persistent</code> flag applies only to messages: PerfTest always declares
+non-exclusive queues as durable, as RabbitMQ 4.3+ does not support
+non-durable non-exclusive queues.</p>
 </div>
 <div class="paragraph">
 <p>When PerfTest is running, it is important to monitor various
@@ -766,7 +771,7 @@ connection page.</p>
 <p>Queue page demonstrates message rates, consumer count,
 acknowledgement mode used by the consumers, consumer
 utilisation and message location break down (disk, RAM,
-paged out transient messages, etc). When durable queues and
+paged out transient messages, etc). When
 persistent messages are used, node I/O and message
 store/queue index operation metrics become particularly
 important to monitor.</p>
@@ -2158,8 +2163,8 @@ It is then possible to override the metrics values thanks to the <code>--exposed
 </div>
 <div id="footer">
 <div id="footer-text">
-Version 2.25.0-SNAPSHOT<br>
-Last updated 2026-02-27 14:28:14 UTC
+Version 2.26.0-SNAPSHOT<br>
+Last updated 2026-10-05 15:37:44 UTC
 </div>
 </div>
 </body>
