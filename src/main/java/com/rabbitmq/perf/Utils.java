@@ -165,33 +165,31 @@ abstract class Utils {
     List<SNIServerName> serverNames = sniServerNames(strArg(cmd, "sni", null));
     if (!serverNames.isEmpty()) {
       socketConfigurator =
-          socketConfigurator.andThen(
-              socket -> {
-                if (socket instanceof SSLSocket) {
-                  SSLSocket sslSocket = (SSLSocket) socket;
-                  SSLParameters sslParameters =
-                      sslSocket.getSSLParameters() == null
-                          ? new SSLParameters()
-                          : sslSocket.getSSLParameters();
-                  sslParameters.setServerNames(serverNames);
-                  sslSocket.setSSLParameters(sslParameters);
-                } else {
-                  LOGGER.warn("SNI parameter set on a non-TLS connection");
-                }
-              });
+          socketConfigurator.andThen(socket -> {
+            if (socket instanceof SSLSocket) {
+              SSLSocket sslSocket = (SSLSocket) socket;
+              SSLParameters sslParameters =
+                  sslSocket.getSSLParameters() == null
+                      ? new SSLParameters()
+                      : sslSocket.getSSLParameters();
+              sslParameters.setServerNames(serverNames);
+              sslSocket.setSSLParameters(sslParameters);
+            } else {
+              LOGGER.warn("SNI parameter set on a non-TLS connection");
+            }
+          });
     }
     TcpSettings settings = new TcpSettings(cmd);
     socketConfigurator =
-        socketConfigurator.andThen(
-            socket -> {
-              if (settings.sendBufferSize() > 0) {
-                socket.setSendBufferSize(settings.sendBufferSize());
-              }
-              if (settings.receiveBufferSize() > 0) {
-                socket.setReceiveBufferSize(settings.receiveBufferSize());
-              }
-              socket.setTcpNoDelay(settings.tcpNoDelay());
-            });
+        socketConfigurator.andThen(socket -> {
+          if (settings.sendBufferSize() > 0) {
+            socket.setSendBufferSize(settings.sendBufferSize());
+          }
+          if (settings.receiveBufferSize() > 0) {
+            socket.setReceiveBufferSize(settings.receiveBufferSize());
+          }
+          socket.setTcpNoDelay(settings.tcpNoDelay());
+        });
     return socketConfigurator;
   }
 

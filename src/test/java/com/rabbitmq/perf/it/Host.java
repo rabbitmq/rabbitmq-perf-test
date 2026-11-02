@@ -155,19 +155,18 @@ public class Host {
 
     return allLines.stream()
         .filter(line -> line.trim().length() > 0)
-        .map(
-            line -> {
-              // line: amq.gen-R6o236wc_tFFqMd2W2ldGg	0
-              String[] columns = line.split("\t");
-              // can be also header line, so ignoring NumberFormatException
-              try {
-                Integer.valueOf(columns[1]);
-                return columns[0];
-              } catch (NumberFormatException e) {
-                // OK
-                return null;
-              }
-            })
+        .map(line -> {
+          // line: amq.gen-R6o236wc_tFFqMd2W2ldGg	0
+          String[] columns = line.split("\t");
+          // can be also header line, so ignoring NumberFormatException
+          try {
+            Integer.valueOf(columns[1]);
+            return columns[0];
+          } catch (NumberFormatException e) {
+            // OK
+            return null;
+          }
+        })
         .filter(line -> line != null)
         .collect(Collectors.toList());
   }

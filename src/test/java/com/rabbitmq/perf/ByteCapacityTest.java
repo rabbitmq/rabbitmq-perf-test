@@ -35,11 +35,10 @@ public class ByteCapacityTest {
             arguments("100mb", 100_000_000L),
             arguments("100kb", 100_000L),
             arguments("100", 100L))
-        .flatMap(
-            arguments ->
-                Stream.of(
-                    arguments,
-                    arguments(arguments.get()[0].toString().toUpperCase(), arguments.get()[1])));
+        .flatMap(arguments ->
+            Stream.of(
+                arguments,
+                arguments(arguments.get()[0].toString().toUpperCase(), arguments.get()[1])));
   }
 
   @ParameterizedTest

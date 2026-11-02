@@ -51,18 +51,16 @@ public class StatsTest {
     AtomicBoolean keepSending = new AtomicBoolean(true);
     AtomicBoolean keepConsuming = new AtomicBoolean(true);
     try {
-      startTask(
-          () -> {
-            while (keepSending.get()) {
-              stats.handleSend();
-            }
-          });
-      startTask(
-          () -> {
-            while (keepConsuming.get()) {
-              stats.handleRecv(1);
-            }
-          });
+      startTask(() -> {
+        while (keepSending.get()) {
+          stats.handleSend();
+        }
+      });
+      startTask(() -> {
+        while (keepConsuming.get()) {
+          stats.handleRecv(1);
+        }
+      });
       waitAtMost(10, () -> reportCount.get() > 1);
       waitAtMost(10, () -> published.value() > 0);
       waitAtMost(10, () -> consumed.value() > 0);
@@ -92,18 +90,16 @@ public class StatsTest {
     AtomicBoolean keepSending = new AtomicBoolean(true);
     AtomicBoolean keepConsuming = new AtomicBoolean(true);
     try {
-      startTask(
-          () -> {
-            while (keepSending.get()) {
-              stats.handleSend();
-            }
-          });
-      startTask(
-          () -> {
-            while (keepConsuming.get()) {
-              stats.handleRecv(1);
-            }
-          });
+      startTask(() -> {
+        while (keepSending.get()) {
+          stats.handleSend();
+        }
+      });
+      startTask(() -> {
+        while (keepConsuming.get()) {
+          stats.handleRecv(1);
+        }
+      });
       waitAtMost(10, () -> reportCount.get() > 1);
       waitAtMost(10, () -> published.value() > 0);
       waitAtMost(10, () -> consumed.value() > 0);

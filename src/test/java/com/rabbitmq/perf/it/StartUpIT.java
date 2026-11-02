@@ -158,20 +158,19 @@ public class StartUpIT {
   }
 
   private void run(MulticastSet multicastSet) {
-    executorService.submit(
-        () -> {
-          try {
-            multicastSet.run();
-            testIsDone.set(true);
-            testLatch.countDown();
-          } catch (InterruptedException e) {
-            // one of the tests stops the execution, no need to be noisy
-            throw new RuntimeException(e);
-          } catch (Exception e) {
-            testHasFailed.set(true);
-            testLatch.countDown();
-          }
-        });
+    executorService.submit(() -> {
+      try {
+        multicastSet.run();
+        testIsDone.set(true);
+        testLatch.countDown();
+      } catch (InterruptedException e) {
+        // one of the tests stops the execution, no need to be noisy
+        throw new RuntimeException(e);
+      } catch (Exception e) {
+        testHasFailed.set(true);
+        testLatch.countDown();
+      }
+    });
   }
 
   private MulticastSet.CompletionHandler latchCompletionHandler(int count, TestInfo info) {

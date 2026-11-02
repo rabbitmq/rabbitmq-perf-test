@@ -93,14 +93,13 @@ class VariableValueIndicator<T> implements ValueIndicator<T> {
           LOGGER.debug("Changing value from {} to {}", value.get(), interval.value);
           T oldValue = value.get();
           value.set(interval.value);
-          listeners.forEach(
-              l -> {
-                try {
-                  l.valueChanged(oldValue, value.get());
-                } catch (Exception e) {
-                  LOGGER.warn("Error while notifying variable value listener: {}", e.getMessage());
-                }
-              });
+          listeners.forEach(l -> {
+            try {
+              l.valueChanged(oldValue, value.get());
+            } catch (Exception e) {
+              LOGGER.warn("Error while notifying variable value listener: {}", e.getMessage());
+            }
+          });
         }
         break;
       }
@@ -126,19 +125,18 @@ class VariableValueIndicator<T> implements ValueIndicator<T> {
                 {valueAndDuration[0], (Predicate<Integer>) value -> value >= 0},
                 {valueAndDuration[1], (Predicate<Integer>) value -> value > 0}
               })
-          .forEach(
-              parameters -> {
-                String input = parameters[0].toString();
-                Predicate<Integer> validation = (Predicate<Integer>) parameters[1];
-                try {
-                  int value = Integer.valueOf(input);
-                  if (!validation.test(value)) {
-                    valid.set(false);
-                  }
-                } catch (NumberFormatException e) {
-                  valid.set(false);
-                }
-              });
+          .forEach(parameters -> {
+            String input = parameters[0].toString();
+            Predicate<Integer> validation = (Predicate<Integer>) parameters[1];
+            try {
+              int value = Integer.valueOf(input);
+              if (!validation.test(value)) {
+                valid.set(false);
+              }
+            } catch (NumberFormatException e) {
+              valid.set(false);
+            }
+          });
     }
 
     if (!valid.get()) {

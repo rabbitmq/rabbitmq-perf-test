@@ -76,11 +76,10 @@ public class PerfTestMultiTest {
     assertThat(results.get("samples")).isInstanceOf(List.class);
     List<Map<String, Object>> samples = (List<Map<String, Object>>) results.get("samples");
     assertThat(samples).hasSize(2);
-    samples.forEach(
-        sample -> {
-          assertThat(sample).hasSize(5);
-          assertThat(sample.keySet()).contains(rateKeys).contains("elapsed");
-        });
+    samples.forEach(sample -> {
+      assertThat(sample).hasSize(5);
+      assertThat(sample.keySet()).contains(rateKeys).contains("elapsed");
+    });
   }
 
   @Test
@@ -115,19 +114,17 @@ public class PerfTestMultiTest {
     String[] rateKeys =
         new String[] {"send-bytes-rate", "recv-msg-rate", "send-msg-rate", "recv-bytes-rate"};
     data.entrySet()
-        .forEach(
-            entry -> {
-              assertThat(entry.getValue()).isInstanceOf(Map.class);
-              Map<String, Object> result = (Map<String, Object>) entry.getValue();
-              assertThat(result).containsKeys(rateKeys).containsKey("samples");
-              assertThat(result.get("samples")).isInstanceOf(List.class);
-              List<Map<String, Object>> samples = (List<Map<String, Object>>) result.get("samples");
-              assertThat(samples).hasSize(2);
-              samples.forEach(
-                  sample -> {
-                    assertThat(sample).hasSize(5).containsKeys(rateKeys).containsKey("elapsed");
-                  });
-            });
+        .forEach(entry -> {
+          assertThat(entry.getValue()).isInstanceOf(Map.class);
+          Map<String, Object> result = (Map<String, Object>) entry.getValue();
+          assertThat(result).containsKeys(rateKeys).containsKey("samples");
+          assertThat(result.get("samples")).isInstanceOf(List.class);
+          List<Map<String, Object>> samples = (List<Map<String, Object>>) result.get("samples");
+          assertThat(samples).hasSize(2);
+          samples.forEach(sample -> {
+            assertThat(sample).hasSize(5).containsKeys(rateKeys).containsKey("elapsed");
+          });
+        });
   }
 
   private Gson gson() {

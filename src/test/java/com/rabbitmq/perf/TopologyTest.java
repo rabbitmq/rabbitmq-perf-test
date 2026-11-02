@@ -215,15 +215,14 @@ public class TopologyTest {
         .newConnection(addresses.capture(), ArgumentMatchers.anyString());
     assertThat(addresses.getAllValues()).hasSize(1 + 1 + uris.size());
     IntStream.range(0, uris.size())
-        .forEach(
-            i -> {
-              List<Address> oneItemAddressList = addresses.getAllValues().get(i);
-              assertThat(oneItemAddressList)
-                  .hasSize(1)
-                  .element(0)
-                  .hasFieldOrPropertyWithValue("host", "host" + i)
-                  .hasFieldOrPropertyWithValue("port", 5672 + i);
-            });
+        .forEach(i -> {
+          List<Address> oneItemAddressList = addresses.getAllValues().get(i);
+          assertThat(oneItemAddressList)
+              .hasSize(1)
+              .element(0)
+              .hasFieldOrPropertyWithValue("host", "host" + i)
+              .hasFieldOrPropertyWithValue("port", 5672 + i);
+        });
 
     verify(c, times(1 + 1 + 1)).createChannel(); // queue configuration, consumer, producer
     verify(ch, times(1)).queueDeclare(eq(""), anyBoolean(), anyBoolean(), anyBoolean(), isNull());
@@ -1027,22 +1026,20 @@ public class TopologyTest {
       Future future = mock(Future.class);
       try {
         when(future.get())
-            .then(
-                invocation -> {
-                  for (CountDownLatch latch : latches) {
-                    latch.await(1, TimeUnit.SECONDS);
-                  }
-                  return null;
-                });
+            .then(invocation -> {
+              for (CountDownLatch latch : latches) {
+                latch.await(1, TimeUnit.SECONDS);
+              }
+              return null;
+            });
       } catch (Exception e) {
         e.printStackTrace();
       }
       when(executorService.submit(any(Runnable.class)))
-          .thenAnswer(
-              invocation -> {
-                backingExecutorService.submit((Runnable) invocation.getArguments()[0]);
-                return future;
-              });
+          .thenAnswer(invocation -> {
+            backingExecutorService.submit((Runnable) invocation.getArguments()[0]);
+            return future;
+          });
     }
 
     @Override

@@ -206,61 +206,59 @@ public class Consumer extends AgentBase implements Runnable {
   }
 
   private void startBasicGetConsumer() {
-    this.executorService.execute(
-        () -> {
-          ConsumerImpl delegate = new ConsumerImpl(channel);
-          final boolean shouldPause = this.pollingInterval > 0;
-          long queueNamesVersion = this.queueNamesVersion.get();
-          List<String> queues = this.queueNames.get();
-          Channel ch = this.channel;
-          Connection connection = this.channel.getConnection();
-          started();
-          while (!completed.get() && !Thread.interrupted()) {
-            // queue name can change between recoveries, we refresh only if necessary
-            if (queueNamesVersion != this.queueNamesVersion.get()) {
-              queues = this.queueNames.get();
-              queueNamesVersion = this.queueNamesVersion.get();
+    this.executorService.execute(() -> {
+      ConsumerImpl delegate = new ConsumerImpl(channel);
+      final boolean shouldPause = this.pollingInterval > 0;
+      long queueNamesVersion = this.queueNamesVersion.get();
+      List<String> queues = this.queueNames.get();
+      Channel ch = this.channel;
+      Connection connection = this.channel.getConnection();
+      started();
+      while (!completed.get() && !Thread.interrupted()) {
+        // queue name can change between recoveries, we refresh only if necessary
+        if (queueNamesVersion != this.queueNamesVersion.get()) {
+          queues = this.queueNames.get();
+          queueNamesVersion = this.queueNamesVersion.get();
+        }
+        for (String queue : queues) {
+          if (!this.recoveryProcess.isRecoverying()) {
+            try {
+              GetResponse response = ch.basicGet(queue, autoAck);
+              if (response != null) {
+                delegate.maybeHandleMessage(
+                    response.getEnvelope(), response.getProps(), response.getBody(), ch);
+              }
+            } catch (IOException e) {
+              LOGGER.debug("Basic.get error on queue {}: {}", queue, e.getMessage());
+              try {
+                ch = connection.createChannel();
+              } catch (Exception ex) {
+                LOGGER.debug("Error while trying to create a channel: {}", queue, e.getMessage());
+              }
+            } catch (AlreadyClosedException e) {
+              LOGGER.debug("Tried to basic.get from a closed connection");
             }
-            for (String queue : queues) {
-              if (!this.recoveryProcess.isRecoverying()) {
-                try {
-                  GetResponse response = ch.basicGet(queue, autoAck);
-                  if (response != null) {
-                    delegate.maybeHandleMessage(
-                        response.getEnvelope(), response.getProps(), response.getBody(), ch);
-                  }
-                } catch (IOException e) {
-                  LOGGER.debug("Basic.get error on queue {}: {}", queue, e.getMessage());
-                  try {
-                    ch = connection.createChannel();
-                  } catch (Exception ex) {
-                    LOGGER.debug(
-                        "Error while trying to create a channel: {}", queue, e.getMessage());
-                  }
-                } catch (AlreadyClosedException e) {
-                  LOGGER.debug("Tried to basic.get from a closed connection");
-                }
-                if (shouldPause) {
-                  try {
-                    Thread.sleep(this.pollingInterval);
-                  } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                  }
-                }
-              } else {
-                // The connection is recovering, waiting a bit.
-                // The duration is arbitrary: don't want to empty loop
-                // too much and don't want to catch too late with recovery
-                try {
-                  LOGGER.debug("Recovery in progress, sleeping for a sec");
-                  Thread.sleep(1000L);
-                } catch (InterruptedException e) {
-                  Thread.currentThread().interrupt();
-                }
+            if (shouldPause) {
+              try {
+                Thread.sleep(this.pollingInterval);
+              } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
               }
             }
+          } else {
+            // The connection is recovering, waiting a bit.
+            // The duration is arbitrary: don't want to empty loop
+            // too much and don't want to catch too late with recovery
+            try {
+              LOGGER.debug("Recovery in progress, sleeping for a sec");
+              Thread.sleep(1000L);
+            } catch (InterruptedException e) {
+              Thread.currentThread().interrupt();
+            }
           }
-        });
+        }
+      }
+    });
   }
 
   private void registerAsynchronousConsumer() {

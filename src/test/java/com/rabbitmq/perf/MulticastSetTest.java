@@ -214,13 +214,12 @@ public class MulticastSetTest {
         .when(factory)
         .setUri(anyString());
     when(factory.newConnection("perf-test-test"))
-        .thenAnswer(
-            invocation -> {
-              if (currentUri.get().contains("host2")) {
-                throw new IOException("simulating down broker");
-              }
-              return connection;
-            });
+        .thenAnswer(invocation -> {
+          if (currentUri.get().contains("host2")) {
+            throw new IOException("simulating down broker");
+          }
+          return connection;
+        });
     assertThat(waitUntilBrokerAvailableIfNecessary(1, 3, threeUris(), factory)).isFalse();
     verify(factory, atLeast(3)).newConnection("perf-test-test");
     verify(connection, times(2)).close();
@@ -244,18 +243,17 @@ public class MulticastSetTest {
           .when(factory)
           .setUri(anyString());
       when(factory.newConnection("perf-test-test"))
-          .thenAnswer(
-              invocation -> {
-                // brokers are not available at the beginning
-                if (watch.getTime(TimeUnit.SECONDS) < startUpTimeInSeconds) {
-                  throw new IOException("simulating down broker");
-                }
-                // host2 is never available
-                if (currentUri.get().contains("host2")) {
-                  throw new IOException("simulating down broker");
-                }
-                return connection;
-              });
+          .thenAnswer(invocation -> {
+            // brokers are not available at the beginning
+            if (watch.getTime(TimeUnit.SECONDS) < startUpTimeInSeconds) {
+              throw new IOException("simulating down broker");
+            }
+            // host2 is never available
+            if (currentUri.get().contains("host2")) {
+              throw new IOException("simulating down broker");
+            }
+            return connection;
+          });
       Collection<String> uris = threeUris();
       assertThat(waitUntilBrokerAvailableIfNecessary(startUpTimeInSeconds * 2, 2, uris, factory))
           .isTrue();
@@ -350,15 +348,14 @@ public class MulticastSetTest {
         .newConnection(addresses.capture(), ArgumentMatchers.anyString());
     assertThat(addresses.getAllValues()).hasSize(hostCount);
     IntStream.range(0, hostCount)
-        .forEach(
-            i -> {
-              List<Address> oneItemAddressList = addresses.getAllValues().get(i);
-              assertThat(oneItemAddressList)
-                  .hasSize(1)
-                  .element(0)
-                  .hasFieldOrPropertyWithValue("host", "host" + i)
-                  .hasFieldOrPropertyWithValue("port", 5672 + i);
-            });
+        .forEach(i -> {
+          List<Address> oneItemAddressList = addresses.getAllValues().get(i);
+          assertThat(oneItemAddressList)
+              .hasSize(1)
+              .element(0)
+              .hasFieldOrPropertyWithValue("host", "host" + i)
+              .hasFieldOrPropertyWithValue("port", 5672 + i);
+        });
   }
 
   @ParameterizedTest

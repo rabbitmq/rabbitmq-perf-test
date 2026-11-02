@@ -44,11 +44,10 @@ public class VariableValueIndicatorTest {
     validate("1:1");
     validate("0:20");
     asList("1-1", ":", "20:0", "-1:20", "20:-1", "a:20", "20:a")
-        .forEach(
-            input ->
-                assertThatThrownBy(() -> validate(input))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining(input));
+        .forEach(input ->
+            assertThatThrownBy(() -> validate(input))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining(input));
   }
 
   @Test
@@ -72,19 +71,18 @@ public class VariableValueIndicatorTest {
           {cycleDuration + intervals.get(2).start + 1, intervals.get(2).value},
         };
     asList(parameters)
-        .forEach(
-            parameter -> {
-              int secondsToAdd = (int) parameter[0];
-              int expectedValue = (int) parameter[1];
-              updateValueIfNecessary(
-                  intervals,
-                  startTime,
-                  addSecondsToNano(startTime, secondsToAdd),
-                  cycleDuration,
-                  value,
-                  Collections.emptySet());
-              assertThat(value).hasValue(expectedValue);
-            });
+        .forEach(parameter -> {
+          int secondsToAdd = (int) parameter[0];
+          int expectedValue = (int) parameter[1];
+          updateValueIfNecessary(
+              intervals,
+              startTime,
+              addSecondsToNano(startTime, secondsToAdd),
+              cycleDuration,
+              value,
+              Collections.emptySet());
+          assertThat(value).hasValue(expectedValue);
+        });
   }
 
   @ParameterizedTest

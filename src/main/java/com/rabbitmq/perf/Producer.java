@@ -121,11 +121,10 @@ public class Producer extends AgentBase implements Runnable, ReturnListener, Con
     this.timestampProvider = parameters.getTsp();
     if (this.timestampProvider.isTimestampInHeader()) {
       builderProcessor =
-          builderProcessor.andThen(
-              builder ->
-                  builder.headers(
-                      Collections.singletonMap(
-                          TIMESTAMP_HEADER, parameters.getTsp().getCurrentTime())));
+          builderProcessor.andThen(builder ->
+              builder.headers(
+                  Collections.singletonMap(
+                      TIMESTAMP_HEADER, parameters.getTsp().getCurrentTime())));
     }
     if (parameters.getMessageProperties() != null && !parameters.getMessageProperties().isEmpty()) {
       builderProcessor =
@@ -168,12 +167,11 @@ public class Producer extends AgentBase implements Runnable, ReturnListener, Con
           rateLimiterFactory.create(
               this.rateIndicator.getValue() > 0 ? this.rateIndicator.getValue() : 1);
       AtomicReference<RateLimiter> rateLimiterReference = new AtomicReference<>(rateLimiter);
-      this.rateIndicator.register(
-          (oldValue, newValue) -> {
-            if (newValue > 0) {
-              rateLimiterReference.set(rateLimiterFactory.create(newValue));
-            }
-          });
+      this.rateIndicator.register((oldValue, newValue) -> {
+        if (newValue > 0) {
+          rateLimiterReference.set(rateLimiterFactory.create(newValue));
+        }
+      });
       this.rateLimiterCallback = () -> rateLimiterReference.get().acquire();
     } else if (this.rateIndicator.getValue() >= 0 && !this.rateIndicator.isVariable()) {
       if (this.rateIndicator.getValue() > 0) {
@@ -252,21 +250,20 @@ public class Producer extends AgentBase implements Runnable, ReturnListener, Con
 
     if (!headers.isEmpty()) {
       builderProcessor =
-          builderProcessor.andThen(
-              builder -> {
-                // we merge if there are already some headers
-                AMQP.BasicProperties properties = builder.build();
-                Map<String, Object> existingHeaders = properties.getHeaders();
-                if (existingHeaders != null && !existingHeaders.isEmpty()) {
-                  Map<String, Object> newHeaders = new HashMap<>();
-                  newHeaders.putAll(existingHeaders);
-                  newHeaders.putAll(headers);
-                  builder = builder.headers(newHeaders);
-                } else {
-                  builder = builder.headers(headers);
-                }
-                return builder;
-              });
+          builderProcessor.andThen(builder -> {
+            // we merge if there are already some headers
+            AMQP.BasicProperties properties = builder.build();
+            Map<String, Object> existingHeaders = properties.getHeaders();
+            if (existingHeaders != null && !existingHeaders.isEmpty()) {
+              Map<String, Object> newHeaders = new HashMap<>();
+              newHeaders.putAll(existingHeaders);
+              newHeaders.putAll(headers);
+              builder = builder.headers(newHeaders);
+            } else {
+              builder = builder.headers(headers);
+            }
+            return builder;
+          });
     }
 
     return builderProcessor;

@@ -146,11 +146,10 @@ public class DefaultPerformanceMetricsTest {
 
   static TestConfiguration[] testConfigurationsMilliSeconds() {
     return Stream.of(testConfigurationsMicroSeconds())
-        .map(
-            configuration -> {
-              configuration.configurator.useMilliseconds(true);
-              return configuration;
-            })
+        .map(configuration -> {
+          configuration.configurator.useMilliseconds(true);
+          return configuration;
+        })
         .collect(Collectors.toList())
         .toArray(new TestConfiguration[] {});
   }

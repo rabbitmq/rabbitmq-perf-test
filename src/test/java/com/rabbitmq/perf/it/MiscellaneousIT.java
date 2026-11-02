@@ -241,18 +241,17 @@ public class MiscellaneousIT {
   }
 
   private void run(MulticastSet multicastSet) {
-    executorService.submit(
-        () -> {
-          try {
-            multicastSet.run();
-            testIsDone.set(true);
-            testLatch.countDown();
-          } catch (InterruptedException e) {
-            // one of the tests stops the execution, no need to be noisy
-            throw new RuntimeException(e);
-          } catch (Exception e) {
-            e.printStackTrace();
-          }
-        });
+    executorService.submit(() -> {
+      try {
+        multicastSet.run();
+        testIsDone.set(true);
+        testLatch.countDown();
+      } catch (InterruptedException e) {
+        // one of the tests stops the execution, no need to be noisy
+        throw new RuntimeException(e);
+      } catch (Exception e) {
+        e.printStackTrace();
+      }
+    });
   }
 }

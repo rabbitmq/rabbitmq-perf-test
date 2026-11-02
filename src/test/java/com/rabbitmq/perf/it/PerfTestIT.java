@@ -138,14 +138,13 @@ public class PerfTestIT {
 
   Future<?> run(ArgumentsBuilder builder) {
     String[] args = builder.build().split(" ");
-    return executor.submit(
-        () -> {
-          PerfTest.PerfTestOptions options = new PerfTest.PerfTestOptions();
-          options.setConsoleOut(new PrintStream(out));
-          options.setConsoleErr(new PrintStream(err));
-          options.setSystemExiter(systemExiter);
-          PerfTest.main(args, options);
-        });
+    return executor.submit(() -> {
+      PerfTest.PerfTestOptions options = new PerfTest.PerfTestOptions();
+      options.setConsoleOut(new PrintStream(out));
+      options.setConsoleErr(new PrintStream(err));
+      options.setSystemExiter(systemExiter);
+      PerfTest.main(args, options);
+    });
   }
 
   ArgumentsBuilder builder(IoLayer ioLayer) {

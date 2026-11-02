@@ -183,11 +183,10 @@ public class ExpectedMetricsTest {
     assertThat(metrics).hasValue(0);
     int producerCount = 10;
     IntStream.range(0, producerCount)
-        .forEach(
-            i -> {
-              expectedMetrics.agentStarted(PRODUCER);
-              assertThat(metrics).hasValue(rate.get() * (i + 1));
-            });
+        .forEach(i -> {
+          expectedMetrics.agentStarted(PRODUCER);
+          assertThat(metrics).hasValue(rate.get() * (i + 1));
+        });
     // simulate the value change
     rate.set(20.0f);
     listener.get().valueChanged(10.0f, rate.get()); // supposed to be called by ValueIndicator

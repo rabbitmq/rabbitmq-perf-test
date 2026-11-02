@@ -278,10 +278,8 @@ public class ProducerTest {
                 .setMsgLimit(1)
                 .setConfirm(-1)
                 .setConfirmTimeout(30)
-                .setMessageBodySource(
-                    (sequence) ->
-                        new MessageBodySource.MessageEnvelope(
-                            "".getBytes(), "application/json", 0L))
+                .setMessageBodySource(sequence ->
+                    new MessageBodySource.MessageEnvelope("".getBytes(), "application/json", 0L))
                 .setTsp(new TimestampProvider(true, true))
                 .setPerformanceMetrics(performanceMetrics())
                 .setMessageProperties(messageProperties)

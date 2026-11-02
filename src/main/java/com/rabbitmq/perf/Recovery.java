@@ -96,16 +96,14 @@ public class Recovery {
                       connection.getClientProvidedName());
                 }
               });
-      connection.addShutdownListener(
-          cause -> {
-            if (AutorecoveringConnection.DEFAULT_CONNECTION_RECOVERY_TRIGGERING_CONDITION.test(
-                cause)) {
-              LOGGER.debug(
-                  "Setting recovery in progress flag for connection {}",
-                  connection.getClientProvidedName());
-              recoveryInProgress.set(true);
-            }
-          });
+      connection.addShutdownListener(cause -> {
+        if (AutorecoveringConnection.DEFAULT_CONNECTION_RECOVERY_TRIGGERING_CONDITION.test(cause)) {
+          LOGGER.debug(
+              "Setting recovery in progress flag for connection {}",
+              connection.getClientProvidedName());
+          recoveryInProgress.set(true);
+        }
+      });
       return recoveryProcess;
     } else {
       return Recovery.NO_OP_RECOVERY_PROCESS;

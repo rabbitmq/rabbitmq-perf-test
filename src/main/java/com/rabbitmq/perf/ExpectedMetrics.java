@@ -122,10 +122,9 @@ final class ExpectedMetrics {
   void register(ValueIndicator<Float> publishingRateIndicator, Duration publishingInterval) {
     if (publishingInterval == null) {
       publishingRateCalculation = producers -> producers * publishingRateIndicator.getValue();
-      publishingRateIndicator.register(
-          (oldValue, newValue) -> {
-            expectedPublished.accumulate(publishingRateCalculation.applyAsDouble(producers.get()));
-          });
+      publishingRateIndicator.register((oldValue, newValue) -> {
+        expectedPublished.accumulate(publishingRateCalculation.applyAsDouble(producers.get()));
+      });
     } else {
       publishingRateCalculation = producers -> producers / (double) publishingInterval.getSeconds();
     }

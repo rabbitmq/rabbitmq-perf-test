@@ -104,24 +104,22 @@ public class DefaultInstanceSynchronizationTest {
     Duration timeout = Duration.ofSeconds(30);
     List<InstanceSynchronization> syncs =
         IntStream.range(0, expectedInstances)
-            .mapToObj(
-                unused ->
-                    Utils.defaultInstanceSynchronization(
-                        id, expectedInstances, null, timeout, noOpPrintStream()))
+            .mapToObj(unused ->
+                Utils.defaultInstanceSynchronization(
+                    id, expectedInstances, null, timeout, noOpPrintStream()))
             .collect(toList());
     CountDownLatch latch = new CountDownLatch(expectedInstances);
     ExecutorService executorService = Executors.newFixedThreadPool(expectedInstances);
     try {
-      syncs.forEach(
-          sync -> {
-            executorService.submit(
-                (Callable<Void>)
-                    () -> {
-                      sync.synchronize();
-                      latch.countDown();
-                      return null;
-                    });
-          });
+      syncs.forEach(sync -> {
+        executorService.submit(
+            (Callable<Void>)
+                () -> {
+                  sync.synchronize();
+                  latch.countDown();
+                  return null;
+                });
+      });
       assertThat(latch.await(10, TimeUnit.SECONDS)).isTrue();
     } finally {
       executorService.shutdownNow();

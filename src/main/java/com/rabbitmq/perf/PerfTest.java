@@ -384,13 +384,12 @@ public class PerfTest {
           new ExpectedMetrics(p, registry, metricsPrefix, exposedMetrics);
       int agentCount = p.getProducerThreadCount() + p.getConsumerThreadCount();
       Set<Integer> starts = ConcurrentHashMap.newKeySet(agentCount);
-      p.setStartListener(
-          (id, type) -> {
-            if (starts.add(id) && starts.size() == agentCount) {
-              performanceMetrics.resetGlobals();
-            }
-            expectedMetrics.agentStarted(type);
-          });
+      p.setStartListener((id, type) -> {
+        if (starts.add(id) && starts.size() == agentCount) {
+          performanceMetrics.resetGlobals();
+        }
+        expectedMetrics.agentStarted(type);
+      });
 
       String instanceSyncNamespace = lookUpInstanceSyncNamespace(cmd);
       int instanceSyncTimeout = Utils.intArg(cmd, "ist", 600);
@@ -1591,36 +1590,33 @@ public class PerfTest {
       return null;
     }
     return Arrays.stream(arg.split(","))
-        .map(
-            entry -> {
-              String[] keyValue = entry.split("=");
-              if (keyValue.length == 1) {
-                return new Object[] {keyValue[0], ""};
-              } else if ("true".equals(keyValue[1])) {
-                return new Object[] {keyValue[0], true};
-              } else if ("false".equals(keyValue[1])) {
-                return new Object[] {keyValue[0], false};
-              } else {
-                try {
-                  return new Object[] {keyValue[0], Long.parseLong(keyValue[1])};
-                } catch (NumberFormatException e) {
-                  return new Object[] {keyValue[0], keyValue[1]};
-                }
-              }
-            })
-        .map(
-            keyValue -> {
-              if ("x-dead-letter-exchange".equals(keyValue[0])
-                  && "amq.default".equals(keyValue[1])) {
-                return new String[] {"x-dead-letter-exchange", ""};
-              } else if ("x-single-active-consumer".equals(keyValue[0])) {
-                return new Object[] {
-                  "x-single-active-consumer", Boolean.parseBoolean(String.valueOf(keyValue[1]))
-                };
-              } else {
-                return keyValue;
-              }
-            })
+        .map(entry -> {
+          String[] keyValue = entry.split("=");
+          if (keyValue.length == 1) {
+            return new Object[] {keyValue[0], ""};
+          } else if ("true".equals(keyValue[1])) {
+            return new Object[] {keyValue[0], true};
+          } else if ("false".equals(keyValue[1])) {
+            return new Object[] {keyValue[0], false};
+          } else {
+            try {
+              return new Object[] {keyValue[0], Long.parseLong(keyValue[1])};
+            } catch (NumberFormatException e) {
+              return new Object[] {keyValue[0], keyValue[1]};
+            }
+          }
+        })
+        .map(keyValue -> {
+          if ("x-dead-letter-exchange".equals(keyValue[0]) && "amq.default".equals(keyValue[1])) {
+            return new String[] {"x-dead-letter-exchange", ""};
+          } else if ("x-single-active-consumer".equals(keyValue[0])) {
+            return new Object[] {
+              "x-single-active-consumer", Boolean.parseBoolean(String.valueOf(keyValue[1]))
+            };
+          } else {
+            return keyValue;
+          }
+        })
         .collect(
             Collectors.toMap(
                 entry -> entry[0].toString(),

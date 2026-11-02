@@ -107,14 +107,13 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
     List<Arguments> consumerArguments = consumerCountArguments().collect(Collectors.toList());
     List<Arguments> result = new ArrayList<>();
     Stream.of("idle", "empty")
-        .forEach(
-            exitWhen -> {
-              for (Arguments consumerArgument : consumerArguments) {
-                result.add(
-                    Arguments.arguments(
-                        exitWhen, consumerArgument.get()[0], consumerArgument.get()[1]));
-              }
-            });
+        .forEach(exitWhen -> {
+          for (Arguments consumerArgument : consumerArguments) {
+            result.add(
+                Arguments.arguments(
+                    exitWhen, consumerArgument.get()[0], consumerArgument.get()[1]));
+          }
+        });
     return result.toArray(new Arguments[0]);
   }
 
@@ -1114,44 +1113,40 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
     final Collection<Future<?>> tasks = new ArrayList<>(messagesCount);
     AtomicLong deliveryTag = new AtomicLong(0);
     IntStream.range(0, messagesCount)
-        .forEach(
-            i -> {
-              Future<?> task =
-                  executorService.submit(
-                      () -> {
-                        try {
-                          consumer.handleDelivery(
-                              "",
-                              new Envelope(deliveryTag.incrementAndGet(), false, "", ""),
-                              null,
-                              new byte[20]);
-                        } catch (Exception e) {
-                          e.printStackTrace();
-                        }
-                      });
-              tasks.add(task);
-            });
+        .forEach(i -> {
+          Future<?> task =
+              executorService.submit(() -> {
+                try {
+                  consumer.handleDelivery(
+                      "",
+                      new Envelope(deliveryTag.incrementAndGet(), false, "", ""),
+                      null,
+                      new byte[20]);
+                } catch (Exception e) {
+                  e.printStackTrace();
+                }
+              });
+          tasks.add(task);
+        });
     return tasks;
   }
 
   private Future<?> sendMessagesToConsumerSync(int messagesCount, Consumer consumer) {
     AtomicLong deliveryTag = new AtomicLong(0);
-    return executorService.submit(
-        () -> {
-          IntStream.range(0, messagesCount)
-              .forEach(
-                  i -> {
-                    try {
-                      consumer.handleDelivery(
-                          "",
-                          new Envelope(deliveryTag.incrementAndGet(), false, "", ""),
-                          null,
-                          new byte[20]);
-                    } catch (Exception e) {
-                      e.printStackTrace();
-                    }
-                  });
-        });
+    return executorService.submit(() -> {
+      IntStream.range(0, messagesCount)
+          .forEach(i -> {
+            try {
+              consumer.handleDelivery(
+                  "",
+                  new Envelope(deliveryTag.incrementAndGet(), false, "", ""),
+                  null,
+                  new byte[20]);
+            } catch (Exception e) {
+              e.printStackTrace();
+            }
+          });
+    });
   }
 
   private void countsAndTimeLimit(int pmc, int cmc, int time) {
@@ -1198,23 +1193,22 @@ public class MessageCountTimeLimitAndPublishingIntervalRateTest {
   }
 
   private void run(MulticastSet multicastSet) {
-    executorService.submit(
-        () -> {
-          try {
-            long start = System.nanoTime();
-            multicastSet.run();
-            testDurationInMs = Duration.ofNanos(System.nanoTime() - start);
-            testIsDone.set(true);
-          } catch (InterruptedException e) {
-            // one of the tests stops the execution, no need to be noisy
-            LOGGER.warn("Run has been interrupted");
-          } catch (Exception e) {
-            if (e.getCause() instanceof InterruptedException) {
-              LOGGER.warn("Run has been interrupted");
-            } else {
-              LOGGER.warn("Error during run", e);
-            }
-          }
-        });
+    executorService.submit(() -> {
+      try {
+        long start = System.nanoTime();
+        multicastSet.run();
+        testDurationInMs = Duration.ofNanos(System.nanoTime() - start);
+        testIsDone.set(true);
+      } catch (InterruptedException e) {
+        // one of the tests stops the execution, no need to be noisy
+        LOGGER.warn("Run has been interrupted");
+      } catch (Exception e) {
+        if (e.getCause() instanceof InterruptedException) {
+          LOGGER.warn("Run has been interrupted");
+        } else {
+          LOGGER.warn("Error during run", e);
+        }
+      }
+    });
   }
 }

@@ -489,18 +489,17 @@ public class ConnectionRecoveryIT {
   }
 
   private void run(MulticastSet multicastSet) {
-    executorService.submit(
-        () -> {
-          try {
-            multicastSet.run();
-            testIsDone.set(true);
-            testLatch.countDown();
-          } catch (InterruptedException e) {
-            // one of the tests stops the execution, no need to be noisy
-            throw new RuntimeException(e);
-          } catch (Exception e) {
-            throw new RuntimeException(e);
-          }
-        });
+    executorService.submit(() -> {
+      try {
+        multicastSet.run();
+        testIsDone.set(true);
+        testLatch.countDown();
+      } catch (InterruptedException e) {
+        // one of the tests stops the execution, no need to be noisy
+        throw new RuntimeException(e);
+      } catch (Exception e) {
+        throw new RuntimeException(e);
+      }
+    });
   }
 }

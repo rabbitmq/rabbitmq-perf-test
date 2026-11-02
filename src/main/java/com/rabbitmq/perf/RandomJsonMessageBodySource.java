@@ -47,34 +47,32 @@ class RandomJsonMessageBodySource implements MessageBodySource {
     char[] fieldsSymbols = LOWER.toCharArray();
     char[] valuesSymbols = ALPHANUM.toCharArray();
     IntStream.range(0, fieldValueCount)
-        .forEach(
-            i -> {
-              fields.add(random(random, buf, 30, fieldsSymbols));
-              values.add(random(random, buf, maxSize, valuesSymbols));
-            });
+        .forEach(i -> {
+          fields.add(random(random, buf, 30, fieldsSymbols));
+          values.add(random(random, buf, maxSize, valuesSymbols));
+        });
 
     List<String> shuffledFields = new ArrayList<>(fields);
     IntStream.range(0, bodyCount)
-        .forEach(
-            i -> {
-              StringBuilder builder = new StringBuilder("{ ");
-              Collections.shuffle(shuffledFields);
-              Iterator<String> fieldsIterator = shuffledFields.iterator();
-              while (true) {
-                if (!fieldsIterator.hasNext()) {
-                  fieldsIterator = shuffledFields.iterator();
-                }
-                builder.append("\"").append(fieldsIterator.next()).append("\" : ");
-                builder.append("\"").append(values.get(random.nextInt(values.size()))).append("\"");
-                if (builder.length() < bodySize) {
-                  builder.append(",");
-                } else {
-                  break;
-                }
-              }
-              builder.append(" }");
-              bodies[i] = builder.toString().getBytes(CHARSET);
-            });
+        .forEach(i -> {
+          StringBuilder builder = new StringBuilder("{ ");
+          Collections.shuffle(shuffledFields);
+          Iterator<String> fieldsIterator = shuffledFields.iterator();
+          while (true) {
+            if (!fieldsIterator.hasNext()) {
+              fieldsIterator = shuffledFields.iterator();
+            }
+            builder.append("\"").append(fieldsIterator.next()).append("\" : ");
+            builder.append("\"").append(values.get(random.nextInt(values.size()))).append("\"");
+            if (builder.length() < bodySize) {
+              builder.append(",");
+            } else {
+              break;
+            }
+          }
+          builder.append(" }");
+          bodies[i] = builder.toString().getBytes(CHARSET);
+        });
   }
 
   // based on

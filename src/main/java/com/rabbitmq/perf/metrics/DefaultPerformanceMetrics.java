@@ -184,23 +184,22 @@ public final class DefaultPerformanceMetrics implements PerformanceMetrics, Auto
       startTimeForTotal.set(startTime.get());
 
       scheduledExecutorService.scheduleAtFixedRate(
-          wrapInCatch(
-              () -> {
-                if (!this.started.get()) {
-                  return;
-                }
-                if (noActivity()) {
-                  this.publishedRate.accumulate(0);
-                  this.confirmedRate.accumulate(0);
-                  this.nackedRate.accumulate(0);
-                  this.returnedRate.accumulate(0);
-                  this.receivedRate.accumulate(0);
-                  this.confirmedLatency.set(histogram());
-                  this.consumedLatency.set(histogram());
-                } else {
-                  metrics(System.nanoTime());
-                }
-              }),
+          wrapInCatch(() -> {
+            if (!this.started.get()) {
+              return;
+            }
+            if (noActivity()) {
+              this.publishedRate.accumulate(0);
+              this.confirmedRate.accumulate(0);
+              this.nackedRate.accumulate(0);
+              this.returnedRate.accumulate(0);
+              this.receivedRate.accumulate(0);
+              this.confirmedLatency.set(histogram());
+              this.consumedLatency.set(histogram());
+            } else {
+              metrics(System.nanoTime());
+            }
+          }),
           interval.getSeconds(),
           interval.getSeconds(),
           TimeUnit.SECONDS);

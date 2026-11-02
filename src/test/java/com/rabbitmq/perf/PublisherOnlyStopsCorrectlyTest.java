@@ -59,12 +59,12 @@ public class PublisherOnlyStopsCorrectlyTest {
         // number of messages before throwing exception, configurator, assertion message
         Arguments.of(
             10,
-            (Consumer<MulticastParams>) (params) -> {},
+            (Consumer<MulticastParams>) params -> {},
             "Sender should have failed and program should stop"),
         Arguments.of(
             2,
             (Consumer<MulticastParams>)
-                (params) -> params.setPublishingInterval(Duration.ofSeconds(1)),
+                params -> params.setPublishingInterval(Duration.ofSeconds(1)),
             "Sender should have failed and program should stop"));
   }
 

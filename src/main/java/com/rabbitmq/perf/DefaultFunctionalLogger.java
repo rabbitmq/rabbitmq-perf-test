@@ -107,34 +107,28 @@ public class DefaultFunctionalLogger implements FunctionalLogger {
       long publishingId,
       BasicProperties messageProperties,
       byte[] body) {
-    wrap(
-        () ->
-            print(
-                "publisher %d: message published, timestamp = %d, publishing ID = %d%s",
-                producerId,
-                timestamp,
-                publishingId,
-                maybeDetails(timestamp, messageProperties, body)));
+    wrap(() ->
+        print(
+            "publisher %d: message published, timestamp = %d, publishing ID = %d%s",
+            producerId, timestamp, publishingId, maybeDetails(timestamp, messageProperties, body)));
   }
 
   @Override
   public void receivedPublishConfirm(
       int producerId, boolean confirmed, long publishingId, int confirmCount) {
-    wrap(
-        () ->
-            print(
-                "publisher %d: publish confirm, type = %s, publishing ID = %d, confirm count = %d",
-                producerId, confirmed ? "ack" : "nack", publishingId, confirmCount));
+    wrap(() ->
+        print(
+            "publisher %d: publish confirm, type = %s, publishing ID = %d, confirm count = %d",
+            producerId, confirmed ? "ack" : "nack", publishingId, confirmCount));
   }
 
   @Override
   public void publishConfirmed(
       int producerId, boolean confirmed, long publishingId, long timestamp) {
-    wrap(
-        () ->
-            print(
-                "publisher %d: message confirmed, type = %s, timestamp = %d, publishing ID = %d",
-                producerId, confirmed ? "ack" : "nack", timestamp, publishingId));
+    wrap(() ->
+        print(
+            "publisher %d: message confirmed, type = %s, timestamp = %d, publishing ID = %d",
+            producerId, confirmed ? "ack" : "nack", timestamp, publishingId));
   }
 
   @Override
@@ -144,23 +138,21 @@ public class DefaultFunctionalLogger implements FunctionalLogger {
       Envelope envelope,
       BasicProperties messageProperties,
       byte[] body) {
-    wrap(
-        () ->
-            print(
-                "consumer %d: received message, timestamp = %d, delivery tag = %d%s",
-                consumerId,
-                timestamp,
-                envelope.getDeliveryTag(),
-                maybeDetails(timestamp, messageProperties, body)));
+    wrap(() ->
+        print(
+            "consumer %d: received message, timestamp = %d, delivery tag = %d%s",
+            consumerId,
+            timestamp,
+            envelope.getDeliveryTag(),
+            maybeDetails(timestamp, messageProperties, body)));
   }
 
   @Override
   public void acknowledged(int consumerId, long timestamp, Envelope envelope, int ackedCount) {
-    wrap(
-        () ->
-            print(
-                "consumer %d: acknowledged message(s), timestamp = %d, delivery tag = %d, message count = %d",
-                consumerId, timestamp, envelope.getDeliveryTag(), ackedCount));
+    wrap(() ->
+        print(
+            "consumer %d: acknowledged message(s), timestamp = %d, delivery tag = %d, message count = %d",
+            consumerId, timestamp, envelope.getDeliveryTag(), ackedCount));
   }
 
   private void print(String format, Object... args) {

@@ -1070,10 +1070,9 @@ public class MulticastParams {
         return configureQueues(connections, this.queueNames, topologyRecording, () -> {});
       } else {
         return connections.stream()
-            .map(
-                connection ->
-                    new TopologyHandlerResult(
-                        connection, new ArrayList<>(), this.topologyRecording.child()))
+            .map(connection ->
+                new TopologyHandlerResult(
+                    connection, new ArrayList<>(), this.topologyRecording.child()))
             .collect(Collectors.toList());
       }
     }
@@ -1172,10 +1171,9 @@ public class MulticastParams {
       // if queues are exclusive, we'll create them for each consumer connection
       if (this.params.isExclusive()) {
         return connections.stream()
-            .map(
-                connection ->
-                    new TopologyHandlerResult(
-                        connection, new ArrayList<>(), this.topologyRecording.child()))
+            .map(connection ->
+                new TopologyHandlerResult(
+                    connection, new ArrayList<>(), this.topologyRecording.child()))
             .collect(Collectors.toList());
       } else {
         return configureQueues(
