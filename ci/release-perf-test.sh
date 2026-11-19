@@ -12,3 +12,5 @@ git checkout $RELEASE_BRANCH
   --batch-mode -Dtag="v$RELEASE_VERSION" \
   -DreleaseVersion=$RELEASE_VERSION \
   -DdevelopmentVersion=$DEVELOPMENT_VERSION
+
+git checkout "v$RELEASE_VERSION"
