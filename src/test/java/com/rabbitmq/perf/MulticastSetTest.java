@@ -173,7 +173,7 @@ public class MulticastSetTest {
       waitUntilBrokerAvailableIfNecessaryShouldRetryAndReturnTrueWhenConnectionFailsThenSucceeds()
           throws Exception {
     when(factory.newConnection("perf-test-test"))
-        .thenThrow(IOException.class)
+        .thenThrow(new IOException())
         .thenReturn(connection);
     Collection<String> uris = oneUri();
     assertThat(waitUntilBrokerAvailableIfNecessary(5, 1, uris, factory)).isTrue();
@@ -186,7 +186,7 @@ public class MulticastSetTest {
   public void
       waitUntilBrokerAvailableIfNecessaryShouldReturnFalseWhenTimesOutBecauseOfConnectionFailures()
           throws Exception {
-    when(factory.newConnection("perf-test-test")).thenThrow(IOException.class);
+    when(factory.newConnection("perf-test-test")).thenThrow(new IOException());
     assertThat(waitUntilBrokerAvailableIfNecessary(1, 1, oneUri(), factory)).isFalse();
     verify(factory, atLeastOnce()).newConnection("perf-test-test");
     verify(connection, never()).close();
