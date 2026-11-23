@@ -24,16 +24,16 @@ import com.sun.net.httpserver.HttpServer;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
 import java.io.BufferedReader;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
+import java.util.zip.GZIPInputStream;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
@@ -112,27 +112,25 @@ public class DatadogMetricsTest {
     server.createContext(
         "/datadog",
         exchange -> {
-          Map<String, String> parameters =
-              Arrays.stream(exchange.getRequestURI().getQuery().split("&"))
-                  .map(parameter -> parameter.split("="))
-                  .collect(
-                      Collectors.toMap(
-                          parameterNameValue -> parameterNameValue[0],
-                          parameterNameValue -> parameterNameValue[1]));
-          if (parameters.get("api_key") != null) {
-            apiKey.set(parameters.get("api_key"));
+          String apiKeyHeader = exchange.getRequestHeaders().getFirst("DD-API-KEY");
+          if (apiKeyHeader != null) {
+            apiKey.set(apiKeyHeader);
           }
-          if (parameters.get("application_key") != null) {
-            appKey.set(parameters.get("application_key"));
+          String appKeyHeader = exchange.getRequestHeaders().getFirst("DD-APPLICATION-KEY");
+          if (appKeyHeader != null) {
+            appKey.set(appKeyHeader);
+          }
+          InputStream body = exchange.getRequestBody();
+          if ("gzip".equals(exchange.getRequestHeaders().getFirst("Content-Encoding"))) {
+            body = new GZIPInputStream(body);
           }
           try (BufferedReader reader =
-              new BufferedReader(
-                  new InputStreamReader(exchange.getRequestBody(), StandardCharsets.UTF_8))) {
-            String body = reader.lines().collect(Collectors.joining("\n"));
-            DatadogMetricsTest.this.content.set(body);
+              new BufferedReader(new InputStreamReader(body, StandardCharsets.UTF_8))) {
+            String content = reader.lines().collect(Collectors.joining("\n"));
+            DatadogMetricsTest.this.content.set(content);
 
-            if (body.contains("\"description\"")) {
-              description.set(body);
+            if (content.contains("\"description\"")) {
+              description.set(content);
             }
           }
           exchange.sendResponseHeaders(200, 0);
